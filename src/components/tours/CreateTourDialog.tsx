@@ -61,6 +61,35 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
     }
   };
 
+  const createJobWithDepartments = async (jobData: any) => {
+    console.log("Creating job with data:", jobData);
+    
+    // First create the job
+    const { data: job, error: jobError } = await supabase
+      .from("jobs")
+      .insert(jobData)
+      .select()
+      .single();
+
+    if (jobError) throw jobError;
+
+    console.log("Job created:", job);
+
+    // Then create the department associations
+    const departmentEntries = departments.map(department => ({
+      job_id: job.id,
+      department
+    }));
+
+    const { error: deptError } = await supabase
+      .from("job_departments")
+      .insert(departmentEntries);
+
+    if (deptError) throw deptError;
+
+    return job;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -96,23 +125,18 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
 
       validDates.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      const { data: tourData, error: tourError } = await supabase
-        .from("jobs")
-        .insert({
-          title,
-          description,
-          start_time: `${validDates[0].date}T00:00:00`,
-          end_time: `${validDates[validDates.length - 1].date}T23:59:59`,
-          location: validDates[0].location,
-          job_type: "tour",
-          color,
-          departments,
-        })
-        .select()
-        .single();
+      // Create the main tour job
+      const tourJob = await createJobWithDepartments({
+        title,
+        description,
+        start_time: `${validDates[0].date}T00:00:00`,
+        end_time: `${validDates[validDates.length - 1].date}T23:59:59`,
+        location: validDates[0].location,
+        job_type: "tour",
+        color,
+      });
 
-      if (tourError) throw tourError;
-
+      // Handle locations
       const unique_locations = [...new Set(validDates.map((d) => d.location))];
       for (const location of unique_locations) {
         if (location) {
@@ -124,23 +148,19 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
         }
       }
 
-      const dateEntries = validDates.map((date) => ({
-        title: `${title} (Tour Date)`,
-        description,
-        start_time: `${date.date}T00:00:00`,
-        end_time: `${date.date}T23:59:59`,
-        location: date.location,
-        job_type: "single",
-        tour_id: tourData.id,
-        color,
-        departments,
-      }));
-
-      const { error: datesError } = await supabase
-        .from("jobs")
-        .insert(dateEntries);
-
-      if (datesError) throw datesError;
+      // Create individual tour dates
+      for (const date of validDates) {
+        await createJobWithDepartments({
+          title: `${title} (Tour Date)`,
+          description,
+          start_time: `${date.date}T00:00:00`,
+          end_time: `${date.date}T23:59:59`,
+          location: date.location,
+          job_type: "single",
+          tour_date_id: tourJob.id,
+          color,
+        });
+      }
 
       await queryClient.invalidateQueries({ queryKey: ["jobs"] });
       await queryClient.invalidateQueries({ queryKey: ["locations"] });
