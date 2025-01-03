@@ -14,19 +14,28 @@ export type Database = {
           assigned_at: string
           assigned_by: string | null
           job_id: string
+          lights_role: string | null
+          sound_role: string | null
           technician_id: string
+          video_role: string | null
         }
         Insert: {
           assigned_at?: string
           assigned_by?: string | null
           job_id: string
+          lights_role?: string | null
+          sound_role?: string | null
           technician_id: string
+          video_role?: string | null
         }
         Update: {
           assigned_at?: string
           assigned_by?: string | null
           job_id?: string
+          lights_role?: string | null
+          sound_role?: string | null
           technician_id?: string
+          video_role?: string | null
         }
         Relationships: [
           {
