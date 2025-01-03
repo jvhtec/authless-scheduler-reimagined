@@ -61,41 +61,58 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
     }
   };
 
+  const createOrGetLocation = async (locationName: string) => {
+    if (!locationName) return null;
+    
+    try {
+      // First try to find existing location
+      const { data: existingLocation, error: findError } = await supabase
+        .from("locations")
+        .select("id")
+        .eq("name", locationName)
+        .single();
+
+      if (existingLocation) {
+        return existingLocation.id;
+      }
+
+      // If not found, create new location
+      const { data: newLocation, error: createError } = await supabase
+        .from("locations")
+        .insert({ name: locationName })
+        .select("id")
+        .single();
+
+      if (createError) throw createError;
+      return newLocation.id;
+    } catch (error) {
+      console.error("Error handling location:", error);
+      throw error;
+    }
+  };
+
+  const createTourDate = async (tourId: string, date: string, locationId: string | null) => {
+    const { data: tourDate, error } = await supabase
+      .from("tour_dates")
+      .insert({
+        tour_id: tourId,
+        date,
+        location_id: locationId
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return tourDate;
+  };
+
   const createJobWithDepartments = async (jobData: any) => {
     console.log("Creating job with data:", jobData);
     
-    // First, if there's a location, create or get its ID
-    let locationId = null;
-    if (jobData.location) {
-      const { data: locationData, error: locationError } = await supabase
-        .from("locations")
-        .insert({ name: jobData.location })
-        .select()
-        .single();
-
-      if (locationError) {
-        // If insert fails, try to find existing location
-        const { data: existingLocation, error: findError } = await supabase
-          .from("locations")
-          .select()
-          .eq("name", jobData.location)
-          .single();
-
-        if (findError) throw findError;
-        locationId = existingLocation.id;
-      } else {
-        locationId = locationData.id;
-      }
-    }
-
-    // Create the job with location_id instead of location
+    // Create the job
     const { data: job, error: jobError } = await supabase
       .from("jobs")
-      .insert({
-        ...jobData,
-        location_id: locationId,
-        location: undefined // Remove the location field
-      })
+      .insert(jobData)
       .select()
       .single();
 
@@ -103,7 +120,7 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
 
     console.log("Job created:", job);
 
-    // Then create the department associations
+    // Create department associations
     const departmentEntries = departments.map(department => ({
       job_id: job.id,
       department
@@ -153,27 +170,45 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
 
       validDates.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+      // First, create the tour in the tours table
+      const { data: tour, error: tourError } = await supabase
+        .from("tours")
+        .insert({
+          name: title,
+          description
+        })
+        .select()
+        .single();
+
+      if (tourError) throw tourError;
+
       // Create the main tour job
-      const tourJob = await createJobWithDepartments({
+      const mainTourJob = await createJobWithDepartments({
         title,
         description,
         start_time: `${validDates[0].date}T00:00:00`,
         end_time: `${validDates[validDates.length - 1].date}T23:59:59`,
-        location: validDates[0].location,
         job_type: "tour",
         color,
       });
 
-      // Create individual tour dates
-      for (const date of validDates) {
+      // Process each tour date
+      for (const dateInfo of validDates) {
+        // First get or create location
+        const locationId = await createOrGetLocation(dateInfo.location);
+        
+        // Create tour date entry
+        const tourDate = await createTourDate(tour.id, dateInfo.date, locationId);
+
+        // Create job for this tour date
         await createJobWithDepartments({
           title: `${title} (Tour Date)`,
           description,
-          start_time: `${date.date}T00:00:00`,
-          end_time: `${date.date}T23:59:59`,
-          location: date.location,
+          start_time: `${dateInfo.date}T00:00:00`,
+          end_time: `${dateInfo.date}T23:59:59`,
+          location_id: locationId,
           job_type: "single",
-          tour_date_id: tourJob.id,
+          tour_date_id: tourDate.id,
           color,
         });
       }
