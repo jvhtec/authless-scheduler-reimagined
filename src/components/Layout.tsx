@@ -97,7 +97,14 @@ const Layout = ({ children }: LayoutProps) => {
               <SidebarTrigger />
               <h1 className="text-xl font-semibold">Tech Schedule</h1>
             </div>
-            <Button variant="outline" onClick={handleSignOut}>Sign Out</Button>
+            <div className="flex flex-col items-end gap-1">
+              <Button variant="outline" onClick={handleSignOut}>Sign Out</Button>
+              {session?.user && (
+                <p className="text-sm text-muted-foreground">
+                  Signed in as: {session.user.email}
+                </p>
+              )}
+            </div>
           </header>
           <main className="p-6">
             {children}
