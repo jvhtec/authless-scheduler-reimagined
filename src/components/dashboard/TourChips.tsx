@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface TourChipsProps {
   onTourClick: (tourId: string) => void;
@@ -20,7 +21,8 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
           id,
           title,
           start_time,
-          end_time
+          end_time,
+          color
         `)
         .eq('job_type', 'tour')
         .gte('start_time', startOfYear)
@@ -42,7 +44,15 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
           variant="outline"
           size="sm"
           onClick={() => onTourClick(tour.id)}
-          className="rounded-full"
+          className={cn(
+            "rounded-full border-2",
+            "hover:bg-opacity-10 hover:text-foreground transition-colors"
+          )}
+          style={{
+            borderColor: tour.color,
+            color: tour.color,
+            backgroundColor: `${tour.color}10` // 10% opacity version of the color
+          }}
         >
           {tour.title} ({format(new Date(tour.start_time), 'MMM yyyy')})
         </Button>
