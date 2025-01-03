@@ -6,16 +6,24 @@ import { Department } from "@/types/department";
 import { useJobs } from "@/hooks/useJobs";
 import { format, addWeeks, addMonths, isAfter, isBefore } from "date-fns";
 import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
-import { JobAssignments } from "@/components/jobs/JobAssignments";
+import { EditJobDialog } from "@/components/jobs/EditJobDialog";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
+import { JobCard } from "@/components/jobs/JobCard";
 
 const Dashboard = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [timeSpan, setTimeSpan] = useState<string>("1week");
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   
   const { data: jobs, isLoading } = useJobs();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const getTimeSpanEndDate = () => {
     const today = new Date();
@@ -58,29 +66,37 @@ const Dashboard = () => {
     setIsAssignmentDialogOpen(true);
   };
 
-  const renderJobCards = (jobs: any[]) => {
-    return jobs.map(job => (
-      <div
-        key={job.id}
-        className="mb-4 p-4 rounded-lg shadow-sm cursor-pointer hover:bg-accent/50 transition-colors"
-        style={{
-          borderLeft: `4px solid ${job.color || '#7E69AB'}`,
-          backgroundColor: `${job.color}15` || '#7E69AB15'
-        }}
-        onClick={() => handleJobClick(job.id, job.job_departments[0]?.department || "sound")}
-      >
-        <h4 className="font-medium">{job.title}</h4>
-        <p className="text-sm text-muted-foreground">
-          {format(new Date(job.start_time), 'MMM dd, HH:mm')}
-        </p>
-        {job.location?.name && (
-          <p className="text-sm text-muted-foreground mt-1">
-            📍 {job.location.name}
-          </p>
-        )}
-        <JobAssignments jobId={job.id} department={job.job_departments[0]?.department} />
-      </div>
-    ));
+  const handleEditClick = (job: any) => {
+    setSelectedJob(job);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = async (jobId: string) => {
+    if (!window.confirm("Are you sure you want to delete this job?")) return;
+
+    console.log("Deleting job:", jobId);
+    try {
+      const { error } = await supabase
+        .from("jobs")
+        .delete()
+        .eq("id", jobId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Job deleted successfully",
+        description: "The job has been removed.",
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    } catch (error: any) {
+      console.error("Error deleting job:", error);
+      toast({
+        title: "Error deleting job",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -124,27 +140,19 @@ const Dashboard = () => {
               {isLoading ? (
                 <p className="text-muted-foreground">Loading schedule...</p>
               ) : getSelectedDateJobs().length > 0 ? (
-                getSelectedDateJobs().map(job => (
-                  <div 
-                    key={job.id} 
-                    className="flex justify-between items-center p-2 border rounded cursor-pointer hover:bg-accent/50 transition-colors"
-                    style={{ 
-                      borderColor: job.color || '#7E69AB',
-                      backgroundColor: `${job.color}15` || '#7E69AB15'
-                    }}
-                    onClick={() => handleJobClick(job.id, job.job_departments[0]?.department || "sound")}
-                  >
-                    <div>
-                      <p className="font-medium">{job.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(job.start_time), 'HH:mm')} - {format(new Date(job.end_time), 'HH:mm')}
-                      </p>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {job.location?.name}
-                    </div>
-                  </div>
-                ))
+                getSelectedDateJobs().map(job => {
+                  const department = job.job_departments[0]?.department || "sound";
+                  return (
+                    <JobCard
+                      key={job.id}
+                      job={job}
+                      onEditClick={handleEditClick}
+                      onDeleteClick={handleDeleteClick}
+                      onJobClick={(jobId) => handleJobClick(jobId, department)}
+                      department={department}
+                    />
+                  );
+                })
               ) : (
                 <p className="text-muted-foreground">No events scheduled for this date</p>
               )}
@@ -162,7 +170,16 @@ const Dashboard = () => {
             {isLoading ? (
               <p className="text-muted-foreground">Loading...</p>
             ) : (
-              renderJobCards(getDepartmentJobs("sound"))
+              getDepartmentJobs("sound").map(job => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onEditClick={handleEditClick}
+                  onDeleteClick={handleDeleteClick}
+                  onJobClick={(jobId) => handleJobClick(jobId, "sound")}
+                  department="sound"
+                />
+              ))
             )}
           </CardContent>
         </Card>
@@ -175,7 +192,16 @@ const Dashboard = () => {
             {isLoading ? (
               <p className="text-muted-foreground">Loading...</p>
             ) : (
-              renderJobCards(getDepartmentJobs("lights"))
+              getDepartmentJobs("lights").map(job => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onEditClick={handleEditClick}
+                  onDeleteClick={handleDeleteClick}
+                  onJobClick={(jobId) => handleJobClick(jobId, "lights")}
+                  department="lights"
+                />
+              ))
             )}
           </CardContent>
         </Card>
@@ -188,7 +214,16 @@ const Dashboard = () => {
             {isLoading ? (
               <p className="text-muted-foreground">Loading...</p>
             ) : (
-              renderJobCards(getDepartmentJobs("video"))
+              getDepartmentJobs("video").map(job => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onEditClick={handleEditClick}
+                  onDeleteClick={handleDeleteClick}
+                  onJobClick={(jobId) => handleJobClick(jobId, "video")}
+                  department="video"
+                />
+              ))
             )}
           </CardContent>
         </Card>
@@ -200,6 +235,14 @@ const Dashboard = () => {
           onOpenChange={setIsAssignmentDialogOpen}
           jobId={selectedJobId}
           department={selectedDepartment}
+        />
+      )}
+
+      {selectedJob && (
+        <EditJobDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          job={selectedJob}
         />
       )}
     </div>
