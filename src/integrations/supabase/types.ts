@@ -85,6 +85,7 @@ export type Database = {
           description: string | null
           end_time: string
           id: string
+          job_type: Database["public"]["Enums"]["job_type"]
           location_id: string | null
           start_time: string
           status: Database["public"]["Enums"]["job_status"] | null
@@ -98,6 +99,7 @@ export type Database = {
           description?: string | null
           end_time: string
           id?: string
+          job_type?: Database["public"]["Enums"]["job_type"]
           location_id?: string | null
           start_time: string
           status?: Database["public"]["Enums"]["job_status"] | null
@@ -111,6 +113,7 @@ export type Database = {
           description?: string | null
           end_time?: string
           id?: string
+          job_type?: Database["public"]["Enums"]["job_type"]
           location_id?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["job_status"] | null
@@ -287,6 +290,7 @@ export type Database = {
     Enums: {
       department: "sound" | "lights" | "video"
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
+      job_type: "single" | "tour"
       user_role: "admin" | "user"
     }
     CompositeTypes: {
