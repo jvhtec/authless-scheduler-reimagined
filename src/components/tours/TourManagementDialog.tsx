@@ -74,37 +74,52 @@ export const TourManagementDialog = ({
         if (jobsError) throw jobsError;
 
         if (jobs) {
+          console.log("Deleting job assignments...");
           // Delete job assignments for tour date jobs
-          await supabase
+          const { error: assignmentsError } = await supabase
             .from("job_assignments")
             .delete()
             .in("job_id", jobs.map(j => j.id));
 
+          if (assignmentsError) throw assignmentsError;
+
+          console.log("Deleting job departments...");
           // Delete job departments for tour date jobs
-          await supabase
+          const { error: departmentsError } = await supabase
             .from("job_departments")
             .delete()
             .in("job_id", jobs.map(j => j.id));
 
+          if (departmentsError) throw departmentsError;
+
+          console.log("Deleting jobs...");
           // Delete tour date jobs
-          await supabase
+          const { error: jobsDeleteError } = await supabase
             .from("jobs")
             .delete()
             .in("id", jobs.map(j => j.id));
+
+          if (jobsDeleteError) throw jobsDeleteError;
         }
       }
 
+      console.log("Deleting tour dates...");
       // Delete tour dates
-      await supabase
+      const { error: tourDatesDeleteError } = await supabase
         .from("tour_dates")
         .delete()
         .eq("tour_id", tour.id);
 
+      if (tourDatesDeleteError) throw tourDatesDeleteError;
+
+      console.log("Deleting tour...");
       // Delete tour
-      await supabase
+      const { error: tourDeleteError } = await supabase
         .from("tours")
         .delete()
         .eq("id", tour.id);
+
+      if (tourDeleteError) throw tourDeleteError;
 
       await queryClient.invalidateQueries({ queryKey: ["tours"] });
       onOpenChange(false);

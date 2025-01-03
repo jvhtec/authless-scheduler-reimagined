@@ -19,10 +19,9 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
   const { data: tours, isLoading } = useQuery({
-    queryKey: ["tours", new Date().getFullYear()],
+    queryKey: ["tours"],
     queryFn: async () => {
-      const startOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
-      const endOfYear = new Date(new Date().getFullYear(), 11, 31).toISOString();
+      console.log("Fetching tours data...");
       
       // First get all tours
       const { data: tours, error: toursError } = await supabase
@@ -30,70 +29,55 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         .select(`
           id,
           name,
-          description
-        `);
-
-      if (toursError) throw toursError;
-
-      // Then get all tour dates for these tours
-      const { data: tourDates, error: datesError } = await supabase
-        .from("tour_dates")
-        .select(`
-          id,
-          date,
-          tour_id,
-          location:locations(name)
+          description,
+          created_at,
+          tour_dates (
+            id,
+            date,
+            location:locations(name)
+          ),
+          jobs:jobs!tour_dates(
+            id,
+            color,
+            start_time,
+            end_time
+          )
         `)
-        .in('tour_id', tours.map(t => t.id))
-        .order('date');
+        .order('created_at', { ascending: false });
 
-      if (datesError) throw datesError;
+      if (toursError) {
+        console.error("Error fetching tours:", toursError);
+        throw toursError;
+      }
 
-      // Finally get the jobs associated with these tour dates
-      const { data: jobs, error: jobsError } = await supabase
-        .from("jobs")
-        .select(`
-          id,
-          title,
-          start_time,
-          end_time,
-          color,
-          tour_date_id
-        `)
-        .eq('job_type', 'tour')
-        .gte('start_time', startOfYear)
-        .lte('end_time', endOfYear)
-        .order('start_time');
+      console.log("Tours data:", tours);
 
-      if (jobsError) throw jobsError;
-
-      // Combine the data
+      // Transform the data to match the expected format
       return tours.map(tour => {
-        const tourDatesForTour = tourDates.filter(date => date.tour_id === tour.id);
-        const job = jobs.find(job => 
-          tourDatesForTour.some(date => date.id === job.tour_date_id)
-        );
-
+        const jobs = tour.jobs.flat();
+        const firstJob = jobs[0];
         return {
           ...tour,
           title: tour.name,
-          color: job?.color || '#7E69AB',
-          start_time: job?.start_time,
-          end_time: job?.end_time,
-          dates: tourDatesForTour
+          color: firstJob?.color || '#7E69AB',
+          start_time: firstJob?.start_time,
+          end_time: firstJob?.end_time,
+          dates: tour.tour_dates
         };
-      }).filter(tour => tour.start_time && tour.end_time); // Only return tours with jobs
+      }).filter(tour => tour.start_time && tour.end_time);
     },
   });
 
   if (isLoading) return <div>Loading tours...</div>;
 
   const handleViewDates = (tour: any) => {
+    console.log("Opening dates dialog for tour:", tour);
     setSelectedTourId(tour.id);
     setIsDatesDialogOpen(true);
   };
 
   const handleManageTour = (tour: any) => {
+    console.log("Opening manage dialog for tour:", tour);
     setSelectedTour(tour);
     setIsManageDialogOpen(true);
   };
