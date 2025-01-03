@@ -240,7 +240,7 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
             </div>
           </div>
 
-          <SimplifiedJobColorPicker value={color} onChange={setColor} />
+          <SimplifiedJobColorPicker color={color} onChange={setColor} />
 
           <Button type="submit" className="w-full">
             Create Tour
