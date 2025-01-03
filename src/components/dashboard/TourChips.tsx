@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { TourDateManagementDialog } from "../tours/TourDateManagementDialog";
 import { TourManagementDialog } from "../tours/TourManagementDialog";
 import { Calendar, Settings } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface TourChipsProps {
   onTourClick: (tourId: string) => void;
@@ -17,6 +17,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
   const [selectedTour, setSelectedTour] = useState<any>(null);
   const [isDatesDialogOpen, setIsDatesDialogOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   const { data: tours, isLoading } = useQuery({
     queryKey: ["tours"],
@@ -40,6 +41,11 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
       if (toursError) {
         console.error("Error fetching tours:", toursError);
+        toast({
+          title: "Error fetching tours",
+          description: toursError.message,
+          variant: "destructive",
+        });
         throw toursError;
       }
 
@@ -52,8 +58,6 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
     },
   });
 
-  if (isLoading) return <div>Loading tours...</div>;
-
   const handleViewDates = (tour: any) => {
     console.log("Opening dates dialog for tour:", tour);
     setSelectedTourId(tour.id);
@@ -65,6 +69,8 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
     setSelectedTour(tour);
     setIsManageDialogOpen(true);
   };
+
+  if (isLoading) return <div>Loading tours...</div>;
 
   return (
     <>

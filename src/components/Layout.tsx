@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger, SidebarFooter, SidebarSeparator } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarSeparator } from "@/components/ui/sidebar";
 import { LayoutDashboard, Music2, Lightbulb, Video, Settings as SettingsIcon, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -92,9 +92,14 @@ const Layout = ({ children }: LayoutProps) => {
           </SidebarContent>
           <SidebarFooter className="border-t border-sidebar-border">
             {session?.user && (
-              <p className="text-sm text-muted-foreground px-2">
-                Signed in as: {session.user.email}
-              </p>
+              <div className="px-2 py-2 text-center">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Signed in as:
+                </p>
+                <p className="text-sm text-muted-foreground truncate">
+                  {session.user.email}
+                </p>
+              </div>
             )}
             <Button 
               variant="ghost" 
