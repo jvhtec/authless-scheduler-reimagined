@@ -1,10 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Department } from "@/types/department";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { SimplifiedJobColorPicker } from "./SimplifiedJobColorPicker";
@@ -32,6 +31,7 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     console.log("Creating job with data:", {
       title,
       description,
@@ -39,10 +39,18 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
       endTime,
       location,
       color,
-      selectedDepartments
+      selectedDepartments,
     });
     
     try {
+      // Get the current user session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) throw sessionError;
+      if (!session?.user) {
+        throw new Error("You must be logged in to create a job");
+      }
+
       // First, create the job
       const { data: jobData, error: jobError } = await supabase
         .from('jobs')
@@ -52,6 +60,7 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
           start_time: startTime,
           end_time: endTime,
           color,
+          created_by: session.user.id // Set the created_by field
         })
         .select()
         .single();
@@ -97,9 +106,7 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
         description: "Job created successfully",
       });
 
-      onOpenChange(false);
-      
-      // Reset form
+      // Reset form and close dialog
       setTitle("");
       setDescription("");
       setStartTime("");
@@ -107,11 +114,17 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
       setLocation("");
       setColor("#7E69AB");
       setSelectedDepartments([currentDepartment]);
-    } catch (error) {
-      console.error("Error creating job:", error);
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Error creating job:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       toast({
         title: "Error",
-        description: "Failed to create job",
+        description: "Failed to create job. Please try again.",
         variant: "destructive",
       });
     }
@@ -119,12 +132,12 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Create New Job</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
+          <div>
             <Label htmlFor="title">Title</Label>
             <Input
               id="title"
@@ -133,8 +146,7 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
               required
             />
           </div>
-          
-          <div className="space-y-2">
+          <div>
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
@@ -142,30 +154,29 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="startTime">Start Time</Label>
-            <Input
-              id="startTime"
-              type="datetime-local"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="startTime">Start Time</Label>
+              <Input
+                id="startTime"
+                type="datetime-local"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="endTime">End Time</Label>
+              <Input
+                id="endTime"
+                type="datetime-local"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                required
+              />
+            </div>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="endTime">End Time</Label>
-            <Input
-              id="endTime"
-              type="datetime-local"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
+          <div>
             <Label htmlFor="location">Location</Label>
             <Input
               id="location"
@@ -173,35 +184,34 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
               onChange={(e) => setLocation(e.target.value)}
             />
           </div>
-
-          <SimplifiedJobColorPicker value={color} onChange={setColor} />
-
-          <div className="space-y-2">
+          <div>
             <Label>Departments</Label>
-            <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
               {availableDepartments.map((dept) => (
-                <div key={dept} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`dept-${dept}`}
-                    checked={selectedDepartments.includes(dept)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedDepartments([...selectedDepartments, dept]);
-                      } else {
-                        setSelectedDepartments(
-                          selectedDepartments.filter((d) => d !== dept)
-                        );
-                      }
-                    }}
-                    disabled={dept === currentDepartment}
-                  />
-                  <Label htmlFor={`dept-${dept}`}>{dept}</Label>
-                </div>
+                <Button
+                  key={dept}
+                  type="button"
+                  variant={selectedDepartments.includes(dept) ? "default" : "outline"}
+                  onClick={() => {
+                    setSelectedDepartments((prev) =>
+                      prev.includes(dept)
+                        ? prev.filter((d) => d !== dept)
+                        : [...prev, dept]
+                    );
+                  }}
+                >
+                  {dept}
+                </Button>
               ))}
             </div>
           </div>
-
-          <Button type="submit" className="w-full">Create Job</Button>
+          <SimplifiedJobColorPicker color={color} onChange={setColor} />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Create Job</Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
