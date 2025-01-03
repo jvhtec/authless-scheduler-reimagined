@@ -24,6 +24,32 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
       const startOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
       const endOfYear = new Date(new Date().getFullYear(), 11, 31).toISOString();
       
+      // First get all tours
+      const { data: tours, error: toursError } = await supabase
+        .from("tours")
+        .select(`
+          id,
+          name,
+          description
+        `);
+
+      if (toursError) throw toursError;
+
+      // Then get all tour dates for these tours
+      const { data: tourDates, error: datesError } = await supabase
+        .from("tour_dates")
+        .select(`
+          id,
+          date,
+          tour_id,
+          location:locations(name)
+        `)
+        .in('tour_id', tours.map(t => t.id))
+        .order('date');
+
+      if (datesError) throw datesError;
+
+      // Finally get the jobs associated with these tour dates
       const { data: jobs, error: jobsError } = await supabase
         .from("jobs")
         .select(`
@@ -41,25 +67,22 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
       if (jobsError) throw jobsError;
 
-      const tourIds = jobs.map(job => job.id);
+      // Combine the data
+      return tours.map(tour => {
+        const tourDatesForTour = tourDates.filter(date => date.tour_id === tour.id);
+        const job = jobs.find(job => 
+          tourDatesForTour.some(date => date.id === job.tour_date_id)
+        );
 
-      const { data: tourDates, error: datesError } = await supabase
-        .from("tour_dates")
-        .select(`
-          id,
-          date,
-          tour_id,
-          location:locations(name)
-        `)
-        .in('tour_id', tourIds)
-        .order('date');
-
-      if (datesError) throw datesError;
-
-      return jobs.map(job => ({
-        ...job,
-        dates: tourDates.filter(date => date.tour_id === job.id)
-      }));
+        return {
+          ...tour,
+          title: tour.name,
+          color: job?.color || '#7E69AB',
+          start_time: job?.start_time,
+          end_time: job?.end_time,
+          dates: tourDatesForTour
+        };
+      }).filter(tour => tour.start_time && tour.end_time); // Only return tours with jobs
     },
   });
 
