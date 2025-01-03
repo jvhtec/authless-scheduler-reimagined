@@ -50,9 +50,6 @@ const Dashboard = () => {
               <p className="text-muted-foreground">
                 Sign in to view and manage schedules
               </p>
-              <div className="flex justify-center">
-                <Button variant="outline">Create Schedule</Button>
-              </div>
             </div>
           </CardContent>
         </Card>

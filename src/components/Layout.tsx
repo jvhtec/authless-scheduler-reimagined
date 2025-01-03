@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
-import { LayoutDashboard, Music2, Lightbulb, Video, Settings as SettingsIcon, Menu } from "lucide-react";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger } from "@/components/ui/sidebar";
+import { LayoutDashboard, Music2, Lightbulb, Video, Settings as SettingsIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface LayoutProps {
@@ -64,9 +64,7 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="flex-1">
           <header className="border-b p-4 flex justify-between items-center bg-background">
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-              </Button>
+              <SidebarTrigger />
               <h1 className="text-xl font-semibold">Tech Schedule</h1>
             </div>
             <Button>Sign In</Button>

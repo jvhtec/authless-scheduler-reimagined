@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { SimplifiedJobColorPicker } from "@/components/jobs/SimplifiedJobColorPicker";
 
 interface CreateTourDialogProps {
   open: boolean;
@@ -17,6 +18,7 @@ const CreateTourDialog = ({ open, onOpenChange }: CreateTourDialogProps) => {
   const [endDate, setEndDate] = useState("");
   const [venues, setVenues] = useState("");
   const [notes, setNotes] = useState("");
+  const [color, setColor] = useState("#7E69AB");
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,7 +28,8 @@ const CreateTourDialog = ({ open, onOpenChange }: CreateTourDialogProps) => {
       startDate,
       endDate,
       venues,
-      notes
+      notes,
+      color
     });
     
     try {
@@ -43,6 +46,7 @@ const CreateTourDialog = ({ open, onOpenChange }: CreateTourDialogProps) => {
       setEndDate("");
       setVenues("");
       setNotes("");
+      setColor("#7E69AB");
     } catch (error) {
       console.error("Error creating tour:", error);
       toast({
@@ -91,6 +95,8 @@ const CreateTourDialog = ({ open, onOpenChange }: CreateTourDialogProps) => {
               required
             />
           </div>
+
+          <SimplifiedJobColorPicker value={color} onChange={setColor} />
 
           <div className="space-y-2">
             <Label htmlFor="venues">Venues</Label>
