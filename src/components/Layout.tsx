@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger } from "@/components/ui/sidebar";
-import { LayoutDashboard, Music2, Lightbulb, Video, Settings as SettingsIcon } from "lucide-react";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger, SidebarFooter, SidebarSeparator } from "@/components/ui/sidebar";
+import { LayoutDashboard, Music2, Lightbulb, Video, Settings as SettingsIcon, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -90,20 +90,35 @@ const Layout = ({ children }: LayoutProps) => {
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
+          <SidebarFooter className="border-t border-sidebar-border">
+            {session?.user && (
+              <p className="text-sm text-muted-foreground px-2">
+                Signed in as: {session.user.email}
+              </p>
+            )}
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start gap-2" 
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sign Out</span>
+            </Button>
+            <SidebarSeparator />
+            <div className="px-2 py-4">
+              <img
+                src="/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png"
+                alt="Sector Pro Logo"
+                className="h-6 w-auto dark:invert"
+              />
+            </div>
+          </SidebarFooter>
         </Sidebar>
         <div className="flex-1">
           <header className="border-b p-4 flex justify-between items-center bg-background">
             <div className="flex items-center gap-2">
               <SidebarTrigger />
               <h1 className="text-xl font-semibold">Tech Schedule</h1>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <Button variant="outline" onClick={handleSignOut}>Sign Out</Button>
-              {session?.user && (
-                <p className="text-sm text-muted-foreground">
-                  Signed in as: {session.user.email}
-                </p>
-              )}
             </div>
           </header>
           <main className="p-6">
