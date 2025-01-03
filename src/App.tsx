@@ -4,6 +4,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
+import Sound from "./pages/Sound";
+import Lights from "./pages/Lights";
+import Video from "./pages/Video";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -15,6 +20,11 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/sound" element={<Sound />} />
+          <Route path="/lights" element={<Lights />} />
+          <Route path="/video" element={<Video />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

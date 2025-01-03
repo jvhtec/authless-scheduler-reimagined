@@ -1,12 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PanelLeftOpen, PanelRightOpen } from "lucide-react";
+import { PanelLeftOpen, PanelRightOpen, LayoutDashboard, Music2, Lightbulb, Video, Settings as SettingsIcon } from "lucide-react";
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 const Index = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen flex">
@@ -22,19 +24,41 @@ const Index = () => {
             <Button
               variant="ghost"
               className="w-full justify-start text-sidebar-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent"
+              onClick={() => navigate('/dashboard')}
             >
+              <LayoutDashboard className="mr-2 h-4 w-4" />
               Dashboard
             </Button>
             <Button
               variant="ghost"
               className="w-full justify-start text-sidebar-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent"
+              onClick={() => navigate('/sound')}
             >
-              Schedule
+              <Music2 className="mr-2 h-4 w-4" />
+              Sound
             </Button>
             <Button
               variant="ghost"
               className="w-full justify-start text-sidebar-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent"
+              onClick={() => navigate('/lights')}
             >
+              <Lightbulb className="mr-2 h-4 w-4" />
+              Lights
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-sidebar-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent"
+              onClick={() => navigate('/video')}
+            >
+              <Video className="mr-2 h-4 w-4" />
+              Video
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-sidebar-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent"
+              onClick={() => navigate('/settings')}
+            >
+              <SettingsIcon className="mr-2 h-4 w-4" />
               Settings
             </Button>
           </nav>
