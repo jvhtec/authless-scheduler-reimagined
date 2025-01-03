@@ -5,6 +5,7 @@ export const useJobs = () => {
   return useQuery({
     queryKey: ["jobs"],
     queryFn: async () => {
+      console.log("Fetching jobs with departments and locations...");
       const { data, error } = await supabase
         .from("jobs")
         .select(`
@@ -14,7 +15,12 @@ export const useJobs = () => {
         `)
         .order('start_time');
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching jobs:", error);
+        throw error;
+      }
+
+      console.log("Jobs data:", data);
       return data;
     },
   });
