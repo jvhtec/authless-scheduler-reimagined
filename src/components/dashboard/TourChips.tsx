@@ -23,7 +23,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
     queryFn: async () => {
       console.log("Fetching tours data...");
       
-      // First get all tours
+      // First get all tours with their dates
       const { data: tours, error: toursError } = await supabase
         .from("tours")
         .select(`
@@ -35,12 +35,6 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
             id,
             date,
             location:locations(name)
-          ),
-          jobs:jobs!tour_dates(
-            id,
-            color,
-            start_time,
-            end_time
           )
         `)
         .order('created_at', { ascending: false });
@@ -52,19 +46,42 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
       console.log("Tours data:", tours);
 
-      // Transform the data to match the expected format
-      return tours.map(tour => {
-        const jobs = tour.jobs.flat();
-        const firstJob = jobs[0];
-        return {
-          ...tour,
-          title: tour.name,
-          color: firstJob?.color || '#7E69AB',
-          start_time: firstJob?.start_time,
-          end_time: firstJob?.end_time,
-          dates: tour.tour_dates
-        };
-      }).filter(tour => tour.start_time && tour.end_time);
+      // For each tour date, get the associated jobs
+      const toursWithJobs = await Promise.all(
+        tours.map(async (tour) => {
+          const jobPromises = tour.tour_dates.map(async (date: any) => {
+            const { data: jobs, error: jobsError } = await supabase
+              .from("jobs")
+              .select("id, color, start_time, end_time")
+              .eq("tour_date_id", date.id);
+
+            if (jobsError) {
+              console.error("Error fetching jobs for tour date:", jobsError);
+              return [];
+            }
+
+            return jobs;
+          });
+
+          const allJobs = await Promise.all(jobPromises);
+          const flattenedJobs = allJobs.flat();
+
+          // Get the first job's details for the tour chip display
+          const firstJob = flattenedJobs[0];
+
+          return {
+            ...tour,
+            title: tour.name,
+            color: firstJob?.color || '#7E69AB',
+            start_time: firstJob?.start_time,
+            end_time: firstJob?.end_time,
+            jobs: flattenedJobs
+          };
+        })
+      );
+
+      // Filter out tours without jobs
+      return toursWithJobs.filter(tour => tour.start_time && tour.end_time);
     },
   });
 
@@ -128,7 +145,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
           open={isDatesDialogOpen}
           onOpenChange={setIsDatesDialogOpen}
           tourId={selectedTourId}
-          tourDates={tours?.find(t => t.id === selectedTourId)?.dates || []}
+          tourDates={tours?.find(t => t.id === selectedTourId)?.tour_dates || []}
         />
       )}
 
