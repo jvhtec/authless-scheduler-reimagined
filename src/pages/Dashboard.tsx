@@ -5,11 +5,15 @@ import { useState } from "react";
 import { Department } from "@/types/department";
 import { useJobs } from "@/hooks/useJobs";
 import { format, addWeeks, addMonths, isAfter, isBefore } from "date-fns";
+import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
+import { JobAssignments } from "@/components/jobs/JobAssignments";
 
 const Dashboard = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [timeSpan, setTimeSpan] = useState<string>("1week");
-  const currentDepartment: Department = "sound";
+  const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   
   const { data: jobs, isLoading } = useJobs();
 
@@ -48,15 +52,22 @@ const Dashboard = () => {
     });
   };
 
+  const handleJobClick = (jobId: string, department: Department) => {
+    setSelectedJobId(jobId);
+    setSelectedDepartment(department);
+    setIsAssignmentDialogOpen(true);
+  };
+
   const renderJobCards = (jobs: any[]) => {
     return jobs.map(job => (
       <div
         key={job.id}
-        className="mb-4 p-4 rounded-lg shadow-sm"
+        className="mb-4 p-4 rounded-lg shadow-sm cursor-pointer hover:bg-accent/50 transition-colors"
         style={{
           borderLeft: `4px solid ${job.color || '#7E69AB'}`,
           backgroundColor: `${job.color}15` || '#7E69AB15'
         }}
+        onClick={() => handleJobClick(job.id, job.job_departments[0]?.department || "sound")}
       >
         <h4 className="font-medium">{job.title}</h4>
         <p className="text-sm text-muted-foreground">
@@ -67,6 +78,7 @@ const Dashboard = () => {
             📍 {job.location.name}
           </p>
         )}
+        <JobAssignments jobId={job.id} department={job.job_departments[0]?.department} />
       </div>
     ));
   };
@@ -115,11 +127,12 @@ const Dashboard = () => {
                 getSelectedDateJobs().map(job => (
                   <div 
                     key={job.id} 
-                    className="flex justify-between items-center p-2 border rounded"
+                    className="flex justify-between items-center p-2 border rounded cursor-pointer hover:bg-accent/50 transition-colors"
                     style={{ 
                       borderColor: job.color || '#7E69AB',
                       backgroundColor: `${job.color}15` || '#7E69AB15'
                     }}
+                    onClick={() => handleJobClick(job.id, job.job_departments[0]?.department || "sound")}
                   >
                     <div>
                       <p className="font-medium">{job.title}</p>
@@ -180,6 +193,15 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {selectedJobId && (
+        <JobAssignmentDialog
+          open={isAssignmentDialogOpen}
+          onOpenChange={setIsAssignmentDialogOpen}
+          jobId={selectedJobId}
+          department={selectedDepartment}
+        />
+      )}
     </div>
   );
 };

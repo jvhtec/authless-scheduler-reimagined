@@ -6,10 +6,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useJobs } from "@/hooks/useJobs";
 import { format } from "date-fns";
+import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
 
 const Video = () => {
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
   const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
+  const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const currentDepartment = "video";
   
@@ -29,6 +32,11 @@ const Video = () => {
       const jobDate = format(new Date(job.start_time), 'yyyy-MM-dd');
       return jobDate === selectedDate;
     });
+  };
+
+  const handleJobClick = (jobId: string) => {
+    setSelectedJobId(jobId);
+    setIsAssignmentDialogOpen(true);
   };
 
   return (
@@ -72,11 +80,12 @@ const Video = () => {
                 getSelectedDateJobs().map(job => (
                   <div 
                     key={job.id} 
-                    className="flex justify-between items-center p-2 border rounded"
+                    className="flex justify-between items-center p-2 border rounded cursor-pointer hover:bg-accent/50 transition-colors"
                     style={{ 
                       borderColor: job.color || '#7E69AB',
                       backgroundColor: `${job.color}15` || '#7E69AB15'
                     }}
+                    onClick={() => handleJobClick(job.id)}
                   >
                     <div>
                       <p className="font-medium">{job.title}</p>
@@ -108,6 +117,15 @@ const Video = () => {
         onOpenChange={setIsTourDialogOpen}
         currentDepartment={currentDepartment}
       />
+
+      {selectedJobId && (
+        <JobAssignmentDialog
+          open={isAssignmentDialogOpen}
+          onOpenChange={setIsAssignmentDialogOpen}
+          jobId={selectedJobId}
+          department={currentDepartment}
+        />
+      )}
     </div>
   );
 };
