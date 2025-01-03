@@ -1,6 +1,3 @@
-import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { Department } from "@/types/department";
 import { useJobs } from "@/hooks/useJobs";
@@ -11,6 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { JobCard } from "@/components/jobs/JobCard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { CalendarSection } from "@/components/dashboard/CalendarSection";
+import { TourChips } from "@/components/dashboard/TourChips";
 
 const Dashboard = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -28,16 +29,11 @@ const Dashboard = () => {
   const getTimeSpanEndDate = () => {
     const today = new Date();
     switch (timeSpan) {
-      case "1week":
-        return addWeeks(today, 1);
-      case "2weeks":
-        return addWeeks(today, 2);
-      case "1month":
-        return addMonths(today, 1);
-      case "3months":
-        return addMonths(today, 3);
-      default:
-        return addWeeks(today, 1);
+      case "1week": return addWeeks(today, 1);
+      case "2weeks": return addWeeks(today, 2);
+      case "1month": return addMonths(today, 1);
+      case "3months": return addMonths(today, 3);
+      default: return addWeeks(today, 1);
     }
   };
 
@@ -118,35 +114,22 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <Select value={timeSpan} onValueChange={setTimeSpan}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select time span" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1week">Next Week</SelectItem>
-            <SelectItem value="2weeks">Next 2 Weeks</SelectItem>
-            <SelectItem value="1month">Next Month</SelectItem>
-            <SelectItem value="3months">Next 3 Months</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Tours {new Date().getFullYear()}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TourChips onTourClick={(tourId) => {
+            const tour = jobs?.find(job => job.id === tourId);
+            if (tour) handleEditClick(tour);
+          }} />
+        </CardContent>
+      </Card>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Calendar</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={setDate}
-              className="rounded-md border"
-            />
-          </CardContent>
-        </Card>
+        <CalendarSection date={date} onDateSelect={setDate} />
 
         <Card>
           <CardHeader>
@@ -179,71 +162,29 @@ const Dashboard = () => {
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Sound Schedule</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <p className="text-muted-foreground">Loading...</p>
-            ) : (
-              getDepartmentJobs("sound").map(job => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  onEditClick={handleEditClick}
-                  onDeleteClick={handleDeleteClick}
-                  onJobClick={(jobId) => handleJobClick(jobId, "sound")}
-                  department="sound"
-                />
-              ))
-            )}
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Lights Schedule</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <p className="text-muted-foreground">Loading...</p>
-            ) : (
-              getDepartmentJobs("lights").map(job => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  onEditClick={handleEditClick}
-                  onDeleteClick={handleDeleteClick}
-                  onJobClick={(jobId) => handleJobClick(jobId, "lights")}
-                  department="lights"
-                />
-              ))
-            )}
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Video Schedule</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <p className="text-muted-foreground">Loading...</p>
-            ) : (
-              getDepartmentJobs("video").map(job => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  onEditClick={handleEditClick}
-                  onDeleteClick={handleDeleteClick}
-                  onJobClick={(jobId) => handleJobClick(jobId, "video")}
-                  department="video"
-                />
-              ))
-            )}
-          </CardContent>
-        </Card>
+        {["sound", "lights", "video"].map((dept) => (
+          <Card key={dept}>
+            <CardHeader>
+              <CardTitle>{dept.charAt(0).toUpperCase() + dept.slice(1)} Schedule</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <p className="text-muted-foreground">Loading...</p>
+              ) : (
+                getDepartmentJobs(dept as Department).map(job => (
+                  <JobCard
+                    key={job.id}
+                    job={job}
+                    onEditClick={handleEditClick}
+                    onDeleteClick={handleDeleteClick}
+                    onJobClick={(jobId) => handleJobClick(jobId, dept as Department)}
+                    department={dept as Department}
+                  />
+                ))
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {selectedJobId && (
