@@ -7,8 +7,9 @@ export interface Assignment {
   sound_role: string | null;
   lights_role: string | null;
   video_role: string | null;
-  technicians?: {
-    name: string;
+  profiles: {
+    first_name: string;
+    last_name: string;
     email: string;
     department: string;
   };

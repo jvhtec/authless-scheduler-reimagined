@@ -8,13 +8,6 @@ interface JobAssignmentsProps {
   department?: Department;
 }
 
-interface TechnicianData {
-  first_name: string;
-  last_name: string;
-  email: string;
-  department: Department;
-}
-
 export const JobAssignments = ({ jobId, department }: JobAssignmentsProps) => {
   const { data: assignments } = useQuery({
     queryKey: ["job-assignments", jobId],
@@ -24,7 +17,7 @@ export const JobAssignments = ({ jobId, department }: JobAssignmentsProps) => {
         .from("job_assignments")
         .select(`
           *,
-          technician:profiles (
+          profiles (
             first_name,
             last_name,
             email,
@@ -50,8 +43,7 @@ export const JobAssignments = ({ jobId, department }: JobAssignmentsProps) => {
   // Filter assignments based on department if specified
   const filteredAssignments = department
     ? assignments.filter(assignment => {
-        const technicianData = assignment.technician as unknown as TechnicianData;
-        return technicianData.department === department;
+        return assignment.profiles.department === department;
       })
     : assignments;
 
@@ -63,7 +55,6 @@ export const JobAssignments = ({ jobId, department }: JobAssignmentsProps) => {
       <div className="space-y-1">
         {filteredAssignments.map((assignment) => {
           const role = assignment.sound_role || assignment.lights_role || assignment.video_role;
-          const technicianData = assignment.technician as unknown as TechnicianData;
           
           return (
             <div
@@ -71,7 +62,7 @@ export const JobAssignments = ({ jobId, department }: JobAssignmentsProps) => {
               className="text-sm text-muted-foreground flex items-center gap-1"
             >
               <span className="font-medium">
-                {technicianData.first_name} {technicianData.last_name}
+                {assignment.profiles.first_name} {assignment.profiles.last_name}
               </span>
               <span className="text-xs">({role})</span>
             </div>
