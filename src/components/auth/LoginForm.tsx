@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface LoginFormProps {
   onShowSignUp: () => void;
@@ -15,6 +16,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -23,15 +25,35 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log("Attempting login with email:", formData.email);
+      
+      const { data: { user }, error } = await supabase.auth.signInWithPassword({
         email: formData.email.toLowerCase(),
         password: formData.password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Login error:", error);
+        if (error.message.includes("Email not confirmed")) {
+          setError("Please check your email to verify your account before logging in.");
+        } else if (error.message.includes("Invalid login credentials")) {
+          setError("Invalid email or password. Please try again.");
+        } else {
+          setError(error.message);
+        }
+        return;
+      }
 
+      if (!user) {
+        setError("No user found with these credentials.");
+        return;
+      }
+
+      console.log("Login successful for user:", user.email);
+      
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in.",
@@ -39,11 +61,8 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
 
       navigate("/dashboard");
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "An error occurred during login.",
-        variant: "destructive",
-      });
+      console.error("Unexpected error during login:", error);
+      setError(error.message || "An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -51,6 +70,12 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
 
   return (
     <form onSubmit={handleLogin} className="space-y-4">
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input
