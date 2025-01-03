@@ -1,40 +1,37 @@
 import { Button } from "@/components/ui/button";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger } from "@/components/ui/sidebar";
 import { LayoutDashboard, Music2, Lightbulb, Video, Settings as SettingsIcon } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { Dialog, DialogContent } from "./ui/dialog";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout = ({ children }: LayoutProps) => {
+  const navigate = useNavigate();
   const [session, setSession] = useState<any>(null);
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (!session) {
+        navigate('/auth');
+      }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) setShowAuthDialog(false);
+      if (!session) {
+        navigate('/auth');
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setSession(null);
-  };
+  }, [navigate]);
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -95,27 +92,12 @@ const Layout = ({ children }: LayoutProps) => {
               <SidebarTrigger />
               <h1 className="text-xl font-semibold">Tech Schedule</h1>
             </div>
-            {session ? (
-              <Button onClick={handleSignOut}>Sign Out</Button>
-            ) : (
-              <Button onClick={() => setShowAuthDialog(true)}>Sign In</Button>
-            )}
           </header>
           <main className="p-6">
             {children}
           </main>
         </div>
       </div>
-
-      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <Auth
-            supabaseClient={supabase}
-            appearance={{ theme: ThemeSupa }}
-            providers={[]}
-          />
-        </DialogContent>
-      </Dialog>
     </SidebarProvider>
   );
 };
