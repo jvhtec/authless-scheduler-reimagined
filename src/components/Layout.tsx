@@ -33,6 +33,11 @@ const Layout = ({ children }: LayoutProps) => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+  };
+
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full">
@@ -92,6 +97,7 @@ const Layout = ({ children }: LayoutProps) => {
               <SidebarTrigger />
               <h1 className="text-xl font-semibold">Tech Schedule</h1>
             </div>
+            <Button variant="outline" onClick={handleSignOut}>Sign Out</Button>
           </header>
           <main className="p-6">
             {children}
