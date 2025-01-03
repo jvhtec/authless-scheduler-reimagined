@@ -61,6 +61,19 @@ export const SignUpForm = ({ onBack }: { onBack: () => void }) => {
         throw authError;
       }
 
+      // If this is the super user, update their role to admin
+      if (formData.email.toLowerCase() === 'sonido@sector-pro.com') {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ role: 'admin' })
+          .eq('email', formData.email.toLowerCase());
+
+        if (updateError) {
+          console.error("Error updating role:", updateError);
+          throw updateError;
+        }
+      }
+
       console.log("Signup completed successfully");
 
       toast({
