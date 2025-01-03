@@ -23,7 +23,6 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
     queryFn: async () => {
       console.log("Fetching tours data...");
       
-      // First get all tours with their dates
       const { data: tours, error: toursError } = await supabase
         .from("tours")
         .select(`
@@ -45,42 +44,11 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
       }
 
       console.log("Tours data:", tours);
-
-      // For each tour date, get the associated jobs
-      const toursWithJobs = await Promise.all(
-        tours.map(async (tour) => {
-          const jobPromises = tour.tour_dates.map(async (date: any) => {
-            const { data: jobs, error: jobsError } = await supabase
-              .from("jobs")
-              .select("id, color, start_time, end_time")
-              .eq("tour_date_id", date.id);
-
-            if (jobsError) {
-              console.error("Error fetching jobs for tour date:", jobsError);
-              return [];
-            }
-
-            return jobs || [];
-          });
-
-          const allJobs = await Promise.all(jobPromises);
-          const flattenedJobs = allJobs.flat();
-
-          // Get the first job's details for the tour chip display
-          const firstJob = flattenedJobs[0];
-
-          return {
-            ...tour,
-            title: tour.name,
-            color: firstJob?.color || '#7E69AB',
-            start_time: firstJob?.start_time || new Date().toISOString(),
-            end_time: firstJob?.end_time || new Date().toISOString(),
-            jobs: flattenedJobs
-          };
-        })
-      );
-
-      return toursWithJobs;
+      return tours?.map(tour => ({
+        ...tour,
+        title: tour.name,
+        color: '#7E69AB', // Default color for consistency
+      })) || [];
     },
   });
 
@@ -117,7 +85,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
                 backgroundColor: `${tour.color}10`
               }}
             >
-              {tour.title} ({format(new Date(tour.start_time), 'MMM yyyy')})
+              {tour.title}
             </Button>
             <Button
               variant="ghost"

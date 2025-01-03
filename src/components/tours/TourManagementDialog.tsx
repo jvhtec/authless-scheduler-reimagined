@@ -163,7 +163,7 @@ export const TourManagementDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Manage Tour</DialogTitle>
+          <DialogTitle>Manage Tour: {tour.name}</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6">
