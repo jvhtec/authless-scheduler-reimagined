@@ -64,10 +64,38 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
   const createJobWithDepartments = async (jobData: any) => {
     console.log("Creating job with data:", jobData);
     
-    // First create the job
+    // First, if there's a location, create or get its ID
+    let locationId = null;
+    if (jobData.location) {
+      const { data: locationData, error: locationError } = await supabase
+        .from("locations")
+        .insert({ name: jobData.location })
+        .select()
+        .single();
+
+      if (locationError) {
+        // If insert fails, try to find existing location
+        const { data: existingLocation, error: findError } = await supabase
+          .from("locations")
+          .select()
+          .eq("name", jobData.location)
+          .single();
+
+        if (findError) throw findError;
+        locationId = existingLocation.id;
+      } else {
+        locationId = locationData.id;
+      }
+    }
+
+    // Create the job with location_id instead of location
     const { data: job, error: jobError } = await supabase
       .from("jobs")
-      .insert(jobData)
+      .insert({
+        ...jobData,
+        location_id: locationId,
+        location: undefined // Remove the location field
+      })
       .select()
       .single();
 
@@ -136,18 +164,6 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
         color,
       });
 
-      // Handle locations
-      const unique_locations = [...new Set(validDates.map((d) => d.location))];
-      for (const location of unique_locations) {
-        if (location) {
-          await supabase
-            .from("locations")
-            .insert({ name: location })
-            .select()
-            .maybeSingle();
-        }
-      }
-
       // Create individual tour dates
       for (const date of validDates) {
         await createJobWithDepartments({
@@ -176,7 +192,7 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
       setDates([{ date: "", location: "" }]);
       setColor("#7E69AB");
       setDepartments([currentDepartment]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating tour:", error);
       toast({
         title: "Error",
