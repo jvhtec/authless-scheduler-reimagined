@@ -2,8 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Sound from "./pages/Sound";
 import Lights from "./pages/Lights";
@@ -19,12 +19,12 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/sound" element={<Sound />} />
-          <Route path="/lights" element={<Lights />} />
-          <Route path="/video" element={<Video />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
+          <Route path="/sound" element={<Layout><Sound /></Layout>} />
+          <Route path="/lights" element={<Layout><Lights /></Layout>} />
+          <Route path="/video" element={<Layout><Video /></Layout>} />
+          <Route path="/settings" element={<Layout><Settings /></Layout>} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
