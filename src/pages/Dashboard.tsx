@@ -5,12 +5,32 @@ import { useState } from "react";
 import CreateJobDialog from "@/components/jobs/CreateJobDialog";
 import CreateTourDialog from "@/components/tours/CreateTourDialog";
 import { Department } from "@/types/department";
+import { useJobs } from "@/hooks/useJobs";
+import { format } from "date-fns";
 
 const Dashboard = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
   const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
-  const currentDepartment: Department = "sound"; // This would typically come from user context
+  const currentDepartment: Department = "sound";
+  
+  const { data: jobs, isLoading } = useJobs();
+
+  const getDepartmentJobs = (department: Department) => {
+    if (!jobs) return [];
+    return jobs.filter(job => 
+      job.job_departments.some(dept => dept.department === department)
+    );
+  };
+
+  const getSelectedDateJobs = () => {
+    if (!date || !jobs) return [];
+    const selectedDate = format(date, 'yyyy-MM-dd');
+    return jobs.filter(job => {
+      const jobDate = format(new Date(job.start_time), 'yyyy-MM-dd');
+      return jobDate === selectedDate;
+    });
+  };
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -47,9 +67,25 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <p className="text-muted-foreground">
-                Sign in to view and manage schedules
-              </p>
+              {isLoading ? (
+                <p className="text-muted-foreground">Loading schedule...</p>
+              ) : getSelectedDateJobs().length > 0 ? (
+                getSelectedDateJobs().map(job => (
+                  <div key={job.id} className="flex justify-between items-center p-2 border rounded">
+                    <div>
+                      <p className="font-medium">{job.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(job.start_time), 'HH:mm')} - {format(new Date(job.end_time), 'HH:mm')}
+                      </p>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {job.location?.name}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground">No events scheduled for this date</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -61,7 +97,9 @@ const Dashboard = () => {
             <CardTitle>Sound Schedule</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">3 upcoming events</p>
+            <p className="text-muted-foreground">
+              {isLoading ? "Loading..." : `${getDepartmentJobs("sound").length} upcoming events`}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -69,7 +107,9 @@ const Dashboard = () => {
             <CardTitle>Lights Schedule</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">2 upcoming events</p>
+            <p className="text-muted-foreground">
+              {isLoading ? "Loading..." : `${getDepartmentJobs("lights").length} upcoming events`}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -77,7 +117,9 @@ const Dashboard = () => {
             <CardTitle>Video Schedule</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">1 upcoming event</p>
+            <p className="text-muted-foreground">
+              {isLoading ? "Loading..." : `${getDepartmentJobs("video").length} upcoming events`}
+            </p>
           </CardContent>
         </Card>
       </div>

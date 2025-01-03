@@ -9,6 +9,122 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      job_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          job_id: string
+          technician_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          job_id: string
+          technician_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          job_id?: string
+          technician_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_assignments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_assignments_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_departments: {
+        Row: {
+          department: Database["public"]["Enums"]["department"]
+          job_id: string
+        }
+        Insert: {
+          department: Database["public"]["Enums"]["department"]
+          job_id: string
+        }
+        Update: {
+          department?: Database["public"]["Enums"]["department"]
+          job_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_departments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_time: string
+          id: string
+          location_id: string | null
+          start_time: string
+          status: Database["public"]["Enums"]["job_status"] | null
+          title: string
+          tour_date_id: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_time: string
+          id?: string
+          location_id?: string | null
+          start_time: string
+          status?: Database["public"]["Enums"]["job_status"] | null
+          title: string
+          tour_date_id?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_time?: string
+          id?: string
+          location_id?: string | null
+          start_time?: string
+          status?: Database["public"]["Enums"]["job_status"] | null
+          title?: string
+          tour_date_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_tour_date_id_fkey"
+            columns: ["tour_date_id"]
+            isOneToOne: false
+            referencedRelation: "tour_dates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           created_at: string
@@ -27,6 +143,116 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+        }
+        Relationships: []
+      }
+      technician_departments: {
+        Row: {
+          department: Database["public"]["Enums"]["department"]
+          technician_id: string
+        }
+        Insert: {
+          department: Database["public"]["Enums"]["department"]
+          technician_id: string
+        }
+        Update: {
+          department?: Database["public"]["Enums"]["department"]
+          technician_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technician_departments_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tour_dates: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          location_id: string | null
+          tour_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          location_id?: string | null
+          tour_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          location_id?: string | null
+          tour_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_dates_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_dates_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tours: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -35,7 +261,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      department: "sound" | "lights" | "video"
+      job_status: "pending" | "in_progress" | "completed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
