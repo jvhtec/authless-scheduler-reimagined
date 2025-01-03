@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { SimplifiedJobColorPicker } from "./SimplifiedJobColorPicker";
+import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface CreateJobDialogProps {
   open: boolean;
@@ -24,6 +26,7 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
   const [color, setColor] = useState("#7E69AB");
   const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([currentDepartment]);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const availableDepartments: Department[] = ["sound", "lights", "video"];
 
@@ -40,6 +43,55 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
     });
     
     try {
+      // First, create the job
+      const { data: jobData, error: jobError } = await supabase
+        .from('jobs')
+        .insert({
+          title,
+          description,
+          start_time: startTime,
+          end_time: endTime,
+          color,
+        })
+        .select()
+        .single();
+
+      if (jobError) throw jobError;
+
+      // Then, create the job departments
+      const jobDepartments = selectedDepartments.map(department => ({
+        job_id: jobData.id,
+        department,
+      }));
+
+      const { error: deptError } = await supabase
+        .from('job_departments')
+        .insert(jobDepartments);
+
+      if (deptError) throw deptError;
+
+      // If location is provided, first create or find the location
+      if (location) {
+        const { data: locationData, error: locationError } = await supabase
+          .from('locations')
+          .insert({ name: location })
+          .select()
+          .single();
+
+        if (locationError) throw locationError;
+
+        // Update the job with the location_id
+        const { error: updateError } = await supabase
+          .from('jobs')
+          .update({ location_id: locationData.id })
+          .eq('id', jobData.id);
+
+        if (updateError) throw updateError;
+      }
+
+      // Invalidate the jobs query to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+
       toast({
         title: "Success",
         description: "Job created successfully",
