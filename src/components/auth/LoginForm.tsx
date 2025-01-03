@@ -30,29 +30,29 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
     try {
       console.log("Attempting login with email:", formData.email);
       
-      const { data: { user }, error } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email.toLowerCase(),
         password: formData.password,
       });
 
-      if (error) {
-        console.error("Login error:", error);
-        if (error.message.includes("Email not confirmed")) {
+      if (signInError) {
+        console.error("Login error:", signInError);
+        if (signInError.message.includes("Email not confirmed")) {
           setError("Please check your email to verify your account before logging in.");
-        } else if (error.message.includes("Invalid login credentials")) {
+        } else if (signInError.message.includes("Invalid login credentials")) {
           setError("Invalid email or password. Please try again.");
         } else {
-          setError(error.message);
+          setError(signInError.message);
         }
         return;
       }
 
-      if (!user) {
+      if (!data.user) {
         setError("No user found with these credentials.");
         return;
       }
 
-      console.log("Login successful for user:", user.email);
+      console.log("Login successful for user:", data.user.email);
       
       toast({
         title: "Welcome back!",
@@ -62,7 +62,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
       navigate("/dashboard");
     } catch (error: any) {
       console.error("Unexpected error during login:", error);
-      setError(error.message || "An unexpected error occurred. Please try again.");
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
