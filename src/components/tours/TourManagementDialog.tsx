@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { SimplifiedJobColorPicker } from "../jobs/SimplifiedJobColorPicker";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Calendar, Palette, Trash2 } from "lucide-react";
+import { Palette, Trash2 } from "lucide-react";
 
 interface TourManagementDialogProps {
   open: boolean;
@@ -23,23 +23,22 @@ export const TourManagementDialog = ({
 
   const handleColorChange = async (color: string) => {
     try {
-      // Update tour job color
-      await supabase
-        .from("jobs")
-        .update({ color })
-        .eq("id", tour.id);
-
-      // Update all tour date jobs color
-      const { data: tourDates } = await supabase
+      console.log("Updating color for tour:", tour);
+      
+      // Get all tour dates for this tour
+      const { data: tourDates, error: tourDatesError } = await supabase
         .from("tour_dates")
         .select("id")
-        .eq("tour_id", tour.tour_id);
+        .eq("tour_id", tour.id);
+
+      if (tourDatesError) throw tourDatesError;
 
       if (tourDates) {
+        // Update all jobs associated with these tour dates
         await supabase
           .from("jobs")
           .update({ color })
-          .eq("tour_date_id", tourDates.map(td => td.id));
+          .in("tour_date_id", tourDates.map(td => td.id));
       }
 
       await queryClient.invalidateQueries({ queryKey: ["tours"] });
@@ -55,61 +54,57 @@ export const TourManagementDialog = ({
 
   const handleDeleteTour = async () => {
     try {
-      // Delete all tour date jobs
-      const { data: tourDates } = await supabase
+      console.log("Deleting tour:", tour);
+
+      // Get all tour dates for this tour
+      const { data: tourDates, error: tourDatesError } = await supabase
         .from("tour_dates")
         .select("id")
-        .eq("tour_id", tour.tour_id);
+        .eq("tour_id", tour.id);
+
+      if (tourDatesError) throw tourDatesError;
 
       if (tourDates) {
-        // Delete job assignments for tour date jobs
-        await supabase
-          .from("job_assignments")
-          .delete()
-          .in("job_id", tourDates.map(td => td.id));
-
-        // Delete job departments for tour date jobs
-        await supabase
-          .from("job_departments")
-          .delete()
-          .in("job_id", tourDates.map(td => td.id));
-
-        // Delete tour date jobs
-        await supabase
+        // Get all jobs associated with these tour dates
+        const { data: jobs, error: jobsError } = await supabase
           .from("jobs")
-          .delete()
+          .select("id")
           .in("tour_date_id", tourDates.map(td => td.id));
+
+        if (jobsError) throw jobsError;
+
+        if (jobs) {
+          // Delete job assignments for tour date jobs
+          await supabase
+            .from("job_assignments")
+            .delete()
+            .in("job_id", jobs.map(j => j.id));
+
+          // Delete job departments for tour date jobs
+          await supabase
+            .from("job_departments")
+            .delete()
+            .in("job_id", jobs.map(j => j.id));
+
+          // Delete tour date jobs
+          await supabase
+            .from("jobs")
+            .delete()
+            .in("id", jobs.map(j => j.id));
+        }
       }
 
       // Delete tour dates
       await supabase
         .from("tour_dates")
         .delete()
-        .eq("tour_id", tour.tour_id);
-
-      // Delete main tour job assignments
-      await supabase
-        .from("job_assignments")
-        .delete()
-        .eq("job_id", tour.id);
-
-      // Delete main tour job departments
-      await supabase
-        .from("job_departments")
-        .delete()
-        .eq("job_id", tour.id);
-
-      // Delete main tour job
-      await supabase
-        .from("jobs")
-        .delete()
-        .eq("id", tour.id);
+        .eq("tour_id", tour.id);
 
       // Delete tour
       await supabase
         .from("tours")
         .delete()
-        .eq("id", tour.tour_id);
+        .eq("id", tour.id);
 
       await queryClient.invalidateQueries({ queryKey: ["tours"] });
       onOpenChange(false);
