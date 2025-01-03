@@ -54,7 +54,7 @@ export const TourManagementDialog = ({
 
   const handleDeleteTour = async () => {
     try {
-      console.log("Deleting tour:", tour);
+      console.log("Starting tour deletion process for tour:", tour.id);
 
       // Get all tour dates for this tour
       const { data: tourDates, error: tourDatesError } = await supabase
@@ -62,72 +62,98 @@ export const TourManagementDialog = ({
         .select("id")
         .eq("tour_id", tour.id);
 
-      if (tourDatesError) throw tourDatesError;
+      if (tourDatesError) {
+        console.error("Error fetching tour dates:", tourDatesError);
+        throw tourDatesError;
+      }
 
-      if (tourDates) {
+      console.log("Found tour dates:", tourDates);
+
+      if (tourDates && tourDates.length > 0) {
+        const tourDateIds = tourDates.map(td => td.id);
+
         // Get all jobs associated with these tour dates
         const { data: jobs, error: jobsError } = await supabase
           .from("jobs")
           .select("id")
-          .in("tour_date_id", tourDates.map(td => td.id));
+          .in("tour_date_id", tourDateIds);
 
-        if (jobsError) throw jobsError;
+        if (jobsError) {
+          console.error("Error fetching jobs:", jobsError);
+          throw jobsError;
+        }
 
-        if (jobs) {
-          console.log("Deleting job assignments...");
-          // Delete job assignments for tour date jobs
+        console.log("Found jobs:", jobs);
+
+        if (jobs && jobs.length > 0) {
+          const jobIds = jobs.map(j => j.id);
+
+          // Delete job assignments
           const { error: assignmentsError } = await supabase
             .from("job_assignments")
             .delete()
-            .in("job_id", jobs.map(j => j.id));
+            .in("job_id", jobIds);
 
-          if (assignmentsError) throw assignmentsError;
+          if (assignmentsError) {
+            console.error("Error deleting job assignments:", assignmentsError);
+            throw assignmentsError;
+          }
 
-          console.log("Deleting job departments...");
-          // Delete job departments for tour date jobs
+          // Delete job departments
           const { error: departmentsError } = await supabase
             .from("job_departments")
             .delete()
-            .in("job_id", jobs.map(j => j.id));
+            .in("job_id", jobIds);
 
-          if (departmentsError) throw departmentsError;
+          if (departmentsError) {
+            console.error("Error deleting job departments:", departmentsError);
+            throw departmentsError;
+          }
 
-          console.log("Deleting jobs...");
-          // Delete tour date jobs
+          // Delete jobs
           const { error: jobsDeleteError } = await supabase
             .from("jobs")
             .delete()
-            .in("id", jobs.map(j => j.id));
+            .in("id", jobIds);
 
-          if (jobsDeleteError) throw jobsDeleteError;
+          if (jobsDeleteError) {
+            console.error("Error deleting jobs:", jobsDeleteError);
+            throw jobsDeleteError;
+          }
+        }
+
+        // Delete tour dates
+        const { error: tourDatesDeleteError } = await supabase
+          .from("tour_dates")
+          .delete()
+          .eq("tour_id", tour.id);
+
+        if (tourDatesDeleteError) {
+          console.error("Error deleting tour dates:", tourDatesDeleteError);
+          throw tourDatesDeleteError;
         }
       }
 
-      console.log("Deleting tour dates...");
-      // Delete tour dates
-      const { error: tourDatesDeleteError } = await supabase
-        .from("tour_dates")
-        .delete()
-        .eq("tour_id", tour.id);
-
-      if (tourDatesDeleteError) throw tourDatesDeleteError;
-
-      console.log("Deleting tour...");
-      // Delete tour
+      // Finally delete the tour
       const { error: tourDeleteError } = await supabase
         .from("tours")
         .delete()
         .eq("id", tour.id);
 
-      if (tourDeleteError) throw tourDeleteError;
+      if (tourDeleteError) {
+        console.error("Error deleting tour:", tourDeleteError);
+        throw tourDeleteError;
+      }
 
+      console.log("Tour deletion completed successfully");
       await queryClient.invalidateQueries({ queryKey: ["tours"] });
       onOpenChange(false);
       toast({ title: "Tour deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting tour:", error);
+    } catch (error: any) {
+      console.error("Error in deletion process:", error);
       toast({
         title: "Error deleting tour",
+        description: error.message,
         variant: "destructive",
       });
     }
@@ -164,7 +190,7 @@ export const TourManagementDialog = ({
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This action cannot be undone. This will permanently delete the tour
-                  and all associated tour dates.
+                  and all associated tour dates and jobs.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

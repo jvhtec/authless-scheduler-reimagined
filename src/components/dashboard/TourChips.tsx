@@ -60,7 +60,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
               return [];
             }
 
-            return jobs;
+            return jobs || [];
           });
 
           const allJobs = await Promise.all(jobPromises);
@@ -73,15 +73,14 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
             ...tour,
             title: tour.name,
             color: firstJob?.color || '#7E69AB',
-            start_time: firstJob?.start_time,
-            end_time: firstJob?.end_time,
+            start_time: firstJob?.start_time || new Date().toISOString(),
+            end_time: firstJob?.end_time || new Date().toISOString(),
             jobs: flattenedJobs
           };
         })
       );
 
-      // Filter out tours without jobs
-      return toursWithJobs.filter(tour => tour.start_time && tour.end_time);
+      return toursWithJobs;
     },
   });
 
