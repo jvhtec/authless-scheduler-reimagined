@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Assignment } from "@/types/assignment";
 import { Department } from "@/types/department";
+import { User } from "lucide-react";
 
 interface JobAssignmentsProps {
   jobId: string;
@@ -49,26 +50,38 @@ export const JobAssignments = ({ jobId, department }: JobAssignmentsProps) => {
 
   if (!filteredAssignments.length) return null;
 
+  const getRoleForDepartment = (assignment: Assignment) => {
+    switch (department) {
+      case "sound":
+        return assignment.sound_role;
+      case "lights":
+        return assignment.lights_role;
+      case "video":
+        return assignment.video_role;
+      default:
+        return assignment.sound_role || assignment.lights_role || assignment.video_role;
+    }
+  };
+
   return (
-    <div className="mt-4">
-      <h3 className="text-sm font-medium mb-2">Current Assignments</h3>
-      <div className="space-y-1">
-        {filteredAssignments.map((assignment) => {
-          const role = assignment.sound_role || assignment.lights_role || assignment.video_role;
-          
-          return (
-            <div
-              key={assignment.id}
-              className="text-sm text-muted-foreground flex items-center gap-1"
-            >
-              <span className="font-medium">
-                {assignment.profiles.first_name} {assignment.profiles.last_name}
-              </span>
-              <span className="text-xs">({role})</span>
-            </div>
-          );
-        })}
-      </div>
+    <div className="space-y-1">
+      {filteredAssignments.map((assignment) => {
+        const role = getRoleForDepartment(assignment);
+        if (!role) return null;
+        
+        return (
+          <div
+            key={assignment.id}
+            className="flex items-center gap-2 text-sm text-muted-foreground"
+          >
+            <User className="h-4 w-4" />
+            <span className="font-medium">
+              {assignment.profiles.first_name} {assignment.profiles.last_name}
+            </span>
+            <span className="text-xs">({role})</span>
+          </div>
+        );
+      })}
     </div>
   );
 };
