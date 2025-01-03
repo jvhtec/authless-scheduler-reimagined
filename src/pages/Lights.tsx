@@ -1,7 +1,7 @@
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import CreateJobDialog from "@/components/jobs/CreateJobDialog";
 import CreateTourDialog from "@/components/tours/CreateTourDialog";
-import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useJobs } from "@/hooks/useJobs";
@@ -70,7 +70,14 @@ const Lights = () => {
                 <p className="text-muted-foreground">Loading schedule...</p>
               ) : getSelectedDateJobs().length > 0 ? (
                 getSelectedDateJobs().map(job => (
-                  <div key={job.id} className="flex justify-between items-center p-2 border rounded">
+                  <div 
+                    key={job.id} 
+                    className="flex justify-between items-center p-2 border rounded"
+                    style={{ 
+                      borderColor: job.color || '#7E69AB',
+                      backgroundColor: `${job.color}15` || '#7E69AB15'
+                    }}
+                  >
                     <div>
                       <p className="font-medium">{job.title}</p>
                       <p className="text-sm text-muted-foreground">
