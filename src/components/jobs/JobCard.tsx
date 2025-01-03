@@ -83,7 +83,10 @@ export const JobCard = ({
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4" />
           <span>
-            {format(new Date(job.start_time), 'HH:mm')} - {format(new Date(job.end_time), 'HH:mm')}
+            {format(new Date(job.start_time), 'MMM d, yyyy')}
+            {job.start_time !== job.end_time && 
+              ` - ${format(new Date(job.end_time), 'MMM d, yyyy')}`
+            }
           </span>
         </div>
         
