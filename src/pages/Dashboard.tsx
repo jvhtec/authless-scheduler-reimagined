@@ -91,6 +91,7 @@ const Dashboard = () => {
       <CreateTourDialog
         open={isTourDialogOpen}
         onOpenChange={setIsTourDialogOpen}
+        currentDepartment={currentDepartment}
       />
     </div>
   );

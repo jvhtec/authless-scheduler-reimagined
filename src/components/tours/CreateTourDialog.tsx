@@ -1,11 +1,17 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 import { SimplifiedJobColorPicker } from "@/components/jobs/SimplifiedJobColorPicker";
+import { SimplifiedTourDateInput } from "./SimplifiedTourDateInput";
+import { useLocations } from "@/hooks/useLocations";
+import { Department } from "@/types/department";
+import { useState } from "react";
 
 interface CreateTourDialogProps {
   open: boolean;
