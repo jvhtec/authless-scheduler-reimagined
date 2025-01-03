@@ -1,6 +1,5 @@
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
 const Lights = () => {
@@ -33,9 +32,6 @@ const Lights = () => {
               <p className="text-muted-foreground">
                 Sign in to view and manage light schedules
               </p>
-              <div className="flex justify-center">
-                <Button variant="outline">Create Light Event</Button>
-              </div>
             </div>
           </CardContent>
         </Card>
