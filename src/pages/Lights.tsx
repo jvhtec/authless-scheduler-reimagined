@@ -1,18 +1,16 @@
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import CreateJobDialog from "@/components/jobs/CreateJobDialog";
 import CreateTourDialog from "@/components/tours/CreateTourDialog";
-import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useJobs } from "@/hooks/useJobs";
 import { format } from "date-fns";
 import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
 import { EditJobDialog } from "@/components/jobs/EditJobDialog";
-import { Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
-import { JobCard } from "@/components/jobs/JobCard";
+import { LightsHeader } from "@/components/lights/LightsHeader";
+import { LightsCalendar } from "@/components/lights/LightsCalendar";
+import { LightsSchedule } from "@/components/lights/LightsSchedule";
 
 const Lights = () => {
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
@@ -54,8 +52,7 @@ const Lights = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleDeleteClick = async (e: React.MouseEvent, jobId: string) => {
-    e.stopPropagation();
+  const handleDeleteClick = async (jobId: string) => {
     if (!window.confirm("Are you sure you want to delete this job?")) return;
 
     console.log("Deleting job:", jobId);
@@ -102,87 +99,21 @@ const Lights = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">Lights Department</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsJobDialogOpen(true)}>
-            Create Job
-          </Button>
-          <Button variant="outline" onClick={() => setIsTourDialogOpen(true)}>
-            Create Tour
-          </Button>
-        </div>
-      </div>
+      <LightsHeader 
+        onCreateJob={() => setIsJobDialogOpen(true)}
+        onCreateTour={() => setIsTourDialogOpen(true)}
+      />
 
       <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Calendar</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={setDate}
-              className="rounded-md border"
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Schedule for {date?.toLocaleDateString()}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {isLoading ? (
-                <p className="text-muted-foreground">Loading schedule...</p>
-              ) : getSelectedDateJobs().length > 0 ? (
-                getSelectedDateJobs().map(job => (
-                  <div 
-                    key={job.id} 
-                    className="flex justify-between items-center p-2 border rounded cursor-pointer hover:bg-accent/50 transition-colors group"
-                    style={{ 
-                      borderColor: job.color || '#7E69AB',
-                      backgroundColor: `${job.color}15` || '#7E69AB15'
-                    }}
-                    onClick={() => handleJobClick(job.id)}
-                  >
-                    <div>
-                      <p className="font-medium">{job.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(job.start_time), 'HH:mm')} - {format(new Date(job.end_time), 'HH:mm')}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm text-muted-foreground">
-                        {job.location?.name}
-                      </div>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => handleEditClick(e, job)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => handleDeleteClick(e, job.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-muted-foreground">No events scheduled for this date</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <LightsCalendar date={date} onSelect={setDate} />
+        <LightsSchedule
+          date={date}
+          jobs={getSelectedDateJobs()}
+          isLoading={isLoading}
+          onJobClick={handleJobClick}
+          onEditClick={handleEditClick}
+          onDeleteClick={handleDeleteClick}
+        />
       </div>
 
       <CreateJobDialog
