@@ -76,16 +76,33 @@ const Dashboard = () => {
 
     console.log("Deleting job:", jobId);
     try {
-      const { error } = await supabase
+      // First delete job_assignments
+      const { error: assignmentsError } = await supabase
+        .from("job_assignments")
+        .delete()
+        .eq("job_id", jobId);
+
+      if (assignmentsError) throw assignmentsError;
+
+      // Then delete job_departments
+      const { error: departmentsError } = await supabase
+        .from("job_departments")
+        .delete()
+        .eq("job_id", jobId);
+
+      if (departmentsError) throw departmentsError;
+
+      // Finally delete the job
+      const { error: jobError } = await supabase
         .from("jobs")
         .delete()
         .eq("id", jobId);
 
-      if (error) throw error;
+      if (jobError) throw jobError;
 
       toast({
         title: "Job deleted successfully",
-        description: "The job has been removed.",
+        description: "The job and all related records have been removed.",
       });
       
       queryClient.invalidateQueries({ queryKey: ["jobs"] });

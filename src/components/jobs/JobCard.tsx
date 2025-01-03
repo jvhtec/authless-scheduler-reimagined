@@ -31,7 +31,7 @@ export const JobCard = ({
     onDeleteClick(job.id);
   };
 
-  const isTourJob = !!job.tour_date_id;
+  const isTourJob = job.job_type === 'tour' || !!job.tour_date_id;
 
   return (
     <div 
@@ -55,7 +55,7 @@ export const JobCard = ({
             <p className="font-medium">{job.title}</p>
             {isTourJob && (
               <span className="text-xs bg-primary/10 px-2 py-0.5 rounded-full ml-2">
-                Tour
+                {job.tour_date_id ? 'Tour Date' : 'Tour'}
               </span>
             )}
           </div>

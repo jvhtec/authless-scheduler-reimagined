@@ -12,6 +12,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
+import { JobCard } from "@/components/jobs/JobCard";
 
 const Lights = () => {
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
@@ -48,8 +49,7 @@ const Lights = () => {
     setIsAssignmentDialogOpen(true);
   };
 
-  const handleEditClick = (e: React.MouseEvent, job: any) => {
-    e.stopPropagation();
+  const handleEditClick = (job: any) => {
     setSelectedJob(job);
     setIsEditDialogOpen(true);
   };
@@ -60,16 +60,33 @@ const Lights = () => {
 
     console.log("Deleting job:", jobId);
     try {
-      const { error } = await supabase
+      // First delete job_assignments
+      const { error: assignmentsError } = await supabase
+        .from("job_assignments")
+        .delete()
+        .eq("job_id", jobId);
+
+      if (assignmentsError) throw assignmentsError;
+
+      // Then delete job_departments
+      const { error: departmentsError } = await supabase
+        .from("job_departments")
+        .delete()
+        .eq("job_id", jobId);
+
+      if (departmentsError) throw departmentsError;
+
+      // Finally delete the job
+      const { error: jobError } = await supabase
         .from("jobs")
         .delete()
         .eq("id", jobId);
 
-      if (error) throw error;
+      if (jobError) throw jobError;
 
       toast({
         title: "Job deleted successfully",
-        description: "The job has been removed.",
+        description: "The job and all related records have been removed.",
       });
       
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
