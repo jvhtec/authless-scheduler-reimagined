@@ -7,16 +7,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useJobs } from "@/hooks/useJobs";
 import { format } from "date-fns";
 import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
+import { EditJobDialog } from "@/components/jobs/EditJobDialog";
+import { Pencil, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Lights = () => {
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
   const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const currentDepartment = "lights";
   
   const { data: jobs, isLoading } = useJobs();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const getDepartmentJobs = () => {
     if (!jobs) return [];
@@ -37,6 +46,41 @@ const Lights = () => {
   const handleJobClick = (jobId: string) => {
     setSelectedJobId(jobId);
     setIsAssignmentDialogOpen(true);
+  };
+
+  const handleEditClick = (e: React.MouseEvent, job: any) => {
+    e.stopPropagation();
+    setSelectedJob(job);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = async (e: React.MouseEvent, jobId: string) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this job?")) return;
+
+    console.log("Deleting job:", jobId);
+    try {
+      const { error } = await supabase
+        .from("jobs")
+        .delete()
+        .eq("id", jobId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Job deleted successfully",
+        description: "The job has been removed.",
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    } catch (error: any) {
+      console.error("Error deleting job:", error);
+      toast({
+        title: "Error deleting job",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -80,7 +124,7 @@ const Lights = () => {
                 getSelectedDateJobs().map(job => (
                   <div 
                     key={job.id} 
-                    className="flex justify-between items-center p-2 border rounded cursor-pointer hover:bg-accent/50 transition-colors"
+                    className="flex justify-between items-center p-2 border rounded cursor-pointer hover:bg-accent/50 transition-colors group"
                     style={{ 
                       borderColor: job.color || '#7E69AB',
                       backgroundColor: `${job.color}15` || '#7E69AB15'
@@ -93,8 +137,26 @@ const Lights = () => {
                         {format(new Date(job.start_time), 'HH:mm')} - {format(new Date(job.end_time), 'HH:mm')}
                       </p>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {job.location?.name}
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm text-muted-foreground">
+                        {job.location?.name}
+                      </div>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => handleEditClick(e, job)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => handleDeleteClick(e, job.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -124,6 +186,14 @@ const Lights = () => {
           onOpenChange={setIsAssignmentDialogOpen}
           jobId={selectedJobId}
           department={currentDepartment}
+        />
+      )}
+
+      {selectedJob && (
+        <EditJobDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          job={selectedJob}
         />
       )}
     </div>
