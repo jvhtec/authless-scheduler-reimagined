@@ -1,21 +1,16 @@
 import { useState } from "react";
 import { Department } from "@/types/department";
-import { useJobs } from "@/hooks/useJobs";
 import { format, addWeeks, addMonths, isAfter, isBefore } from "date-fns";
 import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
 import { EditJobDialog } from "@/components/jobs/EditJobDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { JobCard } from "@/components/jobs/JobCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { LightsCalendar } from "@/components/lights/LightsCalendar";
-import { LightsSchedule } from "@/components/lights/LightsSchedule";
-import { TourChips } from "@/components/dashboard/TourChips";
 
 const Dashboard = () => {
-  const [date, setDate] = useState<Date | undefined>(new Date());
   const [timeSpan, setTimeSpan] = useState<string>("1week");
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -23,9 +18,50 @@ const Dashboard = () => {
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   
-  const { data: jobs, isLoading } = useJobs();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch assigned jobs for the current user
+  const { data: jobs, isLoading } = useQuery({
+    queryKey: ["assigned-jobs"],
+    queryFn: async () => {
+      console.log("Fetching assigned jobs for current user...");
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) throw new Error("No user found");
+
+      const { data, error } = await supabase
+        .from("job_assignments")
+        .select(`
+          job_id,
+          sound_role,
+          lights_role,
+          video_role,
+          jobs (
+            *,
+            location:locations(name),
+            job_departments(department)
+          )
+        `)
+        .eq('technician_id', user.id);
+
+      if (error) {
+        console.error("Error fetching assigned jobs:", error);
+        throw error;
+      }
+
+      // Transform the data to match the expected format
+      const transformedJobs = data.map(assignment => ({
+        ...assignment.jobs,
+        sound_role: assignment.sound_role,
+        lights_role: assignment.lights_role,
+        video_role: assignment.video_role
+      }));
+
+      console.log("Assigned jobs fetched successfully:", transformedJobs);
+      return transformedJobs;
+    },
+  });
 
   const getTimeSpanEndDate = () => {
     const today = new Date();
@@ -38,29 +74,17 @@ const Dashboard = () => {
     }
   };
 
-  const getDepartmentJobs = (department: Department) => {
+  const getFilteredJobs = () => {
     if (!jobs) return [];
     const endDate = getTimeSpanEndDate();
     return jobs.filter(job => 
-      job.job_departments.some(dept => dept.department === department) &&
       isAfter(new Date(job.start_time), new Date()) &&
-      isBefore(new Date(job.start_time), endDate) &&
-      job.job_type !== 'tour' // Filter out tour type jobs
+      isBefore(new Date(job.start_time), endDate)
     );
   };
 
-  const getSelectedDateJobs = () => {
-    if (!date || !jobs) return [];
-    const selectedDate = format(date, 'yyyy-MM-dd');
-    return jobs.filter(job => {
-      const jobDate = format(new Date(job.start_time), 'yyyy-MM-dd');
-      return jobDate === selectedDate && job.job_type !== 'tour'; // Filter out tour type jobs
-    });
-  };
-
-  const handleJobClick = (jobId: string, department: Department) => {
+  const handleJobClick = (jobId: string) => {
     setSelectedJobId(jobId);
-    setSelectedDepartment(department);
     setIsAssignmentDialogOpen(true);
   };
 
@@ -99,7 +123,7 @@ const Dashboard = () => {
         description: "The job and all related records have been removed.",
       });
       
-      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["assigned-jobs"] });
     } catch (error: any) {
       console.error("Error deleting job:", error);
       toast({
@@ -115,54 +139,28 @@ const Dashboard = () => {
       <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
       
       <Card>
-        <CardHeader>
-          <CardTitle>Tours {new Date().getFullYear()}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TourChips onTourClick={(tourId) => {
-            const tour = jobs?.find(job => job.id === tourId);
-            if (tour) handleEditClick(tour);
-          }} />
+        <CardContent className="space-y-4">
+          <h2 className="text-xl font-semibold mt-4">My Assigned Jobs</h2>
+          {isLoading ? (
+            <p className="text-muted-foreground">Loading...</p>
+          ) : (
+            <div className="space-y-4">
+              {getFilteredJobs().map(job => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onEditClick={handleEditClick}
+                  onDeleteClick={handleDeleteClick}
+                  onJobClick={handleJobClick}
+                />
+              ))}
+              {getFilteredJobs().length === 0 && (
+                <p className="text-muted-foreground">No jobs assigned for this time period.</p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        <LightsCalendar date={date} onSelect={setDate} />
-        <LightsSchedule
-          date={date}
-          jobs={getSelectedDateJobs()}
-          isLoading={isLoading}
-          onJobClick={(jobId) => handleJobClick(jobId, "sound")}
-          onEditClick={handleEditClick}
-          onDeleteClick={handleDeleteClick}
-        />
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-6">
-        {["sound", "lights", "video"].map((dept) => (
-          <Card key={dept}>
-            <CardHeader>
-              <CardTitle>{dept.charAt(0).toUpperCase() + dept.slice(1)} Schedule</CardTitle>
-            </CardHeader>
-            <CardContent className="h-[400px] overflow-y-auto">
-              {isLoading ? (
-                <p className="text-muted-foreground">Loading...</p>
-              ) : (
-                getDepartmentJobs(dept as Department).map(job => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    onEditClick={handleEditClick}
-                    onDeleteClick={handleDeleteClick}
-                    onJobClick={(jobId) => handleJobClick(jobId, dept as Department)}
-                    department={dept as Department}
-                  />
-                ))
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
 
       {selectedJobId && (
         <JobAssignmentDialog
