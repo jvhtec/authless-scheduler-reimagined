@@ -111,10 +111,10 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="container mx-auto px-4 space-y-6">
       <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
       
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>Tours {new Date().getFullYear()}</CardTitle>
         </CardHeader>
@@ -126,23 +126,27 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <LightsCalendar date={date} onSelect={setDate} />
-        <LightsSchedule
-          date={date}
-          jobs={getSelectedDateJobs()}
-          isLoading={isLoading}
-          onJobClick={(jobId) => handleJobClick(jobId, "sound")}
-          onEditClick={handleEditClick}
-          onDeleteClick={handleDeleteClick}
-        />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="w-full">
+          <LightsCalendar date={date} onSelect={setDate} />
+        </div>
+        <div className="w-full">
+          <LightsSchedule
+            date={date}
+            jobs={getSelectedDateJobs()}
+            isLoading={isLoading}
+            onJobClick={(jobId) => handleJobClick(jobId, "sound")}
+            onEditClick={handleEditClick}
+            onDeleteClick={handleDeleteClick}
+          />
+        </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {["sound", "lights", "video"].map((dept) => (
-          <Card key={dept}>
+          <Card key={dept} className="w-full">
             <CardHeader>
-              <CardTitle>{dept.charAt(0).toUpperCase() + dept.slice(1)} Schedule</CardTitle>
+              <CardTitle className="capitalize">{dept} Schedule</CardTitle>
             </CardHeader>
             <CardContent className="h-[400px] overflow-y-auto">
               {isLoading ? (
