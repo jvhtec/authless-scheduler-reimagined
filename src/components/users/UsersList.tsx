@@ -3,6 +3,21 @@ import { supabase } from "@/lib/supabase";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 type Profile = {
   id: string;
@@ -14,6 +29,9 @@ type Profile = {
 
 export const UsersList = () => {
   const { toast } = useToast();
+  const [editingUser, setEditingUser] = useState<Profile | null>(null);
+  const [editedFirstName, setEditedFirstName] = useState("");
+  const [editedLastName, setEditedLastName] = useState("");
   
   const { data: users, isLoading, error, refetch } = useQuery({
     queryKey: ['profiles'],
@@ -62,6 +80,43 @@ export const UsersList = () => {
     }
   };
 
+  const handleEdit = (user: Profile) => {
+    setEditingUser(user);
+    setEditedFirstName(user.first_name || "");
+    setEditedLastName(user.last_name || "");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingUser) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          first_name: editedFirstName,
+          last_name: editedLastName,
+        })
+        .eq('id', editingUser.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Profile updated",
+        description: "The user profile has been successfully updated.",
+      });
+
+      setEditingUser(null);
+      refetch();
+    } catch (error: any) {
+      console.error("Update error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update user: " + error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (error) {
     console.error("Query error state:", error);
     return (
@@ -94,19 +149,72 @@ export const UsersList = () => {
             <p className="text-sm text-muted-foreground">Role: {user.role}</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="icon">
-              <Pencil className="h-4 w-4" />
-            </Button>
             <Button 
               variant="outline" 
               size="icon"
-              onClick={() => handleDelete(user.id)}
+              onClick={() => handleEdit(user)}
             >
-              <Trash2 className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
             </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the user
+                    account and remove their data from our servers.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleDelete(user.id)}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       ))}
+
+      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User Profile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                value={editedFirstName}
+                onChange={(e) => setEditedFirstName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                value={editedLastName}
+                onChange={(e) => setEditedLastName(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEditingUser(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit}>
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
