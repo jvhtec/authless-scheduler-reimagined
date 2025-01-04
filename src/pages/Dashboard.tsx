@@ -44,7 +44,8 @@ const Dashboard = () => {
     return jobs.filter(job => 
       job.job_departments.some(dept => dept.department === department) &&
       isAfter(new Date(job.start_time), new Date()) &&
-      isBefore(new Date(job.start_time), endDate)
+      isBefore(new Date(job.start_time), endDate) &&
+      job.job_type !== 'tour' // Filter out tour type jobs
     );
   };
 
@@ -53,7 +54,7 @@ const Dashboard = () => {
     const selectedDate = format(date, 'yyyy-MM-dd');
     return jobs.filter(job => {
       const jobDate = format(new Date(job.start_time), 'yyyy-MM-dd');
-      return jobDate === selectedDate;
+      return jobDate === selectedDate && job.job_type !== 'tour'; // Filter out tour type jobs
     });
   };
 

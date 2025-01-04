@@ -12,7 +12,8 @@ export const useJobs = () => {
           *,
           location:locations(name),
           job_departments(department)
-        `);
+        `)
+        .neq('job_type', 'tour'); // Exclude tour type jobs
 
       if (error) {
         console.error("Error fetching jobs:", error);
