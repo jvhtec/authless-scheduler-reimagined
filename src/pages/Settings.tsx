@@ -22,17 +22,22 @@ const Settings = () => {
 
   const checkUserRole = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      if (!user) {
-        console.log("No user found");
+      if (userError) {
+        console.error("Error getting user:", userError);
         navigate("/auth");
         return;
       }
 
-      console.log("User found:", user);
+      if (!user) {
+        console.log("No user found, redirecting to auth");
+        navigate("/auth");
+        return;
+      }
 
-      // First try to get the profile
+      console.log("Checking role for user:", user.id);
+
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role')
@@ -52,19 +57,16 @@ const Settings = () => {
       console.log("Profile data:", profile);
       
       if (!profile) {
-        console.log("No profile found, creating one...");
-        // If no profile exists, create one with default role
+        console.log("Creating new profile for user");
         const { error: insertError } = await supabase
           .from('profiles')
-          .insert([
-            { 
-              id: user.id,
-              email: user.email,
-              role: 'technician',
-              first_name: user.user_metadata.first_name,
-              last_name: user.user_metadata.last_name
-            }
-          ]);
+          .insert({
+            id: user.id,
+            email: user.email,
+            role: 'technician',
+            first_name: user.user_metadata?.first_name,
+            last_name: user.user_metadata?.last_name
+          });
 
         if (insertError) {
           console.error("Error creating profile:", insertError);
@@ -81,7 +83,7 @@ const Settings = () => {
       console.log("Has management access:", hasManagementAccess);
       setIsManagement(hasManagementAccess);
     } catch (error) {
-      console.error("Error checking user role:", error);
+      console.error("Error in checkUserRole:", error);
       toast({
         title: "Error",
         description: "Could not verify user role",

@@ -12,22 +12,24 @@ interface TourChipsProps {
   onTourClick: (tourId: string) => void;
 }
 
+interface TourDate {
+  id: string;
+  date: string;
+  location: {
+    name: string;
+  } | null;
+  jobs: Array<{
+    id: string;
+    color: string;
+  }>;
+}
+
 interface Tour {
   id: string;
   name: string;
   description: string | null;
   created_at: string;
-  tour_dates: Array<{
-    id: string;
-    date: string;
-    location: {
-      name: string;
-    } | null;
-    jobs: Array<{
-      id: string;
-      color: string;
-    }>;
-  }>;
+  tour_dates: TourDate[];
 }
 
 export const TourChips = ({ onTourClick }: TourChipsProps) => {
@@ -42,7 +44,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
     queryFn: async () => {
       console.log("Fetching tours data...");
       
-      const { data, error } = await supabase
+      const { data: toursData, error } = await supabase
         .from("tours")
         .select(`
           id,
@@ -73,8 +75,22 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         throw error;
       }
 
-      console.log("Tours data:", data);
-      return data as Tour[];
+      // Ensure proper typing of the response
+      const typedTours: Tour[] = (toursData || []).map(tour => ({
+        id: tour.id,
+        name: tour.name,
+        description: tour.description,
+        created_at: tour.created_at,
+        tour_dates: (tour.tour_dates || []).map(date => ({
+          id: date.id,
+          date: date.date,
+          location: date.location,
+          jobs: date.jobs || []
+        }))
+      }));
+
+      console.log("Processed tours data:", typedTours);
+      return typedTours;
     },
   });
 
