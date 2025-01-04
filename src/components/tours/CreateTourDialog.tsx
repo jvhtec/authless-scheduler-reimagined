@@ -3,15 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { SimplifiedJobColorPicker } from "@/components/jobs/SimplifiedJobColorPicker";
-import { SimplifiedTourDateInput } from "./SimplifiedTourDateInput";
-import { useLocations } from "@/hooks/useLocations";
 import { Department } from "@/types/department";
 import { useState } from "react";
+import { useLocations } from "@/hooks/useLocations";
+import { TourDateForm } from "./TourDateForm";
+import { TourDepartmentSelector } from "./TourDepartmentSelector";
 
 interface CreateTourDialogProps {
   open: boolean;
@@ -59,80 +59,6 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
     } else {
       setDepartments(departments.filter(d => d !== dept));
     }
-  };
-
-  const createOrGetLocation = async (locationName: string) => {
-    if (!locationName) return null;
-    
-    try {
-      // First try to find existing location
-      const { data: existingLocation, error: findError } = await supabase
-        .from("locations")
-        .select("id")
-        .eq("name", locationName)
-        .single();
-
-      if (existingLocation) {
-        return existingLocation.id;
-      }
-
-      // If not found, create new location
-      const { data: newLocation, error: createError } = await supabase
-        .from("locations")
-        .insert({ name: locationName })
-        .select("id")
-        .single();
-
-      if (createError) throw createError;
-      return newLocation.id;
-    } catch (error) {
-      console.error("Error handling location:", error);
-      throw error;
-    }
-  };
-
-  const createTourDate = async (tourId: string, date: string, locationId: string | null) => {
-    const { data: tourDate, error } = await supabase
-      .from("tour_dates")
-      .insert({
-        tour_id: tourId,
-        date,
-        location_id: locationId
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return tourDate;
-  };
-
-  const createJobWithDepartments = async (jobData: any) => {
-    console.log("Creating job with data:", jobData);
-    
-    // Create the job
-    const { data: job, error: jobError } = await supabase
-      .from("jobs")
-      .insert(jobData)
-      .select()
-      .single();
-
-    if (jobError) throw jobError;
-
-    console.log("Job created:", job);
-
-    // Create department associations
-    const departmentEntries = departments.map(department => ({
-      job_id: job.id,
-      department
-    }));
-
-    const { error: deptError } = await supabase
-      .from("job_departments")
-      .insert(departmentEntries);
-
-    if (deptError) throw deptError;
-
-    return job;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -183,38 +109,90 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
       if (tourError) throw tourError;
 
       // Create the main tour job
-      const mainTourJob = await createJobWithDepartments({
-        title,
-        description,
-        start_time: `${validDates[0].date}T00:00:00`,
-        end_time: `${validDates[validDates.length - 1].date}T23:59:59`,
-        job_type: "tour",
-        color,
-      });
+      const { data: mainTourJob, error: mainJobError } = await supabase
+        .from("jobs")
+        .insert({
+          title,
+          description,
+          start_time: `${validDates[0].date}T00:00:00`,
+          end_time: `${validDates[validDates.length - 1].date}T23:59:59`,
+          job_type: "tour",
+          color,
+        })
+        .select()
+        .single();
+
+      if (mainJobError) throw mainJobError;
+
+      // Create department associations for main tour job
+      const mainJobDepartments = departments.map(department => ({
+        job_id: mainTourJob.id,
+        department
+      }));
+
+      const { error: mainDeptError } = await supabase
+        .from("job_departments")
+        .insert(mainJobDepartments);
+
+      if (mainDeptError) throw mainDeptError;
 
       // Process each tour date
       for (const dateInfo of validDates) {
         // First get or create location
-        const locationId = await createOrGetLocation(dateInfo.location);
+        const { data: location, error: locationError } = await supabase
+          .from("locations")
+          .insert({ name: dateInfo.location })
+          .select()
+          .single();
+
+        if (locationError) throw locationError;
         
         // Create tour date entry
-        const tourDate = await createTourDate(tour.id, dateInfo.date, locationId);
+        const { data: tourDate, error: tourDateError } = await supabase
+          .from("tour_dates")
+          .insert({
+            tour_id: tour.id,
+            date: dateInfo.date,
+            location_id: location.id
+          })
+          .select()
+          .single();
+
+        if (tourDateError) throw tourDateError;
 
         // Create job for this tour date
-        await createJobWithDepartments({
-          title: `${title} (Tour Date)`,
-          description,
-          start_time: `${dateInfo.date}T00:00:00`,
-          end_time: `${dateInfo.date}T23:59:59`,
-          location_id: locationId,
-          job_type: "single",
-          tour_date_id: tourDate.id,
-          color,
-        });
+        const { data: dateJob, error: dateJobError } = await supabase
+          .from("jobs")
+          .insert({
+            title: `${title} (Tour Date)`,
+            description,
+            start_time: `${dateInfo.date}T00:00:00`,
+            end_time: `${dateInfo.date}T23:59:59`,
+            location_id: location.id,
+            job_type: "single",
+            tour_date_id: tourDate.id,
+            color,
+          })
+          .select()
+          .single();
+
+        if (dateJobError) throw dateJobError;
+
+        // Create department associations for this date's job
+        const dateDepartments = departments.map(department => ({
+          job_id: dateJob.id,
+          department
+        }));
+
+        const { error: dateDeptError } = await supabase
+          .from("job_departments")
+          .insert(dateDepartments);
+
+        if (dateDeptError) throw dateDeptError;
       }
 
       await queryClient.invalidateQueries({ queryKey: ["jobs"] });
-      await queryClient.invalidateQueries({ queryKey: ["locations"] });
+      await queryClient.invalidateQueries({ queryKey: ["tours"] });
 
       toast({
         title: "Success",
@@ -264,52 +242,20 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Tour Dates</Label>
-            <div className="space-y-4">
-              {dates.map((date, index) => (
-                <SimplifiedTourDateInput
-                  key={index}
-                  index={index}
-                  date={date}
-                  onDateChange={handleDateChange}
-                  onRemove={() => handleRemoveDate(index)}
-                  showRemove={dates.length > 1}
-                  locations={locations}
-                />
-              ))}
-              
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleAddDate}
-              >
-                Add Date
-              </Button>
-            </div>
-          </div>
+          <TourDateForm
+            dates={dates}
+            onDateChange={handleDateChange}
+            onAddDate={handleAddDate}
+            onRemoveDate={handleRemoveDate}
+            locations={locations}
+          />
 
-          <div className="space-y-2">
-            <Label>Departments</Label>
-            <div className="flex flex-col gap-2">
-              {availableDepartments.map((dept) => (
-                <div key={dept} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`dept-${dept}`}
-                    checked={departments.includes(dept)}
-                    onCheckedChange={(checked) => 
-                      handleDepartmentChange(dept, checked as boolean)
-                    }
-                    disabled={dept === currentDepartment}
-                  />
-                  <Label htmlFor={`dept-${dept}`}>
-                    {dept.charAt(0).toUpperCase() + dept.slice(1)}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
+          <TourDepartmentSelector
+            departments={departments}
+            availableDepartments={availableDepartments}
+            currentDepartment={currentDepartment}
+            onDepartmentChange={handleDepartmentChange}
+          />
 
           <SimplifiedJobColorPicker color={color} onChange={setColor} />
 
