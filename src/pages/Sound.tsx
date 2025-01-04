@@ -1,146 +1,209 @@
-import { useState } from "react";
-import CreateJobDialog from "@/components/jobs/CreateJobDialog";
-import CreateTourDialog from "@/components/tours/CreateTourDialog";
-import { useJobs } from "@/hooks/useJobs";
-import { format } from "date-fns";
-import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
-import { EditJobDialog } from "@/components/jobs/EditJobDialog";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { useQueryClient } from "@tanstack/react-query";
-import { LightsHeader } from "@/components/lights/LightsHeader";
-import { LightsCalendar } from "@/components/lights/LightsCalendar";
-import { LightsSchedule } from "@/components/lights/LightsSchedule";
+import { JobCard } from "@/components/jobs/JobCard";
+import { TourChips } from "@/components/dashboard/TourChips";
+import { CalendarSection } from "@/components/dashboard/CalendarSection";
+import { useState } from "react";
+import { JobWithAssignment } from "@/types/job";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 const Sound = () => {
-  const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
-  const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
-  const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-  const [selectedJob, setSelectedJob] = useState<any>(null);
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const currentDepartment = "sound";
-  
-  const { data: jobs, isLoading } = useJobs();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [selectedDate, setSelectedDate] = useState<Date>();
 
-  const getDepartmentJobs = () => {
-    if (!jobs) return [];
-    return jobs.filter(job => 
-      job.job_departments.some(dept => dept.department === currentDepartment)
-    );
-  };
+  const { data: jobs, isLoading } = useQuery({
+    queryKey: ["sound-jobs"],
+    queryFn: async () => {
+      console.log("Fetching sound department jobs...");
+      const { data, error } = await supabase
+        .from("jobs")
+        .select(`
+          *,
+          location:locations(name),
+          job_departments(department)
+        `)
+        .eq('job_departments.department', 'sound');
 
-  const getSelectedDateJobs = () => {
-    if (!date || !jobs) return [];
-    const selectedDate = format(date, 'yyyy-MM-dd');
-    return getDepartmentJobs().filter(job => {
-      const jobDate = format(new Date(job.start_time), 'yyyy-MM-dd');
-      return jobDate === selectedDate;
-    });
-  };
+      if (error) {
+        console.error("Error fetching sound jobs:", error);
+        throw error;
+      }
 
-  const handleJobClick = (jobId: string) => {
-    setSelectedJobId(jobId);
-    setIsAssignmentDialogOpen(true);
-  };
+      console.log("Sound jobs fetched:", data);
+      return data as JobWithAssignment[];
+    },
+  });
 
-  const handleEditClick = (job: any) => {
-    setSelectedJob(job);
-    setIsEditDialogOpen(true);
-  };
+  const filteredJobs = jobs?.filter(job => {
+    if (selectedDate) {
+      const jobDate = new Date(job.start_time);
+      return (
+        jobDate.getDate() === selectedDate.getDate() &&
+        jobDate.getMonth() === selectedDate.getMonth() &&
+        jobDate.getFullYear() === selectedDate.getFullYear()
+      );
+    }
+    return true;
+  });
 
-  const handleDeleteClick = async (jobId: string) => {
-    if (!window.confirm("Are you sure you want to delete this job?")) return;
+  const pendingJobs = filteredJobs?.filter(job => job.status === 'pending') || [];
+  const inProgressJobs = filteredJobs?.filter(job => job.status === 'in_progress') || [];
+  const completedJobs = filteredJobs?.filter(job => job.status === 'completed') || [];
+
+  const handleDragEnd = async (result: any) => {
+    if (!result.destination) return;
+
+    const jobId = result.draggableId;
+    const newStatus = result.destination.droppableId;
 
     try {
-      const { error: assignmentsError } = await supabase
-        .from("job_assignments")
-        .delete()
-        .eq("job_id", jobId);
+      const { error } = await supabase
+        .from('jobs')
+        .update({ status: newStatus })
+        .eq('id', jobId);
 
-      if (assignmentsError) throw assignmentsError;
-
-      const { error: departmentsError } = await supabase
-        .from("job_departments")
-        .delete()
-        .eq("job_id", jobId);
-
-      if (departmentsError) throw departmentsError;
-
-      const { error: jobError } = await supabase
-        .from("jobs")
-        .delete()
-        .eq("id", jobId);
-
-      if (jobError) throw jobError;
-
-      toast({
-        title: "Job deleted successfully",
-        description: "The job and all related records have been removed.",
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ["jobs"] });
-    } catch (error: any) {
-      console.error("Error deleting job:", error);
-      toast({
-        title: "Error deleting job",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating job status:', error);
     }
   };
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <LightsHeader 
-        onCreateJob={() => setIsJobDialogOpen(true)}
-        onCreateTour={() => setIsTourDialogOpen(true)}
-        department="Sound"
-      />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 space-y-6">
+          <CalendarSection 
+            jobs={jobs || []} 
+            onDateSelect={setSelectedDate}
+          />
+          
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <div className="grid grid-cols-3 gap-4">
+              <Droppable droppableId="pending">
+                {(provided) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="space-y-4"
+                  >
+                    <Card>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold mb-4">Pending</h3>
+                        {pendingJobs.map((job, index) => (
+                          <Draggable key={job.id} draggableId={job.id} index={index}>
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className="mb-4"
+                              >
+                                <JobCard
+                                  job={job}
+                                  onEditClick={() => {}}
+                                  onDeleteClick={() => {}}
+                                  onJobClick={() => {}}
+                                  showAssignments
+                                  department="sound"
+                                />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </Droppable>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <LightsCalendar date={date} onSelect={setDate} />
-        <LightsSchedule
-          date={date}
-          jobs={getSelectedDateJobs()}
-          isLoading={isLoading}
-          onJobClick={handleJobClick}
-          onEditClick={handleEditClick}
-          onDeleteClick={handleDeleteClick}
-        />
+              <Droppable droppableId="in_progress">
+                {(provided) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="space-y-4"
+                  >
+                    <Card>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold mb-4">In Progress</h3>
+                        {inProgressJobs.map((job, index) => (
+                          <Draggable key={job.id} draggableId={job.id} index={index}>
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className="mb-4"
+                              >
+                                <JobCard
+                                  job={job}
+                                  onEditClick={() => {}}
+                                  onDeleteClick={() => {}}
+                                  onJobClick={() => {}}
+                                  showAssignments
+                                  department="sound"
+                                />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </Droppable>
+
+              <Droppable droppableId="completed">
+                {(provided) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="space-y-4"
+                  >
+                    <Card>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold mb-4">Completed</h3>
+                        {completedJobs.map((job, index) => (
+                          <Draggable key={job.id} draggableId={job.id} index={index}>
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className="mb-4"
+                              >
+                                <JobCard
+                                  job={job}
+                                  onEditClick={() => {}}
+                                  onDeleteClick={() => {}}
+                                  onJobClick={() => {}}
+                                  showAssignments
+                                  department="sound"
+                                />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </Droppable>
+            </div>
+          </DragDropContext>
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <TourChips onTourClick={() => {}} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      <CreateJobDialog
-        open={isJobDialogOpen}
-        onOpenChange={setIsJobDialogOpen}
-        currentDepartment={currentDepartment}
-      />
-      
-      <CreateTourDialog
-        open={isTourDialogOpen}
-        onOpenChange={setIsTourDialogOpen}
-        currentDepartment={currentDepartment}
-      />
-
-      {selectedJobId && (
-        <JobAssignmentDialog
-          open={isAssignmentDialogOpen}
-          onOpenChange={setIsAssignmentDialogOpen}
-          jobId={selectedJobId}
-          department={currentDepartment}
-        />
-      )}
-
-      {selectedJob && (
-        <EditJobDialog
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          job={selectedJob}
-        />
-      )}
     </div>
   );
 };
