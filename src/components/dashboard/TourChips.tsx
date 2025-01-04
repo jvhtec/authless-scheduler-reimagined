@@ -17,7 +17,7 @@ interface TourDate {
   date: string;
   location: {
     name: string;
-  };
+  } | null;
   jobs: {
     id: string;
     color: string;
@@ -53,7 +53,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
           name,
           description,
           created_at,
-          tour_dates!inner (
+          tour_dates (
             id,
             date,
             location:locations (
@@ -78,21 +78,30 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
       }
 
       console.log("Tours data:", tours);
-      return (tours as Tour[])?.map(tour => ({
+      
+      // Transform the data to match our interface
+      const transformedTours = tours?.map(tour => ({
         ...tour,
         title: tour.name,
+        tour_dates: tour.tour_dates?.map(date => ({
+          ...date,
+          location: date.location ? { name: date.location.name } : null,
+          jobs: date.jobs || []
+        })) || [],
         color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB',
-      })) || [];
+      })) as Tour[];
+
+      return transformedTours || [];
     },
   });
 
-  const handleViewDates = (tour: any) => {
+  const handleViewDates = (tour: Tour) => {
     console.log("Opening dates dialog for tour:", tour);
     setSelectedTourId(tour.id);
     setIsDatesDialogOpen(true);
   };
 
-  const handleManageTour = (tour: any) => {
+  const handleManageTour = (tour: Tour) => {
     console.log("Opening manage dialog for tour:", tour);
     setSelectedTour(tour);
     setIsManageDialogOpen(true);
