@@ -33,6 +33,17 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
             <span>Dashboard</span>
           </Button>
         </Link>
+        <Link to="/project-management">
+          <Button
+            variant="ghost"
+            className={`w-full justify-start gap-2 ${
+              location.pathname === "/project-management" ? "bg-accent" : ""
+            }`}
+          >
+            <Briefcase className="h-4 w-4" />
+            <span>Project Management</span>
+          </Button>
+        </Link>
       </div>
     );
   }
