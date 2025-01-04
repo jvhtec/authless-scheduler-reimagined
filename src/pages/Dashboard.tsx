@@ -19,6 +19,14 @@ type JobWithAssignment = Database['public']['Tables']['jobs']['Row'] & {
   video_role?: string | null;
 };
 
+type JobAssignmentResponse = {
+  job_id: string;
+  sound_role: string | null;
+  lights_role: string | null;
+  video_role: string | null;
+  jobs: JobWithAssignment;
+}
+
 const Dashboard = () => {
   const [timeSpan, setTimeSpan] = useState<string>("1week");
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
@@ -59,26 +67,15 @@ const Dashboard = () => {
       }
 
       // Transform and type the data properly
-      const transformedJobs = data.map(assignment => ({
+      const transformedJobs = (data as JobAssignmentResponse[]).map(assignment => ({
         ...assignment.jobs,
         sound_role: assignment.sound_role,
         lights_role: assignment.lights_role,
         video_role: assignment.video_role
       }));
 
-      // Type guard to ensure the jobs match our expected type
-      const isJobWithAssignment = (job: any): job is JobWithAssignment => {
-        return job !== null && 
-               typeof job === 'object' && 
-               'id' in job &&
-               'start_time' in job &&
-               'end_time' in job;
-      };
-
-      const typedJobs = transformedJobs.filter(isJobWithAssignment);
-
-      console.log("Assigned jobs fetched successfully:", typedJobs);
-      return typedJobs;
+      console.log("Assigned jobs fetched successfully:", transformedJobs);
+      return transformedJobs;
     },
   });
 
