@@ -1,49 +1,39 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Layout from "./components/Layout";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import TechnicianDashboard from "./pages/TechnicianDashboard";
-import Sound from "./pages/Sound";
-import Lights from "./pages/Lights";
-import Video from "./pages/Video";
-import Settings from "./pages/Settings";
-import { useEffect } from "react";
+import { Toaster } from "@/components/ui/toaster";
+import { Layout } from "@/components/Layout";
+import { Auth } from "@/pages/Auth";
+import { Dashboard } from "@/pages/Dashboard";
+import { Settings } from "@/pages/Settings";
+import { Sound } from "@/pages/Sound";
+import { Lights } from "@/pages/Lights";
+import { Video } from "@/pages/Video";
+import { TechnicianDashboard } from "@/pages/TechnicianDashboard";
+import { Profile } from "@/pages/Profile";
+import "./App.css";
 
 const queryClient = new QueryClient();
 
-const App = () => {
-  // Initialize theme from localStorage on app start
-  useEffect(() => {
-    const theme = localStorage.getItem("theme");
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-    }
-  }, []);
-
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Navigate to="/auth" replace />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
-            <Route path="/technician" element={<Layout><TechnicianDashboard /></Layout>} />
-            <Route path="/sound" element={<Layout><Sound /></Layout>} />
-            <Route path="/lights" element={<Layout><Lights /></Layout>} />
-            <Route path="/video" element={<Layout><Video /></Layout>} />
-            <Route path="/settings" element={<Layout><Settings /></Layout>} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <Router>
+        <Routes>
+          <Route path="/auth" element={<Auth />} />
+          <Route element={<Layout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/sound" element={<Sound />} />
+            <Route path="/lights" element={<Lights />} />
+            <Route path="/video" element={<Video />} />
+            <Route path="/technician" element={<TechnicianDashboard />} />
+            <Route path="/profile" element={<Profile />} />
+          </Route>
+        </Routes>
+      </Router>
+      <Toaster />
     </QueryClientProvider>
   );
-};
+}
 
 export default App;
