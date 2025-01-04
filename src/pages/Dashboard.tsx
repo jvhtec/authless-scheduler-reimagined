@@ -8,11 +8,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminDashboard } from "@/components/dashboard/AdminDashboard";
 import { TechnicianDashboard } from "@/components/dashboard/TechnicianDashboard";
 import { JobWithAssignment } from "@/types/job";
+import CreateJobDialog from "@/components/jobs/CreateJobDialog";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 const Dashboard = () => {
   const [timeSpan, setTimeSpan] = useState<string>("1week");
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobWithAssignment | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<"sound" | "lights" | "video">("sound");
@@ -29,7 +33,7 @@ const Dashboard = () => {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, department")
         .eq("id", user.id)
         .single();
 
@@ -40,7 +44,7 @@ const Dashboard = () => {
 
   // Query for jobs based on user role
   const { data: jobs, isLoading } = useQuery({
-    queryKey: ["assigned-jobs"],
+    queryKey: ["assigned-jobs", timeSpan],
     queryFn: async () => {
       console.log("Fetching jobs based on user role...");
       const { data: { user } } = await supabase.auth.getUser();
@@ -167,6 +171,15 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
+      {isAdminOrManagement && (
+        <div className="flex justify-end">
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Job
+          </Button>
+        </div>
+      )}
+
       {isAdminOrManagement ? (
         <AdminDashboard
           timeSpan={timeSpan}
@@ -184,6 +197,7 @@ const Dashboard = () => {
           onEditClick={handleEditClick}
           onDeleteClick={handleDeleteClick}
           onJobClick={handleJobClick}
+          department={userProfile?.department as "sound" | "lights" | "video"}
         />
       )}
 
@@ -201,6 +215,14 @@ const Dashboard = () => {
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           job={selectedJob}
+        />
+      )}
+
+      {isAdminOrManagement && (
+        <CreateJobDialog
+          open={isCreateDialogOpen}
+          onOpenChange={setIsCreateDialogOpen}
+          currentDepartment={selectedDepartment}
         />
       )}
     </div>

@@ -3,6 +3,7 @@ import { JobCard } from "@/components/jobs/JobCard";
 import { TourChips } from "@/components/dashboard/TourChips";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { JobWithAssignment } from "@/types/job";
+import { CalendarSection } from "./CalendarSection";
 
 interface AdminDashboardProps {
   timeSpan: string;
@@ -27,7 +28,8 @@ export const AdminDashboard = ({
     <>
       <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={onTimeSpanChange} />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
+        <div className="md:col-span-2 space-y-6">
+          <CalendarSection jobs={jobs || []} />
           <Card>
             <CardContent className="space-y-4">
               <h2 className="text-xl font-semibold mt-4">All Jobs</h2>
@@ -52,8 +54,12 @@ export const AdminDashboard = ({
             </CardContent>
           </Card>
         </div>
-        <div>
-          <TourChips onTourClick={() => {}} />
+        <div className="space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <TourChips onTourClick={() => {}} />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </>
