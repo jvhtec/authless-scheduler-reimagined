@@ -31,22 +31,47 @@ export const TourManagementDialog = ({
         .select("id")
         .eq("tour_id", tour.id);
 
-      if (tourDatesError) throw tourDatesError;
+      if (tourDatesError) {
+        console.error("Error fetching tour dates:", tourDatesError);
+        throw tourDatesError;
+      }
 
-      if (tourDates) {
+      console.log("Found tour dates:", tourDates);
+
+      if (tourDates && tourDates.length > 0) {
         // Update all jobs associated with these tour dates
-        await supabase
+        const { error: jobsError } = await supabase
           .from("jobs")
           .update({ color })
           .in("tour_date_id", tourDates.map(td => td.id));
+
+        if (jobsError) {
+          console.error("Error updating jobs colors:", jobsError);
+          throw jobsError;
+        }
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["tours"] });
+      // Also update the main tour job if it exists
+      const { error: mainJobError } = await supabase
+        .from("jobs")
+        .update({ color })
+        .eq("title", tour.name)
+        .eq("job_type", "tour");
+
+      if (mainJobError) {
+        console.error("Error updating main tour job color:", mainJobError);
+        throw mainJobError;
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["tours-with-dates"] });
+      await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      
       toast({ title: "Color updated successfully" });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating color:", error);
       toast({
         title: "Error updating color",
+        description: error.message,
         variant: "destructive",
       });
     }
