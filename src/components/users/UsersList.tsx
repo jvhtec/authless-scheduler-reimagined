@@ -7,15 +7,21 @@ import { useToast } from "@/hooks/use-toast";
 export const UsersList = () => {
   const { toast } = useToast();
   
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isLoading, refetch } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
+      console.log("Fetching users...");
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching users:", error);
+        throw error;
+      }
+      
+      console.log("Users data:", data);
       return data;
     },
   });
@@ -29,11 +35,14 @@ export const UsersList = () => {
 
       if (error) throw error;
 
+      await refetch();
+      
       toast({
         title: "User deleted",
         description: "The user has been successfully deleted.",
       });
     } catch (error: any) {
+      console.error("Error deleting user:", error);
       toast({
         title: "Error",
         description: "Failed to delete user. " + error.message,
@@ -46,9 +55,13 @@ export const UsersList = () => {
     return <div>Loading users...</div>;
   }
 
+  if (!users?.length) {
+    return <div className="text-muted-foreground">No users found.</div>;
+  }
+
   return (
     <div className="space-y-4">
-      {users?.map((user) => (
+      {users.map((user) => (
         <div 
           key={user.id} 
           className="flex items-center justify-between p-4 border rounded-lg"

@@ -24,7 +24,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
     queryFn: async () => {
       console.log("Fetching tours data...");
       
-      const { data: tours, error: toursError } = await supabase
+      const { data: toursData, error: toursError } = await supabase
         .from("tours")
         .select(`
           id,
@@ -53,11 +53,10 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         throw toursError;
       }
 
-      console.log("Tours data:", tours);
-      return tours?.map(tour => ({
+      console.log("Tours data:", toursData);
+      return toursData?.map(tour => ({
         ...tour,
         title: tour.name,
-        // Get the color from the first job of the first tour date, or use default
         color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB',
       })) || [];
     },
