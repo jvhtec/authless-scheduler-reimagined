@@ -175,6 +175,7 @@ const Settings = () => {
         user={currentUser}
         onOpenChange={setEditUserOpen}
         onSave={handleUpdateProfile}
+        open={editUserOpen}
       />
     </div>
   );

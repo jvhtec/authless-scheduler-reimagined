@@ -10,9 +10,10 @@ interface EditUserDialogProps {
   user: Profile | null;
   onOpenChange: (open: boolean) => void;
   onSave: (updatedData: Partial<Profile>) => void;
+  open: boolean;
 }
 
-export const EditUserDialog = ({ user, onOpenChange, onSave }: EditUserDialogProps) => {
+export const EditUserDialog = ({ user, onOpenChange, onSave, open }: EditUserDialogProps) => {
   if (!user) return null;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -25,13 +26,18 @@ export const EditUserDialog = ({ user, onOpenChange, onSave }: EditUserDialogPro
       department: formData.get('department') as Department,
       dni: formData.get('dni') as string,
       residencia: formData.get('residencia') as string,
-      role: formData.get('role') as string,
     };
+    
+    // Only include role if user is admin or management
+    if (user.role === 'admin' || user.role === 'management') {
+      updatedData.role = formData.get('role') as string;
+    }
+    
     onSave(updatedData);
   };
 
   return (
-    <Dialog open={!!user} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit User Profile</DialogTitle>
@@ -74,21 +80,23 @@ export const EditUserDialog = ({ user, onOpenChange, onSave }: EditUserDialogPro
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
-            <Select name="role" defaultValue={user.role}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="user">User</SelectItem>
-                <SelectItem value="management">Management</SelectItem>
-                <SelectItem value="logistics">Logistics</SelectItem>
-                <SelectItem value="technician">Technician</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {(user.role === 'admin' || user.role === 'management') && (
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select name="role" defaultValue={user.role}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="management">Management</SelectItem>
+                  <SelectItem value="logistics">Logistics</SelectItem>
+                  <SelectItem value="technician">Technician</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="dni">DNI/NIE</Label>
             <Input
