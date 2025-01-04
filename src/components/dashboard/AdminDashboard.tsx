@@ -4,6 +4,8 @@ import { TourChips } from "@/components/dashboard/TourChips";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { JobWithAssignment } from "@/types/job";
 import { CalendarSection } from "./CalendarSection";
+import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AdminDashboardProps {
   timeSpan: string;
@@ -24,20 +26,62 @@ export const AdminDashboard = ({
   onDeleteClick,
   onJobClick,
 }: AdminDashboardProps) => {
+  const [selectedDate, setSelectedDate] = useState<Date>();
+
+  const filteredJobs = jobs?.filter(job => {
+    if (selectedDate) {
+      const jobDate = new Date(job.start_time);
+      return (
+        jobDate.getDate() === selectedDate.getDate() &&
+        jobDate.getMonth() === selectedDate.getMonth() &&
+        jobDate.getFullYear() === selectedDate.getFullYear()
+      );
+    }
+    return true;
+  });
+
   return (
     <>
       <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={onTimeSpanChange} />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
-          <CalendarSection jobs={jobs || []} />
+          <CalendarSection 
+            jobs={jobs || []} 
+            onDateSelect={setSelectedDate}
+          />
           <Card>
-            <CardContent className="space-y-4">
-              <h2 className="text-xl font-semibold mt-4">All Jobs</h2>
-              {isLoading ? (
-                <p className="text-muted-foreground">Loading...</p>
-              ) : (
-                <div className="space-y-4">
-                  {jobs?.map(job => (
+            <CardContent>
+              <Tabs defaultValue="all" className="w-full">
+                <TabsList className="w-full justify-start">
+                  <TabsTrigger value="all">All Jobs</TabsTrigger>
+                  <TabsTrigger value="sound">Sound</TabsTrigger>
+                  <TabsTrigger value="lights">Lights</TabsTrigger>
+                  <TabsTrigger value="video">Video</TabsTrigger>
+                </TabsList>
+                <TabsContent value="all" className="space-y-4 mt-4">
+                  {isLoading ? (
+                    <p className="text-muted-foreground">Loading...</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {filteredJobs?.map(job => (
+                        <JobCard
+                          key={job.id}
+                          job={job}
+                          onEditClick={onEditClick}
+                          onDeleteClick={onDeleteClick}
+                          onJobClick={onJobClick}
+                        />
+                      ))}
+                      {!filteredJobs?.length && (
+                        <p className="text-muted-foreground">No jobs found.</p>
+                      )}
+                    </div>
+                  )}
+                </TabsContent>
+                <TabsContent value="sound" className="space-y-4 mt-4">
+                  {filteredJobs?.filter(job => 
+                    job.job_departments?.some(d => d.department === "sound")
+                  ).map(job => (
                     <JobCard
                       key={job.id}
                       job={job}
@@ -46,11 +90,34 @@ export const AdminDashboard = ({
                       onJobClick={onJobClick}
                     />
                   ))}
-                  {!jobs?.length && (
-                    <p className="text-muted-foreground">No jobs found.</p>
-                  )}
-                </div>
-              )}
+                </TabsContent>
+                <TabsContent value="lights" className="space-y-4 mt-4">
+                  {filteredJobs?.filter(job => 
+                    job.job_departments?.some(d => d.department === "lights")
+                  ).map(job => (
+                    <JobCard
+                      key={job.id}
+                      job={job}
+                      onEditClick={onEditClick}
+                      onDeleteClick={onDeleteClick}
+                      onJobClick={onJobClick}
+                    />
+                  ))}
+                </TabsContent>
+                <TabsContent value="video" className="space-y-4 mt-4">
+                  {filteredJobs?.filter(job => 
+                    job.job_departments?.some(d => d.department === "video")
+                  ).map(job => (
+                    <JobCard
+                      key={job.id}
+                      job={job}
+                      onEditClick={onEditClick}
+                      onDeleteClick={onDeleteClick}
+                      onJobClick={onJobClick}
+                    />
+                  ))}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>
