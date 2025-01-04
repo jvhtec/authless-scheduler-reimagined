@@ -1,36 +1,13 @@
 import { useState } from "react";
-import { Department } from "@/types/department";
 import { format, addWeeks, addMonths, isAfter, isBefore } from "date-fns";
 import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
 import { EditJobDialog } from "@/components/jobs/EditJobDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { JobCard } from "@/components/jobs/JobCard";
-import { Card, CardContent } from "@/components/ui/card";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { Database } from "@/integrations/supabase/types";
-import { CalendarSection } from "@/components/dashboard/CalendarSection";
-import { TourChips } from "@/components/dashboard/TourChips";
-
-type JobWithAssignment = Database['public']['Tables']['jobs']['Row'] & {
-  location?: { name: string | null };
-  job_departments?: { department: Department }[];
-  sound_role?: string | null;
-  lights_role?: string | null;
-  video_role?: string | null;
-};
-
-type JobAssignmentResponse = {
-  job_id: string;
-  sound_role: string | null;
-  lights_role: string | null;
-  video_role: string | null;
-  jobs: Database['public']['Tables']['jobs']['Row'] & {
-    location: { name: string | null } | null;
-    job_departments: { department: Department }[];
-  };
-}
+import { AdminDashboard } from "@/components/dashboard/AdminDashboard";
+import { TechnicianDashboard } from "@/components/dashboard/TechnicianDashboard";
+import { JobWithAssignment } from "@/types/job";
 
 const Dashboard = () => {
   const [timeSpan, setTimeSpan] = useState<string>("1week");
@@ -38,7 +15,7 @@ const Dashboard = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobWithAssignment | null>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
+  const [selectedDepartment, setSelectedDepartment] = useState<"sound" | "lights" | "video">("sound");
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -102,7 +79,7 @@ const Dashboard = () => {
 
       if (error) throw error;
 
-      const transformedJobs = (data as unknown as JobAssignmentResponse[]).map(assignment => ({
+      const transformedJobs = data.map(assignment => ({
         ...assignment.jobs,
         sound_role: assignment.sound_role,
         lights_role: assignment.lights_role,
@@ -110,7 +87,7 @@ const Dashboard = () => {
       }));
 
       console.log("Jobs fetched successfully:", transformedJobs);
-      return transformedJobs as JobWithAssignment[];
+      return transformedJobs;
     },
     enabled: !!userProfile,
   });
@@ -186,66 +163,28 @@ const Dashboard = () => {
     }
   };
 
+  const isAdminOrManagement = userProfile?.role === 'admin' || userProfile?.role === 'management';
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {(userProfile?.role === 'admin' || userProfile?.role === 'management') ? (
-        <>
-          <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2">
-              <Card>
-                <CardContent className="space-y-4">
-                  <h2 className="text-xl font-semibold mt-4">All Jobs</h2>
-                  {isLoading ? (
-                    <p className="text-muted-foreground">Loading...</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {jobs?.map(job => (
-                        <JobCard
-                          key={job.id}
-                          job={job}
-                          onEditClick={handleEditClick}
-                          onDeleteClick={handleDeleteClick}
-                          onJobClick={handleJobClick}
-                        />
-                      ))}
-                      {!jobs?.length && (
-                        <p className="text-muted-foreground">No jobs found.</p>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-            <div>
-              <TourChips onTourClick={() => {}} />
-            </div>
-          </div>
-        </>
+      {isAdminOrManagement ? (
+        <AdminDashboard
+          timeSpan={timeSpan}
+          onTimeSpanChange={setTimeSpan}
+          jobs={getFilteredJobs()}
+          isLoading={isLoading}
+          onEditClick={handleEditClick}
+          onDeleteClick={handleDeleteClick}
+          onJobClick={handleJobClick}
+        />
       ) : (
-        <Card>
-          <CardContent className="space-y-4">
-            <h2 className="text-xl font-semibold mt-4">My Assigned Jobs</h2>
-            {isLoading ? (
-              <p className="text-muted-foreground">Loading...</p>
-            ) : (
-              <div className="space-y-4">
-                {jobs?.map(job => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    onEditClick={handleEditClick}
-                    onDeleteClick={handleDeleteClick}
-                    onJobClick={handleJobClick}
-                  />
-                ))}
-                {!jobs?.length && (
-                  <p className="text-muted-foreground">No jobs assigned for this time period.</p>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <TechnicianDashboard
+          jobs={getFilteredJobs()}
+          isLoading={isLoading}
+          onEditClick={handleEditClick}
+          onDeleteClick={handleDeleteClick}
+          onJobClick={handleJobClick}
+        />
       )}
 
       {selectedJobId && (

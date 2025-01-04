@@ -12,7 +12,7 @@ import {
   SidebarSeparator,
   SidebarTrigger
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Settings as SettingsIcon, LogOut } from "lucide-react";
+import { LayoutDashboard, Settings as SettingsIcon, LogOut, Music2, Video as VideoIcon, Lightbulb } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -32,7 +32,6 @@ const Layout = ({ children }: LayoutProps) => {
       if (!session) {
         navigate('/auth');
       } else {
-        // Fetch user role from profiles table
         supabase
           .from('profiles')
           .select('role')
@@ -66,6 +65,8 @@ const Layout = ({ children }: LayoutProps) => {
     setSession(null);
   };
 
+  const isAdminOrManagement = userRole === 'admin' || userRole === 'management';
+
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full">
@@ -82,6 +83,34 @@ const Layout = ({ children }: LayoutProps) => {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  {isAdminOrManagement && (
+                    <>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild>
+                          <Link to="/sound">
+                            <Music2 className="h-4 w-4" />
+                            <span>Sound</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild>
+                          <Link to="/lights">
+                            <Lightbulb className="h-4 w-4" />
+                            <span>Lights</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild>
+                          <Link to="/video">
+                            <VideoIcon className="h-4 w-4" />
+                            <span>Video</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </>
+                  )}
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link to="/settings">
