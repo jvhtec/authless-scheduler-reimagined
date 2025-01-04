@@ -4,10 +4,14 @@ import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
 import { EditJobDialog } from "@/components/jobs/EditJobDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AdminDashboard } from "@/components/dashboard/AdminDashboard";
-import { TechnicianDashboard } from "@/components/dashboard/TechnicianDashboard";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
 import { JobWithAssignment } from "@/types/job";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { CalendarSection } from "@/components/dashboard/CalendarSection";
+import { TourChips } from "@/components/dashboard/TourChips";
+import { KanbanView } from "@/components/dashboard/KanbanView";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Dashboard = () => {
   const [timeSpan, setTimeSpan] = useState<string>("1week");
@@ -15,10 +19,9 @@ const Dashboard = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobWithAssignment | null>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<"sound" | "lights" | "video">("sound");
+  const [selectedDate, setSelectedDate] = useState<Date>();
   
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const { data: userProfile } = useQuery({
     queryKey: ["user-profile"],
@@ -45,47 +48,16 @@ const Dashboard = () => {
       
       if (!user) throw new Error("No user found");
 
-      // For admin/management, fetch all jobs
-      if (userProfile?.role === 'admin' || userProfile?.role === 'management') {
-        const { data, error } = await supabase
-          .from("jobs")
-          .select(`
-            *,
-            location:locations(name),
-            job_departments(department)
-          `);
-
-        if (error) throw error;
-        return data;
-      }
-
-      // For technicians, fetch only assigned jobs
       const { data, error } = await supabase
-        .from("job_assignments")
+        .from("jobs")
         .select(`
-          job_id,
-          sound_role,
-          lights_role,
-          video_role,
-          jobs (
-            *,
-            location:locations(name),
-            job_departments(department)
-          )
-        `)
-        .eq('technician_id', user.id);
+          *,
+          location:locations(name),
+          job_departments(department)
+        `);
 
       if (error) throw error;
-
-      const transformedJobs = data.map(assignment => ({
-        ...assignment.jobs,
-        sound_role: assignment.sound_role,
-        lights_role: assignment.lights_role,
-        video_role: assignment.video_role
-      }));
-
-      console.log("Jobs fetched successfully:", transformedJobs);
-      return transformedJobs;
+      return data;
     },
     enabled: !!userProfile,
   });
@@ -104,10 +76,23 @@ const Dashboard = () => {
   const getFilteredJobs = () => {
     if (!jobs) return [];
     const endDate = getTimeSpanEndDate();
-    return jobs.filter(job => 
+    const dateFiltered = jobs.filter(job => 
       isAfter(new Date(job.start_time), new Date()) &&
       isBefore(new Date(job.start_time), endDate)
     );
+
+    if (selectedDate) {
+      return dateFiltered.filter(job => {
+        const jobDate = new Date(job.start_time);
+        return (
+          jobDate.getDate() === selectedDate.getDate() &&
+          jobDate.getMonth() === selectedDate.getMonth() &&
+          jobDate.getFullYear() === selectedDate.getFullYear()
+        );
+      });
+    }
+
+    return dateFiltered;
   };
 
   const handleJobClick = (jobId: string) => {
@@ -149,8 +134,6 @@ const Dashboard = () => {
         title: "Job deleted successfully",
         description: "The job and all related records have been removed.",
       });
-      
-      queryClient.invalidateQueries({ queryKey: ["assigned-jobs"] });
     } catch (error: any) {
       console.error("Error deleting job:", error);
       toast({
@@ -161,36 +144,76 @@ const Dashboard = () => {
     }
   };
 
-  const isAdminOrManagement = userProfile?.role === 'admin' || userProfile?.role === 'management';
+  const filteredJobs = getFilteredJobs();
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {isAdminOrManagement ? (
-        <AdminDashboard
-          timeSpan={timeSpan}
-          onTimeSpanChange={setTimeSpan}
-          jobs={getFilteredJobs()}
-          isLoading={isLoading}
-          onEditClick={handleEditClick}
-          onDeleteClick={handleDeleteClick}
-          onJobClick={handleJobClick}
-        />
-      ) : (
-        <TechnicianDashboard
-          jobs={getFilteredJobs()}
-          isLoading={isLoading}
-          onEditClick={handleEditClick}
-          onDeleteClick={handleDeleteClick}
-          onJobClick={handleJobClick}
-        />
-      )}
+      <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 space-y-6">
+          <CalendarSection 
+            jobs={jobs || []} 
+            onDateSelect={setSelectedDate}
+          />
+          
+          <Card>
+            <CardContent>
+              <Tabs defaultValue="sound" className="w-full">
+                <TabsList className="w-full justify-start">
+                  <TabsTrigger value="sound">Sound</TabsTrigger>
+                  <TabsTrigger value="lights">Lights</TabsTrigger>
+                  <TabsTrigger value="video">Video</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="sound">
+                  <KanbanView
+                    jobs={filteredJobs}
+                    department="sound"
+                    onEditClick={handleEditClick}
+                    onDeleteClick={handleDeleteClick}
+                    onJobClick={handleJobClick}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="lights">
+                  <KanbanView
+                    jobs={filteredJobs}
+                    department="lights"
+                    onEditClick={handleEditClick}
+                    onDeleteClick={handleDeleteClick}
+                    onJobClick={handleJobClick}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="video">
+                  <KanbanView
+                    jobs={filteredJobs}
+                    department="video"
+                    onEditClick={handleEditClick}
+                    onDeleteClick={handleDeleteClick}
+                    onJobClick={handleJobClick}
+                  />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <TourChips onTourClick={() => {}} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {selectedJobId && (
         <JobAssignmentDialog
           open={isAssignmentDialogOpen}
           onOpenChange={setIsAssignmentDialogOpen}
           jobId={selectedJobId}
-          department={selectedDepartment}
         />
       )}
 
