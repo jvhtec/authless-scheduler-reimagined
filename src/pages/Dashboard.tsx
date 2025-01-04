@@ -9,13 +9,22 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { JobCard } from "@/components/jobs/JobCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { Database } from "@/integrations/supabase/types";
+
+type JobWithAssignment = Database['public']['Tables']['jobs']['Row'] & {
+  location?: { name: string | null };
+  job_departments?: { department: Department }[];
+  sound_role?: string | null;
+  lights_role?: string | null;
+  video_role?: string | null;
+};
 
 const Dashboard = () => {
   const [timeSpan, setTimeSpan] = useState<string>("1week");
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [selectedJob, setSelectedJob] = useState<JobWithAssignment | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   
   const { toast } = useToast();
@@ -56,7 +65,7 @@ const Dashboard = () => {
         sound_role: assignment.sound_role,
         lights_role: assignment.lights_role,
         video_role: assignment.video_role
-      }));
+      })) as JobWithAssignment[];
 
       console.log("Assigned jobs fetched successfully:", transformedJobs);
       return transformedJobs;
@@ -88,7 +97,7 @@ const Dashboard = () => {
     setIsAssignmentDialogOpen(true);
   };
 
-  const handleEditClick = (job: any) => {
+  const handleEditClick = (job: JobWithAssignment) => {
     setSelectedJob(job);
     setIsEditDialogOpen(true);
   };
