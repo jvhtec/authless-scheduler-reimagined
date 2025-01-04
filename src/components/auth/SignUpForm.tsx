@@ -58,6 +58,17 @@ export const SignUpForm = ({ onBack }: { onBack: () => void }) => {
 
       if (authError) {
         console.error("Auth error:", authError);
+        
+        // Handle specific error cases
+        if (authError.message === "User already registered") {
+          toast({
+            title: "Account already exists",
+            description: "Please try logging in instead, or use a different email address.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
         throw authError;
       }
 
