@@ -30,7 +30,7 @@ const TechnicianDashboard = () => {
           `)
           .eq('technician_id', user.id)
           .gte('jobs.start_time', new Date().toISOString())
-          .order('jobs.start_time', { ascending: true });
+          .order('jobs(start_time)', { ascending: true });
 
         if (error) throw error;
         
