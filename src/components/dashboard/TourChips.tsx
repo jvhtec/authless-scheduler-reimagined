@@ -77,7 +77,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         throw toursError;
       }
 
-      console.log("Tours data:", tours);
+      console.log("Raw tours data:", tours);
       
       // Transform the data to match our interface
       const transformedTours = tours?.map(tour => ({
@@ -91,6 +91,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB',
       }));
 
+      console.log("Transformed tours data:", transformedTours);
       return transformedTours || [];
     },
   });
