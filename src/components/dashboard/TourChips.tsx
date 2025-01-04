@@ -20,26 +20,23 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
   const { toast } = useToast();
 
   const { data: tours = [], isLoading } = useQuery({
-    queryKey: ["tours"],
+    queryKey: ["tours-with-dates"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, fetch all tours
+      const { data: toursData, error: toursError } = await supabase
         .from("tours")
-        .select("id, name, description, created_at")
-        .order('created_at', { ascending: false });
+        .select("id, name, description, created_at");
 
-      if (error) {
-        toast({
-          title: "Error fetching tours",
-          description: error.message,
-          variant: "destructive",
-        });
-        throw error;
+      if (toursError) {
+        console.error("Error fetching tours:", toursError);
+        throw toursError;
       }
 
-      // Fetch tour dates and jobs in a separate query
-      const { data: toursWithDates, error: datesError } = await supabase
+      // Then fetch tour dates with their locations and jobs
+      const { data: tourDatesData, error: datesError } = await supabase
         .from("tour_dates")
         .select(`
+          id,
           tour_id,
           date,
           location:locations(name),
@@ -47,26 +44,18 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         `);
 
       if (datesError) {
-        toast({
-          title: "Error fetching tour dates",
-          description: datesError.message,
-          variant: "destructive",
-        });
+        console.error("Error fetching tour dates:", datesError);
         throw datesError;
       }
 
-      // Map the dates and jobs to their respective tours
-      return data.map(tour => {
-        const tourDates = toursWithDates?.filter(td => td.tour_id === tour.id) || [];
-        return {
-          ...tour,
-          title: tour.name,
-          tour_dates: tourDates,
-          color: tourDates[0]?.jobs?.[0]?.color || '#7E69AB',
-        };
-      });
-    },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+      // Map tour dates to their respective tours
+      return toursData.map(tour => ({
+        ...tour,
+        title: tour.name,
+        tour_dates: tourDatesData?.filter(td => td.tour_id === tour.id) || [],
+        color: tourDatesData?.find(td => td.tour_id === tour.id)?.jobs?.[0]?.color || '#7E69AB'
+      }));
+    }
   });
 
   const handleViewDates = (tour: any) => {
