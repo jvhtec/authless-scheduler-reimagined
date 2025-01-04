@@ -3,11 +3,14 @@ import { supabase } from "@/lib/supabase";
 import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 import { UserManagement } from "@/components/settings/UserManagement";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const Settings = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isManagement, setIsManagement] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme");
@@ -20,27 +23,29 @@ const Settings = () => {
   const checkUserRole = async () => {
     console.log("Checking user role...");
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (userError) {
-        console.error("Error getting user:", userError);
+      if (sessionError) {
+        console.error("Session error:", sessionError);
         toast({
           title: "Error",
-          description: "Could not verify user session",
+          description: "Could not verify session",
           variant: "destructive",
         });
+        navigate("/auth");
         return;
       }
 
-      if (!user) {
-        console.log("No user found");
+      if (!session) {
+        console.log("No active session found");
+        navigate("/auth");
         return;
       }
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', user.id)
+        .eq('id', session.user.id)
         .single();
       
       if (profileError) {
@@ -65,6 +70,8 @@ const Settings = () => {
         description: "Could not verify user role",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -80,6 +87,10 @@ const Settings = () => {
       localStorage.setItem("theme", "light");
     }
   };
+
+  if (isLoading) {
+    return <div>Loading settings...</div>;
+  }
 
   return (
     <div className="space-y-6">

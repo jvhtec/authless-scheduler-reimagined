@@ -12,12 +12,14 @@ interface TourChipsProps {
   onTourClick: (tourId: string) => void;
 }
 
+interface Location {
+  name: string;
+}
+
 interface TourDate {
   id: string;
   date: string;
-  location: {
-    name: string;
-  } | null;
+  location: Location | null;
   jobs: {
     id: string;
     color: string;
