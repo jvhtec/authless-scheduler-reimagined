@@ -65,10 +65,15 @@ const Dashboard = () => {
         sound_role: assignment.sound_role,
         lights_role: assignment.lights_role,
         video_role: assignment.video_role
-      })) as JobWithAssignment[];
+      }));
 
-      console.log("Assigned jobs fetched successfully:", transformedJobs);
-      return transformedJobs;
+      // Type assertion after verifying the structure
+      const typedJobs = transformedJobs.filter((job): job is JobWithAssignment => 
+        job !== null && typeof job === 'object' && 'id' in job
+      );
+
+      console.log("Assigned jobs fetched successfully:", typedJobs);
+      return typedJobs;
     },
   });
 
