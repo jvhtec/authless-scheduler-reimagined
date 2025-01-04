@@ -29,6 +29,35 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
 
   const availableDepartments: Department[] = ["sound", "lights", "video"];
 
+  const getOrCreateLocation = async (locationName: string) => {
+    if (!locationName) return null;
+    
+    // First try to get the existing location
+    const { data: existingLocations, error: fetchError } = await supabase
+      .from('locations')
+      .select('id')
+      .eq('name', locationName)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+
+    // If location exists, return its ID
+    if (existingLocations) {
+      return existingLocations.id;
+    }
+
+    // If location doesn't exist, create it
+    const { data: newLocation, error: createError } = await supabase
+      .from('locations')
+      .insert({ name: locationName })
+      .select()
+      .single();
+
+    if (createError) throw createError;
+
+    return newLocation.id;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Creating job...");
@@ -42,7 +71,10 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
         throw new Error("You must be logged in to create a job");
       }
 
-      // First, create the job
+      // Get or create location if provided
+      const locationId = location ? await getOrCreateLocation(location) : null;
+
+      // Create the job
       const { data: jobData, error: jobError } = await supabase
         .from('jobs')
         .insert({
@@ -51,7 +83,8 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
           start_time: startTime,
           end_time: endTime,
           color,
-          created_by: session.user.id
+          created_by: session.user.id,
+          location_id: locationId
         })
         .select()
         .single();
@@ -60,7 +93,7 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
 
       console.log("Job created:", jobData);
 
-      // Then, create the job departments
+      // Create the job departments
       const jobDepartments = selectedDepartments.map(department => ({
         job_id: jobData.id,
         department,
@@ -73,27 +106,6 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
       if (deptError) throw deptError;
 
       console.log("Job departments created");
-
-      // If location is provided, create or find the location
-      if (location) {
-        const { data: locationData, error: locationError } = await supabase
-          .from('locations')
-          .insert({ name: location })
-          .select()
-          .single();
-
-        if (locationError) throw locationError;
-
-        console.log("Location created:", locationData);
-
-        // Update the job with the location_id
-        const { error: updateError } = await supabase
-          .from('jobs')
-          .update({ location_id: locationData.id })
-          .eq('id', jobData.id);
-
-        if (updateError) throw updateError;
-      }
 
       // Invalidate the jobs query to refresh the data
       await queryClient.invalidateQueries({ queryKey: ['jobs'] });
