@@ -12,9 +12,31 @@ interface TourChipsProps {
   onTourClick: (tourId: string) => void;
 }
 
+interface TourDate {
+  id: string;
+  date: string;
+  location: {
+    name: string;
+  };
+  jobs: {
+    id: string;
+    color: string;
+  }[];
+}
+
+interface Tour {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  tour_dates: TourDate[];
+  title?: string;
+  color?: string;
+}
+
 export const TourChips = ({ onTourClick }: TourChipsProps) => {
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
-  const [selectedTour, setSelectedTour] = useState<any>(null);
+  const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [isDatesDialogOpen, setIsDatesDialogOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -56,7 +78,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
       }
 
       console.log("Tours data:", tours);
-      return tours?.map(tour => ({
+      return (tours as Tour[])?.map(tour => ({
         ...tour,
         title: tour.name,
         color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB',
