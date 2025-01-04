@@ -61,12 +61,22 @@ export const SignUpForm = ({ onBack }: { onBack: () => void }) => {
         throw authError;
       }
 
-      // If this is the super user, update their role to admin
-      if (formData.email.toLowerCase() === 'sonido@sector-pro.com') {
+      // Determine role based on email domain
+      let role = 'technician';
+      const email = formData.email.toLowerCase();
+      
+      if (email === 'sonido@sector-pro.com') {
+        role = 'admin';
+      } else if (email.endsWith('@sector-pro.com')) {
+        role = 'management';
+      }
+
+      // Update the user's role in the profiles table
+      if (authData?.user) {
         const { error: updateError } = await supabase
           .from('profiles')
-          .update({ role: 'admin' })
-          .eq('email', formData.email.toLowerCase());
+          .update({ role })
+          .eq('id', authData.user.id);
 
         if (updateError) {
           console.error("Error updating role:", updateError);

@@ -52,7 +52,19 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
         return;
       }
 
-      console.log("Login successful for user:", data.user.email);
+      // Fetch user's role from profiles
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching user role:", profileError);
+        throw profileError;
+      }
+
+      console.log("Login successful for user:", data.user.email, "with role:", profileData?.role);
       
       toast({
         title: "Welcome back!",
