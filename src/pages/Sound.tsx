@@ -98,6 +98,7 @@ const Sound = () => {
       <LightsHeader 
         onCreateJob={() => setIsJobDialogOpen(true)}
         onCreateTour={() => setIsTourDialogOpen(true)}
+        department="Sound"
       />
 
       <div className="grid md:grid-cols-2 gap-6">

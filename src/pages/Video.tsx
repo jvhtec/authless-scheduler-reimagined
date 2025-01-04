@@ -98,6 +98,7 @@ const Video = () => {
       <LightsHeader 
         onCreateJob={() => setIsJobDialogOpen(true)}
         onCreateTour={() => setIsTourDialogOpen(true)}
+        department="Video"
       />
 
       <div className="grid md:grid-cols-2 gap-6">
