@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SimplifiedJobColorPicker } from "./SimplifiedJobColorPicker";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocationManagement } from "@/hooks/useLocationManagement";
 
 interface CreateJobDialogProps {
   open: boolean;
@@ -26,37 +27,9 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
   const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([currentDepartment]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { getOrCreateLocation } = useLocationManagement();
 
   const availableDepartments: Department[] = ["sound", "lights", "video"];
-
-  const getOrCreateLocation = async (locationName: string) => {
-    if (!locationName) return null;
-    
-    // First try to get the existing location
-    const { data: existingLocations, error: fetchError } = await supabase
-      .from('locations')
-      .select('id')
-      .eq('name', locationName)
-      .maybeSingle();
-
-    if (fetchError) throw fetchError;
-
-    // If location exists, return its ID
-    if (existingLocations) {
-      return existingLocations.id;
-    }
-
-    // If location doesn't exist, create it
-    const { data: newLocation, error: createError } = await supabase
-      .from('locations')
-      .insert({ name: locationName })
-      .select()
-      .single();
-
-    if (createError) throw createError;
-
-    return newLocation.id;
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
