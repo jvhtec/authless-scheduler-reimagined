@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +17,7 @@ export const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
 
   // Fetch user profile on component mount
-  useState(() => {
+  useEffect(() => {
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
