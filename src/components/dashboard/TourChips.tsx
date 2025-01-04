@@ -38,11 +38,20 @@ interface Tour {
 }
 
 // Type for raw Supabase response
+interface RawLocation {
+  name: string | null;
+}
+
+interface RawJob {
+  id: string;
+  color: string | null;
+}
+
 interface RawTourDate {
   id: string;
   date: string;
-  location: Location | null;
-  jobs: Job[] | null;
+  location: RawLocation | null;
+  jobs: RawJob[] | null;
 }
 
 interface RawTour {
@@ -96,8 +105,10 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         throw error;
       }
 
+      console.log("Raw tours data:", rawToursData);
+
       // Transform the raw data into our expected type
-      const typedTours: Tour[] = (rawToursData as RawTour[] || []).map(tour => ({
+      const typedTours: Tour[] = (rawToursData as unknown as RawTour[]).map(tour => ({
         id: tour.id,
         name: tour.name,
         description: tour.description,
@@ -106,7 +117,10 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
           id: date.id,
           date: date.date,
           location: date.location,
-          jobs: date.jobs || []
+          jobs: date.jobs?.map(job => ({
+            id: job.id,
+            color: job.color || '#7E69AB'
+          })) || []
         }))
       }));
 
