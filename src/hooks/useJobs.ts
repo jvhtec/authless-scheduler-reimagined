@@ -10,8 +10,13 @@ export const useJobs = () => {
         .from("jobs")
         .select(`
           *,
-          location: locations(name),
-          job_departments(department)
+          location: locations (
+            id,
+            name
+          ),
+          job_departments (
+            department
+          )
         `)
         .order('start_time');
 

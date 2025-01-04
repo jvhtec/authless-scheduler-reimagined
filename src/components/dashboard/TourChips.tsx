@@ -36,11 +36,11 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
             date,
             location:locations (
               name
+            ),
+            jobs (
+              id,
+              color
             )
-          ),
-          jobs!tour_dates (
-            id,
-            color
           )
         `)
         .order('created_at', { ascending: false });
@@ -59,7 +59,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
       return tours?.map(tour => ({
         ...tour,
         title: tour.name,
-        color: tour.jobs?.[0]?.color || '#7E69AB',
+        color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB',
       })) || [];
     },
   });
