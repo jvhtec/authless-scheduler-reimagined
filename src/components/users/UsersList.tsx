@@ -4,31 +4,35 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
+type Profile = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  role: string;
+};
+
 export const UsersList = () => {
   const { toast } = useToast();
   
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isLoading, error } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
-      console.log("Fetching profiles...");
+      console.log("Starting profiles fetch...");
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, first_name, last_name, email, role')
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error("Error fetching profiles:", error);
-        toast({
-          title: "Error fetching users",
-          description: error.message,
-          variant: "destructive",
-        });
-        return [];
+        console.error("Error in profiles fetch:", error);
+        throw error;
       }
 
-      console.log("Profiles data:", data);
-      return data || [];
+      console.log("Profiles fetch successful:", data);
+      return data as Profile[];
     },
+    retry: 1, // Only retry once to prevent infinite loops
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     refetchOnWindowFocus: false,
   });
@@ -40,30 +44,37 @@ export const UsersList = () => {
         .delete()
         .eq('id', userId);
 
-      if (error) {
-        console.error("Error deleting user:", error);
-        throw error;
-      }
+      if (error) throw error;
       
       toast({
         title: "User deleted",
         description: "The user has been successfully deleted.",
       });
     } catch (error: any) {
+      console.error("Delete error:", error);
       toast({
         title: "Error",
-        description: "Failed to delete user. " + error.message,
+        description: "Failed to delete user: " + error.message,
         variant: "destructive",
       });
     }
   };
 
+  if (error) {
+    console.error("Query error state:", error);
+    return (
+      <div className="p-4 text-red-500 bg-red-50 rounded-lg">
+        Error loading users: {error.message}
+      </div>
+    );
+  }
+
   if (isLoading) {
-    return <div>Loading users...</div>;
+    return <div className="p-4">Loading users...</div>;
   }
 
   if (!users?.length) {
-    return <div className="text-muted-foreground">No users found.</div>;
+    return <div className="text-muted-foreground p-4">No users found.</div>;
   }
 
   return (
