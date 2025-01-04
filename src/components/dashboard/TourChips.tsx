@@ -12,28 +12,22 @@ interface TourChipsProps {
   onTourClick: (tourId: string) => void;
 }
 
-interface Location {
-  name: string;
-}
-
-interface TourDate {
-  id: string;
-  date: string;
-  location: Location | null;
-  jobs: {
-    id: string;
-    color: string;
-  }[];
-}
-
 interface Tour {
   id: string;
   name: string;
   description: string | null;
   created_at: string;
-  tour_dates: TourDate[];
-  title?: string;
-  color?: string;
+  tour_dates: Array<{
+    id: string;
+    date: string;
+    location: {
+      name: string;
+    } | null;
+    jobs: Array<{
+      id: string;
+      color: string;
+    }>;
+  }>;
 }
 
 export const TourChips = ({ onTourClick }: TourChipsProps) => {
@@ -48,7 +42,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
     queryFn: async () => {
       console.log("Fetching tours data...");
       
-      const { data: toursData, error: toursError } = await supabase
+      const { data, error } = await supabase
         .from("tours")
         .select(`
           id,
@@ -69,32 +63,18 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         `)
         .order('created_at', { ascending: false });
 
-      if (toursError) {
-        console.error("Error fetching tours:", toursError);
+      if (error) {
+        console.error("Error fetching tours:", error);
         toast({
           title: "Error fetching tours",
-          description: toursError.message,
+          description: error.message,
           variant: "destructive",
         });
-        throw toursError;
+        throw error;
       }
 
-      console.log("Raw tours data:", toursData);
-      
-      // Transform the data to match our interface
-      const transformedTours = toursData?.map(tour => ({
-        ...tour,
-        title: tour.name,
-        tour_dates: tour.tour_dates?.map((date: any) => ({
-          ...date,
-          location: date.location ? { name: date.location.name } : null,
-          jobs: date.jobs || []
-        })) || [],
-        color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB'
-      }));
-
-      console.log("Transformed tours data:", transformedTours);
-      return transformedTours || [];
+      console.log("Tours data:", data);
+      return data as Tour[];
     },
   });
 
@@ -126,12 +106,12 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
                 "hover:bg-opacity-10 hover:text-foreground transition-colors"
               )}
               style={{
-                borderColor: tour.color,
-                color: tour.color,
-                backgroundColor: `${tour.color}10`
+                borderColor: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB',
+                color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB',
+                backgroundColor: `${tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB'}10`
               }}
             >
-              {tour.title}
+              {tour.name}
             </Button>
             <Button
               variant="ghost"

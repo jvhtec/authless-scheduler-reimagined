@@ -21,34 +21,23 @@ const Settings = () => {
   }, []);
 
   const checkUserRole = async () => {
-    console.log("Checking user role...");
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const { data: { user } } = await supabase.auth.getUser();
       
-      if (sessionError) {
-        console.error("Session error:", sessionError);
-        toast({
-          title: "Error",
-          description: "Could not verify session",
-          variant: "destructive",
-        });
+      if (!user) {
+        console.log("No user found");
         navigate("/auth");
         return;
       }
 
-      if (!session) {
-        console.log("No active session found");
-        navigate("/auth");
-        return;
-      }
+      console.log("User found:", user);
 
-      console.log("Session found:", session);
-
+      // First try to get the profile
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', session.user.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle();
       
       if (profileError) {
         console.error("Error fetching profile:", profileError);
@@ -60,8 +49,34 @@ const Settings = () => {
         return;
       }
 
-      console.log("User profile:", profile);
+      console.log("Profile data:", profile);
       
+      if (!profile) {
+        console.log("No profile found, creating one...");
+        // If no profile exists, create one with default role
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert([
+            { 
+              id: user.id,
+              email: user.email,
+              role: 'technician',
+              first_name: user.user_metadata.first_name,
+              last_name: user.user_metadata.last_name
+            }
+          ]);
+
+        if (insertError) {
+          console.error("Error creating profile:", insertError);
+          toast({
+            title: "Error",
+            description: "Could not create user profile",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       const hasManagementAccess = profile?.role === 'management' || profile?.role === 'admin';
       console.log("Has management access:", hasManagementAccess);
       setIsManagement(hasManagementAccess);
