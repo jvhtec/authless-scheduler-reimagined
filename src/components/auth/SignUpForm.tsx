@@ -66,7 +66,7 @@ export const SignUpForm = ({ onBack }: { onBack: () => void }) => {
       const email = formData.email.toLowerCase();
       
       if (email === 'sonido@sector-pro.com') {
-        role = 'admin';
+        role = 'management';
       } else if (email.endsWith('@sector-pro.com')) {
         role = 'management';
       }
