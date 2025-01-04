@@ -10,7 +10,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { JobCard } from "@/components/jobs/JobCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { CalendarSection } from "@/components/dashboard/CalendarSection";
+import { LightsCalendar } from "@/components/lights/LightsCalendar";
+import { LightsSchedule } from "@/components/lights/LightsSchedule";
 import { TourChips } from "@/components/dashboard/TourChips";
 
 const Dashboard = () => {
@@ -70,9 +71,7 @@ const Dashboard = () => {
   const handleDeleteClick = async (jobId: string) => {
     if (!window.confirm("Are you sure you want to delete this job?")) return;
 
-    console.log("Deleting job:", jobId);
     try {
-      // First delete job_assignments
       const { error: assignmentsError } = await supabase
         .from("job_assignments")
         .delete()
@@ -80,7 +79,6 @@ const Dashboard = () => {
 
       if (assignmentsError) throw assignmentsError;
 
-      // Then delete job_departments
       const { error: departmentsError } = await supabase
         .from("job_departments")
         .delete()
@@ -88,7 +86,6 @@ const Dashboard = () => {
 
       if (departmentsError) throw departmentsError;
 
-      // Finally delete the job
       const { error: jobError } = await supabase
         .from("jobs")
         .delete()
@@ -113,7 +110,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 p-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
       
       <Card>
@@ -128,42 +125,21 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      <div className="grid md:grid-cols-2 gap-6 min-h-[600px]">
-        <CalendarSection date={date} onDateSelect={setDate} />
-
-        <Card className="h-full">
-          <CardHeader>
-            <CardTitle>Schedule for {date?.toLocaleDateString()}</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[calc(100%-4rem)] overflow-y-auto">
-            <div className="space-y-4">
-              {isLoading ? (
-                <p className="text-muted-foreground">Loading schedule...</p>
-              ) : getSelectedDateJobs().length > 0 ? (
-                getSelectedDateJobs().map(job => {
-                  const department = job.job_departments[0]?.department || "sound";
-                  return (
-                    <JobCard
-                      key={job.id}
-                      job={job}
-                      onEditClick={handleEditClick}
-                      onDeleteClick={handleDeleteClick}
-                      onJobClick={(jobId) => handleJobClick(jobId, department)}
-                      department={department}
-                    />
-                  );
-                })
-              ) : (
-                <p className="text-muted-foreground">No events scheduled for this date</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid md:grid-cols-2 gap-6">
+        <LightsCalendar date={date} onSelect={setDate} />
+        <LightsSchedule
+          date={date}
+          jobs={getSelectedDateJobs()}
+          isLoading={isLoading}
+          onJobClick={(jobId) => handleJobClick(jobId, "sound")}
+          onEditClick={handleEditClick}
+          onDeleteClick={handleDeleteClick}
+        />
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">
         {["sound", "lights", "video"].map((dept) => (
-          <Card key={dept} className="h-full">
+          <Card key={dept}>
             <CardHeader>
               <CardTitle>{dept.charAt(0).toUpperCase() + dept.slice(1)} Schedule</CardTitle>
             </CardHeader>
