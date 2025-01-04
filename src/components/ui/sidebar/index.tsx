@@ -15,6 +15,4 @@ export {
   SidebarContent,
   SidebarFooter,
   SidebarSeparator,
-  SidebarGroup,
-  SidebarGroupContent,
 } from "./sidebar-components"
