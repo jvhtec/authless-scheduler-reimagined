@@ -13,6 +13,7 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { LightsSchedule } from "@/components/lights/LightsSchedule";
 import { TourChips } from "@/components/dashboard/TourChips";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -26,6 +27,7 @@ const Dashboard = () => {
   const { data: jobs, isLoading } = useJobs();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const getTimeSpanEndDate = () => {
     const today = new Date();
@@ -145,7 +147,10 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {["sound", "lights", "video"].map((dept) => (
           <Card key={dept} className="w-full">
-            <CardHeader>
+            <CardHeader 
+              className="cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => navigate(`/${dept}`)}
+            >
               <CardTitle className="capitalize">{dept} Schedule</CardTitle>
             </CardHeader>
             <CardContent className="h-[400px] overflow-y-auto">
