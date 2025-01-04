@@ -11,6 +11,7 @@ interface JobCardProps {
   onJobClick: (jobId: string) => void;
   showAssignments?: boolean;
   department?: Department;
+  userRole?: string | null;
 }
 
 export const JobCard = ({
@@ -19,7 +20,8 @@ export const JobCard = ({
   onDeleteClick,
   onJobClick,
   showAssignments = true,
-  department
+  department,
+  userRole
 }: JobCardProps) => {
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -32,6 +34,7 @@ export const JobCard = ({
   };
 
   const isTourJob = job.job_type === 'tour' || !!job.tour_date_id;
+  const canEdit = userRole !== 'logistics';
 
   return (
     <div 
@@ -41,7 +44,7 @@ export const JobCard = ({
         borderColor: job.color || '#7E69AB',
         backgroundColor: `${job.color}15` || '#7E69AB15'
       }}
-      onClick={() => onJobClick(job.id)}
+      onClick={() => canEdit && onJobClick(job.id)}
     >
       {/* Header Area */}
       <div 
@@ -60,22 +63,24 @@ export const JobCard = ({
             )}
           </div>
         </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleEditClick}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleDeleteClick}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+        {canEdit && (
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleEditClick}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleDeleteClick}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Content Area */}
@@ -98,7 +103,11 @@ export const JobCard = ({
         )}
 
         {showAssignments && (
-          <JobAssignments jobId={job.id} department={department} />
+          <JobAssignments 
+            jobId={job.id} 
+            department={department}
+            userRole={userRole}
+          />
         )}
       </div>
     </div>

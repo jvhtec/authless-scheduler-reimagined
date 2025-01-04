@@ -9,9 +9,10 @@ import { toast } from "sonner";
 interface JobAssignmentsProps {
   jobId: string;
   department?: Department;
+  userRole?: string | null;
 }
 
-export const JobAssignments = ({ jobId, department }: JobAssignmentsProps) => {
+export const JobAssignments = ({ jobId, department, userRole }: JobAssignmentsProps) => {
   const queryClient = useQueryClient();
 
   const { data: assignments } = useQuery({
@@ -44,6 +45,8 @@ export const JobAssignments = ({ jobId, department }: JobAssignmentsProps) => {
   });
 
   const handleDelete = async (assignmentId: string) => {
+    if (userRole === 'logistics') return;
+    
     try {
       const { error } = await supabase
         .from("job_assignments")
@@ -102,14 +105,16 @@ export const JobAssignments = ({ jobId, department }: JobAssignmentsProps) => {
               </span>
               <span className="text-xs">({role})</span>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => handleDelete(assignment.id)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            {userRole !== 'logistics' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => handleDelete(assignment.id)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         );
       })}

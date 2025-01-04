@@ -14,6 +14,7 @@ import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { LightsSchedule } from "@/components/lights/LightsSchedule";
 import { TourChips } from "@/components/dashboard/TourChips";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 const Dashboard = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -23,11 +24,36 @@ const Dashboard = () => {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
+  const [userRole, setUserRole] = useState<string | null>(null);
   
   const { data: jobs, isLoading } = useJobs();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user role:', error);
+          return;
+        }
+
+        if (data) {
+          setUserRole(data.role);
+        }
+      }
+    };
+
+    fetchUserRole();
+  }, []);
 
   const getTimeSpanEndDate = () => {
     const today = new Date();
@@ -61,17 +87,21 @@ const Dashboard = () => {
   };
 
   const handleJobClick = (jobId: string, department: Department) => {
+    if (userRole === 'logistics') return; // Prevent logistics users from assigning technicians
     setSelectedJobId(jobId);
     setSelectedDepartment(department);
     setIsAssignmentDialogOpen(true);
   };
 
   const handleEditClick = (job: any) => {
+    if (userRole === 'logistics') return; // Prevent logistics users from editing jobs
     setSelectedJob(job);
     setIsEditDialogOpen(true);
   };
 
   const handleDeleteClick = async (jobId: string) => {
+    if (userRole === 'logistics') return; // Prevent logistics users from deleting jobs
+    
     if (!window.confirm("Are you sure you want to delete this job?")) return;
 
     try {
@@ -121,10 +151,13 @@ const Dashboard = () => {
           <CardTitle>Tours {new Date().getFullYear()}</CardTitle>
         </CardHeader>
         <CardContent>
-          <TourChips onTourClick={(tourId) => {
-            const tour = jobs?.find(job => job.id === tourId);
-            if (tour) handleEditClick(tour);
-          }} />
+          <TourChips 
+            onTourClick={(tourId) => {
+              if (userRole === 'logistics') return; // Prevent logistics users from editing tours
+              const tour = jobs?.find(job => job.id === tourId);
+              if (tour) handleEditClick(tour);
+            }} 
+          />
         </CardContent>
       </Card>
 
@@ -140,6 +173,7 @@ const Dashboard = () => {
             onJobClick={(jobId) => handleJobClick(jobId, "sound")}
             onEditClick={handleEditClick}
             onDeleteClick={handleDeleteClick}
+            userRole={userRole}
           />
         </div>
       </div>
@@ -165,6 +199,7 @@ const Dashboard = () => {
                     onDeleteClick={handleDeleteClick}
                     onJobClick={(jobId) => handleJobClick(jobId, dept as Department)}
                     department={dept as Department}
+                    userRole={userRole}
                   />
                 ))
               )}
