@@ -10,22 +10,14 @@ export const UsersList = () => {
   const { data: users, isLoading } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
-      try {
-        console.log("Fetching profiles...");
-        let { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
+      console.log("Fetching profiles...");
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error("Error fetching profiles:", error);
-          throw error;
-        }
-
-        console.log("Profiles data:", data);
-        return data || [];
-      } catch (error: any) {
-        console.error("Query error:", error);
+      if (error) {
+        console.error("Error fetching profiles:", error);
         toast({
           title: "Error fetching users",
           description: error.message,
@@ -33,9 +25,12 @@ export const UsersList = () => {
         });
         return [];
       }
+
+      console.log("Profiles data:", data);
+      return data || [];
     },
-    retry: false,
-    refetchOnWindowFocus: false
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   const handleDelete = async (userId: string) => {
