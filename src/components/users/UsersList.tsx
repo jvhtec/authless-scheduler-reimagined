@@ -18,26 +18,22 @@ export const UsersList = () => {
   const { data: users, isLoading, error, refetch } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
-      try {
-        console.log("Starting profiles fetch...");
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, email, role');
+      console.log("Starting profiles fetch...");
+      const response = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, role')
+        .returns<Profile[]>();
 
-        if (error) {
-          console.error("Error in profiles fetch:", error);
-          throw error;
-        }
-
-        console.log("Profiles fetch successful:", data);
-        return data as Profile[];
-      } catch (err) {
-        console.error("Query execution error:", err);
-        throw err;
+      if (response.error) {
+        console.error("Error in profiles fetch:", response.error);
+        throw response.error;
       }
+
+      console.log("Profiles fetch successful:", response.data);
+      return response.data;
     },
-    retry: false, // Disable retries completely
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    retry: false,
+    staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
   });
 
@@ -55,7 +51,6 @@ export const UsersList = () => {
         description: "The user has been successfully deleted.",
       });
       
-      // Manually refetch after successful deletion
       refetch();
     } catch (error: any) {
       console.error("Delete error:", error);
