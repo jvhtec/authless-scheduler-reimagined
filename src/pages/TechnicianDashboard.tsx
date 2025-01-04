@@ -5,10 +5,13 @@ import { MessageSquare, Calendar } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { JobCard } from "@/components/jobs/JobCard";
 import { useToast } from "@/components/ui/use-toast";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { addWeeks, addMonths, isAfter, isBefore } from "date-fns";
 
 const TechnicianDashboard = () => {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timeSpan, setTimeSpan] = useState<string>("1week");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -18,6 +21,8 @@ const TechnicianDashboard = () => {
         if (!user) return;
 
         console.log("Fetching assignments for user:", user.id);
+        
+        const endDate = getTimeSpanEndDate();
         
         const { data, error } = await supabase
           .from('job_assignments')
@@ -30,6 +35,7 @@ const TechnicianDashboard = () => {
           `)
           .eq('technician_id', user.id)
           .gte('jobs.start_time', new Date().toISOString())
+          .lte('jobs.start_time', endDate.toISOString())
           .order('jobs(start_time)', { ascending: true });
 
         if (error) throw error;
@@ -44,10 +50,20 @@ const TechnicianDashboard = () => {
     };
 
     fetchAssignments();
-  }, []);
+  }, [timeSpan]);
+
+  const getTimeSpanEndDate = () => {
+    const today = new Date();
+    switch (timeSpan) {
+      case "1week": return addWeeks(today, 1);
+      case "2weeks": return addWeeks(today, 2);
+      case "1month": return addMonths(today, 1);
+      case "3months": return addMonths(today, 3);
+      default: return addWeeks(today, 1);
+    }
+  };
 
   const handleMessageManagement = () => {
-    // For now, just show a toast. This could be expanded to open a message dialog
     toast({
       title: "Message Sent",
       description: "Your message has been sent to management.",
@@ -57,7 +73,7 @@ const TechnicianDashboard = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Technician Dashboard</h1>
+        <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
         <Button onClick={handleMessageManagement} className="gap-2">
           <MessageSquare className="h-4 w-4" />
           Message Management
