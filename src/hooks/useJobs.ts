@@ -6,34 +6,22 @@ export const useJobs = () => {
     queryKey: ["jobs"],
     queryFn: async () => {
       console.log("Fetching jobs with departments and locations...");
-      try {
-        const { data, error } = await supabase
-          .from("jobs")
-          .select(`
-            id,
-            title,
-            description,
-            start_time,
-            end_time,
-            color,
-            status,
-            job_type,
-            location:locations(name),
-            job_departments(department)
-          `)
-          .order('start_time');
+      const { data, error } = await supabase
+        .from("jobs")
+        .select(`
+          *,
+          location:locations(name),
+          job_departments(department)
+        `)
+        .order('start_time');
 
-        if (error) {
-          console.error("Error fetching jobs:", error);
-          throw error;
-        }
-
-        console.log("Jobs fetched successfully:", data);
-        return data;
-      } catch (error) {
-        console.error("Error in useJobs hook:", error);
+      if (error) {
+        console.error("Error fetching jobs:", error);
         throw error;
       }
+
+      console.log("Jobs fetched successfully:", data);
+      return data;
     },
   });
 };
