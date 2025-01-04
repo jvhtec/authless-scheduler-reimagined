@@ -1,37 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Profile } from "./types";
+import { UserCard } from "./UserCard";
+import { EditUserDialog } from "./EditUserDialog";
+import { DeleteUserDialog } from "./DeleteUserDialog";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-
-type Profile = {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string;
-  role: string;
-};
 
 export const UsersList = () => {
   const { toast } = useToast();
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
-  const [editedFirstName, setEditedFirstName] = useState("");
-  const [editedLastName, setEditedLastName] = useState("");
+  const [deletingUser, setDeletingUser] = useState<Profile | null>(null);
   
   const { data: users, isLoading, error, refetch } = useQuery({
     queryKey: ['profiles'],
@@ -39,7 +18,7 @@ export const UsersList = () => {
       console.log("Starting profiles fetch...");
       const response = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, email, role')
+        .select('id, first_name, last_name, email, role, phone, department, dni, residencia')
         .returns<Profile[]>();
 
       if (response.error) {
@@ -55,12 +34,14 @@ export const UsersList = () => {
     refetchOnWindowFocus: false,
   });
 
-  const handleDelete = async (userId: string) => {
+  const handleDelete = async () => {
+    if (!deletingUser) return;
+    
     try {
       const { error } = await supabase
         .from('profiles')
         .delete()
-        .eq('id', userId);
+        .eq('id', deletingUser.id);
 
       if (error) throw error;
       
@@ -77,25 +58,18 @@ export const UsersList = () => {
         description: "Failed to delete user: " + error.message,
         variant: "destructive",
       });
+    } finally {
+      setDeletingUser(null);
     }
   };
 
-  const handleEdit = (user: Profile) => {
-    setEditingUser(user);
-    setEditedFirstName(user.first_name || "");
-    setEditedLastName(user.last_name || "");
-  };
-
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = async (updatedData: Partial<Profile>) => {
     if (!editingUser) return;
 
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({
-          first_name: editedFirstName,
-          last_name: editedLastName,
-        })
+        .update(updatedData)
         .eq('id', editingUser.id);
 
       if (error) throw error;
@@ -118,7 +92,6 @@ export const UsersList = () => {
   };
 
   if (error) {
-    console.error("Query error state:", error);
     return (
       <div className="p-4 text-red-500 bg-red-50 rounded-lg">
         Error loading users: {error.message}
@@ -137,84 +110,25 @@ export const UsersList = () => {
   return (
     <div className="space-y-4">
       {users.map((user) => (
-        <div 
-          key={user.id} 
-          className="flex items-center justify-between p-4 border rounded-lg"
-        >
-          <div>
-            <h3 className="font-medium">
-              {user.first_name} {user.last_name}
-            </h3>
-            <p className="text-sm text-muted-foreground">{user.email}</p>
-            <p className="text-sm text-muted-foreground">Role: {user.role}</p>
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => handleEdit(user)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the user
-                    account and remove their data from our servers.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => handleDelete(user.id)}>
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </div>
+        <UserCard
+          key={user.id}
+          user={user}
+          onEdit={setEditingUser}
+          onDelete={setDeletingUser}
+        />
       ))}
 
-      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit User Profile</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input
-                id="firstName"
-                value={editedFirstName}
-                onChange={(e) => setEditedFirstName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                id="lastName"
-                value={editedLastName}
-                onChange={(e) => setEditedLastName(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setEditingUser(null)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveEdit}>
-              Save Changes
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <EditUserDialog
+        user={editingUser}
+        onOpenChange={(open) => !open && setEditingUser(null)}
+        onSave={handleSaveEdit}
+      />
+
+      <DeleteUserDialog
+        user={deletingUser}
+        onConfirm={handleDelete}
+        onCancel={() => setDeletingUser(null)}
+      />
     </div>
   );
 };
