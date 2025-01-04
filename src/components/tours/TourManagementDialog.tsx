@@ -38,8 +38,8 @@ export const TourManagementDialog = ({
 
       console.log("Found tour dates:", tourDates);
 
+      // Update all jobs associated with these tour dates
       if (tourDates && tourDates.length > 0) {
-        // Update all jobs associated with these tour dates
         const { error: jobsError } = await supabase
           .from("jobs")
           .update({ color })
@@ -51,12 +51,12 @@ export const TourManagementDialog = ({
         }
       }
 
-      // Also update the main tour job if it exists
+      // Also update the main tour job
       const { error: mainJobError } = await supabase
         .from("jobs")
         .update({ color })
-        .eq("title", tour.name)
-        .eq("job_type", "tour");
+        .eq("job_type", "tour")
+        .eq("title", tour.name);
 
       if (mainJobError) {
         console.error("Error updating main tour job color:", mainJobError);
@@ -95,13 +95,11 @@ export const TourManagementDialog = ({
       console.log("Found tour dates:", tourDates);
 
       if (tourDates && tourDates.length > 0) {
-        const tourDateIds = tourDates.map(td => td.id);
-
         // Get all jobs associated with these tour dates
         const { data: jobs, error: jobsError } = await supabase
           .from("jobs")
           .select("id")
-          .in("tour_date_id", tourDateIds);
+          .in("tour_date_id", tourDates.map(td => td.id));
 
         if (jobsError) {
           console.error("Error fetching jobs:", jobsError);
@@ -111,13 +109,11 @@ export const TourManagementDialog = ({
         console.log("Found jobs:", jobs);
 
         if (jobs && jobs.length > 0) {
-          const jobIds = jobs.map(j => j.id);
-
           // Delete job assignments
           const { error: assignmentsError } = await supabase
             .from("job_assignments")
             .delete()
-            .in("job_id", jobIds);
+            .in("job_id", jobs.map(j => j.id));
 
           if (assignmentsError) {
             console.error("Error deleting job assignments:", assignmentsError);
@@ -128,7 +124,7 @@ export const TourManagementDialog = ({
           const { error: departmentsError } = await supabase
             .from("job_departments")
             .delete()
-            .in("job_id", jobIds);
+            .in("job_id", jobs.map(j => j.id));
 
           if (departmentsError) {
             console.error("Error deleting job departments:", departmentsError);
@@ -139,7 +135,7 @@ export const TourManagementDialog = ({
           const { error: jobsDeleteError } = await supabase
             .from("jobs")
             .delete()
-            .in("id", jobIds);
+            .in("id", jobs.map(j => j.id));
 
           if (jobsDeleteError) {
             console.error("Error deleting jobs:", jobsDeleteError);
@@ -157,6 +153,18 @@ export const TourManagementDialog = ({
           console.error("Error deleting tour dates:", tourDatesDeleteError);
           throw tourDatesDeleteError;
         }
+      }
+
+      // Also delete the main tour job
+      const { error: mainJobError } = await supabase
+        .from("jobs")
+        .delete()
+        .eq("job_type", "tour")
+        .eq("title", tour.name);
+
+      if (mainJobError) {
+        console.error("Error deleting main tour job:", mainJobError);
+        throw mainJobError;
       }
 
       // Finally delete the tour
