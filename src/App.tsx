@@ -10,6 +10,7 @@ import Lights from "@/pages/Lights";
 import Video from "@/pages/Video";
 import TechnicianDashboard from "@/pages/TechnicianDashboard";
 import Profile from "@/pages/Profile";
+import ProjectManagement from "@/pages/ProjectManagement";
 import "./App.css";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ function App() {
             <Route path="/video" element={<Video />} />
             <Route path="/technician" element={<TechnicianDashboard />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/project-management" element={<ProjectManagement />} />
           </Route>
         </Routes>
       </Router>
