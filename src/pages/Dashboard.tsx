@@ -30,7 +30,6 @@ const Dashboard = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch assigned jobs for the current user
   const { data: jobs, isLoading } = useQuery({
     queryKey: ["assigned-jobs"],
     queryFn: async () => {
@@ -59,7 +58,7 @@ const Dashboard = () => {
         throw error;
       }
 
-      // Transform the data to match the expected format
+      // Transform and type the data properly
       const transformedJobs = data.map(assignment => ({
         ...assignment.jobs,
         sound_role: assignment.sound_role,
@@ -67,10 +66,16 @@ const Dashboard = () => {
         video_role: assignment.video_role
       }));
 
-      // Type assertion after verifying the structure
-      const typedJobs = transformedJobs.filter((job): job is JobWithAssignment => 
-        job !== null && typeof job === 'object' && 'id' in job
-      );
+      // Type guard to ensure the jobs match our expected type
+      const isJobWithAssignment = (job: any): job is JobWithAssignment => {
+        return job !== null && 
+               typeof job === 'object' && 
+               'id' in job &&
+               'start_time' in job &&
+               'end_time' in job;
+      };
+
+      const typedJobs = transformedJobs.filter(isJobWithAssignment);
 
       console.log("Assigned jobs fetched successfully:", typedJobs);
       return typedJobs;
