@@ -38,13 +38,42 @@ export const UsersList = () => {
     if (!deletingUser) return;
     
     try {
-      const { error } = await supabase
+      console.log("Attempting to delete user:", deletingUser.id);
+      
+      // First delete from technician_departments if exists
+      const { error: techDeptError } = await supabase
+        .from('technician_departments')
+        .delete()
+        .eq('technician_id', deletingUser.id);
+
+      if (techDeptError) {
+        console.error("Error deleting from technician_departments:", techDeptError);
+        throw techDeptError;
+      }
+
+      // Then delete from job_assignments if exists
+      const { error: jobAssignError } = await supabase
+        .from('job_assignments')
+        .delete()
+        .eq('technician_id', deletingUser.id);
+
+      if (jobAssignError) {
+        console.error("Error deleting from job_assignments:", jobAssignError);
+        throw jobAssignError;
+      }
+
+      // Finally delete the profile
+      const { error: profileError } = await supabase
         .from('profiles')
         .delete()
         .eq('id', deletingUser.id);
 
-      if (error) throw error;
-      
+      if (profileError) {
+        console.error("Error deleting profile:", profileError);
+        throw profileError;
+      }
+
+      console.log("User deleted successfully");
       toast({
         title: "User deleted",
         description: "The user has been successfully deleted.",
@@ -67,6 +96,7 @@ export const UsersList = () => {
     if (!editingUser) return;
 
     try {
+      console.log("Updating user:", editingUser.id, "with data:", updatedData);
       const { error } = await supabase
         .from('profiles')
         .update(updatedData)
