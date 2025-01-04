@@ -1,8 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Assignment } from "@/types/assignment";
 import { Department } from "@/types/department";
-import { User } from "lucide-react";
+import { User, X } from "lucide-react";
+import { Button } from "../ui/button";
+import { toast } from "sonner";
 
 interface JobAssignmentsProps {
   jobId: string;
@@ -10,6 +12,8 @@ interface JobAssignmentsProps {
 }
 
 export const JobAssignments = ({ jobId, department }: JobAssignmentsProps) => {
+  const queryClient = useQueryClient();
+
   const { data: assignments } = useQuery({
     queryKey: ["job-assignments", jobId],
     queryFn: async () => {
@@ -38,6 +42,23 @@ export const JobAssignments = ({ jobId, department }: JobAssignmentsProps) => {
       return data as unknown as Assignment[];
     },
   });
+
+  const handleDelete = async (assignmentId: string) => {
+    try {
+      const { error } = await supabase
+        .from("job_assignments")
+        .delete()
+        .eq("id", assignmentId);
+
+      if (error) throw error;
+
+      toast.success("Assignment deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["job-assignments", jobId] });
+    } catch (error: any) {
+      console.error("Error deleting assignment:", error);
+      toast.error("Failed to delete assignment");
+    }
+  };
 
   if (!assignments?.length) return null;
 
@@ -72,13 +93,23 @@ export const JobAssignments = ({ jobId, department }: JobAssignmentsProps) => {
         return (
           <div
             key={assignment.id}
-            className="flex items-center gap-2 text-sm text-muted-foreground"
+            className="flex items-center justify-between gap-2 text-sm text-muted-foreground bg-secondary/50 p-2 rounded-md"
           >
-            <User className="h-4 w-4" />
-            <span className="font-medium">
-              {assignment.profiles.first_name} {assignment.profiles.last_name}
-            </span>
-            <span className="text-xs">({role})</span>
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              <span className="font-medium">
+                {assignment.profiles.first_name} {assignment.profiles.last_name}
+              </span>
+              <span className="text-xs">({role})</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => handleDelete(assignment.id)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         );
       })}
