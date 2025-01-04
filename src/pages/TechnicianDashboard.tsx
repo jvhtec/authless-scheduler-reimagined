@@ -5,8 +5,8 @@ import { MessageSquare, Calendar } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { JobCard } from "@/components/jobs/JobCard";
 import { useToast } from "@/components/ui/use-toast";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { addWeeks, addMonths, isAfter, isBefore } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { addWeeks, addMonths } from "date-fns";
 
 const TechnicianDashboard = () => {
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -73,11 +73,24 @@ const TechnicianDashboard = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
-        <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
-        <Button onClick={handleMessageManagement} className="gap-2">
-          <MessageSquare className="h-4 w-4" />
-          Message Management
-        </Button>
+        <h1 className="text-2xl font-semibold">Technician Dashboard</h1>
+        <div className="flex items-center gap-4">
+          <Select value={timeSpan} onValueChange={setTimeSpan}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select time span" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1week">Next Week</SelectItem>
+              <SelectItem value="2weeks">Next 2 Weeks</SelectItem>
+              <SelectItem value="1month">Next Month</SelectItem>
+              <SelectItem value="3months">Next 3 Months</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={handleMessageManagement} className="gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Message Management
+          </Button>
+        </div>
       </div>
 
       <Card>
