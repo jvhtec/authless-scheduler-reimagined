@@ -9,6 +9,7 @@ interface LightsScheduleProps {
   onJobClick: (jobId: string) => void;
   onEditClick: (job: any) => void;
   onDeleteClick: (jobId: string) => void;
+  userRole?: string | null;
 }
 
 export const LightsSchedule = ({
@@ -18,6 +19,7 @@ export const LightsSchedule = ({
   onJobClick,
   onEditClick,
   onDeleteClick,
+  userRole,
 }: LightsScheduleProps) => {
   return (
     <Card>
@@ -37,6 +39,7 @@ export const LightsSchedule = ({
                 onDeleteClick={onDeleteClick}
                 onJobClick={onJobClick}
                 department="lights"
+                userRole={userRole}
               />
             ))
           ) : (
