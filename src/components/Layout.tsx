@@ -135,7 +135,7 @@ const Layout = ({ children }: LayoutProps) => {
           <header className="border-b p-4 flex justify-between items-center bg-background">
             <div className="flex items-center gap-2">
               <SidebarTrigger />
-              <h1 className="text-xl font-semibold">Tech Schedule</h1>
+              <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={onTimeSpanChange} />
             </div>
           </header>
           <main className="p-6">
