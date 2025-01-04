@@ -22,44 +22,56 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
   const { data: tours, isLoading } = useQuery({
     queryKey: ["tours"],
     queryFn: async () => {
-      console.log("Fetching tours data...");
-      
-      const { data: toursData, error: toursError } = await supabase
-        .from("tours")
-        .select(`
-          id,
-          name,
-          description,
-          created_at,
-          tour_dates (
+      try {
+        console.log("Fetching tours data...");
+        
+        const { data: toursData, error: toursError } = await supabase
+          .from("tours")
+          .select(`
             id,
-            date,
-            location:locations(name),
-            jobs (
+            name,
+            description,
+            created_at,
+            tour_dates (
               id,
-              color
+              date,
+              location:locations(name),
+              jobs (
+                id,
+                color
+              )
             )
-          )
-        `)
-        .order('created_at', { ascending: false });
+          `)
+          .order('created_at', { ascending: false });
 
-      if (toursError) {
-        console.error("Error fetching tours:", toursError);
-        toast({
-          title: "Error fetching tours",
-          description: toursError.message,
-          variant: "destructive",
-        });
-        throw toursError;
+        if (toursError) {
+          console.error("Error fetching tours:", toursError);
+          toast({
+            title: "Error fetching tours",
+            description: toursError.message,
+            variant: "destructive",
+          });
+          throw toursError;
+        }
+
+        console.log("Tours data:", toursData);
+        
+        // Transform the data before returning
+        const transformedTours = toursData?.map(tour => ({
+          ...tour,
+          title: tour.name,
+          color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB',
+        })) || [];
+
+        console.log("Transformed tours:", transformedTours);
+        return transformedTours;
+      } catch (error) {
+        console.error("Error in tours query:", error);
+        throw error;
       }
-
-      console.log("Tours data:", toursData);
-      return toursData?.map(tour => ({
-        ...tour,
-        title: tour.name,
-        color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB',
-      })) || [];
     },
+    retry: 1,
+    staleTime: 1000 * 60, // 1 minute
   });
 
   const handleViewDates = (tour: any) => {
