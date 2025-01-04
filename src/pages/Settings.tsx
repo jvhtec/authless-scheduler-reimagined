@@ -1,9 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
+import { SignUpForm } from "@/components/auth/SignUpForm";
 
 const Settings = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -35,15 +35,10 @@ const Settings = () => {
       <div className="max-w-2xl space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Account Settings</CardTitle>
+            <CardTitle>Create New User</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground">
-              Sign in to manage your account settings
-            </p>
-            <div className="flex justify-start">
-              <Button variant="outline">Sign In</Button>
-            </div>
+          <CardContent>
+            <SignUpForm onBack={() => {}} />
           </CardContent>
         </Card>
 
