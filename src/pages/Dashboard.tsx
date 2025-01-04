@@ -10,6 +10,8 @@ import { JobCard } from "@/components/jobs/JobCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Database } from "@/integrations/supabase/types";
+import { CalendarSection } from "@/components/dashboard/CalendarSection";
+import { TourChips } from "@/components/dashboard/TourChips";
 
 type JobWithAssignment = Database['public']['Tables']['jobs']['Row'] & {
   location?: { name: string | null };
@@ -41,14 +43,48 @@ const Dashboard = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Query to get user role
+  const { data: userProfile } = useQuery({
+    queryKey: ["user-profile"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Query for jobs based on user role
   const { data: jobs, isLoading } = useQuery({
     queryKey: ["assigned-jobs"],
     queryFn: async () => {
-      console.log("Fetching assigned jobs for current user...");
+      console.log("Fetching jobs based on user role...");
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) throw new Error("No user found");
 
+      // For admin/management, fetch all jobs
+      if (userProfile?.role === 'admin' || userProfile?.role === 'management') {
+        const { data, error } = await supabase
+          .from("jobs")
+          .select(`
+            *,
+            location:locations(name),
+            job_departments(department)
+          `);
+
+        if (error) throw error;
+        return data;
+      }
+
+      // For technicians, fetch only assigned jobs
       const { data, error } = await supabase
         .from("job_assignments")
         .select(`
@@ -64,12 +100,8 @@ const Dashboard = () => {
         `)
         .eq('technician_id', user.id);
 
-      if (error) {
-        console.error("Error fetching assigned jobs:", error);
-        throw error;
-      }
+      if (error) throw error;
 
-      // Transform and type the data properly
       const transformedJobs = (data as unknown as JobAssignmentResponse[]).map(assignment => ({
         ...assignment.jobs,
         sound_role: assignment.sound_role,
@@ -77,9 +109,10 @@ const Dashboard = () => {
         video_role: assignment.video_role
       }));
 
-      console.log("Assigned jobs fetched successfully:", transformedJobs);
+      console.log("Jobs fetched successfully:", transformedJobs);
       return transformedJobs as JobWithAssignment[];
     },
+    enabled: !!userProfile,
   });
 
   const getTimeSpanEndDate = () => {
@@ -155,31 +188,65 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
-      
-      <Card>
-        <CardContent className="space-y-4">
-          <h2 className="text-xl font-semibold mt-4">My Assigned Jobs</h2>
-          {isLoading ? (
-            <p className="text-muted-foreground">Loading...</p>
-          ) : (
-            <div className="space-y-4">
-              {getFilteredJobs().map(job => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  onEditClick={handleEditClick}
-                  onDeleteClick={handleDeleteClick}
-                  onJobClick={handleJobClick}
-                />
-              ))}
-              {getFilteredJobs().length === 0 && (
-                <p className="text-muted-foreground">No jobs assigned for this time period.</p>
-              )}
+      {(userProfile?.role === 'admin' || userProfile?.role === 'management') ? (
+        <>
+          <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2">
+              <Card>
+                <CardContent className="space-y-4">
+                  <h2 className="text-xl font-semibold mt-4">All Jobs</h2>
+                  {isLoading ? (
+                    <p className="text-muted-foreground">Loading...</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {jobs?.map(job => (
+                        <JobCard
+                          key={job.id}
+                          job={job}
+                          onEditClick={handleEditClick}
+                          onDeleteClick={handleDeleteClick}
+                          onJobClick={handleJobClick}
+                        />
+                      ))}
+                      {!jobs?.length && (
+                        <p className="text-muted-foreground">No jobs found.</p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div>
+              <TourChips onTourClick={() => {}} />
+            </div>
+          </div>
+        </>
+      ) : (
+        <Card>
+          <CardContent className="space-y-4">
+            <h2 className="text-xl font-semibold mt-4">My Assigned Jobs</h2>
+            {isLoading ? (
+              <p className="text-muted-foreground">Loading...</p>
+            ) : (
+              <div className="space-y-4">
+                {jobs?.map(job => (
+                  <JobCard
+                    key={job.id}
+                    job={job}
+                    onEditClick={handleEditClick}
+                    onDeleteClick={handleDeleteClick}
+                    onJobClick={handleJobClick}
+                  />
+                ))}
+                {!jobs?.length && (
+                  <p className="text-muted-foreground">No jobs assigned for this time period.</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {selectedJobId && (
         <JobAssignmentDialog
