@@ -12,16 +12,21 @@ interface TourChipsProps {
   onTourClick: (tourId: string) => void;
 }
 
+// Define the exact shape of the data we expect from Supabase
+interface Location {
+  name: string;
+}
+
+interface Job {
+  id: string;
+  color: string;
+}
+
 interface TourDate {
   id: string;
   date: string;
-  location: {
-    name: string;
-  } | null;
-  jobs: Array<{
-    id: string;
-    color: string;
-  }>;
+  location: Location | null;
+  jobs: Job[];
 }
 
 interface Tour {
@@ -30,6 +35,22 @@ interface Tour {
   description: string | null;
   created_at: string;
   tour_dates: TourDate[];
+}
+
+// Type for raw Supabase response
+interface RawTourDate {
+  id: string;
+  date: string;
+  location: Location | null;
+  jobs: Job[] | null;
+}
+
+interface RawTour {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  tour_dates: RawTourDate[] | null;
 }
 
 export const TourChips = ({ onTourClick }: TourChipsProps) => {
@@ -44,7 +65,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
     queryFn: async () => {
       console.log("Fetching tours data...");
       
-      const { data: toursData, error } = await supabase
+      const { data: rawToursData, error } = await supabase
         .from("tours")
         .select(`
           id,
@@ -75,8 +96,8 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         throw error;
       }
 
-      // Ensure proper typing of the response
-      const typedTours: Tour[] = (toursData || []).map(tour => ({
+      // Transform the raw data into our expected type
+      const typedTours: Tour[] = (rawToursData as RawTour[] || []).map(tour => ({
         id: tour.id,
         name: tour.name,
         description: tour.description,
