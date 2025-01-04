@@ -171,7 +171,8 @@ export const TourManagementDialog = ({
       }
 
       console.log("Tour deletion completed successfully");
-      await queryClient.invalidateQueries({ queryKey: ["tours"] });
+      await queryClient.invalidateQueries({ queryKey: ["tours-with-dates"] });
+      await queryClient.invalidateQueries({ queryKey: ["jobs"] });
       onOpenChange(false);
       toast({ title: "Tour deleted successfully" });
     } catch (error: any) {
