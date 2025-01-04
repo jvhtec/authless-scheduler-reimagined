@@ -15,24 +15,28 @@ type Profile = {
 export const UsersList = () => {
   const { toast } = useToast();
   
-  const { data: users, isLoading, error } = useQuery({
+  const { data: users, isLoading, error, refetch } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
-      console.log("Starting profiles fetch...");
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, email, role')
-        .order('created_at', { ascending: false });
+      try {
+        console.log("Starting profiles fetch...");
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email, role');
 
-      if (error) {
-        console.error("Error in profiles fetch:", error);
-        throw error;
+        if (error) {
+          console.error("Error in profiles fetch:", error);
+          throw error;
+        }
+
+        console.log("Profiles fetch successful:", data);
+        return data as Profile[];
+      } catch (err) {
+        console.error("Query execution error:", err);
+        throw err;
       }
-
-      console.log("Profiles fetch successful:", data);
-      return data as Profile[];
     },
-    retry: 1, // Only retry once to prevent infinite loops
+    retry: false, // Disable retries completely
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     refetchOnWindowFocus: false,
   });
@@ -50,6 +54,9 @@ export const UsersList = () => {
         title: "User deleted",
         description: "The user has been successfully deleted.",
       });
+      
+      // Manually refetch after successful deletion
+      refetch();
     } catch (error: any) {
       console.error("Delete error:", error);
       toast({
