@@ -25,6 +25,7 @@ export const EditUserDialog = ({ user, onOpenChange, onSave }: EditUserDialogPro
       department: formData.get('department') as Department,
       dni: formData.get('dni') as string,
       residencia: formData.get('residencia') as string,
+      role: formData.get('role') as string,
     };
     onSave(updatedData);
   };
@@ -70,6 +71,21 @@ export const EditUserDialog = ({ user, onOpenChange, onSave }: EditUserDialogPro
                 <SelectItem value="sound">Sound</SelectItem>
                 <SelectItem value="lights">Lights</SelectItem>
                 <SelectItem value="video">Video</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="role">Role</Label>
+            <Select name="role" defaultValue={user.role}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="management">Management</SelectItem>
+                <SelectItem value="logistics">Logistics</SelectItem>
+                <SelectItem value="technician">Technician</SelectItem>
               </SelectContent>
             </Select>
           </div>
