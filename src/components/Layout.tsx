@@ -12,7 +12,7 @@ import {
   SidebarSeparator,
   SidebarTrigger
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Music2, Lightbulb, Video, Settings as SettingsIcon, LogOut } from "lucide-react";
+import { LayoutDashboard, Music2, Lightbulb, Video, Settings as SettingsIcon, LogOut, UserCircle2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -63,6 +63,14 @@ const Layout = ({ children }: LayoutProps) => {
                       <Link to="/dashboard">
                         <LayoutDashboard className="h-4 w-4" />
                         <span>Dashboard</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/technician">
+                        <UserCircle2 className="h-4 w-4" />
+                        <span>Technician View</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

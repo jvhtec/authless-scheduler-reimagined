@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import TechnicianDashboard from "./pages/TechnicianDashboard";
 import Sound from "./pages/Sound";
 import Lights from "./pages/Lights";
 import Video from "./pages/Video";
@@ -33,6 +34,7 @@ const App = () => {
             <Route path="/" element={<Navigate to="/auth" replace />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
+            <Route path="/technician" element={<Layout><TechnicianDashboard /></Layout>} />
             <Route path="/sound" element={<Layout><Sound /></Layout>} />
             <Route path="/lights" element={<Layout><Lights /></Layout>} />
             <Route path="/video" element={<Layout><Video /></Layout>} />
