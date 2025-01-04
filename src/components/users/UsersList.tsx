@@ -64,7 +64,7 @@ export const UsersList = () => {
       }
       console.log("Successfully deleted job_assignments records");
 
-      // Finally delete the profile
+      // Delete from profiles
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
@@ -75,6 +75,17 @@ export const UsersList = () => {
         throw profileError;
       }
       console.log("Successfully deleted profile");
+
+      // Finally delete the auth user using admin API
+      const { error: authError } = await supabase.auth.admin.deleteUser(
+        deletingUser.id
+      );
+
+      if (authError) {
+        console.error("Error deleting auth user:", authError);
+        throw authError;
+      }
+      console.log("Successfully deleted auth user");
 
       toast({
         title: "User deleted",
