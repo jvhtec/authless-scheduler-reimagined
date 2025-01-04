@@ -24,12 +24,16 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const [session, setSession] = useState<any>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (!session) {
         navigate('/auth');
+      } else {
+        // Fetch user role from profiles table
+        fetchUserRole(session.user.id);
       }
     });
 
@@ -39,16 +43,37 @@ const Layout = ({ children }: LayoutProps) => {
       setSession(session);
       if (!session) {
         navigate('/auth');
+      } else {
+        fetchUserRole(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  const fetchUserRole = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user role:', error);
+      return;
+    }
+
+    if (data) {
+      setUserRole(data.role);
+    }
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setSession(null);
   };
+
+  const isTechnician = userRole === 'technician';
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -58,51 +83,55 @@ const Layout = ({ children }: LayoutProps) => {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/dashboard">
-                        <LayoutDashboard className="h-4 w-4" />
-                        <span>Dashboard</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {!isTechnician && (
+                    <>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild>
+                          <Link to="/dashboard">
+                            <LayoutDashboard className="h-4 w-4" />
+                            <span>Dashboard</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild>
+                          <Link to="/sound">
+                            <Music2 className="h-4 w-4" />
+                            <span>Sound</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild>
+                          <Link to="/lights">
+                            <Lightbulb className="h-4 w-4" />
+                            <span>Lights</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild>
+                          <Link to="/video">
+                            <Video className="h-4 w-4" />
+                            <span>Video</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild>
+                          <Link to="/settings">
+                            <SettingsIcon className="h-4 w-4" />
+                            <span>Settings</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </>
+                  )}
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link to="/technician">
                         <UserCircle2 className="h-4 w-4" />
                         <span>Technician View</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/sound">
-                        <Music2 className="h-4 w-4" />
-                        <span>Sound</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/lights">
-                        <Lightbulb className="h-4 w-4" />
-                        <span>Lights</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/video">
-                        <Video className="h-4 w-4" />
-                        <span>Video</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/settings">
-                        <SettingsIcon className="h-4 w-4" />
-                        <span>Settings</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
