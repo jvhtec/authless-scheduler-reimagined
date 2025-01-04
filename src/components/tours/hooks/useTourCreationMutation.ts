@@ -88,7 +88,10 @@ export const useTourCreationMutation = () => {
       try {
         // Get or create location
         console.log(`Processing location: ${dateInfo.location}`);
-        const locationId = await getOrCreateLocation(dateInfo.location);
+        let locationId = null;
+        if (dateInfo.location) {
+          locationId = await getOrCreateLocation(dateInfo.location);
+        }
         
         // Create tour date entry
         console.log("Creating tour date entry...");
