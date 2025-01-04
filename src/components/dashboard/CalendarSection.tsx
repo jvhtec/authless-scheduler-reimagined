@@ -8,17 +8,19 @@ interface CalendarSectionProps {
 
 export const CalendarSection = ({ date, onDateSelect }: CalendarSectionProps) => {
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-2">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex-none">
         <CardTitle>Calendar</CardTitle>
       </CardHeader>
-      <CardContent>
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={onDateSelect}
-          className="w-full rounded-md border"
-        />
+      <CardContent className="flex-grow">
+        <div className="h-full flex items-center justify-center">
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={onDateSelect}
+            className="w-full rounded-md border"
+          />
+        </div>
       </CardContent>
     </Card>
   );

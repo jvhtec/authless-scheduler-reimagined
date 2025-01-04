@@ -113,7 +113,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 p-6">
       <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
       
       <Card>
@@ -128,14 +128,14 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-6 min-h-[600px]">
         <CalendarSection date={date} onDateSelect={setDate} />
 
-        <Card>
+        <Card className="h-full">
           <CardHeader>
             <CardTitle>Schedule for {date?.toLocaleDateString()}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="h-[calc(100%-4rem)] overflow-y-auto">
             <div className="space-y-4">
               {isLoading ? (
                 <p className="text-muted-foreground">Loading schedule...</p>
@@ -163,11 +163,11 @@ const Dashboard = () => {
 
       <div className="grid md:grid-cols-3 gap-6">
         {["sound", "lights", "video"].map((dept) => (
-          <Card key={dept}>
+          <Card key={dept} className="h-full">
             <CardHeader>
               <CardTitle>{dept.charAt(0).toUpperCase() + dept.slice(1)} Schedule</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="h-[400px] overflow-y-auto">
               {isLoading ? (
                 <p className="text-muted-foreground">Loading...</p>
               ) : (
