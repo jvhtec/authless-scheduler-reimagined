@@ -19,69 +19,53 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: tours, isLoading } = useQuery({
+  const { data: tours = [], isLoading } = useQuery({
     queryKey: ["tours"],
     queryFn: async () => {
-      try {
-        console.log("Fetching tours data...");
-        
-        const { data: toursData, error: toursError } = await supabase
-          .from("tours")
-          .select(`
+      const { data, error } = await supabase
+        .from("tours")
+        .select(`
+          id,
+          name,
+          description,
+          created_at,
+          tour_dates!inner (
             id,
-            name,
-            description,
-            created_at,
-            tour_dates (
+            date,
+            location:locations(name),
+            jobs!inner (
               id,
-              date,
-              location:locations(name),
-              jobs (
-                id,
-                color
-              )
+              color
             )
-          `)
-          .order('created_at', { ascending: false });
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-        if (toursError) {
-          console.error("Error fetching tours:", toursError);
-          toast({
-            title: "Error fetching tours",
-            description: toursError.message,
-            variant: "destructive",
-          });
-          throw toursError;
-        }
-
-        console.log("Tours data:", toursData);
-        
-        // Transform the data before returning
-        const transformedTours = toursData?.map(tour => ({
-          ...tour,
-          title: tour.name,
-          color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB',
-        })) || [];
-
-        console.log("Transformed tours:", transformedTours);
-        return transformedTours;
-      } catch (error) {
-        console.error("Error in tours query:", error);
+      if (error) {
+        console.error("Error fetching tours:", error);
+        toast({
+          title: "Error fetching tours",
+          description: error.message,
+          variant: "destructive",
+        });
         throw error;
       }
+
+      return data.map(tour => ({
+        ...tour,
+        title: tour.name,
+        color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB',
+      }));
     },
-    retry: 1,
-    staleTime: 1000 * 60, // 1 minute
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const handleViewDates = (tour: any) => {
-    console.log("Opening dates dialog for tour:", tour);
     setSelectedTourId(tour.id);
     setIsDatesDialogOpen(true);
   };
 
   const handleManageTour = (tour: any) => {
-    console.log("Opening manage dialog for tour:", tour);
     setSelectedTour(tour);
     setIsManageDialogOpen(true);
   };
@@ -91,7 +75,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
   return (
     <>
       <div className="flex flex-wrap gap-2">
-        {tours?.map((tour) => (
+        {tours.map((tour) => (
           <div key={tour.id} className="flex items-center gap-1">
             <Button
               variant="outline"
@@ -134,7 +118,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
           open={isDatesDialogOpen}
           onOpenChange={setIsDatesDialogOpen}
           tourId={selectedTourId}
-          tourDates={tours?.find(t => t.id === selectedTourId)?.tour_dates || []}
+          tourDates={tours.find(t => t.id === selectedTourId)?.tour_dates || []}
         />
       )}
 
