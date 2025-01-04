@@ -24,25 +24,10 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tours")
-        .select(`
-          id,
-          name,
-          description,
-          created_at,
-          tour_dates!inner (
-            id,
-            date,
-            location:locations(name),
-            jobs!inner (
-              id,
-              color
-            )
-          )
-        `)
+        .select("id, name, description, created_at")
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error("Error fetching tours:", error);
         toast({
           title: "Error fetching tours",
           description: error.message,
@@ -51,11 +36,35 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         throw error;
       }
 
-      return data.map(tour => ({
-        ...tour,
-        title: tour.name,
-        color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB',
-      }));
+      // Fetch tour dates and jobs in a separate query
+      const { data: toursWithDates, error: datesError } = await supabase
+        .from("tour_dates")
+        .select(`
+          tour_id,
+          date,
+          location:locations(name),
+          jobs(id, color)
+        `);
+
+      if (datesError) {
+        toast({
+          title: "Error fetching tour dates",
+          description: datesError.message,
+          variant: "destructive",
+        });
+        throw datesError;
+      }
+
+      // Map the dates and jobs to their respective tours
+      return data.map(tour => {
+        const tourDates = toursWithDates?.filter(td => td.tour_id === tour.id) || [];
+        return {
+          ...tour,
+          title: tour.name,
+          tour_dates: tourDates,
+          color: tourDates[0]?.jobs?.[0]?.color || '#7E69AB',
+        };
+      });
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
