@@ -1,66 +1,31 @@
 import { useState } from "react";
+import { Department } from "@/types/department";
+import { useJobs } from "@/hooks/useJobs";
 import { format, addWeeks, addMonths, isAfter, isBefore } from "date-fns";
 import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
 import { EditJobDialog } from "@/components/jobs/EditJobDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
-import { JobWithAssignment } from "@/types/job";
+import { useQueryClient } from "@tanstack/react-query";
+import { JobCard } from "@/components/jobs/JobCard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { CalendarSection } from "@/components/dashboard/CalendarSection";
+import { LightsCalendar } from "@/components/lights/LightsCalendar";
+import { LightsSchedule } from "@/components/lights/LightsSchedule";
 import { TourChips } from "@/components/dashboard/TourChips";
-import { KanbanView } from "@/components/dashboard/KanbanView";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Dashboard = () => {
+  const [date, setDate] = useState<Date | undefined>(new Date());
   const [timeSpan, setTimeSpan] = useState<string>("1week");
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-  const [selectedJob, setSelectedJob] = useState<JobWithAssignment | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   
+  const { data: jobs, isLoading } = useJobs();
   const { toast } = useToast();
-
-  const { data: userProfile } = useQuery({
-    queryKey: ["user-profile"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user found");
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("role, department")
-        .eq("id", user.id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: jobs, isLoading } = useQuery({
-    queryKey: ["assigned-jobs", timeSpan],
-    queryFn: async () => {
-      console.log("Fetching jobs based on user role...");
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) throw new Error("No user found");
-
-      const { data, error } = await supabase
-        .from("jobs")
-        .select(`
-          *,
-          location:locations(name),
-          job_departments(department)
-        `);
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!userProfile,
-  });
+  const queryClient = useQueryClient();
 
   const getTimeSpanEndDate = () => {
     const today = new Date();
@@ -73,34 +38,33 @@ const Dashboard = () => {
     }
   };
 
-  const getFilteredJobs = () => {
+  const getDepartmentJobs = (department: Department) => {
     if (!jobs) return [];
     const endDate = getTimeSpanEndDate();
-    const dateFiltered = jobs.filter(job => 
+    return jobs.filter(job => 
+      job.job_departments.some(dept => dept.department === department) &&
       isAfter(new Date(job.start_time), new Date()) &&
-      isBefore(new Date(job.start_time), endDate)
+      isBefore(new Date(job.start_time), endDate) &&
+      job.job_type !== 'tour' // Filter out tour type jobs
     );
-
-    if (selectedDate) {
-      return dateFiltered.filter(job => {
-        const jobDate = new Date(job.start_time);
-        return (
-          jobDate.getDate() === selectedDate.getDate() &&
-          jobDate.getMonth() === selectedDate.getMonth() &&
-          jobDate.getFullYear() === selectedDate.getFullYear()
-        );
-      });
-    }
-
-    return dateFiltered;
   };
 
-  const handleJobClick = (jobId: string) => {
+  const getSelectedDateJobs = () => {
+    if (!date || !jobs) return [];
+    const selectedDate = format(date, 'yyyy-MM-dd');
+    return jobs.filter(job => {
+      const jobDate = format(new Date(job.start_time), 'yyyy-MM-dd');
+      return jobDate === selectedDate && job.job_type !== 'tour'; // Filter out tour type jobs
+    });
+  };
+
+  const handleJobClick = (jobId: string, department: Department) => {
     setSelectedJobId(jobId);
+    setSelectedDepartment(department);
     setIsAssignmentDialogOpen(true);
   };
 
-  const handleEditClick = (job: JobWithAssignment) => {
+  const handleEditClick = (job: any) => {
     setSelectedJob(job);
     setIsEditDialogOpen(true);
   };
@@ -134,6 +98,8 @@ const Dashboard = () => {
         title: "Job deleted successfully",
         description: "The job and all related records have been removed.",
       });
+      
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
     } catch (error: any) {
       console.error("Error deleting job:", error);
       toast({
@@ -144,69 +110,58 @@ const Dashboard = () => {
     }
   };
 
-  const filteredJobs = getFilteredJobs();
-
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-6">
-          <CalendarSection 
-            jobs={jobs || []} 
-            onDateSelect={setSelectedDate}
-          />
-          
-          <Card>
-            <CardContent>
-              <Tabs defaultValue="sound" className="w-full">
-                <TabsList className="w-full justify-start">
-                  <TabsTrigger value="sound">Sound</TabsTrigger>
-                  <TabsTrigger value="lights">Lights</TabsTrigger>
-                  <TabsTrigger value="video">Video</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="sound">
-                  <KanbanView
-                    jobs={filteredJobs}
-                    department="sound"
+      <Card>
+        <CardHeader>
+          <CardTitle>Tours {new Date().getFullYear()}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TourChips onTourClick={(tourId) => {
+            const tour = jobs?.find(job => job.id === tourId);
+            if (tour) handleEditClick(tour);
+          }} />
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <LightsCalendar date={date} onSelect={setDate} />
+        <LightsSchedule
+          date={date}
+          jobs={getSelectedDateJobs()}
+          isLoading={isLoading}
+          onJobClick={(jobId) => handleJobClick(jobId, "sound")}
+          onEditClick={handleEditClick}
+          onDeleteClick={handleDeleteClick}
+        />
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        {["sound", "lights", "video"].map((dept) => (
+          <Card key={dept}>
+            <CardHeader>
+              <CardTitle>{dept.charAt(0).toUpperCase() + dept.slice(1)} Schedule</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[400px] overflow-y-auto">
+              {isLoading ? (
+                <p className="text-muted-foreground">Loading...</p>
+              ) : (
+                getDepartmentJobs(dept as Department).map(job => (
+                  <JobCard
+                    key={job.id}
+                    job={job}
                     onEditClick={handleEditClick}
                     onDeleteClick={handleDeleteClick}
-                    onJobClick={handleJobClick}
+                    onJobClick={(jobId) => handleJobClick(jobId, dept as Department)}
+                    department={dept as Department}
                   />
-                </TabsContent>
-                
-                <TabsContent value="lights">
-                  <KanbanView
-                    jobs={filteredJobs}
-                    department="lights"
-                    onEditClick={handleEditClick}
-                    onDeleteClick={handleDeleteClick}
-                    onJobClick={handleJobClick}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="video">
-                  <KanbanView
-                    jobs={filteredJobs}
-                    department="video"
-                    onEditClick={handleEditClick}
-                    onDeleteClick={handleDeleteClick}
-                    onJobClick={handleJobClick}
-                  />
-                </TabsContent>
-              </Tabs>
+                ))
+              )}
             </CardContent>
           </Card>
-        </div>
-        
-        <div className="space-y-6">
-          <Card>
-            <CardContent className="pt-6">
-              <TourChips onTourClick={() => {}} />
-            </CardContent>
-          </Card>
-        </div>
+        ))}
       </div>
 
       {selectedJobId && (
@@ -214,6 +169,7 @@ const Dashboard = () => {
           open={isAssignmentDialogOpen}
           onOpenChange={setIsAssignmentDialogOpen}
           jobId={selectedJobId}
+          department={selectedDepartment}
         />
       )}
 

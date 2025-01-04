@@ -12,7 +12,7 @@ import {
   SidebarSeparator,
   SidebarTrigger
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Settings as SettingsIcon, LogOut, Music2, Video as VideoIcon, Lightbulb } from "lucide-react";
+import { LayoutDashboard, Music2, Lightbulb, Video, Settings as SettingsIcon, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -24,27 +24,12 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const [session, setSession] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string>('technician');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (!session) {
         navigate('/auth');
-      } else {
-        supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data, error }) => {
-            if (data) {
-              setUserRole(data.role);
-            }
-            if (error) {
-              console.error('Error fetching user role:', error);
-            }
-          });
       }
     });
 
@@ -65,8 +50,6 @@ const Layout = ({ children }: LayoutProps) => {
     setSession(null);
   };
 
-  const isAdminOrManagement = userRole === 'admin' || userRole === 'management';
-
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full">
@@ -83,34 +66,30 @@ const Layout = ({ children }: LayoutProps) => {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  {isAdminOrManagement && (
-                    <>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
-                          <Link to="/sound">
-                            <Music2 className="h-4 w-4" />
-                            <span>Sound</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
-                          <Link to="/lights">
-                            <Lightbulb className="h-4 w-4" />
-                            <span>Lights</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
-                          <Link to="/video">
-                            <VideoIcon className="h-4 w-4" />
-                            <span>Video</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    </>
-                  )}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/sound">
+                        <Music2 className="h-4 w-4" />
+                        <span>Sound</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/lights">
+                        <Lightbulb className="h-4 w-4" />
+                        <span>Lights</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/video">
+                        <Video className="h-4 w-4" />
+                        <span>Video</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link to="/settings">
