@@ -10,6 +10,19 @@ const Auth = () => {
   const [session, setSession] = useState<any>(null);
   const [showSignUp, setShowSignUp] = useState(false);
   
+  // Remove dark mode class when entering auth page
+  useEffect(() => {
+    const originalTheme = document.documentElement.classList.contains("dark");
+    document.documentElement.classList.remove("dark");
+
+    // Restore theme when leaving auth page
+    return () => {
+      if (originalTheme) {
+        document.documentElement.classList.add("dark");
+      }
+    };
+  }, []);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);

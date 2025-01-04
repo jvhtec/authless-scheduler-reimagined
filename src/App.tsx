@@ -10,27 +10,38 @@ import Sound from "./pages/Sound";
 import Lights from "./pages/Lights";
 import Video from "./pages/Video";
 import Settings from "./pages/Settings";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/auth" replace />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
-          <Route path="/sound" element={<Layout><Sound /></Layout>} />
-          <Route path="/lights" element={<Layout><Lights /></Layout>} />
-          <Route path="/video" element={<Layout><Video /></Layout>} />
-          <Route path="/settings" element={<Layout><Settings /></Layout>} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  // Initialize theme from localStorage on app start
+  useEffect(() => {
+    const theme = localStorage.getItem("theme");
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Navigate to="/auth" replace />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
+            <Route path="/sound" element={<Layout><Sound /></Layout>} />
+            <Route path="/lights" element={<Layout><Lights /></Layout>} />
+            <Route path="/video" element={<Layout><Video /></Layout>} />
+            <Route path="/settings" element={<Layout><Settings /></Layout>} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
