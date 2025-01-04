@@ -51,6 +51,14 @@ const Auth = () => {
             <LoginForm onShowSignUp={() => setShowSignUp(true)} />
           )}
         </Card>
+
+        <div className="mt-8 flex justify-center">
+          <img 
+            src="/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png" 
+            alt="Sector Pro Logo" 
+            className="h-12 w-auto opacity-80"
+          />
+        </div>
       </div>
     </div>
   );

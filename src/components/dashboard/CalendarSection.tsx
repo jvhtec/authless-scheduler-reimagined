@@ -8,8 +8,8 @@ interface CalendarSectionProps {
 
 export const CalendarSection = ({ date, onDateSelect }: CalendarSectionProps) => {
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full">
+      <CardHeader className="pb-2">
         <CardTitle>Calendar</CardTitle>
       </CardHeader>
       <CardContent>
@@ -17,7 +17,7 @@ export const CalendarSection = ({ date, onDateSelect }: CalendarSectionProps) =>
           mode="single"
           selected={date}
           onSelect={onDateSelect}
-          className="rounded-md border"
+          className="w-full rounded-md border"
         />
       </CardContent>
     </Card>
