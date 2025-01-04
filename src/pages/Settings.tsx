@@ -4,26 +4,15 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
-import { useLocation } from "react-router-dom";
 
 const Settings = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const location = useLocation();
 
   useEffect(() => {
-    // Check localStorage first, then system preference
+    // Only check localStorage, don't set theme on mount
     const storedTheme = localStorage.getItem("theme");
     if (storedTheme) {
       setIsDarkMode(storedTheme === "dark");
-      if (storedTheme === "dark") {
-        document.documentElement.classList.add("dark");
-      }
-    } else {
-      const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      setIsDarkMode(systemPrefersDark);
-      if (systemPrefersDark) {
-        document.documentElement.classList.add("dark");
-      }
     }
   }, []);
 

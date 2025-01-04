@@ -25,7 +25,28 @@ export const TourDateManagementDialog = ({
 
   const handleAddDate = async (date: string, location: string) => {
     try {
-      // First get or create location
+      console.log("Adding new tour date:", { date, location, tourId });
+
+      // First get tour details to get the color
+      const { data: tourData, error: tourError } = await supabase
+        .from("tours")
+        .select(`
+          name,
+          tour_dates (
+            jobs (
+              color
+            )
+          )
+        `)
+        .eq('id', tourId)
+        .single();
+
+      if (tourError) throw tourError;
+
+      // Get the color from the first job of any tour date, or use default
+      const color = tourData?.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB';
+
+      // Get or create location
       const { data: existingLocation } = await supabase
         .from("locations")
         .select("id")
@@ -44,13 +65,32 @@ export const TourDateManagementDialog = ({
       }
 
       // Create tour date
-      await supabase
+      const { data: newTourDate, error: tourDateError } = await supabase
         .from("tour_dates")
         .insert({
           tour_id: tourId,
           date,
           location_id: locationId,
+        })
+        .select()
+        .single();
+
+      if (tourDateError) throw tourDateError;
+
+      // Create job for this tour date
+      const { error: jobError } = await supabase
+        .from('jobs')
+        .insert({
+          title: `${tourData.name} (Tour Date)`,
+          start_time: `${date}T00:00:00`,
+          end_time: `${date}T23:59:59`,
+          location_id: locationId,
+          tour_date_id: newTourDate.id,
+          color: color,
+          job_type: 'single'
         });
+
+      if (jobError) throw jobError;
 
       await queryClient.invalidateQueries({ queryKey: ["tours"] });
       toast({ title: "Date added successfully" });
