@@ -5,17 +5,17 @@ import {
   SidebarContent, 
   SidebarGroup, 
   SidebarGroupContent, 
-  SidebarMenu, 
-  SidebarMenuItem, 
-  SidebarMenuButton,
   SidebarFooter,
   SidebarSeparator,
   SidebarTrigger
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Music2, Lightbulb, Video, Settings as SettingsIcon, LogOut, UserCircle2, User, Moon, Sun } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { ThemeToggle } from "./layout/ThemeToggle";
+import { UserInfo } from "./layout/UserInfo";
+import { SidebarNavigation } from "./layout/SidebarNavigation";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,30 +25,6 @@ const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const [session, setSession] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  useEffect(() => {
-    const storedTheme = localStorage.getItem("theme");
-    if (storedTheme) {
-      setIsDarkMode(storedTheme === "dark");
-      if (storedTheme === "dark") {
-        document.documentElement.classList.add("dark");
-      }
-    }
-  }, []);
-
-  const toggleDarkMode = () => {
-    const newDarkMode = !isDarkMode;
-    setIsDarkMode(newDarkMode);
-    
-    if (newDarkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -96,8 +72,6 @@ const Layout = ({ children }: LayoutProps) => {
     setSession(null);
   };
 
-  const isTechnician = userRole === 'technician';
-
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full">
@@ -105,94 +79,13 @@ const Layout = ({ children }: LayoutProps) => {
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupContent>
-                <SidebarMenu>
-                  {!isTechnician && (
-                    <>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
-                          <Link to="/dashboard">
-                            <LayoutDashboard className="h-4 w-4" />
-                            <span>Dashboard</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
-                          <Link to="/sound">
-                            <Music2 className="h-4 w-4" />
-                            <span>Sound</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
-                          <Link to="/lights">
-                            <Lightbulb className="h-4 w-4" />
-                            <span>Lights</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
-                          <Link to="/video">
-                            <Video className="h-4 w-4" />
-                            <span>Video</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
-                          <Link to="/settings">
-                            <SettingsIcon className="h-4 w-4" />
-                            <span>Settings</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    </>
-                  )}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/technician">
-                        <UserCircle2 className="h-4 w-4" />
-                        <span>Technician View</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/profile">
-                        <User className="h-4 w-4" />
-                        <span>Profile</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
+                <SidebarNavigation userRole={userRole} />
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
           <SidebarFooter className="border-t border-sidebar-border">
-            <Button 
-              variant="ghost" 
-              className="w-full justify-start gap-2" 
-              onClick={toggleDarkMode}
-            >
-              {isDarkMode ? (
-                <Moon className="h-4 w-4" />
-              ) : (
-                <Sun className="h-4 w-4" />
-              )}
-              <span>{isDarkMode ? 'Dark Mode' : 'Light Mode'}</span>
-            </Button>
-            {session?.user && (
-              <div className="px-2 py-2 text-center">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Signed in as:
-                </p>
-                <p className="text-sm text-muted-foreground truncate text-left">
-                  {session.user.email}
-                </p>
-              </div>
-            )}
+            <ThemeToggle />
+            <UserInfo />
             <Button 
               variant="ghost" 
               className="w-full justify-start gap-2" 
