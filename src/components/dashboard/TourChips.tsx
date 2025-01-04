@@ -24,7 +24,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
       // First, fetch all tours
       const { data: toursData, error: toursError } = await supabase
         .from("tours")
-        .select("id, name, description, created_at");
+        .select("id, name, description, created_at, color");
 
       if (toursError) {
         console.error("Error fetching tours:", toursError);
@@ -54,7 +54,6 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         ...tour,
         title: tour.name,
         tour_dates: tourDatesData?.filter(td => td.tour_id === tour.id) || [],
-        color: tourDatesData?.find(td => td.tour_id === tour.id)?.jobs?.[0]?.color || '#7E69AB'
       }));
     }
   });
@@ -85,9 +84,9 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
                 "hover:bg-opacity-10 hover:text-foreground transition-colors"
               )}
               style={{
-                borderColor: tour.color,
-                color: tour.color,
-                backgroundColor: `${tour.color}10`
+                borderColor: tour.color || '#7E69AB',
+                color: tour.color || '#7E69AB',
+                backgroundColor: `${tour.color || '#7E69AB'}10`
               }}
             >
               {tour.title}

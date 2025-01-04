@@ -10,6 +10,17 @@ export const useTourManagement = (tour: any, onClose: () => void) => {
     try {
       console.log("Updating color for tour:", tour);
       
+      // Update the tour's color
+      const { error: tourError } = await supabase
+        .from("tours")
+        .update({ color })
+        .eq("id", tour.id);
+
+      if (tourError) {
+        console.error("Error updating tour color:", tourError);
+        throw tourError;
+      }
+
       // Get all tour dates for this tour
       const { data: tourDates, error: tourDatesError } = await supabase
         .from("tour_dates")
