@@ -89,7 +89,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
           jobs: date.jobs || []
         })) || [],
         color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB',
-      })) as Tour[];
+      }));
 
       return transformedTours || [];
     },

@@ -20,30 +20,44 @@ const Settings = () => {
   const checkUserRole = async () => {
     console.log("Checking user role...");
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('role, email')
-          .eq('id', user.id)
-          .single();
-        
-        console.log("User profile:", profile);
-        
-        if (error) {
-          console.error("Error fetching profile:", error);
-          toast({
-            title: "Error",
-            description: "Could not verify user role",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        const hasManagementAccess = profile?.role === 'management' || profile?.role === 'admin';
-        console.log("Has management access:", hasManagementAccess);
-        setIsManagement(hasManagementAccess);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error("Error getting user:", userError);
+        toast({
+          title: "Error",
+          description: "Could not verify user session",
+          variant: "destructive",
+        });
+        return;
       }
+
+      if (!user) {
+        console.log("No user found");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
+        toast({
+          title: "Error",
+          description: "Could not verify user role",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log("User profile:", profile);
+      
+      const hasManagementAccess = profile?.role === 'management' || profile?.role === 'admin';
+      console.log("Has management access:", hasManagementAccess);
+      setIsManagement(hasManagementAccess);
     } catch (error) {
       console.error("Error checking user role:", error);
       toast({
