@@ -24,7 +24,10 @@ type JobAssignmentResponse = {
   sound_role: string | null;
   lights_role: string | null;
   video_role: string | null;
-  jobs: JobWithAssignment;
+  jobs: Database['public']['Tables']['jobs']['Row'] & {
+    location: { name: string | null } | null;
+    job_departments: { department: Department }[];
+  };
 }
 
 const Dashboard = () => {
@@ -72,7 +75,7 @@ const Dashboard = () => {
         sound_role: assignment.sound_role,
         lights_role: assignment.lights_role,
         video_role: assignment.video_role
-      }));
+      })) as JobWithAssignment[];
 
       console.log("Assigned jobs fetched successfully:", transformedJobs);
       return transformedJobs;
