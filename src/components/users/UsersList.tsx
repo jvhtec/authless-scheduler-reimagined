@@ -8,20 +8,25 @@ export const UsersList = () => {
   const { toast } = useToast();
   
   const { data: users, isLoading, refetch } = useQuery({
-    queryKey: ['users'],
+    queryKey: ['profiles'],
     queryFn: async () => {
-      console.log("Fetching users...");
+      console.log("Fetching profiles...");
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error("Error fetching users:", error);
+        console.error("Error fetching profiles:", error);
+        toast({
+          title: "Error fetching users",
+          description: error.message,
+          variant: "destructive",
+        });
         throw error;
       }
       
-      console.log("Users data:", data);
+      console.log("Profiles data:", data);
       return data;
     },
   });
@@ -33,7 +38,10 @@ export const UsersList = () => {
         .delete()
         .eq('id', userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error deleting user:", error);
+        throw error;
+      }
 
       await refetch();
       
@@ -42,7 +50,6 @@ export const UsersList = () => {
         description: "The user has been successfully deleted.",
       });
     } catch (error: any) {
-      console.error("Error deleting user:", error);
       toast({
         title: "Error",
         description: "Failed to delete user. " + error.message,
