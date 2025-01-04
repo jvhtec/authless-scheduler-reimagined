@@ -11,6 +11,7 @@ export const UsersList = () => {
   const { toast } = useToast();
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [deletingUser, setDeletingUser] = useState<Profile | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   const { data: users, isLoading, error, refetch } = useQuery({
     queryKey: ['profiles'],
@@ -123,6 +124,7 @@ export const UsersList = () => {
       });
 
       setEditingUser(null);
+      setEditDialogOpen(false);
       refetch();
     } catch (error: any) {
       console.error("Update error:", error);
@@ -156,15 +158,22 @@ export const UsersList = () => {
         <UserCard
           key={user.id}
           user={user}
-          onEdit={setEditingUser}
+          onEdit={(user) => {
+            setEditingUser(user);
+            setEditDialogOpen(true);
+          }}
           onDelete={setDeletingUser}
         />
       ))}
 
       <EditUserDialog
         user={editingUser}
-        onOpenChange={(open) => !open && setEditingUser(null)}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) setEditingUser(null);
+        }}
         onSave={handleSaveEdit}
+        open={editDialogOpen}
       />
 
       <DeleteUserDialog
