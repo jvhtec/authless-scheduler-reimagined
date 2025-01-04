@@ -121,7 +121,7 @@ export const useTourCreationMutation = () => {
             end_time: `${dateInfo.date}T23:59:59`,
             location_id: locationId,
             job_type: "single",
-            tour_date_id: tourDate.id,
+            tour_date_id: tourDate.id, // This ensures the job is linked to the tour date
             color,
           })
           .select()
