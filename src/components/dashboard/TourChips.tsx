@@ -6,7 +6,6 @@ import { useState } from "react";
 import { TourDateManagementDialog } from "../tours/TourDateManagementDialog";
 import { TourManagementDialog } from "../tours/TourManagementDialog";
 import { Calendar, Settings } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 
 interface TourChipsProps {
   onTourClick: (tourId: string) => void;
@@ -17,11 +16,11 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
   const [selectedTour, setSelectedTour] = useState<any>(null);
   const [isDatesDialogOpen, setIsDatesDialogOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
-  const { toast } = useToast();
 
   const { data: tours = [], isLoading } = useQuery({
     queryKey: ["tours-with-dates"],
     queryFn: async () => {
+      console.log("Fetching tours and dates...");
       // First, fetch all tours
       const { data: toursData, error: toursError } = await supabase
         .from("tours")
@@ -47,6 +46,8 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         console.error("Error fetching tour dates:", datesError);
         throw datesError;
       }
+
+      console.log("Tours and dates fetched successfully");
 
       // Map tour dates to their respective tours
       return toursData.map(tour => ({

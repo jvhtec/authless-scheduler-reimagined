@@ -12,8 +12,7 @@ export const useJobs = () => {
           *,
           location:locations(name),
           job_departments(department)
-        `)
-        .order('start_time');
+        `);
 
       if (error) {
         console.error("Error fetching jobs:", error);

@@ -31,17 +31,8 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Creating job...");
 
-    console.log("Creating job with data:", {
-      title,
-      description,
-      startTime,
-      endTime,
-      location,
-      color,
-      selectedDepartments,
-    });
-    
     try {
       // Get the current user session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -60,12 +51,14 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
           start_time: startTime,
           end_time: endTime,
           color,
-          created_by: session.user.id // Set the created_by field
+          created_by: session.user.id
         })
         .select()
         .single();
 
       if (jobError) throw jobError;
+
+      console.log("Job created:", jobData);
 
       // Then, create the job departments
       const jobDepartments = selectedDepartments.map(department => ({
@@ -79,7 +72,9 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
 
       if (deptError) throw deptError;
 
-      // If location is provided, first create or find the location
+      console.log("Job departments created");
+
+      // If location is provided, create or find the location
       if (location) {
         const { data: locationData, error: locationError } = await supabase
           .from('locations')
@@ -88,6 +83,8 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
           .single();
 
         if (locationError) throw locationError;
+
+        console.log("Location created:", locationData);
 
         // Update the job with the location_id
         const { error: updateError } = await supabase
@@ -99,7 +96,9 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
       }
 
       // Invalidate the jobs query to refresh the data
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      await queryClient.invalidateQueries({ queryKey: ['jobs'] });
+
+      console.log("Job creation completed successfully");
 
       toast({
         title: "Success",
