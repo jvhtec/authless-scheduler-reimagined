@@ -2,14 +2,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useEffect, useState } from "react";
-import { Moon, Sun } from "lucide-react";
-import { SignUpForm } from "@/components/auth/SignUpForm";
+import { Moon, Sun, UserPlus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CreateUserDialog } from "@/components/users/CreateUserDialog";
+import { UsersList } from "@/components/users/UsersList";
 
 const Settings = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [createUserOpen, setCreateUserOpen] = useState(false);
 
   useEffect(() => {
-    // Only check localStorage, don't set theme on mount
     const storedTheme = localStorage.getItem("theme");
     if (storedTheme) {
       setIsDarkMode(storedTheme === "dark");
@@ -31,14 +33,21 @@ const Settings = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Settings</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-semibold">Settings</h1>
+        <Button onClick={() => setCreateUserOpen(true)}>
+          <UserPlus className="mr-2 h-4 w-4" />
+          Add User
+        </Button>
+      </div>
+
       <div className="max-w-2xl space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Create New User</CardTitle>
+            <CardTitle>Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <SignUpForm onBack={() => {}} />
+            <UsersList />
           </CardContent>
         </Card>
 
@@ -67,6 +76,11 @@ const Settings = () => {
           </CardContent>
         </Card>
       </div>
+
+      <CreateUserDialog 
+        open={createUserOpen} 
+        onOpenChange={setCreateUserOpen} 
+      />
     </div>
   );
 };
