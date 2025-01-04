@@ -70,15 +70,15 @@ const Dashboard = () => {
       }
 
       // Transform and type the data properly
-      const transformedJobs = (data as JobAssignmentResponse[]).map(assignment => ({
+      const transformedJobs = (data as unknown as JobAssignmentResponse[]).map(assignment => ({
         ...assignment.jobs,
         sound_role: assignment.sound_role,
         lights_role: assignment.lights_role,
         video_role: assignment.video_role
-      })) as JobWithAssignment[];
+      }));
 
       console.log("Assigned jobs fetched successfully:", transformedJobs);
-      return transformedJobs;
+      return transformedJobs as JobWithAssignment[];
     },
   });
 
