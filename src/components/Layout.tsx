@@ -12,7 +12,7 @@ import {
   SidebarSeparator,
   SidebarTrigger
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Music2, Lightbulb, Video, Settings as SettingsIcon, LogOut, UserCircle2 } from "lucide-react";
+import { LayoutDashboard, Music2, Lightbulb, Video, Settings as SettingsIcon, LogOut, UserCircle2, User } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -103,6 +103,14 @@ const Layout = ({ children }: LayoutProps) => {
                       <Link to="/settings">
                         <SettingsIcon className="h-4 w-4" />
                         <span>Settings</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/profile">
+                        <User className="h-4 w-4" />
+                        <span>Profile</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
