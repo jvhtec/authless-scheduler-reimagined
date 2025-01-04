@@ -7,21 +7,21 @@ import { useToast } from "@/hooks/use-toast";
 export const UsersList = () => {
   const { toast } = useToast();
   
-  const { data: users, isLoading, refetch } = useQuery({
+  const { data: users, isLoading } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
       try {
         console.log("Fetching profiles...");
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('profiles')
           .select('*')
           .order('created_at', { ascending: false });
-        
+
         if (error) {
           console.error("Error fetching profiles:", error);
           throw error;
         }
-        
+
         console.log("Profiles data:", data);
         return data || [];
       } catch (error: any) {
@@ -31,10 +31,11 @@ export const UsersList = () => {
           description: error.message,
           variant: "destructive",
         });
-        throw error;
+        return [];
       }
     },
-    retry: false
+    retry: false,
+    refetchOnWindowFocus: false
   });
 
   const handleDelete = async (userId: string) => {
@@ -48,8 +49,6 @@ export const UsersList = () => {
         console.error("Error deleting user:", error);
         throw error;
       }
-
-      await refetch();
       
       toast({
         title: "User deleted",
