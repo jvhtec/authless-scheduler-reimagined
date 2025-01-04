@@ -95,7 +95,33 @@ const Settings = () => {
       </div>
 
       <div className="max-w-2xl space-y-6">
-        {/* Profile Card */}
+        {/* Appearance Card - Always visible */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Appearance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2">
+                  {isDarkMode ? (
+                    <Moon className="h-4 w-4" />
+                  ) : (
+                    <Sun className="h-4 w-4" />
+                  )}
+                  <Label htmlFor="dark-mode">Dark Mode</Label>
+                </div>
+              </div>
+              <Switch
+                id="dark-mode"
+                checked={isDarkMode}
+                onCheckedChange={toggleDarkMode}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Profile Card - Always visible */}
         <Card>
           <CardHeader>
             <CardTitle>Your Profile</CardTitle>
@@ -136,32 +162,6 @@ const Settings = () => {
             </CardContent>
           </Card>
         )}
-
-        {/* Appearance Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Appearance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="flex items-center space-x-2">
-                  {isDarkMode ? (
-                    <Moon className="h-4 w-4" />
-                  ) : (
-                    <Sun className="h-4 w-4" />
-                  )}
-                  <Label htmlFor="dark-mode">Dark Mode</Label>
-                </div>
-              </div>
-              <Switch
-                id="dark-mode"
-                checked={isDarkMode}
-                onCheckedChange={toggleDarkMode}
-              />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {currentUser?.role !== 'technician' && (
