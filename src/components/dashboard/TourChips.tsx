@@ -48,7 +48,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
     queryFn: async () => {
       console.log("Fetching tours data...");
       
-      const { data: tours, error: toursError } = await supabase
+      const { data: toursData, error: toursError } = await supabase
         .from("tours")
         .select(`
           id,
@@ -79,18 +79,18 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         throw toursError;
       }
 
-      console.log("Raw tours data:", tours);
+      console.log("Raw tours data:", toursData);
       
       // Transform the data to match our interface
-      const transformedTours = tours?.map(tour => ({
+      const transformedTours = toursData?.map(tour => ({
         ...tour,
         title: tour.name,
-        tour_dates: tour.tour_dates?.map(date => ({
+        tour_dates: tour.tour_dates?.map((date: any) => ({
           ...date,
           location: date.location ? { name: date.location.name } : null,
           jobs: date.jobs || []
         })) || [],
-        color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB',
+        color: tour.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB'
       }));
 
       console.log("Transformed tours data:", transformedTours);

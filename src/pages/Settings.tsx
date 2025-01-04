@@ -42,6 +42,8 @@ const Settings = () => {
         return;
       }
 
+      console.log("Session found:", session);
+
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role')
