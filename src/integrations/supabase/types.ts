@@ -291,7 +291,7 @@ export type Database = {
       department: "sound" | "lights" | "video"
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
       job_type: "single" | "tour"
-      user_role: "admin" | "user" | "management" | "logistics" | "technician"
+      user_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never

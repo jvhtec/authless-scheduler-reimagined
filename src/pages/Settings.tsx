@@ -1,98 +1,20 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
-import { UserManagement } from "@/components/settings/UserManagement";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { Moon, Sun } from "lucide-react";
 
 const Settings = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [isManagement, setIsManagement] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
+    // Only check localStorage, don't set theme on mount
     const storedTheme = localStorage.getItem("theme");
     if (storedTheme) {
       setIsDarkMode(storedTheme === "dark");
     }
-    checkUserRole();
   }, []);
-
-  const checkUserRole = async () => {
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        console.error("Error getting user:", userError);
-        navigate("/auth");
-        return;
-      }
-
-      if (!user) {
-        console.log("No user found, redirecting to auth");
-        navigate("/auth");
-        return;
-      }
-
-      console.log("Checking role for user:", user.id);
-
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      if (profileError) {
-        console.error("Error fetching profile:", profileError);
-        toast({
-          title: "Error",
-          description: "Could not verify user role",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log("Profile data:", profile);
-      
-      if (!profile) {
-        console.log("Creating new profile for user");
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: user.id,
-            email: user.email,
-            role: 'technician',
-            first_name: user.user_metadata?.first_name,
-            last_name: user.user_metadata?.last_name
-          });
-
-        if (insertError) {
-          console.error("Error creating profile:", insertError);
-          toast({
-            title: "Error",
-            description: "Could not create user profile",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      const hasManagementAccess = profile?.role === 'management' || profile?.role === 'admin';
-      console.log("Has management access:", hasManagementAccess);
-      setIsManagement(hasManagementAccess);
-    } catch (error) {
-      console.error("Error in checkUserRole:", error);
-      toast({
-        title: "Error",
-        description: "Could not verify user role",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const toggleDarkMode = () => {
     const newDarkMode = !isDarkMode;
@@ -107,19 +29,48 @@ const Settings = () => {
     }
   };
 
-  if (isLoading) {
-    return <div>Loading settings...</div>;
-  }
-
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Settings</h1>
       <div className="max-w-2xl space-y-6">
-        <AppearanceSettings 
-          isDarkMode={isDarkMode}
-          toggleDarkMode={toggleDarkMode}
-        />
-        {isManagement && <UserManagement />}
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Settings</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Sign in to manage your account settings
+            </p>
+            <div className="flex justify-start">
+              <Button variant="outline">Sign In</Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Appearance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2">
+                  {isDarkMode ? (
+                    <Moon className="h-4 w-4" />
+                  ) : (
+                    <Sun className="h-4 w-4" />
+                  )}
+                  <Label htmlFor="dark-mode">Dark Mode</Label>
+                </div>
+              </div>
+              <Switch
+                id="dark-mode"
+                checked={isDarkMode}
+                onCheckedChange={toggleDarkMode}
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
