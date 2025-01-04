@@ -38,9 +38,9 @@ export const UsersList = () => {
     if (!deletingUser) return;
     
     try {
-      console.log("Attempting to delete user:", deletingUser.id);
+      console.log("Starting deletion process for user:", deletingUser.id);
       
-      // First delete from technician_departments if exists
+      // First delete from technician_departments
       const { error: techDeptError } = await supabase
         .from('technician_departments')
         .delete()
@@ -50,8 +50,9 @@ export const UsersList = () => {
         console.error("Error deleting from technician_departments:", techDeptError);
         throw techDeptError;
       }
+      console.log("Successfully deleted technician_departments records");
 
-      // Then delete from job_assignments if exists
+      // Then delete from job_assignments
       const { error: jobAssignError } = await supabase
         .from('job_assignments')
         .delete()
@@ -61,6 +62,7 @@ export const UsersList = () => {
         console.error("Error deleting from job_assignments:", jobAssignError);
         throw jobAssignError;
       }
+      console.log("Successfully deleted job_assignments records");
 
       // Finally delete the profile
       const { error: profileError } = await supabase
@@ -72,14 +74,14 @@ export const UsersList = () => {
         console.error("Error deleting profile:", profileError);
         throw profileError;
       }
+      console.log("Successfully deleted profile");
 
-      console.log("User deleted successfully");
       toast({
         title: "User deleted",
         description: "The user has been successfully deleted.",
       });
       
-      refetch();
+      await refetch();
     } catch (error: any) {
       console.error("Delete error:", error);
       toast({
