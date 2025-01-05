@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Calendar } from "lucide-react";
+import { MessageSquare, Calendar, Download } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { JobCard } from "@/components/jobs/JobCard";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { addWeeks, addMonths } from "date-fns";
+
+interface JobDocument {
+  id: string;
+  file_name: string;
+  file_path: string;
+  uploaded_at: string;
+}
 
 const TechnicianDashboard = () => {
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -30,7 +37,8 @@ const TechnicianDashboard = () => {
             *,
             jobs!inner (
               *,
-              location:locations(name)
+              location:locations(name),
+              job_documents(*)
             )
           `)
           .eq('technician_id', user.id)
@@ -68,6 +76,40 @@ const TechnicianDashboard = () => {
       title: "Message Sent",
       description: "Your message has been sent to management.",
     });
+  };
+
+  const handleDownload = async (document: JobDocument) => {
+    try {
+      console.log("Downloading document:", document);
+      
+      const { data, error } = await supabase.storage
+        .from('job_documents')
+        .download(document.file_path);
+
+      if (error) throw error;
+
+      // Create a download link
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = document.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Started",
+        description: `Downloading ${document.file_name}`,
+      });
+    } catch (error: any) {
+      console.error("Download error:", error);
+      toast({
+        title: "Download Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -108,14 +150,35 @@ const TechnicianDashboard = () => {
           ) : (
             <div className="grid gap-4">
               {assignments.map((assignment) => (
-                <JobCard
-                  key={assignment.job_id}
-                  job={assignment.jobs}
-                  onEditClick={() => {}}
-                  onDeleteClick={() => {}}
-                  onJobClick={() => {}}
-                  showAssignments={false}
-                />
+                <div key={assignment.job_id} className="space-y-4">
+                  <JobCard
+                    key={assignment.job_id}
+                    job={assignment.jobs}
+                    onEditClick={() => {}}
+                    onDeleteClick={() => {}}
+                    onJobClick={() => {}}
+                    showAssignments={false}
+                  />
+                  {assignment.jobs.job_documents?.length > 0 && (
+                    <div className="ml-4 space-y-2">
+                      <h3 className="text-sm font-medium">Documents:</h3>
+                      <div className="grid gap-2">
+                        {assignment.jobs.job_documents.map((doc: JobDocument) => (
+                          <Button
+                            key={doc.id}
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-start gap-2"
+                            onClick={() => handleDownload(doc)}
+                          >
+                            <Download className="h-4 w-4" />
+                            {doc.file_name}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}
