@@ -102,7 +102,6 @@ const TechnicianDashboard = () => {
         <h1 className="text-2xl font-semibold">Technician Dashboard</h1>
         <div className="flex items-center gap-4">
           <TimeSpanSelector value={timeSpan} onValueChange={setTimeSpan} />
-          <MessageManagementDialog department={userDepartment} />
         </div>
       </div>
 
@@ -118,9 +117,11 @@ const TechnicianDashboard = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={showMessages} onOpenChange={setShowMessages}>
-        <MessageManagementDialog department={userDepartment} />
-      </Dialog>
+      {showMessages && (
+        <Dialog open={showMessages} onOpenChange={setShowMessages}>
+          <MessageManagementDialog department={userDepartment} trigger={false} />
+        </Dialog>
+      )}
     </div>
   );
 };
