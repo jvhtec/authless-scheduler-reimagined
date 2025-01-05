@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useTabVisibility } from "@/hooks/use-tab-visibility";
+import { useTabVisibility } from "@/hooks/useTabVisibility";
 
 interface JobAssignmentDialogProps {
   open: boolean;
