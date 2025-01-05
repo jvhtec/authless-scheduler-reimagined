@@ -36,14 +36,14 @@ export const JobDocuments = ({
 
       if (error) throw error;
 
-      // Create a download link
+      // Create a download link using the global document object
       const url = window.URL.createObjectURL(data);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = jobDocument.file_name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const downloadLink = window.document.createElement('a');
+      downloadLink.href = url;
+      downloadLink.download = jobDocument.file_name;
+      window.document.body.appendChild(downloadLink);
+      downloadLink.click();
+      window.document.body.removeChild(downloadLink);
       window.URL.revokeObjectURL(url);
 
       toast({
