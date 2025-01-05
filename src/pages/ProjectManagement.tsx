@@ -8,6 +8,7 @@ import { startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { MonthNavigation } from "@/components/project-management/MonthNavigation";
 import { DepartmentTabs } from "@/components/project-management/DepartmentTabs";
 import { useJobManagement } from "@/hooks/useJobManagement";
+import { useTabVisibility } from "@/hooks/useTabVisibility";
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
@@ -17,6 +18,8 @@ const ProjectManagement = () => {
 
   const startDate = startOfMonth(currentDate);
   const endDate = endOfMonth(currentDate);
+
+  useTabVisibility(['jobs']);
 
   const { jobs, jobsLoading, handleDeleteDocument } = useJobManagement(
     selectedDepartment,
