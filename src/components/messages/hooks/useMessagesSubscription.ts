@@ -7,8 +7,8 @@ export const useMessagesSubscription = (
 ) => {
   useEffect(() => {
     if (currentUserId) {
-      fetchMessages();
-
+      console.log("Setting up direct messages subscription for user:", currentUserId);
+      
       const channel = supabase
         .channel('direct-messages-changes')
         .on(

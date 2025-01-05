@@ -1,17 +1,17 @@
-import { DirectMessage } from "../types";
+import { Message } from "../types";
 import { supabase } from "@/lib/supabase";
 import { toast as toastFunction } from "@/hooks/use-toast";
 
 export const useMessageOperations = (
-  messages: DirectMessage[],
-  setMessages: React.Dispatch<React.SetStateAction<DirectMessage[]>>,
+  messages: Message[],
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
   toast: typeof toastFunction
 ) => {
   const handleDeleteMessage = async (messageId: string) => {
     try {
       console.log("Deleting message:", messageId);
       const { error } = await supabase
-        .from('direct_messages')
+        .from('messages')
         .delete()
         .eq('id', messageId);
 
@@ -23,7 +23,7 @@ export const useMessageOperations = (
       });
 
       setMessages(messages.filter(msg => msg.id !== messageId));
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting message:", error);
       toast({
         title: "Error",
@@ -37,7 +37,7 @@ export const useMessageOperations = (
     try {
       console.log("Marking message as read:", messageId);
       const { error } = await supabase
-        .from('direct_messages')
+        .from('messages')
         .update({ status: 'read' })
         .eq('id', messageId);
 
