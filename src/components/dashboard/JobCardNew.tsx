@@ -35,21 +35,27 @@ export const JobCardNew = ({
 
   const canEdit = userRole !== 'logistics';
 
+  console.log('Department:', department);
   console.log('Job assignments:', job.job_assignments);
 
   // Get assigned technicians from profiles table through job_assignments
   const assignedTechnicians = job.job_assignments?.map((assignment: any) => {
-    let role;
+    let role = null;
+    
     // Filter based on department
-    if (department === 'sound' && assignment.sound_role) {
-      role = assignment.sound_role;
-    } else if (department === 'lights' && assignment.lights_role) {
-      role = assignment.lights_role;
-    } else if (department === 'video' && assignment.video_role) {
-      role = assignment.video_role;
-    } else if (!department) {
-      // If no department specified (e.g. in dashboard), show any role
-      role = assignment.sound_role || assignment.lights_role || assignment.video_role;
+    switch (department) {
+      case 'sound':
+        role = assignment.sound_role;
+        break;
+      case 'lights':
+        role = assignment.lights_role;
+        break;
+      case 'video':
+        role = assignment.video_role;
+        break;
+      default:
+        // If no department specified, show any role
+        role = assignment.sound_role || assignment.lights_role || assignment.video_role;
     }
 
     if (!role) return null;

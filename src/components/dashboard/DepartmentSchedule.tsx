@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { JobCardNew } from "./JobCardNew";
 import { LucideIcon } from "lucide-react";
+import { Department } from "@/types/department";
 
 interface DepartmentScheduleProps {
-  name: string;
+  name: Department;
   icon: LucideIcon;
   color: string;
   jobs: any[];
@@ -40,6 +41,7 @@ export const DepartmentSchedule = ({
               onEditClick={onEditClick}
               onDeleteClick={onDeleteClick}
               onJobClick={onJobClick}
+              department={name}
               userRole={userRole}
             />
           ))}
