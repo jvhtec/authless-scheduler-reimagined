@@ -18,15 +18,38 @@ const queryClient = new QueryClient();
 
 // Custom redirect component that checks user role
 const RoleBasedRedirect = () => {
-  const { userRole } = useSessionManager();
-  console.log('Redirecting based on role:', userRole);
+  const { userRole, isLoading, session } = useSessionManager();
+  console.log('RoleBasedRedirect - Role:', userRole, 'Loading:', isLoading, 'Has Session:', !!session);
   
-  return (
-    <Navigate 
-      to={userRole === 'technician' ? "/technician-dashboard" : "/dashboard"} 
-      replace 
-    />
-  );
+  // If loading, show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white" />
+      </div>
+    );
+  }
+
+  // If no session, redirect to auth
+  if (!session) {
+    console.log('No session found, redirecting to auth');
+    return <Navigate to="/auth" replace />;
+  }
+
+  // If we have a role, redirect based on it
+  if (userRole) {
+    console.log('Redirecting to dashboard based on role:', userRole);
+    return (
+      <Navigate 
+        to={userRole === 'technician' ? "/technician-dashboard" : "/dashboard"} 
+        replace 
+      />
+    );
+  }
+
+  // If we have a session but no role (edge case), redirect to auth
+  console.log('Session exists but no role found, redirecting to auth');
+  return <Navigate to="/auth" replace />;
 };
 
 function App() {
