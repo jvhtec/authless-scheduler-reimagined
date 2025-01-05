@@ -38,25 +38,69 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
       return;
     }
 
-    const roleField = `${department}_role` as const;
-    const { error } = await supabase
-      .from("job_assignments")
-      .insert({
-        job_id: jobId,
-        technician_id: selectedTechnician,
-        [roleField]: selectedRole,
+    try {
+      // Get technician details
+      const { data: technicianData, error: techError } = await supabase
+        .from("profiles")
+        .select("first_name, last_name, email")
+        .eq("id", selectedTechnician)
+        .single();
+
+      if (techError) throw techError;
+
+      // Get job details including location
+      const { data: jobData, error: jobError } = await supabase
+        .from("jobs")
+        .select(`
+          title,
+          start_time,
+          locations (
+            name
+          )
+        `)
+        .eq("id", jobId)
+        .single();
+
+      if (jobError) throw jobError;
+
+      // Create assignment with initial 'invited' status
+      const roleField = `${department}_role` as const;
+      const { error: assignError } = await supabase
+        .from("job_assignments")
+        .insert({
+          job_id: jobId,
+          technician_id: selectedTechnician,
+          [roleField]: selectedRole,
+          status: 'invited'
+        });
+
+      if (assignError) throw assignError;
+
+      // Send email notification
+      const { error: emailError } = await supabase.functions.invoke('send-assignment-email', {
+        body: {
+          to: technicianData.email,
+          jobTitle: jobData.title,
+          technicianName: `${technicianData.first_name} ${technicianData.last_name}`,
+          startTime: new Date(jobData.start_time).toLocaleString(),
+          location: jobData.locations?.name || 'Location TBD'
+        }
       });
 
-    if (error) {
-      console.error("Error assigning technician:", error);
-      toast.error("Failed to assign technician");
-      return;
-    }
+      if (emailError) {
+        console.error("Error sending email:", emailError);
+        toast.error("Assignment created but failed to send email notification");
+        return;
+      }
 
-    toast.success("Technician assigned successfully");
-    setSelectedTechnician("");
-    setSelectedRole("");
-    onOpenChange(false);
+      toast.success("Technician assigned and notification sent");
+      setSelectedTechnician("");
+      setSelectedRole("");
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Error in assignment process:", error);
+      toast.error(error.message);
+    }
   };
 
   const getRoleOptions = (department: Department) => {
