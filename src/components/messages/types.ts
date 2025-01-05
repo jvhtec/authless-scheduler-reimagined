@@ -14,6 +14,7 @@ export interface DirectMessage {
     last_name: string;
   };
   sender_id: string;
+  recipient_id: string;
 }
 
 export interface Message {
