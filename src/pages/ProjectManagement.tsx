@@ -41,8 +41,7 @@ const ProjectManagement = () => {
 
       console.log("Jobs fetched:", data);
       return data;
-    },
-    enabled: selectedDepartment !== "personal" && selectedDepartment !== "production",
+    }
   });
 
   useEffect(() => {
