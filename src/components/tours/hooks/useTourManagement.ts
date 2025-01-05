@@ -47,18 +47,6 @@ export const useTourManagement = (tour: any, onClose: () => void) => {
         }
       }
 
-      // Also update the main tour job
-      const { error: mainJobError } = await supabase
-        .from("jobs")
-        .update({ color })
-        .eq("job_type", "tour")
-        .eq("title", tour.name);
-
-      if (mainJobError) {
-        console.error("Error updating main tour job color:", mainJobError);
-        throw mainJobError;
-      }
-
       await queryClient.invalidateQueries({ queryKey: ["tours-with-dates"] });
       await queryClient.invalidateQueries({ queryKey: ["jobs"] });
       
@@ -149,18 +137,6 @@ export const useTourManagement = (tour: any, onClose: () => void) => {
           console.error("Error deleting tour dates:", tourDatesDeleteError);
           throw tourDatesDeleteError;
         }
-      }
-
-      // Also delete the main tour job
-      const { error: mainJobError } = await supabase
-        .from("jobs")
-        .delete()
-        .eq("job_type", "tour")
-        .eq("title", tour.name);
-
-      if (mainJobError) {
-        console.error("Error deleting main tour job:", mainJobError);
-        throw mainJobError;
       }
 
       // Finally delete the tour

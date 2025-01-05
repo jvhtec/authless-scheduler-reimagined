@@ -105,12 +105,51 @@ export const TourDateManagementDialog = ({
 
   const handleDeleteDate = async (dateId: string) => {
     try {
-      await supabase
+      console.log("Starting deletion of tour date:", dateId);
+
+      // First, get the jobs associated with this tour date
+      const { data: jobs, error: jobsError } = await supabase
+        .from("jobs")
+        .select("id")
+        .eq("tour_date_id", dateId);
+
+      if (jobsError) throw jobsError;
+
+      if (jobs && jobs.length > 0) {
+        // Delete job assignments
+        const { error: assignmentsError } = await supabase
+          .from("job_assignments")
+          .delete()
+          .in("job_id", jobs.map(j => j.id));
+
+        if (assignmentsError) throw assignmentsError;
+
+        // Delete job departments
+        const { error: departmentsError } = await supabase
+          .from("job_departments")
+          .delete()
+          .in("job_id", jobs.map(j => j.id));
+
+        if (departmentsError) throw departmentsError;
+
+        // Delete the jobs
+        const { error: jobsDeleteError } = await supabase
+          .from("jobs")
+          .delete()
+          .in("id", jobs.map(j => j.id));
+
+        if (jobsDeleteError) throw jobsDeleteError;
+      }
+
+      // Finally delete the tour date
+      const { error: dateError } = await supabase
         .from("tour_dates")
         .delete()
         .eq("id", dateId);
 
-      await queryClient.invalidateQueries({ queryKey: ["tours"] });
+      if (dateError) throw dateError;
+
+      await queryClient.invalidateQueries({ queryKey: ["tours-with-dates"] });
       toast({ title: "Date deleted successfully" });
     } catch (error) {
       console.error("Error deleting date:", error);
