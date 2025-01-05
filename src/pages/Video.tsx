@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { LightsHeader } from "@/components/lights/LightsHeader";
 import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { LightsSchedule } from "@/components/lights/LightsSchedule";
+import { useTabVisibility } from "@/hooks/useTabVisibility";
 
 const Video = () => {
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
@@ -23,14 +24,30 @@ const Video = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const currentDepartment = "video";
   
-  const { data: jobs, isLoading } = useJobs();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  // Use the tab visibility hook to handle tab switching
+  useTabVisibility({
+    onTabVisible: () => {
+      console.log("Video page: Tab became visible, invalidating jobs query");
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    }
+  });
+
+  const { data: jobs, isLoading } = useJobs({
+    staleTime: 30000, // Consider data fresh for 30 seconds
+    refetchOnWindowFocus: true // Enable automatic refetching when window gains focus
+  });
 
   useEffect(() => {
+    console.log("Video page: Fetching user role");
     const fetchUserRole = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log("Video page: No user found");
+        return;
+      }
 
       const { data, error } = await supabase
         .from('profiles')
@@ -39,11 +56,12 @@ const Video = () => {
         .single();
 
       if (error) {
-        console.error('Error fetching user role:', error);
+        console.error('Video page: Error fetching user role:', error);
         return;
       }
 
       if (data) {
+        console.log("Video page: User role fetched:", data.role);
         setUserRole(data.role);
       }
     };
@@ -52,19 +70,26 @@ const Video = () => {
   }, []);
 
   const getDepartmentJobs = () => {
-    if (!jobs) return [];
-    return jobs.filter(job => 
+    if (!jobs) {
+      console.log("Video page: No jobs data available");
+      return [];
+    }
+    const filteredJobs = jobs.filter(job => 
       job.job_departments.some(dept => dept.department === currentDepartment)
     );
+    console.log("Video page: Filtered jobs for department:", filteredJobs.length);
+    return filteredJobs;
   };
 
   const getSelectedDateJobs = () => {
     if (!date || !jobs) return [];
     const selectedDate = format(date, 'yyyy-MM-dd');
-    return getDepartmentJobs().filter(job => {
+    const filteredJobs = getDepartmentJobs().filter(job => {
       const jobDate = format(new Date(job.start_time), 'yyyy-MM-dd');
       return jobDate === selectedDate;
     });
+    console.log("Video page: Filtered jobs for selected date:", filteredJobs.length);
+    return filteredJobs;
   };
 
   const handleJobClick = (jobId: string) => {
