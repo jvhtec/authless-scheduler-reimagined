@@ -7,6 +7,9 @@ import { JobCard } from "@/components/jobs/JobCard";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { addWeeks, addMonths } from "date-fns";
+import { SendMessage } from "@/components/messages/SendMessage";
+import { MessagesList } from "@/components/messages/MessagesList";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface JobDocument {
   id: string;
@@ -19,7 +22,27 @@ const TechnicianDashboard = () => {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeSpan, setTimeSpan] = useState<string>("1week");
+  const [userDepartment, setUserDepartment] = useState<string | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchUserDepartment = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('department')
+        .eq('id', user.id)
+        .single();
+
+      if (profileData) {
+        setUserDepartment(profileData.department);
+      }
+    };
+
+    fetchUserDepartment();
+  }, []);
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -76,13 +99,6 @@ const TechnicianDashboard = () => {
     }
   };
 
-  const handleMessageManagement = () => {
-    toast({
-      title: "Message Sent",
-      description: "Your message has been sent to management.",
-    });
-  };
-
   const handleDownload = async (jobDocument: JobDocument) => {
     try {
       console.log("Downloading document:", jobDocument);
@@ -93,7 +109,6 @@ const TechnicianDashboard = () => {
 
       if (error) throw error;
 
-      // Create a download link
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
@@ -133,10 +148,23 @@ const TechnicianDashboard = () => {
               <SelectItem value="3months">Next 3 Months</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={handleMessageManagement} className="gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Message Management
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Message Management
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Messages</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {userDepartment && <SendMessage department={userDepartment} />}
+                <MessagesList />
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
