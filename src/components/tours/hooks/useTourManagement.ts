@@ -91,6 +91,18 @@ export const useTourManagement = (tour: any, onClose: () => void) => {
       console.log("Found tour dates:", tourDates);
 
       if (tourDates && tourDates.length > 0) {
+        // First, delete all projects associated with these tour dates
+        console.log("Deleting projects associated with tour dates...");
+        const { error: projectsError } = await supabase
+          .from("projects")
+          .delete()
+          .in("tour_date_id", tourDates.map(td => td.id));
+
+        if (projectsError) {
+          console.error("Error deleting projects:", projectsError);
+          throw projectsError;
+        }
+
         // Get all jobs associated with these tour dates
         const { data: jobs, error: jobsError } = await supabase
           .from("jobs")
