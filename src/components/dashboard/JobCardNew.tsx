@@ -33,6 +33,12 @@ export const JobCardNew = ({
 
   const canEdit = userRole !== 'logistics';
 
+  // Get assigned technicians from job_assignments
+  const assignedTechnicians = job.job_assignments?.map((assignment: any) => ({
+    name: `${assignment.technician?.first_name || ''} ${assignment.technician?.last_name || ''}`.trim(),
+    role: assignment.sound_role || assignment.lights_role || assignment.video_role
+  })).filter((tech: any) => tech.name);
+
   return (
     <Card 
       className="mb-4 hover:shadow-md transition-shadow cursor-pointer"
@@ -74,16 +80,22 @@ export const JobCardNew = ({
               {job.location.name}
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <div className="flex gap-1 flex-wrap">
-              {job.job_assignments?.map((assignment: any) => (
-                <Badge key={assignment.technician_id} variant="secondary">
-                  {`${assignment.technician?.first_name || ''} ${assignment.technician?.last_name || ''}`}
-                </Badge>
-              ))}
+          {assignedTechnicians?.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <div className="flex gap-1 flex-wrap">
+                {assignedTechnicians.map((tech: any, index: number) => (
+                  <Badge 
+                    key={`${tech.name}-${index}`} 
+                    variant="secondary"
+                    className="text-xs"
+                  >
+                    {tech.name} {tech.role && `(${tech.role})`}
+                  </Badge>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </CardContent>
     </Card>
