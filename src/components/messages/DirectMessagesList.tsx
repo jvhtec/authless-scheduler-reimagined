@@ -128,6 +128,34 @@ export const DirectMessagesList = () => {
     }
   };
 
+  const handleMarkAsRead = async (messageId: string) => {
+    try {
+      console.log("Marking message as read:", messageId);
+      const { error } = await supabase
+        .from('direct_messages')
+        .update({ status: 'read' })
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Message marked as read",
+        description: "The message has been marked as read.",
+      });
+
+      setMessages(messages.map(msg => 
+        msg.id === messageId ? { ...msg, status: 'read' } : msg
+      ));
+    } catch (error) {
+      console.error("Error marking message as read:", error);
+      toast({
+        title: "Error",
+        description: "Failed to mark the message as read. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     if (currentUserId) {
       fetchMessages();
@@ -192,6 +220,7 @@ export const DirectMessagesList = () => {
             message={message}
             currentUserId={currentUserId}
             onDelete={handleDeleteMessage}
+            onMarkAsRead={handleMarkAsRead}
           />
         ))
       )}

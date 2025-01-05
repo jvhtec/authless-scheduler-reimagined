@@ -1,124 +1,74 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Card, CardContent } from "@/components/ui/card";
-import { format } from "date-fns";
-import { MessageSquare, Trash2 } from "lucide-react";
-import { MessageReplyDialog } from "./MessageReplyDialog";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-
-interface Message {
-  id: string;
-  content: string;
-  created_at: string;
-  status: 'read' | 'unread';
-  department: string;
-  sender: {
-    first_name: string;
-    last_name: string;
-  };
-}
+import { Card, CardContent } from "@/components/ui/card";
+import { MessageSquare, Trash2, CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
 
 export const MessagesList = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const { toast } = useToast();
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userDepartment, setUserDepartment] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchMessages = async () => {
+    const fetchUserProfile = async () => {
       try {
-        console.log("Fetching messages...");
-        const { data: userData } = await supabase.auth.getUser();
-        if (!userData.user) return;
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-        const { data: profileData, error: profileError } = await supabase
+        const { data: profile } = await supabase
           .from('profiles')
-          .select('department, role')
-          .eq('id', userData.user.id)
+          .select('role, department')
+          .eq('id', user.id)
           .single();
 
-        if (profileError) throw profileError;
-
-        setUserRole(profileData.role);
-        console.log("User profile data:", profileData);
-
-        const query = supabase
-          .from('messages')
-          .select(`
-            *,
-            sender:profiles(first_name, last_name)
-          `)
-          .order('created_at', { ascending: false });
-
-        // If user is management, fetch messages from their department
-        if (profileData.role === 'management' && profileData.department) {
-          console.log("Fetching messages for department:", profileData.department);
-          query.eq('department', profileData.department);
-          
-          // Mark unread messages as read for management users
-          const { error: updateError } = await supabase
-            .from('messages')
-            .update({ status: 'read' })
-            .eq('department', profileData.department)
-            .eq('status', 'unread');
-
-          if (updateError) {
-            console.error("Error updating message status:", updateError);
-          }
-        } else {
-          // If user is technician, fetch only their messages
-          console.log("Fetching messages for technician:", userData.user.id);
-          query.eq('sender_id', userData.user.id);
-          
-          // Mark unread messages as read for technician
-          const { error: updateError } = await supabase
-            .from('messages')
-            .update({ status: 'read' })
-            .eq('sender_id', userData.user.id)
-            .eq('status', 'unread');
-
-          if (updateError) {
-            console.error("Error updating message status:", updateError);
-          }
+        if (profile) {
+          setUserRole(profile.role);
+          setUserDepartment(profile.department);
         }
-
-        const { data, error } = await query;
-        if (error) throw error;
-
-        console.log("Fetched messages:", data);
-        setMessages(data || []);
       } catch (error) {
-        console.error("Error fetching messages:", error);
-      } finally {
-        setLoading(false);
+        console.error("Error fetching user profile:", error);
       }
     };
 
-    fetchMessages();
-
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages'
-        },
-        () => {
-          console.log("Message changes detected, refreshing...");
-          fetchMessages();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    fetchUserProfile();
   }, []);
+
+  const fetchMessages = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      let query = supabase
+        .from('messages')
+        .select(`
+          *,
+          sender:profiles!messages_sender_id_fkey (
+            first_name,
+            last_name
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (userRole === 'management') {
+        query = query.eq('department', userDepartment);
+      } else {
+        query = query.eq('sender_id', user.id);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      setMessages(data || []);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDeleteMessage = async (messageId: string) => {
     try {
@@ -134,7 +84,6 @@ export const MessagesList = () => {
         description: "The message has been successfully deleted.",
       });
 
-      // Update local state to remove the deleted message
       setMessages(messages.filter(msg => msg.id !== messageId));
     } catch (error) {
       console.error("Error deleting message:", error);
@@ -146,6 +95,59 @@ export const MessagesList = () => {
     }
   };
 
+  const handleMarkAsRead = async (messageId: string) => {
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ status: 'read' })
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Message marked as read",
+        description: "The message has been marked as read.",
+      });
+
+      setMessages(messages.map(msg => 
+        msg.id === messageId ? { ...msg, status: 'read' } : msg
+      ));
+    } catch (error) {
+      console.error("Error marking message as read:", error);
+      toast({
+        title: "Error",
+        description: "Failed to mark the message as read. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (userRole) {
+      fetchMessages();
+
+      const channel = supabase
+        .channel('messages-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'messages',
+          },
+          () => {
+            console.log("Messages table changed, refreshing...");
+            fetchMessages();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [userRole, userDepartment]);
+
   if (loading) {
     return <div>Loading messages...</div>;
   }
@@ -153,51 +155,52 @@ export const MessagesList = () => {
   return (
     <div className="space-y-4">
       {messages.length === 0 ? (
-        <p className="text-muted-foreground">No messages found.</p>
+        <p className="text-muted-foreground">No messages in this department.</p>
       ) : (
         messages.map((message) => (
-          <Card key={message.id} className={message.status === 'unread' ? 'border-blue-500' : ''}>
+          <Card key={message.id}>
             <CardContent className="pt-6">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">
-                    {message.sender.first_name} {message.sender.last_name}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="font-medium">
+                      {message.sender.first_name} {message.sender.last_name}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      Department: {message.department}
+                    </span>
+                  </div>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  {format(new Date(message.created_at), 'PPp')}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {format(new Date(message.created_at), 'PPp')}
+                  </span>
+                  {userRole === 'management' && message.status === 'unread' && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleMarkAsRead(message.id)}
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {(userRole === 'management' || userRole === 'admin') && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteMessage(message.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
               <p className="mt-2">{message.content}</p>
-              <div className="mt-4 flex justify-end gap-2">
-                {(userRole === 'admin' || userRole === 'management') && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteMessage(message.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedMessage(message)}
-                >
-                  Reply
-                </Button>
-              </div>
             </CardContent>
           </Card>
         ))
       )}
-
-      <MessageReplyDialog
-        message={selectedMessage}
-        open={!!selectedMessage}
-        onOpenChange={(open) => !open && setSelectedMessage(null)}
-      />
     </div>
   );
 };

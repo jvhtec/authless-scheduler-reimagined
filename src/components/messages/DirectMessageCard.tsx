@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { MessageSquare, Trash2 } from "lucide-react";
+import { MessageSquare, Trash2, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DirectMessage } from "./types";
@@ -8,13 +8,18 @@ interface DirectMessageCardProps {
   message: DirectMessage;
   currentUserId: string | undefined;
   onDelete: (messageId: string) => void;
+  onMarkAsRead: (messageId: string) => void;
 }
 
 export const DirectMessageCard = ({ 
   message, 
   currentUserId,
-  onDelete 
+  onDelete,
+  onMarkAsRead
 }: DirectMessageCardProps) => {
+  const isRecipient = currentUserId === message.recipient.id;
+  const showMarkAsRead = isRecipient && message.status === 'unread';
+
   return (
     <Card key={message.id}>
       <CardContent className="pt-6">
@@ -34,6 +39,15 @@ export const DirectMessageCard = ({
             <span className="text-sm text-muted-foreground">
               {format(new Date(message.created_at), 'PPp')}
             </span>
+            {showMarkAsRead && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onMarkAsRead(message.id)}
+              >
+                <CheckCircle className="h-4 w-4" />
+              </Button>
+            )}
             {message.sender_id === currentUserId && (
               <Button
                 variant="ghost"
