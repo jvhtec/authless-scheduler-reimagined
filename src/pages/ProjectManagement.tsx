@@ -9,14 +9,12 @@ import { MonthNavigation } from "@/components/project-management/MonthNavigation
 import { DepartmentTabs } from "@/components/project-management/DepartmentTabs";
 import { useJobManagement } from "@/hooks/useJobManagement";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
-import { useQueryClient } from "@tanstack/react-query";
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   const [currentDate, setCurrentDate] = useState(new Date());
-  const queryClient = useQueryClient();
 
   const startDate = startOfMonth(currentDate);
   const endDate = endOfMonth(currentDate);
@@ -36,17 +34,17 @@ const ProjectManagement = () => {
 
     const checkAccess = async () => {
       try {
-        console.log("Checking session...");
+        console.log("ProjectManagement: Checking session...");
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session && mounted) {
-          console.log("No session found, redirecting to auth");
+          console.log("ProjectManagement: No session found, redirecting to auth");
           navigate('/auth');
           return;
         }
 
         if (session && mounted) {
-          console.log("Session found, checking user role");
+          console.log("ProjectManagement: Session found, checking user role");
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('role')
@@ -54,21 +52,21 @@ const ProjectManagement = () => {
             .single();
 
           if (profileError) {
-            console.error("Error fetching profile:", profileError);
+            console.error("ProjectManagement: Error fetching profile:", profileError);
             navigate('/dashboard');
             return;
           }
 
           if (!profile || !['admin', 'logistics', 'management'].includes(profile.role)) {
-            console.log("Unauthorized access attempt, redirecting to dashboard");
+            console.log("ProjectManagement: Unauthorized access attempt, redirecting to dashboard");
             navigate('/dashboard');
             return;
           }
 
-          console.log("Access granted for role:", profile.role);
+          console.log("ProjectManagement: Access granted for role:", profile.role);
         }
       } catch (error) {
-        console.error("Error in access check:", error);
+        console.error("ProjectManagement: Error in access check:", error);
         if (mounted) navigate('/auth');
       } finally {
         if (mounted) setLoading(false);
@@ -89,6 +87,7 @@ const ProjectManagement = () => {
     setCurrentDate(prev => addMonths(prev, 1));
   };
 
+  // Only show loading state when both initial auth check and jobs are loading
   if (loading || jobsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
