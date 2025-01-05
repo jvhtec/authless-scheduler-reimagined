@@ -30,10 +30,8 @@ const Video = () => {
   // Use the tab visibility hook to handle tab switching
   useTabVisibility(['jobs']);
 
-  const { data: jobs, isLoading } = useJobs({
-    staleTime: 30000, // Consider data fresh for 30 seconds
-    refetchOnWindowFocus: true // Enable automatic refetching when window gains focus
-  });
+  // Remove the options object since useJobs no longer accepts parameters
+  const { data: jobs, isLoading } = useJobs();
 
   useEffect(() => {
     console.log("Video page: Fetching user role");
@@ -69,11 +67,17 @@ const Video = () => {
       console.log("Video page: No jobs data available");
       return [];
     }
-    const filteredJobs = jobs.filter(job => 
-      job.job_departments.some(dept => dept.department === currentDepartment)
-    );
-    console.log("Video page: Filtered jobs for department:", filteredJobs.length);
-    return filteredJobs;
+    // Filter out jobs that are related to deleted tours
+    return jobs.filter(job => {
+      const isInDepartment = job.job_departments.some(dept => 
+        dept.department === currentDepartment
+      );
+      // If it's a tour job, make sure the tour_date_id exists and is valid
+      if (job.tour_date_id) {
+        return isInDepartment && job.tour_date;
+      }
+      return isInDepartment;
+    });
   };
 
   const getSelectedDateJobs = () => {
