@@ -118,16 +118,25 @@ const Layout = ({ children }: LayoutProps) => {
     };
   }, [navigate, location.pathname]);
 
-  // Add effect to check for unread messages for management users
+  // Update effect to check for unread messages for both management and technician users
   useEffect(() => {
-    if (userRole !== 'management' || !userDepartment) return;
+    if (!userRole || !userDepartment) return;
 
     const fetchUnreadMessages = async () => {
-      const { data: messages, error } = await supabase
+      let query = supabase
         .from('messages')
         .select('*')
-        .eq('department', userDepartment)
         .eq('status', 'unread');
+
+      // For management users, show department messages
+      if (userRole === 'management') {
+        query = query.eq('department', userDepartment);
+      } else if (userRole === 'technician') {
+        // For technicians, show their sent messages that got replies
+        query = query.eq('sender_id', session?.user?.id);
+      }
+
+      const { data: messages, error } = await query;
 
       if (error) {
         console.error('Error fetching unread messages:', error);
@@ -148,7 +157,6 @@ const Layout = ({ children }: LayoutProps) => {
           event: '*',
           schema: 'public',
           table: 'messages',
-          filter: `department=eq.${userDepartment}`,
         },
         () => {
           fetchUnreadMessages();
@@ -159,7 +167,7 @@ const Layout = ({ children }: LayoutProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userRole, userDepartment]);
+  }, [userRole, userDepartment, session?.user?.id]);
 
   const handleSignOut = async () => {
     if (isLoggingOut) return;
@@ -192,7 +200,11 @@ const Layout = ({ children }: LayoutProps) => {
   };
 
   const handleMessageNotificationClick = () => {
-    navigate('/dashboard?showMessages=true');
+    if (userRole === 'management') {
+      navigate('/dashboard?showMessages=true');
+    } else if (userRole === 'technician') {
+      navigate('/technician-dashboard?showMessages=true');
+    }
   };
 
   return (
@@ -209,7 +221,7 @@ const Layout = ({ children }: LayoutProps) => {
           <SidebarFooter className="border-t border-sidebar-border">
             <ThemeToggle />
             <UserInfo />
-            {userRole === 'management' && hasUnreadMessages && location.pathname !== '/dashboard' && (
+            {hasUnreadMessages && (
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-2 text-yellow-500"
