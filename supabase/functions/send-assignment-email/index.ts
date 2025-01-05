@@ -48,7 +48,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Sector Pro <jvadillotecnico@gmail.com>",
+        from: "Sector Pro <onboarding@resend.dev>",
         to: [to],
         subject: `Job Assignment: ${jobTitle} - Confirmation Required`,
         html: html,
