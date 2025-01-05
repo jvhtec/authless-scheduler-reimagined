@@ -3,15 +3,27 @@ import { format } from "date-fns";
 import { Department } from "@/types/department";
 import { JobDocument } from "@/types/job";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit, ExternalLink } from "lucide-react";
 
 interface JobCardNewProps {
   job: any;
   department: Department;
-  onDeleteDocument: (jobId: string, document: JobDocument) => Promise<void>;
+  onDeleteDocument?: (jobId: string, document: JobDocument) => Promise<void>;
+  onEditClick?: (job: any) => void;
+  onDeleteClick?: (jobId: string) => void;
+  onJobClick?: (jobId: string) => void;
+  userRole?: string | null;
 }
 
-export const JobCardNew = ({ job, department, onDeleteDocument }: JobCardNewProps) => {
+export const JobCardNew = ({ 
+  job, 
+  department, 
+  onDeleteDocument,
+  onEditClick,
+  onDeleteClick,
+  onJobClick,
+  userRole 
+}: JobCardNewProps) => {
   console.log("JobCardNew: Rendering job:", { jobId: job.id, department });
 
   const documents = job.job_documents || [];
@@ -19,8 +31,22 @@ export const JobCardNew = ({ job, department, onDeleteDocument }: JobCardNewProp
     doc.file_path.startsWith(`${department}/`)
   );
 
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEditClick?.(job);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDeleteClick?.(job.id);
+  };
+
+  const handleJobClick = () => {
+    onJobClick?.(job.id);
+  };
+
   return (
-    <Card>
+    <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={handleJobClick}>
       <CardContent className="pt-6">
         <div className="space-y-2">
           <div className="flex justify-between items-start">
@@ -35,6 +61,24 @@ export const JobCardNew = ({ job, department, onDeleteDocument }: JobCardNewProp
                 </p>
               )}
             </div>
+            {userRole && (userRole === 'admin' || userRole === 'management') && (
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleEditClick}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDeleteClick}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
 
           {departmentDocuments.length > 0 && (
@@ -47,13 +91,18 @@ export const JobCardNew = ({ job, department, onDeleteDocument }: JobCardNewProp
                     className="flex items-center justify-between bg-secondary p-2 rounded-md"
                   >
                     <span className="text-sm truncate">{doc.file_name}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDeleteDocument(job.id, doc)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {onDeleteDocument && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteDocument(job.id, doc);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
