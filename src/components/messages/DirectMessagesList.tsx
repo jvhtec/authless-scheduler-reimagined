@@ -3,12 +3,15 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { DirectMessage } from "./types";
 import { DirectMessageCard } from "./DirectMessageCard";
+import { useMessagesSubscription } from "./hooks/useMessagesSubscription";
+import { useMessageOperations } from "./hooks/useMessageOperations";
 
 export const DirectMessagesList = () => {
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>();
   const { toast } = useToast();
+  const { handleDeleteMessage, handleMarkAsRead } = useMessageOperations(messages, setMessages, toast);
 
   useEffect(() => {
     const getCurrentUser = async () => {
@@ -38,7 +41,6 @@ export const DirectMessagesList = () => {
         return;
       }
 
-      // Fetch both sent and received messages
       const [receivedMessages, sentMessages] = await Promise.all([
         supabase
           .from('direct_messages')
@@ -61,17 +63,10 @@ export const DirectMessagesList = () => {
           .order('created_at', { ascending: false })
       ]);
 
-      if (receivedMessages.error) {
-        console.error("Error fetching received messages:", receivedMessages.error);
-        throw receivedMessages.error;
+      if (receivedMessages.error || sentMessages.error) {
+        throw receivedMessages.error || sentMessages.error;
       }
 
-      if (sentMessages.error) {
-        console.error("Error fetching sent messages:", sentMessages.error);
-        throw sentMessages.error;
-      }
-
-      // Combine and sort messages
       const allMessages = [...(receivedMessages.data || []), ...(sentMessages.data || [])];
       const uniqueMessages = Array.from(
         new Map(allMessages.map(message => [message.id, message])).values()
@@ -82,128 +77,19 @@ export const DirectMessagesList = () => {
 
       console.log("All messages fetched:", sortedMessages);
       setMessages(sortedMessages);
-
-      // Mark unread received messages as read
-      const unreadMessages = receivedMessages.data?.filter(msg => msg.status === 'unread') || [];
-      if (unreadMessages.length > 0) {
-        const { error: updateError } = await supabase
-          .from('direct_messages')
-          .update({ status: 'read' })
-          .in('id', unreadMessages.map(msg => msg.id));
-
-        if (updateError) {
-          console.error("Error marking messages as read:", updateError);
-        }
-      }
     } catch (error) {
       console.error("Error in fetchMessages:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch messages",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteMessage = async (messageId: string) => {
-    try {
-      console.log("Deleting message:", messageId);
-      const { error } = await supabase
-        .from('direct_messages')
-        .delete()
-        .eq('id', messageId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Message deleted",
-        description: "The message has been successfully deleted.",
-      });
-
-      setMessages(messages.filter(msg => msg.id !== messageId));
-    } catch (error: any) {
-      console.error("Error deleting message:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete the message. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleMarkAsRead = async (messageId: string) => {
-    try {
-      console.log("Marking message as read:", messageId);
-      const { error } = await supabase
-        .from('direct_messages')
-        .update({ status: 'read' })
-        .eq('id', messageId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Message marked as read",
-        description: "The message has been marked as read.",
-      });
-
-      setMessages(messages.map(msg => 
-        msg.id === messageId ? { ...msg, status: 'read' } : msg
-      ));
-    } catch (error) {
-      console.error("Error marking message as read:", error);
-      toast({
-        title: "Error",
-        description: "Failed to mark the message as read. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (currentUserId) {
-      fetchMessages();
-
-      // Subscribe to ALL changes in direct_messages table that involve the current user
-      const channel = supabase
-        .channel('direct-messages-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'direct_messages',
-            filter: `recipient_id=eq.${currentUserId}`,
-          },
-          (payload) => {
-            console.log("Direct message changes detected for recipient:", payload);
-            // Show notification for new messages
-            if (payload.eventType === 'INSERT') {
-              toast({
-                title: "New Message",
-                description: "You have received a new message.",
-              });
-            }
-            fetchMessages();
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'direct_messages',
-            filter: `sender_id=eq.${currentUserId}`,
-          },
-          (payload) => {
-            console.log("Direct message changes detected for sender:", payload);
-            fetchMessages();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        console.log("Cleaning up direct messages subscription");
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [currentUserId]);
+  useMessagesSubscription(currentUserId, fetchMessages);
 
   if (loading) {
     return <div>Loading messages...</div>;

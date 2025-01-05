@@ -21,7 +21,7 @@ export const DirectMessageCard = ({
   const showMarkAsRead = isRecipient && message.status === 'unread';
 
   return (
-    <Card key={message.id}>
+    <Card key={message.id} className={message.status === 'unread' ? 'border-primary' : ''}>
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
