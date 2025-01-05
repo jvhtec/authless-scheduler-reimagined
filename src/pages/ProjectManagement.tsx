@@ -3,18 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Music2, Lightbulb, Video } from "lucide-react";
+import { Music2, Lightbulb, Video, Loader2 } from "lucide-react";
 import { Department } from "@/types/department";
 import { useQuery } from "@tanstack/react-query";
-import { JobCardNew } from "@/components/dashboard/JobCardNew";
 import { useToast } from "@/hooks/use-toast";
-
-interface JobDocument {
-  id: string;
-  file_name: string;
-  file_path: string;
-  uploaded_at: string;
-}
+import { DepartmentTabContent } from "@/components/dashboard/DepartmentTabContent";
+import { JobDocument } from "@/types/job";
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
@@ -54,8 +48,19 @@ const ProjectManagement = () => {
 
       if (error) throw error;
       
-      console.log("Jobs fetched:", data);
-      return data;
+      // Filter job documents based on the selected department
+      const jobsWithFilteredDocs = data.map(job => ({
+        ...job,
+        job_documents: job.job_documents.filter((doc: any) => {
+          // Get the document's department from its file path
+          const pathParts = doc.file_path.split('/');
+          const docDepartment = pathParts[pathParts.length - 2]; // Assuming department is stored in path
+          return docDepartment === selectedDepartment;
+        })
+      }));
+      
+      console.log("Jobs fetched with filtered documents:", jobsWithFilteredDocs);
+      return jobsWithFilteredDocs;
     }
   });
 
@@ -135,40 +140,6 @@ const ProjectManagement = () => {
     checkAccess();
   }, [navigate]);
 
-  const renderJobs = () => {
-    if (jobsLoading) {
-      return (
-        <div className="flex items-center justify-center p-4">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
-      );
-    }
-
-    if (!jobs?.length) {
-      return (
-        <p className="text-muted-foreground p-4">
-          No jobs found for this department.
-        </p>
-      );
-    }
-
-    return (
-      <div className="space-y-4">
-        {jobs.map((job) => (
-          <JobCardNew
-            key={job.id}
-            job={job}
-            onEditClick={() => {}}
-            onDeleteClick={() => {}}
-            onJobClick={() => {}}
-            department={selectedDepartment}
-            onDeleteDocument={handleDeleteDocument}
-          />
-        ))}
-      </div>
-    );
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
@@ -207,7 +178,12 @@ const ProjectManagement = () => {
                     <CardTitle className="capitalize">{dept} Jobs</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {renderJobs()}
+                    <DepartmentTabContent
+                      department={dept as Department}
+                      jobs={jobs || []}
+                      isLoading={jobsLoading}
+                      onDeleteDocument={handleDeleteDocument}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>
