@@ -57,7 +57,8 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
           end_time: endTime,
           color,
           created_by: session.user.id,
-          location_id: locationId
+          location_id: locationId,
+          job_type: 'single'
         })
         .select()
         .single();
@@ -72,20 +73,21 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
         department,
       }));
 
+      console.log("Creating job departments:", jobDepartments);
+
       const { error: deptError } = await supabase
         .from('job_departments')
         .insert(jobDepartments);
 
-      if (deptError) throw deptError;
+      if (deptError) {
+        console.error("Error creating job departments:", deptError);
+        throw deptError;
+      }
 
-      console.log("Job departments created");
+      console.log("Job departments created successfully");
 
-      // Invalidate both jobs and tours queries to refresh the data
+      // Invalidate queries to refresh the data
       await queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      await queryClient.invalidateQueries({ queryKey: ['tours'] });
-      await queryClient.invalidateQueries({ queryKey: ['tours-with-dates'] });
-
-      console.log("Job creation completed successfully");
 
       toast({
         title: "Success",
