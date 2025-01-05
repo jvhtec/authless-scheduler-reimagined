@@ -90,9 +90,26 @@ export const useSessionManager = () => {
         async (payload) => {
           console.log('Profile changed:', payload);
           if (session?.user?.id) {
-            const profileData = await fetchUserProfile(session.user.id);
-            setUserRole(profileData.role);
-            setUserDepartment(profileData.department);
+            try {
+              const profileData = await fetchUserProfile(session.user.id);
+              console.log('Updated profile data:', profileData);
+              
+              // Update state with new role and department
+              setUserRole(profileData.role);
+              setUserDepartment(profileData.department);
+              
+              // Redirect if role changed to/from technician
+              if (profileData.role === 'technician') {
+                navigate('/technician-dashboard', { replace: true });
+              } else if (userRole === 'technician' && profileData.role !== 'technician') {
+                navigate('/dashboard', { replace: true });
+              }
+              
+              // Force a page reload to ensure all components update
+              window.location.reload();
+            } catch (error) {
+              console.error('Error updating profile data:', error);
+            }
           }
         }
       )
