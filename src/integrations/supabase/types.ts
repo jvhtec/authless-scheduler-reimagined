@@ -196,6 +196,41 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          department: Database["public"]["Enums"]["department"]
+          id: string
+          sender_id: string
+          status: Database["public"]["Enums"]["message_status"]
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          department: Database["public"]["Enums"]["department"]
+          id?: string
+          sender_id: string
+          status?: Database["public"]["Enums"]["message_status"]
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          department?: Database["public"]["Enums"]["department"]
+          id?: string
+          sender_id?: string
+          status?: Database["public"]["Enums"]["message_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -335,6 +370,7 @@ export type Database = {
       department: "sound" | "lights" | "video"
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
       job_type: "single" | "tour"
+      message_status: "unread" | "read"
       project_status: "pending" | "in_progress" | "completed" | "cancelled"
       user_role: "admin" | "user" | "management" | "logistics" | "technician"
     }
