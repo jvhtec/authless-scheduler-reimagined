@@ -15,9 +15,7 @@ export const useJobs = () => {
         .select(`
           *,
           location:locations(name),
-          job_departments!inner(
-            department
-          )
+          job_departments(department)
         `)
         .neq('job_type', 'tour')
         .gte('start_time', today.toISOString())
