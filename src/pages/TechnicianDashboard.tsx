@@ -10,11 +10,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Dialog } from "@/components/ui/dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const TechnicianDashboard = () => {
   const [timeSpan, setTimeSpan] = useState<string>("1week");
   const [userDepartment, setUserDepartment] = useState<string | null>(null);
   const [showMessages, setShowMessages] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -133,8 +135,17 @@ const TechnicianDashboard = () => {
   };
 
   const handleRefresh = async () => {
-    console.log("Manually refreshing assignments data");
-    await refetch();
+    try {
+      setIsRefreshing(true);
+      console.log("Manually refreshing assignments data");
+      await refetch();
+      toast.success("Assignments refreshed successfully");
+    } catch (error) {
+      console.error("Error refreshing assignments:", error);
+      toast.error("Failed to refresh assignments");
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   return (
@@ -146,10 +157,9 @@ const TechnicianDashboard = () => {
             variant="outline"
             size="icon"
             onClick={handleRefresh}
-            disabled={isLoading}
-            className={isLoading ? "animate-spin" : ""}
+            disabled={isLoading || isRefreshing}
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
           <TimeSpanSelector value={timeSpan} onValueChange={setTimeSpan} />
           <MessageManagementDialog department={userDepartment} />
