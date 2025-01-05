@@ -16,6 +16,7 @@ import { CalendarDays, Music, Video, Lightbulb, MessageSquare } from "lucide-rea
 import { DepartmentSchedule } from "@/components/dashboard/DepartmentSchedule";
 import { JobCardNew } from "@/components/dashboard/JobCardNew";
 import { MessagesList } from "@/components/messages/MessagesList";
+import { DirectMessagesList } from "@/components/messages/DirectMessagesList";
 
 const Dashboard = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -171,7 +172,13 @@ const Dashboard = () => {
           </CardHeader>
           {showMessages && (
             <CardContent>
-              <MessagesList />
+              <div className="space-y-6">
+                <MessagesList />
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-medium mb-4">Direct Messages</h3>
+                  <DirectMessagesList />
+                </div>
+              </div>
             </CardContent>
           )}
         </Card>
