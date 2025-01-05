@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Send } from "lucide-react";
+import { Department } from "@/types/department";
 
 export const SendMessage = () => {
   const [message, setMessage] = useState("");
@@ -28,13 +29,19 @@ export const SendMessage = () => {
         .single();
 
       if (profileError) throw profileError;
+      if (!profileData.department) throw new Error("User has no department assigned");
+
+      // Validate that the department is one of the allowed values
+      if (!['sound', 'lights', 'video'].includes(profileData.department)) {
+        throw new Error("Invalid department");
+      }
 
       const { error } = await supabase
         .from('messages')
         .insert({
           content: message,
           sender_id: userData.user.id,
-          department: profileData.department
+          department: profileData.department as Department // Type assertion here is safe because we validated above
         });
 
       if (error) throw error;
