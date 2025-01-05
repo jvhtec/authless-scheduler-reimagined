@@ -9,6 +9,48 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      direct_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          recipient_id: string
+          sender_id: string
+          status: Database["public"]["Enums"]["direct_message_status"]
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          recipient_id: string
+          sender_id: string
+          status?: Database["public"]["Enums"]["direct_message_status"]
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          recipient_id?: string
+          sender_id?: string
+          status?: Database["public"]["Enums"]["direct_message_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "direct_messages_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_assignments: {
         Row: {
           assigned_at: string
@@ -368,6 +410,7 @@ export type Database = {
     }
     Enums: {
       department: "sound" | "lights" | "video"
+      direct_message_status: "unread" | "read"
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
       job_type: "single" | "tour"
       message_status: "unread" | "read"
