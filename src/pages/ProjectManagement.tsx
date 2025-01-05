@@ -49,7 +49,7 @@ const ProjectManagement = () => {
             .from('profiles')
             .select('role')
             .eq('id', session.user.id)
-            .single();
+            .maybeSingle();
 
           if (profileError) {
             console.error("ProjectManagement: Error fetching profile:", profileError);
@@ -87,10 +87,10 @@ const ProjectManagement = () => {
     setCurrentDate(prev => addMonths(prev, 1));
   };
 
-  // Only show loading state when both initial auth check and jobs are loading
+  // Show loading state when both initial auth check and jobs are loading
   if (loading || jobsLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[200px]">
+      <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
