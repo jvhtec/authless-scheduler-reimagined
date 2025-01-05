@@ -66,14 +66,15 @@ export const NotificationBadge = ({ userId, userRole, userDepartment }: Notifica
   };
 
   useEffect(() => {
+    // Initial fetch
     fetchUnreadMessages();
 
-    // Subscribe to ALL changes in messages and direct_messages tables
-    const messagesChannel = supabase
-      .channel('messages-changes')
+    // Set up real-time subscription for both tables
+    const channel = supabase
+      .channel('realtime-notifications')
       .on(
         'postgres_changes',
-        {
+        { 
           event: '*',
           schema: 'public',
           table: 'messages',
@@ -96,12 +97,12 @@ export const NotificationBadge = ({ userId, userRole, userDepartment }: Notifica
         }
       )
       .subscribe((status) => {
-        console.log("Messages notification subscription status:", status);
+        console.log("Realtime subscription status:", status);
       });
 
     return () => {
-      console.log("Cleaning up messages notification subscription");
-      supabase.removeChannel(messagesChannel);
+      console.log("Cleaning up realtime subscription");
+      supabase.removeChannel(channel);
     };
   }, [userId, userRole, userDepartment]);
 
