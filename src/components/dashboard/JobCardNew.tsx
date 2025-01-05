@@ -6,6 +6,14 @@ import { format } from "date-fns";
 import { Department } from "@/types/department";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { JobDocuments } from "./JobDocuments";
+
+interface JobDocument {
+  id: string;
+  file_name: string;
+  file_path: string;
+  uploaded_at: string;
+}
 
 interface JobCardNewProps {
   job: any;
@@ -15,6 +23,7 @@ interface JobCardNewProps {
   showAssignments?: boolean;
   department?: Department;
   userRole?: string | null;
+  onDeleteDocument?: (jobId: string, document: JobDocument) => void;
 }
 
 export const JobCardNew = ({
@@ -23,7 +32,8 @@ export const JobCardNew = ({
   onDeleteClick,
   onJobClick,
   department,
-  userRole
+  userRole,
+  onDeleteDocument
 }: JobCardNewProps) => {
   const { toast } = useToast();
 
@@ -94,9 +104,6 @@ export const JobCardNew = ({
 
   const canEdit = userRole !== 'logistics';
 
-  console.log('Department:', department);
-  console.log('Job assignments:', job.job_assignments);
-
   // Get assigned technicians from profiles table through job_assignments
   const assignedTechnicians = job.job_assignments?.map((assignment: any) => {
     let role = null;
@@ -125,8 +132,6 @@ export const JobCardNew = ({
       role: role
     };
   }).filter((tech: any) => tech !== null && tech.name !== '') || [];
-
-  console.log('Filtered technicians:', assignedTechnicians);
 
   return (
     <Card 
@@ -197,6 +202,14 @@ export const JobCardNew = ({
                 ))}
               </div>
             </div>
+          )}
+          {job.job_documents && onDeleteDocument && (
+            <JobDocuments
+              jobId={job.id}
+              documents={job.job_documents}
+              department={department}
+              onDeleteDocument={onDeleteDocument}
+            />
           )}
         </div>
       </CardContent>

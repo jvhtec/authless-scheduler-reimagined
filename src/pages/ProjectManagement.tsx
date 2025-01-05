@@ -7,13 +7,22 @@ import { Loader2, Music2, Lightbulb, Video } from "lucide-react";
 import { Department } from "@/types/department";
 import { useQuery } from "@tanstack/react-query";
 import { JobCardNew } from "@/components/dashboard/JobCardNew";
+import { useToast } from "@/hooks/use-toast";
+
+interface JobDocument {
+  id: string;
+  file_name: string;
+  file_path: string;
+  uploaded_at: string;
+}
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
+  const { toast } = useToast();
 
-  const { data: jobs, isLoading: jobsLoading } = useQuery({
+  const { data: jobs, isLoading: jobsLoading, refetch: refetchJobs } = useQuery({
     queryKey: ['jobs', selectedDepartment],
     queryFn: async () => {
       console.log("Fetching jobs for department:", selectedDepartment);
@@ -32,6 +41,12 @@ const ProjectManagement = () => {
               first_name,
               last_name
             )
+          ),
+          job_documents(
+            id,
+            file_name,
+            file_path,
+            uploaded_at
           )
         `)
         .eq('job_departments.department', selectedDepartment)
@@ -43,6 +58,39 @@ const ProjectManagement = () => {
       return data;
     }
   });
+
+  const handleDeleteDocument = async (jobId: string, document: JobDocument) => {
+    try {
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('job_documents')
+        .remove([document.file_path]);
+
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('job_documents')
+        .delete()
+        .eq('id', document.id);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Document deleted",
+        description: "The document has been successfully deleted.",
+      });
+
+      refetchJobs();
+    } catch (error: any) {
+      console.error('Error deleting document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete document: " + error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -113,6 +161,8 @@ const ProjectManagement = () => {
             onEditClick={() => {}}
             onDeleteClick={() => {}}
             onJobClick={() => {}}
+            department={selectedDepartment}
+            onDeleteDocument={handleDeleteDocument}
           />
         ))}
       </div>
