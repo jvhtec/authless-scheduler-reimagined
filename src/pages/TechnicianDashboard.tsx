@@ -78,13 +78,13 @@ const TechnicianDashboard = () => {
     });
   };
 
-  const handleDownload = async (document: JobDocument) => {
+  const handleDownload = async (jobDocument: JobDocument) => {
     try {
-      console.log("Downloading document:", document);
+      console.log("Downloading document:", jobDocument);
       
       const { data, error } = await supabase.storage
         .from('job_documents')
-        .download(document.file_path);
+        .download(jobDocument.file_path);
 
       if (error) throw error;
 
@@ -92,7 +92,7 @@ const TechnicianDashboard = () => {
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = document.file_name;
+      a.download = jobDocument.file_name;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -100,7 +100,7 @@ const TechnicianDashboard = () => {
 
       toast({
         title: "Download Started",
-        description: `Downloading ${document.file_name}`,
+        description: `Downloading ${jobDocument.file_name}`,
       });
     } catch (error: any) {
       console.error("Download error:", error);
