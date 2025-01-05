@@ -52,10 +52,32 @@ export const MessagesList = () => {
         if (profileData.role === 'management' && profileData.department) {
           console.log("Fetching messages for department:", profileData.department);
           query.eq('department', profileData.department);
+          
+          // Mark unread messages as read for management users
+          const { error: updateError } = await supabase
+            .from('messages')
+            .update({ status: 'read' })
+            .eq('department', profileData.department)
+            .eq('status', 'unread');
+
+          if (updateError) {
+            console.error("Error updating message status:", updateError);
+          }
         } else {
           // If user is technician, fetch only their messages
           console.log("Fetching messages for technician:", userData.user.id);
           query.eq('sender_id', userData.user.id);
+          
+          // Mark unread messages as read for technician
+          const { error: updateError } = await supabase
+            .from('messages')
+            .update({ status: 'read' })
+            .eq('sender_id', userData.user.id)
+            .eq('status', 'unread');
+
+          if (updateError) {
+            console.error("Error updating message status:", updateError);
+          }
         }
 
         const { data, error } = await query;
