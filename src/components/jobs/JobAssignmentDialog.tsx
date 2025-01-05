@@ -22,7 +22,7 @@ interface LocationData {
 interface JobData {
   title: string;
   start_time: string;
-  locations: LocationData | null;
+  locations: LocationData;
 }
 
 export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: JobAssignmentDialogProps) => {
@@ -73,8 +73,6 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
 
       if (jobError) throw jobError;
 
-      const typedJobData = jobData as JobData;
-
       // Create assignment with initial 'invited' status
       const roleField = `${department}_role` as const;
       const { error: assignError } = await supabase
@@ -92,10 +90,10 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
       const { error: emailError } = await supabase.functions.invoke('send-assignment-email', {
         body: {
           to: technicianData.email,
-          jobTitle: typedJobData.title,
+          jobTitle: jobData.title,
           technicianName: `${technicianData.first_name} ${technicianData.last_name}`,
-          startTime: new Date(typedJobData.start_time).toLocaleString(),
-          location: typedJobData.locations?.name || 'Location TBD'
+          startTime: new Date(jobData.start_time).toLocaleString(),
+          location: jobData.locations?.name || 'Location TBD'
         }
       });
 
