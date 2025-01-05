@@ -128,6 +128,8 @@ const Sound = () => {
           onJobClick={handleJobClick}
           onEditClick={handleEditClick}
           onDeleteClick={handleDeleteClick}
+          department="sound"
+          userRole={userRole}
         />
       </div>
 

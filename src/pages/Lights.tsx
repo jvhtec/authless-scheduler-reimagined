@@ -128,6 +128,8 @@ const Lights = () => {
           onJobClick={handleJobClick}
           onEditClick={handleEditClick}
           onDeleteClick={handleDeleteClick}
+          department="lights"
+          userRole={userRole}
         />
       </div>
 

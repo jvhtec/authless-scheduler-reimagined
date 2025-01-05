@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format } from "date-fns";
 import { JobCardNew } from "@/components/dashboard/JobCardNew";
 
 interface LightsScheduleProps {
@@ -10,6 +9,7 @@ interface LightsScheduleProps {
   onEditClick: (job: any) => void;
   onDeleteClick: (jobId: string) => void;
   userRole?: string | null;
+  department?: "sound" | "lights" | "video";
 }
 
 export const LightsSchedule = ({
@@ -20,6 +20,7 @@ export const LightsSchedule = ({
   onEditClick,
   onDeleteClick,
   userRole,
+  department = "lights",
 }: LightsScheduleProps) => {
   return (
     <Card>
@@ -38,7 +39,7 @@ export const LightsSchedule = ({
                 onEditClick={onEditClick}
                 onDeleteClick={onDeleteClick}
                 onJobClick={onJobClick}
-                department="lights"
+                department={department}
                 userRole={userRole}
               />
             ))

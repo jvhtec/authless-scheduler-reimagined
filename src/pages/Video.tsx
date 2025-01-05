@@ -128,6 +128,8 @@ const Video = () => {
           onJobClick={handleJobClick}
           onEditClick={handleEditClick}
           onDeleteClick={handleDeleteClick}
+          department="video"
+          userRole={userRole}
         />
       </div>
 
