@@ -4,40 +4,44 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Music2, Lightbulb, Video, Users, Building, Folder, FolderOpen } from "lucide-react";
+import { Loader2, Music2, Lightbulb, Video, Users, Building } from "lucide-react";
 import { Department } from "@/types/department";
 import { useQuery } from "@tanstack/react-query";
-
-interface Project {
-  id: string;
-  title: string;
-  description: string | null;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
-  department: string;
-}
+import { JobCardNew } from "@/components/dashboard/JobCardNew";
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
 
-  const { data: projects, isLoading: projectsLoading } = useQuery({
-    queryKey: ['projects', selectedDepartment],
+  const { data: jobs, isLoading: jobsLoading } = useQuery({
+    queryKey: ['jobs', selectedDepartment],
     queryFn: async () => {
-      console.log("Fetching projects for department:", selectedDepartment);
+      console.log("Fetching jobs for department:", selectedDepartment);
       const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('department', selectedDepartment)
+        .from('jobs')
+        .select(`
+          *,
+          location:locations(name),
+          job_departments!inner(department),
+          job_assignments(
+            technician:profiles(
+              id,
+              first_name,
+              last_name
+            )
+          )
+        `)
+        .eq('job_departments.department', selectedDepartment)
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error("Error fetching projects:", error);
+        console.error("Error fetching jobs:", error);
         throw error;
       }
 
-      console.log("Projects fetched:", data);
-      return data as Project[];
+      console.log("Jobs fetched:", data);
+      return data;
     },
   });
 
@@ -84,8 +88,8 @@ const ProjectManagement = () => {
     checkAccess();
   }, [navigate]);
 
-  const renderProjects = () => {
-    if (projectsLoading) {
+  const renderJobs = () => {
+    if (jobsLoading) {
       return (
         <div className="flex items-center justify-center p-4">
           <Loader2 className="h-6 w-6 animate-spin" />
@@ -93,37 +97,25 @@ const ProjectManagement = () => {
       );
     }
 
-    if (!projects?.length) {
+    if (!jobs?.length) {
       return (
         <p className="text-muted-foreground p-4">
-          No projects found for this department.
+          No jobs found for this department.
         </p>
       );
     }
 
     return (
-      <Accordion type="single" collapsible className="w-full">
-        {projects.map((project) => (
-          <AccordionItem key={project.id} value={project.id}>
-            <AccordionTrigger className="hover:no-underline">
-              <div className="flex items-center gap-2">
-                <Folder className="h-4 w-4" />
-                <span>{project.title}</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-2 pl-6">
-                <p className="text-sm text-muted-foreground">
-                  {project.description || 'No description provided'}
-                </p>
-                <p className="text-sm">
-                  Status: <span className="capitalize">{project.status}</span>
-                </p>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+      <div className="space-y-4">
+        {jobs.map((job) => (
+          <JobCardNew
+            key={job.id}
+            job={job}
+            onEditClick={() => {}}
+            onDeleteClick={() => {}}
+          />
         ))}
-      </Accordion>
+      </div>
     );
   };
 
@@ -170,10 +162,10 @@ const ProjectManagement = () => {
               <TabsContent key={dept} value={dept}>
                 <Card>
                   <CardHeader>
-                    <CardTitle className="capitalize">{dept} Projects</CardTitle>
+                    <CardTitle className="capitalize">{dept} Jobs</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {renderProjects()}
+                    {renderJobs()}
                   </CardContent>
                 </Card>
               </TabsContent>
