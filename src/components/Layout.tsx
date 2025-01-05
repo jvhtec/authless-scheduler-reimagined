@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase";
 import { ThemeToggle } from "./layout/ThemeToggle";
 import { UserInfo } from "./layout/UserInfo";
 import { SidebarNavigation } from "./layout/SidebarNavigation";
+import { useToast } from "@/hooks/use-toast";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -23,11 +24,13 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [session, setSession] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session check:", session ? "Session found" : "No session");
       setSession(session);
       if (!session) {
         navigate('/auth');
@@ -39,6 +42,7 @@ const Layout = ({ children }: LayoutProps) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("Auth state changed:", _event, session ? "Session exists" : "No session");
       setSession(session);
       if (!session) {
         navigate('/auth');
@@ -68,8 +72,56 @@ const Layout = ({ children }: LayoutProps) => {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setSession(null);
+    try {
+      console.log("Starting sign out process");
+      
+      // First check if we have a valid session
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      if (!currentSession) {
+        console.log("No valid session found, clearing state and redirecting");
+        setSession(null);
+        setUserRole(null);
+        navigate('/auth');
+        return;
+      }
+
+      // Attempt to sign out
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Error during sign out:", error);
+        // If we get a session_not_found error, clear state and redirect anyway
+        if (error.message.includes('session_not_found')) {
+          setSession(null);
+          setUserRole(null);
+          navigate('/auth');
+          return;
+        }
+        
+        toast({
+          title: "Error signing out",
+          description: "Please try again",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log("Sign out successful");
+      setSession(null);
+      setUserRole(null);
+      toast({
+        title: "Signed out successfully",
+        description: "You have been logged out",
+      });
+      navigate('/auth');
+    } catch (error) {
+      console.error("Unexpected error during sign out:", error);
+      // In case of any unexpected error, clear state and redirect
+      setSession(null);
+      setUserRole(null);
+      navigate('/auth');
+    }
   };
 
   return (
