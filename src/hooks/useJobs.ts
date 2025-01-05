@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { Department } from "@/types/department";
 
 export const useJobs = () => {
   return useQuery({
@@ -11,7 +12,7 @@ export const useJobs = () => {
         .select(`
           *,
           location:locations(name),
-          job_departments(department)
+          job_departments!inner(department)
         `)
         .neq('job_type', 'tour'); // Exclude tour type jobs
 
