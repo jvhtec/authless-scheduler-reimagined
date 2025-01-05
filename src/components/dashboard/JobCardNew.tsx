@@ -7,6 +7,7 @@ import { Department } from "@/types/department";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
+import { useEffect, useState } from "react";
 
 interface JobDocument {
   id: string;
@@ -38,6 +39,52 @@ export const JobCardNew = ({
   showUpload = false
 }: JobCardNewProps) => {
   const { toast } = useToast();
+  const [assignments, setAssignments] = useState(job.job_assignments || []);
+
+  useEffect(() => {
+    console.log("Setting up real-time subscription for job:", job.id);
+    
+    const channel = supabase
+      .channel(`job_assignments_${job.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'job_assignments',
+          filter: `job_id=eq.${job.id}`
+        },
+        async (payload) => {
+          console.log("Received real-time update:", payload);
+          
+          // Fetch updated assignments
+          const { data: updatedAssignments, error } = await supabase
+            .from('job_assignments')
+            .select(`
+              *,
+              profiles (
+                first_name,
+                last_name
+              )
+            `)
+            .eq('job_id', job.id);
+
+          if (error) {
+            console.error("Error fetching updated assignments:", error);
+            return;
+          }
+
+          console.log("Updated assignments:", updatedAssignments);
+          setAssignments(updatedAssignments);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log("Cleaning up real-time subscription");
+      supabase.removeChannel(channel);
+    };
+  }, [job.id]);
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -105,7 +152,7 @@ export const JobCardNew = ({
 
   const canEdit = userRole !== 'logistics';
 
-  const assignedTechnicians = job.job_assignments?.map((assignment: any) => {
+  const assignedTechnicians = assignments.map((assignment: any) => {
     let role = null;
     
     switch (department) {
@@ -129,7 +176,7 @@ export const JobCardNew = ({
       name: `${assignment.profiles?.first_name || ''} ${assignment.profiles?.last_name || ''}`.trim(),
       role: role
     };
-  }).filter((tech: any) => tech !== null && tech.name !== '') || [];
+  }).filter((tech: any) => tech !== null && tech.name !== '');
 
   return (
     <Card 
