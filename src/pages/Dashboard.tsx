@@ -106,19 +106,7 @@ const Dashboard = () => {
     try {
       console.log("Starting job deletion process for job:", jobId);
 
-      // First delete related projects
-      console.log("Deleting related projects...");
-      const { error: projectsError } = await supabase
-        .from("projects")
-        .delete()
-        .eq("job_id", jobId);
-
-      if (projectsError) {
-        console.error("Error deleting projects:", projectsError);
-        throw projectsError;
-      }
-
-      // Then delete job assignments
+      // Delete job assignments
       console.log("Deleting job assignments...");
       const { error: assignmentsError } = await supabase
         .from("job_assignments")
@@ -130,7 +118,7 @@ const Dashboard = () => {
         throw assignmentsError;
       }
 
-      // Then delete job departments
+      // Delete job departments
       console.log("Deleting job departments...");
       const { error: departmentsError } = await supabase
         .from("job_departments")
@@ -142,7 +130,7 @@ const Dashboard = () => {
         throw departmentsError;
       }
 
-      // Finally delete the job
+      // Delete the job
       console.log("Deleting the job...");
       const { error: jobError } = await supabase
         .from("jobs")
