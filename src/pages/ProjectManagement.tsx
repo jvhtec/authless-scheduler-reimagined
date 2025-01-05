@@ -87,7 +87,7 @@ const ProjectManagement = () => {
     setCurrentDate(prev => addMonths(prev, 1));
   };
 
-  // Show loading state when both initial auth check and jobs are loading
+  // Show loading state when either initial auth check or jobs are loading
   if (loading || jobsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
