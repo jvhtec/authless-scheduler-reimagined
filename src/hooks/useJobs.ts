@@ -13,12 +13,10 @@ export const useJobs = () => {
         .select(`
           *,
           location:locations(name),
-          job_departments(
-            department
-          )
+          job_departments:job_departments(department)
         `)
         .neq('job_type', 'tour')
-        .order('start_time', { ascending: true }); // Added ordering by start_time
+        .order('start_time', { ascending: true });
 
       if (error) {
         console.error("Error fetching jobs:", error);
