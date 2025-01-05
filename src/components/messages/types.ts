@@ -4,10 +4,12 @@ export interface DirectMessage {
   created_at: string;
   status: 'read' | 'unread';
   sender: {
+    id: string;
     first_name: string;
     last_name: string;
   };
   recipient: {
+    id: string;
     first_name: string;
     last_name: string;
   };
