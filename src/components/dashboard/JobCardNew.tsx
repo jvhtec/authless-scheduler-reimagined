@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Clock, MapPin, Users, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { Department } from "@/types/department";
 
 interface JobCardNewProps {
   job: any;
@@ -10,7 +11,7 @@ interface JobCardNewProps {
   onDeleteClick: (jobId: string) => void;
   onJobClick: (jobId: string) => void;
   showAssignments?: boolean;
-  department?: string;
+  department?: Department;
   userRole?: string | null;
 }
 
@@ -19,6 +20,7 @@ export const JobCardNew = ({
   onEditClick,
   onDeleteClick,
   onJobClick,
+  department,
   userRole
 }: JobCardNewProps) => {
   const handleEditClick = (e: React.MouseEvent) => {
@@ -36,11 +38,28 @@ export const JobCardNew = ({
   console.log('Job assignments:', job.job_assignments);
 
   // Get assigned technicians from profiles table through job_assignments
-  const assignedTechnicians = job.job_assignments?.map((assignment: any) => ({
-    id: assignment.technician_id,
-    name: `${assignment.profiles?.first_name || ''} ${assignment.profiles?.last_name || ''}`.trim(),
-    role: assignment.sound_role || assignment.lights_role || assignment.video_role
-  })).filter((tech: any) => tech.name !== '') || [];
+  const assignedTechnicians = job.job_assignments?.map((assignment: any) => {
+    let role;
+    // Filter based on department
+    if (department === 'sound' && assignment.sound_role) {
+      role = assignment.sound_role;
+    } else if (department === 'lights' && assignment.lights_role) {
+      role = assignment.lights_role;
+    } else if (department === 'video' && assignment.video_role) {
+      role = assignment.video_role;
+    } else if (!department) {
+      // If no department specified (e.g. in dashboard), show any role
+      role = assignment.sound_role || assignment.lights_role || assignment.video_role;
+    }
+
+    if (!role) return null;
+
+    return {
+      id: assignment.technician_id,
+      name: `${assignment.profiles?.first_name || ''} ${assignment.profiles?.last_name || ''}`.trim(),
+      role: role
+    };
+  }).filter((tech: any) => tech !== null && tech.name !== '') || [];
 
   console.log('Filtered technicians:', assignedTechnicians);
 
