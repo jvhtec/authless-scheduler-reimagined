@@ -3,26 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Department } from "@/types/department";
 import { JobAssignments } from "./JobAssignments";
-import { Button } from "../ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AssignmentForm } from "./AssignmentForm";
+import { JobData, TechnicianData } from "@/types/jobAssignment";
 
 interface JobAssignmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   jobId: string;
   department: Department;
-}
-
-interface LocationData {
-  name: string;
-}
-
-interface JobData {
-  title: string;
-  start_time: string;
-  locations: LocationData | null;
 }
 
 export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: JobAssignmentDialogProps) => {
@@ -38,7 +28,7 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
         .eq("department", department);
 
       if (error) throw error;
-      return data;
+      return data as TechnicianData[];
     },
   });
 
@@ -88,6 +78,8 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
 
       if (jobError) throw jobError;
 
+      const typedJobData = jobData as JobData;
+
       // Create assignment with initial 'invited' status
       const roleField = `${department}_role` as const;
       const { error: assignError } = await supabase
@@ -110,10 +102,10 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
       const { error: emailError } = await supabase.functions.invoke('send-assignment-email', {
         body: {
           to: technicianData.email,
-          jobTitle: jobData.title,
+          jobTitle: typedJobData.title,
           technicianName: `${technicianData.first_name} ${technicianData.last_name}`,
-          startTime: new Date(jobData.start_time).toLocaleString(),
-          location: jobData.locations?.name || 'Location TBD'
+          startTime: new Date(typedJobData.start_time).toLocaleString(),
+          location: typedJobData.locations?.name || 'Location TBD'
         }
       });
 
@@ -133,19 +125,6 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
     }
   };
 
-  const getRoleOptions = (department: Department) => {
-    switch (department) {
-      case "sound":
-        return ["FOH Engineer", "Monitor Engineer", "PA Tech", "RF Tech"];
-      case "lights":
-        return ["Lighting Designer", "Lighting Tech", "Follow Spot"];
-      case "video":
-        return ["Video Director", "Camera Operator", "Video Tech"];
-      default:
-        return [];
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -154,48 +133,18 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
         </DialogHeader>
         
         <div className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Technician</label>
-            <Select value={selectedTechnician} onValueChange={setSelectedTechnician}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select technician" />
-              </SelectTrigger>
-              <SelectContent>
-                {technicians?.map((tech) => (
-                  <SelectItem key={tech.id} value={tech.id}>
-                    {tech.first_name} {tech.last_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Role</label>
-            <Select value={selectedRole} onValueChange={setSelectedRole}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                {getRoleOptions(department).map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <AssignmentForm
+            technicians={technicians}
+            selectedTechnician={selectedTechnician}
+            setSelectedTechnician={setSelectedTechnician}
+            selectedRole={selectedRole}
+            setSelectedRole={setSelectedRole}
+            department={department}
+            onCancel={() => onOpenChange(false)}
+            onAssign={handleAssign}
+          />
 
           <JobAssignments jobId={jobId} department={department} />
-
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAssign}>
-              Assign
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
