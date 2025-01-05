@@ -34,7 +34,6 @@ const Dashboard = () => {
   const { data: jobs, isLoading } = useJobs();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUserRole = async () => {
