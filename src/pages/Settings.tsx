@@ -18,15 +18,17 @@ const Settings = () => {
         </Button>
       </div>
 
-      <div className="max-w-2xl space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Users</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <UsersList />
-          </CardContent>
-        </Card>
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Users</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <UsersList />
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <CreateUserDialog 

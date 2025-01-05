@@ -1,14 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Profile } from "./types";
 import { UserCard } from "./UserCard";
 import { EditUserDialog } from "./EditUserDialog";
 import { DeleteUserDialog } from "./DeleteUserDialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export const UsersList = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [deletingUser, setDeletingUser] = useState<Profile | null>(null);
   
@@ -33,6 +34,30 @@ export const UsersList = () => {
     staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
   });
+
+  // Subscribe to real-time changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+        },
+        (payload) => {
+          console.log('Profile change detected:', payload);
+          // Invalidate and refetch
+          queryClient.invalidateQueries({ queryKey: ['profiles'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const handleDelete = async () => {
     if (!deletingUser) return;
@@ -123,7 +148,24 @@ export const UsersList = () => {
       });
 
       setEditingUser(null);
-      refetch();
+      await refetch();
+      
+      // Force refresh the session if the current user was updated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id === editingUser.id) {
+        console.log("Current user was updated, refreshing session...");
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('role, department')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (profileData) {
+          console.log("Updated profile data:", profileData);
+          // Trigger a page reload to update all components
+          window.location.reload();
+        }
+      }
     } catch (error: any) {
       console.error("Update error:", error);
       toast({

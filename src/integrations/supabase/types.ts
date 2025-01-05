@@ -9,13 +9,99 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      assignment_notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          job_id: string | null
+          message: string
+          read: boolean | null
+          technician_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          job_id?: string | null
+          message: string
+          read?: boolean | null
+          technician_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          job_id?: string | null
+          message?: string
+          read?: boolean | null
+          technician_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_notifications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_notifications_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      direct_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          recipient_id: string
+          sender_id: string
+          status: Database["public"]["Enums"]["direct_message_status"]
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          recipient_id: string
+          sender_id: string
+          status?: Database["public"]["Enums"]["direct_message_status"]
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          recipient_id?: string
+          sender_id?: string
+          status?: Database["public"]["Enums"]["direct_message_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "direct_messages_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_assignments: {
         Row: {
           assigned_at: string
           assigned_by: string | null
           job_id: string
           lights_role: string | null
+          response_time: string | null
           sound_role: string | null
+          status: Database["public"]["Enums"]["assignment_status"] | null
           technician_id: string
           video_role: string | null
         }
@@ -24,7 +110,9 @@ export type Database = {
           assigned_by?: string | null
           job_id: string
           lights_role?: string | null
+          response_time?: string | null
           sound_role?: string | null
+          status?: Database["public"]["Enums"]["assignment_status"] | null
           technician_id: string
           video_role?: string | null
         }
@@ -33,7 +121,9 @@ export type Database = {
           assigned_by?: string | null
           job_id?: string
           lights_role?: string | null
+          response_time?: string | null
           sound_role?: string | null
+          status?: Database["public"]["Enums"]["assignment_status"] | null
           technician_id?: string
           video_role?: string | null
         }
@@ -70,6 +160,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "job_departments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_documents: {
+        Row: {
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          job_id: string
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          job_id: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          job_id?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_documents_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
@@ -154,6 +285,41 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          department: Database["public"]["Enums"]["department"]
+          id: string
+          sender_id: string
+          status: Database["public"]["Enums"]["message_status"]
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          department: Database["public"]["Enums"]["department"]
+          id?: string
+          sender_id: string
+          status?: Database["public"]["Enums"]["message_status"]
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          department?: Database["public"]["Enums"]["department"]
+          id?: string
+          sender_id?: string
+          status?: Database["public"]["Enums"]["message_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -291,9 +457,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      assignment_status: "invited" | "confirmed" | "declined"
       department: "sound" | "lights" | "video"
+      direct_message_status: "unread" | "read"
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
       job_type: "single" | "tour"
+      message_status: "unread" | "read"
       project_status: "pending" | "in_progress" | "completed" | "cancelled"
       user_role: "admin" | "user" | "management" | "logistics" | "technician"
     }

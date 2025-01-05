@@ -1,9 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Clock, MapPin, Users, Edit, Trash2 } from "lucide-react";
+import { Clock, MapPin, Users, Edit, Trash2, Upload } from "lucide-react";
 import { format } from "date-fns";
 import { Department } from "@/types/department";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { JobDocuments } from "./JobDocuments";
+import { useEffect, useState } from "react";
+
+interface JobDocument {
+  id: string;
+  file_name: string;
+  file_path: string;
+  uploaded_at: string;
+}
 
 interface JobCardNewProps {
   job: any;
@@ -13,6 +24,8 @@ interface JobCardNewProps {
   showAssignments?: boolean;
   department?: Department;
   userRole?: string | null;
+  onDeleteDocument?: (jobId: string, document: JobDocument) => void;
+  showUpload?: boolean;
 }
 
 export const JobCardNew = ({
@@ -21,8 +34,58 @@ export const JobCardNew = ({
   onDeleteClick,
   onJobClick,
   department,
-  userRole
+  userRole,
+  onDeleteDocument,
+  showUpload = false
 }: JobCardNewProps) => {
+  const { toast } = useToast();
+  const [assignments, setAssignments] = useState(job.job_assignments || []);
+
+  useEffect(() => {
+    console.log("Setting up real-time subscription for job:", job.id);
+    
+    const channel = supabase
+      .channel(`job_assignments_${job.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'job_assignments',
+          filter: `job_id=eq.${job.id}`
+        },
+        async (payload) => {
+          console.log("Received real-time update:", payload);
+          
+          // Fetch updated assignments
+          const { data: updatedAssignments, error } = await supabase
+            .from('job_assignments')
+            .select(`
+              *,
+              profiles (
+                first_name,
+                last_name
+              )
+            `)
+            .eq('job_id', job.id);
+
+          if (error) {
+            console.error("Error fetching updated assignments:", error);
+            return;
+          }
+
+          console.log("Updated assignments:", updatedAssignments);
+          setAssignments(updatedAssignments);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log("Cleaning up real-time subscription");
+      supabase.removeChannel(channel);
+    };
+  }, [job.id]);
+
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onEditClick(job);
@@ -33,16 +96,65 @@ export const JobCardNew = ({
     onDeleteClick(job.id);
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    const file = e.target.files?.[0];
+    if (!file || !department) return;
+
+    try {
+      console.log('Starting file upload for job:', job.id);
+      
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${department}/${job.id}/${crypto.randomUUID()}.${fileExt}`;
+
+      console.log('Generated file path:', filePath);
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('job_documents')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('File uploaded successfully:', uploadData);
+
+      const { error: dbError } = await supabase
+        .from('job_documents')
+        .insert({
+          job_id: job.id,
+          file_name: file.name,
+          file_path: filePath,
+          file_type: file.type,
+          file_size: file.size
+        });
+
+      if (dbError) {
+        console.error('Database error:', dbError);
+        throw dbError;
+      }
+
+      toast({
+        title: "Document uploaded",
+        description: "The document has been successfully uploaded.",
+      });
+
+    } catch (error: any) {
+      console.error('Error in upload process:', error);
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const canEdit = userRole !== 'logistics';
 
-  console.log('Department:', department);
-  console.log('Job assignments:', job.job_assignments);
-
-  // Get assigned technicians from profiles table through job_assignments
-  const assignedTechnicians = job.job_assignments?.map((assignment: any) => {
+  const assignedTechnicians = assignments.map((assignment: any) => {
     let role = null;
     
-    // Filter based on department
     switch (department) {
       case 'sound':
         role = assignment.sound_role;
@@ -54,7 +166,6 @@ export const JobCardNew = ({
         role = assignment.video_role;
         break;
       default:
-        // If no department specified, show any role
         role = assignment.sound_role || assignment.lights_role || assignment.video_role;
     }
 
@@ -65,9 +176,7 @@ export const JobCardNew = ({
       name: `${assignment.profiles?.first_name || ''} ${assignment.profiles?.last_name || ''}`.trim(),
       role: role
     };
-  }).filter((tech: any) => tech !== null && tech.name !== '') || [];
-
-  console.log('Filtered technicians:', assignedTechnicians);
+  }).filter((tech: any) => tech !== null && tech.name !== '');
 
   return (
     <Card 
@@ -86,16 +195,31 @@ export const JobCardNew = ({
               <Badge variant="secondary" className="ml-2">Tour</Badge>
             )}
           </div>
-          {canEdit && (
-            <div className="flex gap-2">
-              <Button variant="ghost" size="icon" onClick={handleEditClick}>
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handleDeleteClick}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            {canEdit && (
+              <>
+                <Button variant="ghost" size="icon" onClick={handleEditClick}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={handleDeleteClick}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+            {showUpload && (
+              <div className="relative">
+                <input
+                  type="file"
+                  onChange={handleFileUpload}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <Button variant="ghost" size="icon">
+                  <Upload className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -125,6 +249,14 @@ export const JobCardNew = ({
                 ))}
               </div>
             </div>
+          )}
+          {job.job_documents && onDeleteDocument && (
+            <JobDocuments
+              jobId={job.id}
+              documents={job.job_documents}
+              department={department}
+              onDeleteDocument={onDeleteDocument}
+            />
           )}
         </div>
       </CardContent>

@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Department } from "@/types/department";
 import { JobAssignments } from "./JobAssignments";
@@ -18,6 +18,7 @@ interface JobAssignmentDialogProps {
 export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: JobAssignmentDialogProps) => {
   const [selectedTechnician, setSelectedTechnician] = useState<string>("");
   const [selectedRole, setSelectedRole] = useState<string>("");
+  const queryClient = useQueryClient();
 
   const { data: technicians, isLoading: isLoadingTechnicians } = useQuery({
     queryKey: ["technicians", department],
@@ -31,6 +32,14 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
       return data;
     },
   });
+
+  const handleDialogChange = async (isOpen: boolean) => {
+    if (!isOpen) {
+      // Refresh jobs data when dialog closes
+      await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    }
+    onOpenChange(isOpen);
+  };
 
   const handleAssign = async () => {
     if (!selectedTechnician || !selectedRole) {
@@ -56,7 +65,7 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
     toast.success("Technician assigned successfully");
     setSelectedTechnician("");
     setSelectedRole("");
-    onOpenChange(false);
+    handleDialogChange(false);
   };
 
   const getRoleOptions = (department: Department) => {
@@ -73,7 +82,7 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Assign Technician</DialogTitle>
@@ -115,7 +124,7 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
           <JobAssignments jobId={jobId} department={department} />
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={() => handleDialogChange(false)}>
               Cancel
             </Button>
             <Button onClick={handleAssign}>

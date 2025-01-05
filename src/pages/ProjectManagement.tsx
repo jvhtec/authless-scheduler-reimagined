@@ -3,18 +3,27 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Music2, Lightbulb, Video } from "lucide-react";
+import { Music2, Lightbulb, Video, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Department } from "@/types/department";
 import { useQuery } from "@tanstack/react-query";
-import { JobCardNew } from "@/components/dashboard/JobCardNew";
+import { useToast } from "@/hooks/use-toast";
+import { DepartmentTabContent } from "@/components/dashboard/DepartmentTabContent";
+import { JobDocument } from "@/types/job";
+import { Button } from "@/components/ui/button";
+import { startOfMonth, endOfMonth, addMonths, format } from "date-fns";
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const { toast } = useToast();
 
-  const { data: jobs, isLoading: jobsLoading } = useQuery({
-    queryKey: ['jobs', selectedDepartment],
+  const startDate = startOfMonth(currentDate);
+  const endDate = endOfMonth(currentDate);
+
+  const { data: jobs, isLoading: jobsLoading, refetch: refetchJobs } = useQuery({
+    queryKey: ['jobs', selectedDepartment, startDate, endDate],
     queryFn: async () => {
       console.log("Fetching jobs for department:", selectedDepartment);
       const { data, error } = await supabase
@@ -32,17 +41,75 @@ const ProjectManagement = () => {
               first_name,
               last_name
             )
+          ),
+          job_documents(
+            id,
+            file_name,
+            file_path,
+            uploaded_at
           )
         `)
         .eq('job_departments.department', selectedDepartment)
-        .order('created_at', { ascending: false });
+        .eq('job_type', 'single')
+        .gte('start_time', startDate.toISOString())
+        .lte('start_time', endDate.toISOString())
+        .order('start_time', { ascending: true });
 
       if (error) throw error;
       
-      console.log("Jobs fetched:", data);
-      return data;
+      const jobsWithFilteredDocs = data.map(job => ({
+        ...job,
+        job_documents: job.job_documents.filter((doc: any) => {
+          console.log("Checking document path:", doc.file_path, "for department:", selectedDepartment);
+          return doc.file_path.startsWith(`${selectedDepartment}/`);
+        })
+      }));
+      
+      console.log("Jobs fetched with filtered documents:", jobsWithFilteredDocs);
+      return jobsWithFilteredDocs;
     }
   });
+
+  const handleDeleteDocument = async (jobId: string, document: JobDocument) => {
+    try {
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('job_documents')
+        .remove([document.file_path]);
+
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('job_documents')
+        .delete()
+        .eq('id', document.id);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Document deleted",
+        description: "The document has been successfully deleted.",
+      });
+
+      refetchJobs();
+    } catch (error: any) {
+      console.error('Error deleting document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete document: " + error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePreviousMonth = () => {
+    setCurrentDate(prev => addMonths(prev, -1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(prev => addMonths(prev, 1));
+  };
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -87,38 +154,6 @@ const ProjectManagement = () => {
     checkAccess();
   }, [navigate]);
 
-  const renderJobs = () => {
-    if (jobsLoading) {
-      return (
-        <div className="flex items-center justify-center p-4">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
-      );
-    }
-
-    if (!jobs?.length) {
-      return (
-        <p className="text-muted-foreground p-4">
-          No jobs found for this department.
-        </p>
-      );
-    }
-
-    return (
-      <div className="space-y-4">
-        {jobs.map((job) => (
-          <JobCardNew
-            key={job.id}
-            job={job}
-            onEditClick={() => {}}
-            onDeleteClick={() => {}}
-            onJobClick={() => {}}
-          />
-        ))}
-      </div>
-    );
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
@@ -134,6 +169,20 @@ const ProjectManagement = () => {
           <CardTitle>Project Management</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="flex items-center justify-between mb-6">
+            <Button variant="outline" size="sm" onClick={handlePreviousMonth}>
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <h2 className="text-lg font-semibold">
+              {format(currentDate, 'MMMM yyyy')}
+            </h2>
+            <Button variant="outline" size="sm" onClick={handleNextMonth}>
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+
           <Tabs defaultValue="sound" onValueChange={(value) => setSelectedDepartment(value as Department)}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="sound" className="flex items-center gap-2">
@@ -157,7 +206,12 @@ const ProjectManagement = () => {
                     <CardTitle className="capitalize">{dept} Jobs</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {renderJobs()}
+                    <DepartmentTabContent
+                      department={dept as Department}
+                      jobs={jobs || []}
+                      isLoading={jobsLoading}
+                      onDeleteDocument={handleDeleteDocument}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>

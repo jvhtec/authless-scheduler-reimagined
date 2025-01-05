@@ -9,14 +9,16 @@ import {
   SidebarSeparator,
   SidebarTrigger
 } from "@/components/ui/sidebar";
-import { LogOut } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { LogOut, BellDot } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { ThemeToggle } from "./layout/ThemeToggle";
 import { UserInfo } from "./layout/UserInfo";
 import { SidebarNavigation } from "./layout/SidebarNavigation";
+import { AboutCard } from "./layout/AboutCard";
 import { useToast } from "@/hooks/use-toast";
+import { useSessionManager } from "@/hooks/useSessionManager";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -24,82 +26,66 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
-  const [session, setSession] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  
+  const {
+    session,
+    userRole,
+    userDepartment,
+    isLoading,
+    setSession,
+    setUserRole,
+    setUserDepartment
+  } = useSessionManager();
 
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        console.log("Initial session check:", currentSession ? "Session found" : "No session");
-        
-        if (!currentSession) {
-          console.log("No session found, redirecting to auth");
-          navigate('/auth');
-          return;
-        }
-        
-        setSession(currentSession);
-        await fetchUserRole(currentSession.user.id);
-      } catch (error) {
-        console.error("Error checking session:", error);
-        navigate('/auth');
+    if (!userRole || !userDepartment) return;
+
+    const fetchUnreadMessages = async () => {
+      let query = supabase
+        .from('messages')
+        .select('*')
+        .eq('status', 'unread');
+
+      if (userRole === 'management') {
+        query = query.eq('department', userDepartment);
+      } else if (userRole === 'technician') {
+        query = query.eq('sender_id', session?.user?.id);
       }
-    };
 
-    checkSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log("Auth state changed:", _event, session ? "Session exists" : "No session");
-      
-      if (!session) {
-        setSession(null);
-        setUserRole(null);
-        navigate('/auth');
-        return;
-      }
-      
-      setSession(session);
-      await fetchUserRole(session.user.id);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
-
-  const fetchUserRole = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single();
+      const { data: messages, error } = await query;
 
       if (error) {
-        console.error('Error fetching user role:', error);
+        console.error('Error fetching unread messages:', error);
         return;
       }
 
-      if (data) {
-        console.log('User role fetched:', data.role);
-        setUserRole(data.role);
-        
-        // Redirect technicians to technician dashboard if they're on the main dashboard
-        if (data.role === 'technician' && 
-            (location.pathname === '/dashboard' || location.pathname === '/')) {
-          navigate('/technician-dashboard');
+      setHasUnreadMessages(messages.length > 0);
+    };
+
+    fetchUnreadMessages();
+
+    const channel = supabase
+      .channel('messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+        },
+        () => {
+          fetchUnreadMessages();
         }
-      }
-    } catch (error) {
-      console.error('Error in fetchUserRole:', error);
-    }
-  };
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userRole, userDepartment, session?.user?.id]);
 
   const handleSignOut = async () => {
     if (isLoggingOut) return;
@@ -108,22 +94,13 @@ const Layout = ({ children }: LayoutProps) => {
     console.log("Starting sign out process");
 
     try {
-      // First clear local state
       setSession(null);
       setUserRole(null);
-
-      // Clear all local storage related to auth
-      localStorage.removeItem('supabase.auth.token');
-      localStorage.removeItem('supabase.auth.expires_at');
-      localStorage.removeItem('supabase.auth.refresh_token');
-      
-      // Navigate before signing out
-      navigate('/auth');
-      
-      // Then sign out from Supabase
+      setUserDepartment(null);
+      localStorage.clear();
       await supabase.auth.signOut();
-      
       console.log("Sign out successful");
+      navigate('/auth');
       toast({
         title: "Success",
         description: "You have been logged out successfully",
@@ -139,6 +116,27 @@ const Layout = ({ children }: LayoutProps) => {
     }
   };
 
+  const handleMessageNotificationClick = () => {
+    if (userRole === 'management') {
+      navigate('/dashboard?showMessages=true');
+    } else if (userRole === 'technician') {
+      navigate('/technician-dashboard?showMessages=true');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white" />
+      </div>
+    );
+  }
+
+  if (!session || !userRole) {
+    navigate('/auth');
+    return null;
+  }
+
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full">
@@ -153,6 +151,16 @@ const Layout = ({ children }: LayoutProps) => {
           <SidebarFooter className="border-t border-sidebar-border">
             <ThemeToggle />
             <UserInfo />
+            {hasUnreadMessages && (
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-2 text-yellow-500"
+                onClick={handleMessageNotificationClick}
+              >
+                <BellDot className="h-4 w-4" />
+                <span>New Messages</span>
+              </Button>
+            )}
             <Button 
               variant="ghost" 
               className="w-full justify-start gap-2" 
@@ -162,6 +170,7 @@ const Layout = ({ children }: LayoutProps) => {
               <LogOut className="h-4 w-4" />
               <span>{isLoggingOut ? 'Signing out...' : 'Sign Out'}</span>
             </Button>
+            <AboutCard />
             <SidebarSeparator />
             <div className="px-2 py-4">
               <img

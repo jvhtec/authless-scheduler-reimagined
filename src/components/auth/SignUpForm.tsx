@@ -2,52 +2,34 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { Department } from "@/types/department";
 import { SignUpFormFields } from "./signup/SignUpFormFields";
 import { SignUpFormActions } from "./signup/SignUpFormActions";
 
-interface SignUpFormData {
-  email: string;
-  password: string;
-  name: string;
-  phone: string;
-  department: Department;
-  dni: string;
-  residencia: string;
+interface SignUpFormProps {
+  onBack?: () => void;
+  preventAutoLogin?: boolean;
 }
 
-export const SignUpForm = ({ onBack }: { onBack: () => void }) => {
+export const SignUpForm = ({ onBack, preventAutoLogin = false }: SignUpFormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<SignUpFormData>({
-    email: "",
-    password: "",
-    name: "",
-    phone: "",
-    department: "sound",
-    dni: "",
-    residencia: "",
-  });
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleFormChange = (field: keyof SignUpFormData, value: string | Department) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleSubmit = async (formData: any) => {
+    setIsLoading(true);
+    setError(null);
 
     try {
-      console.log("Starting signup process with email:", formData.email);
-
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      console.log("Starting user creation process");
+      
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email.toLowerCase(),
         password: formData.password,
         options: {
           data: {
-            first_name: formData.name.split(' ')[0],
-            last_name: formData.name.split(' ').slice(1).join(' '),
+            first_name: formData.firstName,
+            last_name: formData.lastName,
             phone: formData.phone,
             department: formData.department,
             dni: formData.dni,
@@ -56,67 +38,54 @@ export const SignUpForm = ({ onBack }: { onBack: () => void }) => {
         },
       });
 
-      if (authError) {
-        console.error("Auth error:", authError);
-        
-        // Handle specific error cases
-        if (authError.message === "User already registered") {
-          toast({
-            title: "Account already exists",
-            description: "Please try logging in instead, or use a different email address.",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        throw authError;
+      if (signUpError) {
+        console.error("Signup error:", signUpError);
+        setError(signUpError.message);
+        return;
       }
 
-      // If this is the super user, update their role to admin
-      if (formData.email.toLowerCase() === 'sonido@sector-pro.com') {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ role: 'admin' })
-          .eq('email', formData.email.toLowerCase());
-
-        if (updateError) {
-          console.error("Error updating role:", updateError);
-          throw updateError;
-        }
+      if (!signUpData.user) {
+        setError("Failed to create user account.");
+        return;
       }
 
-      console.log("Signup completed successfully");
+      console.log("User created successfully:", signUpData.user.email);
 
+      // If we're preventing auto-login (e.g., in settings page)
+      if (preventAutoLogin) {
+        console.log("Auto-login prevented - user created from settings");
+        toast({
+          title: "Success",
+          description: "New user account created successfully.",
+        });
+        if (onBack) onBack();
+        return;
+      }
+
+      // Normal signup flow with auto-login (e.g., in auth page)
+      console.log("Proceeding with normal signup flow");
       toast({
-        title: "Account created!",
-        description: "Please check your email to verify your account.",
+        title: "Welcome!",
+        description: "Your account has been created successfully.",
       });
+      navigate("/dashboard");
 
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 2000);
     } catch (error: any) {
-      console.error("Error during signup:", error);
-      toast({
-        title: "Error",
-        description: error.message || "There was an error creating your account. Please try again.",
-        variant: "destructive",
-      });
+      console.error("Unexpected error during signup:", error);
+      setError("An unexpected error occurred. Please try again.");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSignUp} className="space-y-4">
+    <div className="space-y-6">
       <SignUpFormFields 
-        formData={formData}
-        onChange={handleFormChange}
+        onSubmit={handleSubmit}
+        error={error}
+        isLoading={isLoading}
       />
-      <SignUpFormActions 
-        loading={loading}
-        onBack={onBack}
-      />
-    </form>
+      {onBack && <SignUpFormActions onBack={onBack} loading={isLoading} />}
+    </div>
   );
 };

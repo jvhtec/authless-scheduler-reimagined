@@ -1,18 +1,47 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { MessageSquare, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { JobCard } from "@/components/jobs/JobCard";
-import { useToast } from "@/components/ui/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { addWeeks, addMonths } from "date-fns";
+import { TimeSpanSelector } from "@/components/technician/TimeSpanSelector";
+import { MessageManagementDialog } from "@/components/technician/MessageManagementDialog";
+import { AssignmentsList } from "@/components/technician/AssignmentsList";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Dialog } from "@/components/ui/dialog";
 
 const TechnicianDashboard = () => {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeSpan, setTimeSpan] = useState<string>("1week");
-  const { toast } = useToast();
+  const [userDepartment, setUserDepartment] = useState<string | null>(null);
+  const [showMessages, setShowMessages] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const shouldShowMessages = searchParams.get('showMessages') === 'true';
+    setShowMessages(shouldShowMessages);
+  }, [location.search]);
+
+  useEffect(() => {
+    const fetchUserDepartment = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('department')
+        .eq('id', user.id)
+        .single();
+
+      if (profileData) {
+        setUserDepartment(profileData.department);
+      }
+    };
+
+    fetchUserDepartment();
+  }, []);
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -30,7 +59,13 @@ const TechnicianDashboard = () => {
             *,
             jobs!inner (
               *,
-              location:locations(name)
+              location:locations(name),
+              job_documents(
+                id,
+                file_name,
+                file_path,
+                uploaded_at
+              )
             )
           `)
           .eq('technician_id', user.id)
@@ -63,11 +98,9 @@ const TechnicianDashboard = () => {
     }
   };
 
-  const handleMessageManagement = () => {
-    toast({
-      title: "Message Sent",
-      description: "Your message has been sent to management.",
-    });
+  const handleCloseMessages = () => {
+    setShowMessages(false);
+    navigate('/technician-dashboard');
   };
 
   return (
@@ -75,21 +108,8 @@ const TechnicianDashboard = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Technician Dashboard</h1>
         <div className="flex items-center gap-4">
-          <Select value={timeSpan} onValueChange={setTimeSpan}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select time span" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1week">Next Week</SelectItem>
-              <SelectItem value="2weeks">Next 2 Weeks</SelectItem>
-              <SelectItem value="1month">Next Month</SelectItem>
-              <SelectItem value="3months">Next 3 Months</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={handleMessageManagement} className="gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Message Management
-          </Button>
+          <TimeSpanSelector value={timeSpan} onValueChange={setTimeSpan} />
+          <MessageManagementDialog department={userDepartment} />
         </div>
       </div>
 
@@ -101,26 +121,15 @@ const TechnicianDashboard = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <p className="text-muted-foreground">Loading assignments...</p>
-          ) : assignments.length === 0 ? (
-            <p className="text-muted-foreground">No upcoming assignments found.</p>
-          ) : (
-            <div className="grid gap-4">
-              {assignments.map((assignment) => (
-                <JobCard
-                  key={assignment.job_id}
-                  job={assignment.jobs}
-                  onEditClick={() => {}}
-                  onDeleteClick={() => {}}
-                  onJobClick={() => {}}
-                  showAssignments={false}
-                />
-              ))}
-            </div>
-          )}
+          <AssignmentsList assignments={assignments} loading={loading} />
         </CardContent>
       </Card>
+
+      {showMessages && (
+        <Dialog open={showMessages} onOpenChange={handleCloseMessages}>
+          <MessageManagementDialog department={userDepartment} trigger={false} />
+        </Dialog>
+      )}
     </div>
   );
 };
