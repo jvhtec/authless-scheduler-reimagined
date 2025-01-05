@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Clock, MapPin, Users, Edit, Trash2 } from "lucide-react";
+import { Clock, MapPin, Users, Edit, Trash2, Upload } from "lucide-react";
 import { format } from "date-fns";
 import { Department } from "@/types/department";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 interface JobCardNewProps {
   job: any;
@@ -23,6 +25,8 @@ export const JobCardNew = ({
   department,
   userRole
 }: JobCardNewProps) => {
+  const { toast } = useToast();
+
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onEditClick(job);
@@ -31,6 +35,61 @@ export const JobCardNew = ({
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDeleteClick(job.id);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      console.log('Starting file upload for job:', job.id);
+      
+      // Generate a unique file path
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${job.id}/${crypto.randomUUID()}.${fileExt}`;
+
+      // Upload file to storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('job_documents')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('File uploaded successfully:', uploadData);
+
+      // Create document record in the database
+      const { error: dbError } = await supabase
+        .from('job_documents')
+        .insert({
+          job_id: job.id,
+          file_name: file.name,
+          file_path: filePath,
+          file_type: file.type,
+          file_size: file.size
+        });
+
+      if (dbError) {
+        console.error('Database error:', dbError);
+        throw dbError;
+      }
+
+      toast({
+        title: "Document uploaded",
+        description: "The document has been successfully uploaded.",
+      });
+
+    } catch (error: any) {
+      console.error('Error in upload process:', error);
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const canEdit = userRole !== 'logistics';
@@ -86,16 +145,29 @@ export const JobCardNew = ({
               <Badge variant="secondary" className="ml-2">Tour</Badge>
             )}
           </div>
-          {canEdit && (
-            <div className="flex gap-2">
-              <Button variant="ghost" size="icon" onClick={handleEditClick}>
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handleDeleteClick}>
-                <Trash2 className="h-4 w-4" />
+          <div className="flex gap-2">
+            {canEdit && (
+              <>
+                <Button variant="ghost" size="icon" onClick={handleEditClick}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={handleDeleteClick}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+            <div className="relative">
+              <input
+                type="file"
+                onChange={handleFileUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <Button variant="ghost" size="icon">
+                <Upload className="h-4 w-4" />
               </Button>
             </div>
-          )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
