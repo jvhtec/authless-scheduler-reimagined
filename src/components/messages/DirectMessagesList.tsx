@@ -32,7 +32,7 @@ export const DirectMessagesList = () => {
         .from('direct_messages')
         .select(`
           *,
-          sender:profiles(first_name, last_name)
+          sender:profiles!direct_messages_sender_id_fkey(first_name, last_name)
         `)
         .eq('recipient_id', userData.user.id)
         .order('created_at', { ascending: false });
