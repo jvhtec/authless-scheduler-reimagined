@@ -31,7 +31,6 @@ const Dashboard = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [showMessages, setShowMessages] = useState(false);
   const [newMessageDialogOpen, setNewMessageDialogOpen] = useState(false);
-  const [selectedRecipient, setSelectedRecipient] = useState<{ id: string; name: string } | null>(null);
   
   const { data: jobs, isLoading } = useJobs();
   const { toast } = useToast();
@@ -155,25 +154,8 @@ const Dashboard = () => {
     }
   };
 
-  const handleNewMessage = async () => {
-    try {
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .order('first_name');
-
-      if (error) throw error;
-
-      if (profiles && profiles.length > 0) {
-        setSelectedRecipient({
-          id: profiles[0].id,
-          name: `${profiles[0].first_name} ${profiles[0].last_name}`
-        });
-        setNewMessageDialogOpen(true);
-      }
-    } catch (error) {
-      console.error("Error fetching profiles:", error);
-    }
+  const handleNewMessage = () => {
+    setNewMessageDialogOpen(true);
   };
 
   return (
@@ -299,14 +281,10 @@ const Dashboard = () => {
         />
       )}
 
-      {selectedRecipient && (
-        <DirectMessageDialog
-          recipientId={selectedRecipient.id}
-          recipientName={selectedRecipient.name}
-          open={newMessageDialogOpen}
-          onOpenChange={setNewMessageDialogOpen}
-        />
-      )}
+      <DirectMessageDialog
+        open={newMessageDialogOpen}
+        onOpenChange={setNewMessageDialogOpen}
+      />
     </div>
   );
 };

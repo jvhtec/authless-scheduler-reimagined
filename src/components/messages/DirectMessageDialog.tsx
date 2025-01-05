@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,38 +8,71 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { MessageSquare } from "lucide-react";
 
 interface DirectMessageDialogProps {
-  recipientId: string;
-  recipientName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  recipientId?: string;
+  recipientName?: string;
+}
+
+interface Profile {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
 }
 
 export const DirectMessageDialog = ({ 
-  recipientId, 
-  recipientName, 
   open, 
-  onOpenChange 
+  onOpenChange,
+  recipientId: initialRecipientId,
+  recipientName: initialRecipientName,
 }: DirectMessageDialogProps) => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [selectedRecipientId, setSelectedRecipientId] = useState<string | undefined>(initialRecipientId);
   const { toast } = useToast();
 
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .order('first_name');
+
+      if (error) {
+        console.error('Error fetching profiles:', error);
+        return;
+      }
+
+      setProfiles(data || []);
+    };
+
+    fetchProfiles();
+  }, []);
+
   const handleSend = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() || !selectedRecipientId) return;
 
     try {
       setSending(true);
-      console.log("Sending direct message to:", recipientId);
+      console.log("Sending direct message to:", selectedRecipientId);
 
       const { error } = await supabase
         .from('direct_messages')
         .insert({
-          recipient_id: recipientId,
+          recipient_id: selectedRecipientId,
           content: message,
         });
 
@@ -64,16 +97,45 @@ export const DirectMessageDialog = ({
     }
   };
 
+  const getRecipientName = (id: string) => {
+    const profile = profiles.find(p => p.id === id);
+    return profile ? `${profile.first_name} ${profile.last_name}` : '';
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            Message to {recipientName}
+            New Message
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">To:</label>
+            <Select
+              value={selectedRecipientId}
+              onValueChange={setSelectedRecipientId}
+              disabled={!!initialRecipientId}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select recipient">
+                  {selectedRecipientId ? getRecipientName(selectedRecipientId) : "Select recipient"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.map((profile) => (
+                  <SelectItem 
+                    key={profile.id} 
+                    value={profile.id}
+                  >
+                    {profile.first_name} {profile.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -84,7 +146,7 @@ export const DirectMessageDialog = ({
         <DialogFooter>
           <Button
             onClick={handleSend}
-            disabled={sending || !message.trim()}
+            disabled={sending || !message.trim() || !selectedRecipientId}
           >
             {sending ? "Sending..." : "Send Message"}
           </Button>
