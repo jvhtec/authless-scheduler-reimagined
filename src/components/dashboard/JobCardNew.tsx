@@ -33,16 +33,15 @@ export const JobCardNew = ({
 
   const canEdit = userRole !== 'logistics';
 
+  console.log('Job assignments:', job.job_assignments);
+
   // Get assigned technicians from profiles table through job_assignments
-  const assignedTechnicians = job.job_assignments?.filter((assignment: any) => 
-    assignment.profiles?.first_name || assignment.profiles?.last_name
-  ).map((assignment: any) => ({
+  const assignedTechnicians = job.job_assignments?.map((assignment: any) => ({
     id: assignment.technician_id,
     name: `${assignment.profiles?.first_name || ''} ${assignment.profiles?.last_name || ''}`.trim(),
     role: assignment.sound_role || assignment.lights_role || assignment.video_role
-  })) || [];
+  })).filter((tech: any) => tech.name !== '') || [];
 
-  console.log('Job assignments:', job.job_assignments);
   console.log('Filtered technicians:', assignedTechnicians);
 
   return (
