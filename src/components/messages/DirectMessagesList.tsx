@@ -132,6 +132,7 @@ export const DirectMessagesList = () => {
     if (currentUserId) {
       fetchMessages();
 
+      // Subscribe to ALL changes in direct_messages table that involve the current user
       const channel = supabase
         .channel('direct-messages-changes')
         .on(
@@ -139,10 +140,31 @@ export const DirectMessagesList = () => {
           {
             event: '*',
             schema: 'public',
-            table: 'direct_messages'
+            table: 'direct_messages',
+            filter: `recipient_id=eq.${currentUserId}`,
           },
-          () => {
-            console.log("Direct message changes detected, refreshing...");
+          (payload) => {
+            console.log("Direct message changes detected for recipient:", payload);
+            // Show notification for new messages
+            if (payload.eventType === 'INSERT') {
+              toast({
+                title: "New Message",
+                description: "You have received a new message.",
+              });
+            }
+            fetchMessages();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'direct_messages',
+            filter: `sender_id=eq.${currentUserId}`,
+          },
+          (payload) => {
+            console.log("Direct message changes detected for sender:", payload);
             fetchMessages();
           }
         )
