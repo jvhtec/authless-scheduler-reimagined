@@ -6,9 +6,26 @@ import { MessagesList } from "@/components/messages/MessagesList";
 
 interface MessageManagementDialogProps {
   department: string | null;
+  trigger?: boolean;
 }
 
-export const MessageManagementDialog = ({ department }: MessageManagementDialogProps) => {
+export const MessageManagementDialog = ({ department, trigger = true }: MessageManagementDialogProps) => {
+  const content = (
+    <DialogContent className="max-w-2xl">
+      <DialogHeader>
+        <DialogTitle>Messages</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-4">
+        {department && <SendMessage department={department} />}
+        <MessagesList />
+      </div>
+    </DialogContent>
+  );
+
+  if (!trigger) {
+    return content;
+  }
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -17,15 +34,7 @@ export const MessageManagementDialog = ({ department }: MessageManagementDialogP
           Message Management
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Messages</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          {department && <SendMessage department={department} />}
-          <MessagesList />
-        </div>
-      </DialogContent>
+      {content}
     </Dialog>
   );
 };

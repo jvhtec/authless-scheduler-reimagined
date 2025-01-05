@@ -6,12 +6,21 @@ import { addWeeks, addMonths } from "date-fns";
 import { TimeSpanSelector } from "@/components/technician/TimeSpanSelector";
 import { MessageManagementDialog } from "@/components/technician/MessageManagementDialog";
 import { AssignmentsList } from "@/components/technician/AssignmentsList";
+import { useLocation } from "react-router-dom";
+import { Dialog } from "@/components/ui/dialog";
 
 const TechnicianDashboard = () => {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeSpan, setTimeSpan] = useState<string>("1week");
   const [userDepartment, setUserDepartment] = useState<string | null>(null);
+  const [showMessages, setShowMessages] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    setShowMessages(searchParams.get('showMessages') === 'true');
+  }, [location.search]);
 
   useEffect(() => {
     const fetchUserDepartment = async () => {
@@ -108,6 +117,10 @@ const TechnicianDashboard = () => {
           <AssignmentsList assignments={assignments} loading={loading} />
         </CardContent>
       </Card>
+
+      <Dialog open={showMessages} onOpenChange={setShowMessages}>
+        <MessageManagementDialog department={userDepartment} />
+      </Dialog>
     </div>
   );
 };
