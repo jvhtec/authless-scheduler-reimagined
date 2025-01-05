@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -69,9 +70,16 @@ export const DirectMessageDialog = ({
       setSending(true);
       console.log("Sending direct message to:", selectedRecipientId);
 
+      // Get the current user's session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        throw new Error("No authenticated user found");
+      }
+
       const { error } = await supabase
         .from('direct_messages')
         .insert({
+          sender_id: session.user.id,
           recipient_id: selectedRecipientId,
           content: message,
         });
@@ -110,6 +118,9 @@ export const DirectMessageDialog = ({
             <MessageSquare className="h-5 w-5" />
             New Message
           </DialogTitle>
+          <DialogDescription>
+            Send a direct message to another user
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
