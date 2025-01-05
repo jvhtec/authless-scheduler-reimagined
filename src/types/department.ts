@@ -1,1 +1,1 @@
-export type Department = "sound" | "lights" | "video";
+export type Department = "sound" | "lights" | "video" | "personal" | "production";

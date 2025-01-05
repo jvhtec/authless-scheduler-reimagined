@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Music2, Lightbulb, Video } from "lucide-react";
+import { Loader2, Music2, Lightbulb, Video, Users, Building } from "lucide-react";
 import { Department } from "@/types/department";
 
 const ProjectManagement = () => {
@@ -70,7 +70,7 @@ const ProjectManagement = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="sound" onValueChange={(value) => setSelectedDepartment(value as Department)}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="sound" className="flex items-center gap-2">
                 <Music2 className="h-4 w-4" />
                 Sound
@@ -82,6 +82,14 @@ const ProjectManagement = () => {
               <TabsTrigger value="video" className="flex items-center gap-2">
                 <Video className="h-4 w-4" />
                 Video
+              </TabsTrigger>
+              <TabsTrigger value="personal" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Personal
+              </TabsTrigger>
+              <TabsTrigger value="production" className="flex items-center gap-2">
+                <Building className="h-4 w-4" />
+                Production
               </TabsTrigger>
             </TabsList>
             <TabsContent value="sound">
@@ -111,6 +119,26 @@ const ProjectManagement = () => {
                 </CardHeader>
                 <CardContent>
                   <p>Video department management content will go here.</p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="personal">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Personal Department</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p>Personal department management content will go here.</p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="production">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Production Department</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p>Production department management content will go here.</p>
                 </CardContent>
               </Card>
             </TabsContent>
