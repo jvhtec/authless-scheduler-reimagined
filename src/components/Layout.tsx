@@ -78,43 +78,32 @@ const Layout = ({ children }: LayoutProps) => {
   };
 
   const handleSignOut = async () => {
-    if (isLoggingOut) return; // Prevent multiple logout attempts
+    if (isLoggingOut) return;
+    
+    setIsLoggingOut(true);
+    console.log("Starting sign out process");
 
     try {
-      setIsLoggingOut(true);
-      console.log("Starting sign out process");
-
-      // First attempt to sign out from Supabase
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error("Error during sign out:", error);
-        // If we get a session_not_found error, we can consider the user logged out
-        if (error.message.includes('session_not_found')) {
-          console.log("Session not found, considering user logged out");
-        } else {
-          toast({
-            title: "Warning",
-            description: "There was an issue during logout, but you have been logged out locally",
-          });
-        }
-      } else {
-        console.log("Sign out successful");
-        toast({
-          title: "Success",
-          description: "You have been logged out successfully",
-        });
-      }
-    } catch (error) {
-      console.error("Unexpected error during sign out:", error);
-      toast({
-        title: "Warning",
-        description: "An unexpected error occurred, but you have been logged out",
-      });
-    } finally {
-      // Always clear local state and redirect
+      // Clear local state first
       setSession(null);
       setUserRole(null);
+      localStorage.removeItem('supabase.auth.token');
+      
+      // Then attempt to sign out from Supabase
+      await supabase.auth.signOut();
+      
+      console.log("Sign out successful");
+      toast({
+        title: "Success",
+        description: "You have been logged out successfully",
+      });
+    } catch (error) {
+      console.error("Error during sign out:", error);
+      toast({
+        title: "Notice",
+        description: "You have been logged out",
+      });
+    } finally {
       setIsLoggingOut(false);
       navigate('/auth');
     }
