@@ -24,6 +24,7 @@ export const DirectMessagesList = () => {
         if (user) {
           console.log("Current user set:", user.id);
           setCurrentUserId(user.id);
+          await fetchMessages(user.id);
         }
       } catch (error) {
         console.error("Error in getCurrentUser:", error);
@@ -32,14 +33,10 @@ export const DirectMessagesList = () => {
     getCurrentUser();
   }, []);
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (userId: string) => {
     try {
-      console.log("Fetching direct messages...");
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.log("No authenticated user found");
-        return;
-      }
+      console.log("Fetching direct messages for user:", userId);
+      setLoading(true);
 
       const [receivedMessages, sentMessages] = await Promise.all([
         supabase
@@ -49,7 +46,7 @@ export const DirectMessagesList = () => {
             sender:profiles!direct_messages_sender_id_fkey(id, first_name, last_name),
             recipient:profiles!direct_messages_recipient_id_fkey(id, first_name, last_name)
           `)
-          .eq('recipient_id', user.id)
+          .eq('recipient_id', userId)
           .order('created_at', { ascending: false }),
         
         supabase
@@ -59,7 +56,7 @@ export const DirectMessagesList = () => {
             sender:profiles!direct_messages_sender_id_fkey(id, first_name, last_name),
             recipient:profiles!direct_messages_recipient_id_fkey(id, first_name, last_name)
           `)
-          .eq('sender_id', user.id)
+          .eq('sender_id', userId)
           .order('created_at', { ascending: false })
       ]);
 
@@ -94,15 +91,13 @@ export const DirectMessagesList = () => {
     }
   };
 
-  useMessagesSubscription(currentUserId, fetchMessages);
-
-  if (loading) {
-    return <div>Loading messages...</div>;
-  }
+  useMessagesSubscription(currentUserId, () => currentUserId && fetchMessages(currentUserId));
 
   return (
     <div className="space-y-4">
-      {messages.length === 0 ? (
+      {loading ? (
+        <p className="text-muted-foreground">Loading messages...</p>
+      ) : messages.length === 0 ? (
         <p className="text-muted-foreground">No direct messages.</p>
       ) : (
         messages.map((message) => (
