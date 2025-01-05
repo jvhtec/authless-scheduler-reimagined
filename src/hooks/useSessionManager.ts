@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
@@ -8,25 +8,48 @@ export const useSessionManager = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userDepartment, setUserDepartment] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = useCallback(async (userId: string) => {
     console.log('Fetching user profile for:', userId);
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('role, department')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role, department')
+        .eq('id', userId)
+        .single();
 
-    if (profileError) {
-      console.error("Error fetching user profile:", profileError);
-      throw profileError;
+      if (profileError) {
+        console.error("Error fetching user profile:", profileError);
+        throw profileError;
+      }
+
+      console.log('User profile fetched:', profileData);
+      return profileData;
+    } catch (error) {
+      console.error("Error in fetchUserProfile:", error);
+      throw error;
     }
+  }, []);
 
-    console.log('User profile fetched:', profileData);
-    return profileData;
-  };
+  const refreshSession = useCallback(async () => {
+    console.log("Refreshing session...");
+    try {
+      const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error("Error refreshing session:", error);
+        throw error;
+      }
 
-  const handleSessionUpdate = async (currentSession: any) => {
+      return currentSession;
+    } catch (error) {
+      console.error("Error in refreshSession:", error);
+      throw error;
+    }
+  }, []);
+
+  const handleSessionUpdate = useCallback(async (currentSession: any) => {
     console.log("Session update handler called with session:", !!currentSession);
     setIsLoading(true);
     
@@ -46,6 +69,7 @@ export const useSessionManager = () => {
       const profileData = await fetchUserProfile(currentSession.user.id);
       setUserRole(profileData.role);
       setUserDepartment(profileData.department);
+      setLastRefresh(Date.now());
     } catch (error) {
       console.error("Error in session update:", error);
       // Clear session data and redirect to auth on error
@@ -56,18 +80,42 @@ export const useSessionManager = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [navigate, fetchUserProfile]);
 
-  // Initial session check and refresh setup
+  // Periodic session refresh
+  useEffect(() => {
+    const REFRESH_INTERVAL = 4 * 60 * 1000; // 4 minutes
+    let refreshTimer: NodeJS.Timeout;
+    
+    const periodicRefresh = async () => {
+      try {
+        if (Date.now() - lastRefresh >= REFRESH_INTERVAL) {
+          console.log("Performing periodic session refresh");
+          const refreshedSession = await refreshSession();
+          if (refreshedSession) {
+            await handleSessionUpdate(refreshedSession);
+          }
+        }
+      } catch (error) {
+        console.error("Error in periodic refresh:", error);
+      }
+    };
+
+    refreshTimer = setInterval(periodicRefresh, REFRESH_INTERVAL);
+
+    return () => {
+      clearInterval(refreshTimer);
+    };
+  }, [lastRefresh, refreshSession, handleSessionUpdate]);
+
+  // Initial session setup and auth state change listener
   useEffect(() => {
     let mounted = true;
+    console.log("Setting up session...");
 
     const setupSession = async () => {
       try {
-        console.log("Setting up session...");
         setIsLoading(true);
-
-        // Get initial session
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         console.log("Initial session check:", !!initialSession);
 
@@ -75,18 +123,16 @@ export const useSessionManager = () => {
           await handleSessionUpdate(initialSession);
         }
 
-        // Set up session refresh
         const {
           data: { subscription },
-        } = supabase.auth.onAuthStateChange(async (event, session) => {
-          console.log("Auth state changed:", event);
+        } = supabase.auth.onAuthStateChange(async (_event, session) => {
+          console.log("Auth state changed:", _event);
           if (mounted) {
             await handleSessionUpdate(session);
           }
         });
 
         return () => {
-          mounted = false;
           subscription.unsubscribe();
         };
       } catch (error) {
@@ -98,15 +144,15 @@ export const useSessionManager = () => {
       }
     };
 
-    setupSession();
-
-    // Cleanup function
+    const setupPromise = setupSession();
+    
     return () => {
       mounted = false;
+      setupPromise.then(cleanup => cleanup && cleanup());
     };
-  }, [navigate]);
+  }, [navigate, handleSessionUpdate]);
 
-  // Subscribe to profile changes
+  // Profile changes subscription
   useEffect(() => {
     if (!session?.user?.id) return;
 
@@ -145,7 +191,7 @@ export const useSessionManager = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session?.user?.id, userRole]);
+  }, [session?.user?.id, userRole, fetchUserProfile]);
 
   return {
     session,
