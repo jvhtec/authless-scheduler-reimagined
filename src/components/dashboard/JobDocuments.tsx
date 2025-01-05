@@ -30,11 +30,16 @@ export const JobDocuments = ({
 
   const handleDownload = async (jobDocument: JobDocument) => {
     try {
+      console.log('Starting download for document:', jobDocument.file_name);
+      
       const { data, error } = await supabase.storage
         .from('job_documents')
         .download(jobDocument.file_path);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Download error:', error);
+        throw error;
+      }
 
       // Create a download link using the global document object
       const url = window.URL.createObjectURL(data);
