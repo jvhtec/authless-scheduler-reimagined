@@ -7,12 +7,13 @@ export const useJobs = () => {
     queryKey: ["jobs"],
     queryFn: async () => {
       console.log("Fetching jobs with departments and locations...");
+      
       const { data, error } = await supabase
         .from("jobs")
         .select(`
           *,
           location:locations(name),
-          job_departments(department)
+          job_departments!job_departments_job_id_fkey(department)
         `)
         .neq('job_type', 'tour'); // Exclude tour type jobs
 
