@@ -56,8 +56,13 @@ export const JobAssignments = ({ jobId, department, userRole }: JobAssignmentsPr
 
       if (error) throw error;
 
+      // Refresh both assignments and jobs data
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["job-assignments", jobId] }),
+        queryClient.invalidateQueries({ queryKey: ["jobs"] })
+      ]);
+
       toast.success("Assignment deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["job-assignments", jobId] });
     } catch (error: any) {
       console.error("Error deleting assignment:", error);
       toast.error("Failed to delete assignment");
