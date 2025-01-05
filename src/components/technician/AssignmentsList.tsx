@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { useEffect } from "react";
 
 interface JobDocument {
   id: string;
@@ -23,6 +24,31 @@ interface AssignmentsListProps {
 
 export const AssignmentsList = ({ assignments, loading }: AssignmentsListProps) => {
   const { toast } = useToast();
+
+  useEffect(() => {
+    console.log("Setting up real-time subscription for job assignments");
+    
+    const channel = supabase
+      .channel('job_assignments_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'job_assignments'
+        },
+        async (payload) => {
+          console.log("Received real-time update for job assignments:", payload);
+          // The parent component will handle the refresh through React Query
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log("Cleaning up real-time subscription");
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const handleDownload = async (jobDocument: JobDocument) => {
     try {

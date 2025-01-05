@@ -8,15 +8,15 @@ import { MessageManagementDialog } from "@/components/technician/MessageManageme
 import { AssignmentsList } from "@/components/technician/AssignmentsList";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Dialog } from "@/components/ui/dialog";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const TechnicianDashboard = () => {
-  const [assignments, setAssignments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [timeSpan, setTimeSpan] = useState<string>("1week");
   const [userDepartment, setUserDepartment] = useState<string | null>(null);
   const [showMessages, setShowMessages] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -43,11 +43,39 @@ const TechnicianDashboard = () => {
     fetchUserDepartment();
   }, []);
 
+  // Set up real-time subscription for job assignments
   useEffect(() => {
-    const fetchAssignments = async () => {
+    console.log("Setting up real-time subscription for assignments");
+    
+    const channel = supabase
+      .channel('assignments_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'job_assignments'
+        },
+        (payload) => {
+          console.log("Received real-time update:", payload);
+          // Invalidate and refetch assignments
+          queryClient.invalidateQueries({ queryKey: ['assignments'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log("Cleaning up real-time subscription");
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  const { data: assignments = [], isLoading } = useQuery({
+    queryKey: ['assignments', timeSpan],
+    queryFn: async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) return [];
 
         console.log("Fetching assignments for user:", user.id);
         
@@ -76,16 +104,16 @@ const TechnicianDashboard = () => {
         if (error) throw error;
         
         console.log("Fetched assignments:", data);
-        setAssignments(data || []);
+        return data || [];
       } catch (error) {
         console.error("Error fetching assignments:", error);
-      } finally {
-        setLoading(false);
+        return [];
       }
-    };
-
-    fetchAssignments();
-  }, [timeSpan]);
+    },
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    refetchOnReconnect: true
+  });
 
   const getTimeSpanEndDate = () => {
     const today = new Date();
@@ -121,7 +149,7 @@ const TechnicianDashboard = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <AssignmentsList assignments={assignments} loading={loading} />
+          <AssignmentsList assignments={assignments} loading={isLoading} />
         </CardContent>
       </Card>
 
