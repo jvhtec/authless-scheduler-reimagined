@@ -7,7 +7,7 @@ import { useTabVisibility } from "@/hooks/useTabVisibility";
 export const UsersList = () => {
   useTabVisibility(['profiles']);
 
-  const { data: users, isLoading, error } = useQuery({
+  const { data: users, isLoading, error, isFetching } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
       console.log("Starting profiles fetch...");
@@ -24,9 +24,13 @@ export const UsersList = () => {
       console.log("Profiles fetch successful:", response.data);
       return response.data;
     },
-    retry: false,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    gcTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnMount: true,
     refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   if (error) {
@@ -37,6 +41,7 @@ export const UsersList = () => {
     );
   }
 
+  // Show loading state only on initial load, not during background refetches
   if (isLoading) {
     return <div className="p-4">Loading users...</div>;
   }
@@ -45,5 +50,12 @@ export const UsersList = () => {
     return <div className="text-muted-foreground p-4">No users found.</div>;
   }
 
-  return <UsersListContent users={users} />;
+  return (
+    <>
+      {isFetching && !isLoading && (
+        <div className="text-xs text-muted-foreground mb-2">Refreshing...</div>
+      )}
+      <UsersListContent users={users} />
+    </>
+  );
 };

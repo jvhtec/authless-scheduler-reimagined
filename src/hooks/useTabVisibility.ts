@@ -9,10 +9,20 @@ export const useTabVisibility = (queryKeys: string[]) => {
       if (document.visibilityState === 'visible') {
         console.log('Tab became visible, refreshing queries:', queryKeys);
         queryKeys.forEach(key => {
-          queryClient.invalidateQueries({ queryKey: [key] });
+          // Force a refetch when tab becomes visible
+          queryClient.invalidateQueries({ 
+            queryKey: [key],
+            refetchType: 'active',
+            exact: false 
+          });
         });
       }
     };
+
+    // Initial check when component mounts
+    if (document.visibilityState === 'visible') {
+      handleVisibilityChange();
+    }
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
