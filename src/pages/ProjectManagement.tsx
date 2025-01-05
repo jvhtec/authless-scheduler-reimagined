@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Music2, Lightbulb, Video, Users, Building } from "lucide-react";
+import { Loader2, Music2, Lightbulb, Video } from "lucide-react";
 import { Department } from "@/types/department";
 import { useQuery } from "@tanstack/react-query";
 import { JobCardNew } from "@/components/dashboard/JobCardNew";
@@ -43,6 +42,7 @@ const ProjectManagement = () => {
       console.log("Jobs fetched:", data);
       return data;
     },
+    enabled: selectedDepartment !== "personal" && selectedDepartment !== "production",
   });
 
   useEffect(() => {
@@ -113,6 +113,7 @@ const ProjectManagement = () => {
             job={job}
             onEditClick={() => {}}
             onDeleteClick={() => {}}
+            onJobClick={() => {}}
           />
         ))}
       </div>
@@ -135,7 +136,7 @@ const ProjectManagement = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="sound" onValueChange={(value) => setSelectedDepartment(value as Department)}>
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="sound" className="flex items-center gap-2">
                 <Music2 className="h-4 w-4" />
                 Sound
@@ -148,17 +149,9 @@ const ProjectManagement = () => {
                 <Video className="h-4 w-4" />
                 Video
               </TabsTrigger>
-              <TabsTrigger value="personal" className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Personal
-              </TabsTrigger>
-              <TabsTrigger value="production" className="flex items-center gap-2">
-                <Building className="h-4 w-4" />
-                Production
-              </TabsTrigger>
             </TabsList>
 
-            {["sound", "lights", "video", "personal", "production"].map((dept) => (
+            {["sound", "lights", "video"].map((dept) => (
               <TabsContent key={dept} value={dept}>
                 <Card>
                   <CardHeader>
