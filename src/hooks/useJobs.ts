@@ -13,7 +13,7 @@ export const useJobs = () => {
         .select(`
           *,
           location:locations(name),
-          job_departments:job_departments!inner(
+          job_departments(
             department
           )
         `)
