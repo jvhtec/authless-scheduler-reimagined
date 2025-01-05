@@ -20,6 +20,12 @@ export const DirectMessageCard = ({
   const isRecipient = message.recipient_id === currentUserId;
   const showMarkAsRead = isRecipient && message.status === 'unread';
 
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to permanently delete this message?')) {
+      onDelete(message.id);
+    }
+  };
+
   return (
     <Card className={message.status === 'unread' ? 'border-primary' : ''}>
       <CardContent className="pt-6">
@@ -54,7 +60,7 @@ export const DirectMessageCard = ({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => onDelete(message.id)}
+                onClick={handleDelete}
                 title="Delete message"
               >
                 <Trash2 className="h-4 w-4" />

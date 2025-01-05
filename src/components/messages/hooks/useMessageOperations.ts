@@ -19,7 +19,7 @@ export const useMessageOperations = (
 
       toast({
         title: "Message deleted",
-        description: "The message has been successfully deleted.",
+        description: "The message has been permanently deleted.",
       });
 
       setMessages(messages.filter(msg => msg.id !== messageId));
