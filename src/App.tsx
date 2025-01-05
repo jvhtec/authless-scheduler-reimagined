@@ -31,6 +31,7 @@ function App() {
             <Route path="/video" element={<Video />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/project-management" element={<ProjectManagement />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>
       </Router>
