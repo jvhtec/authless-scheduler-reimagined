@@ -59,6 +59,8 @@ export const JobCardNew = ({
       const fileExt = file.name.split('.').pop();
       const filePath = `${department}/${job.id}/${crypto.randomUUID()}.${fileExt}`;
 
+      console.log('Generated file path:', filePath);
+
       // Upload file to storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('job_documents')

@@ -52,8 +52,8 @@ const ProjectManagement = () => {
       const jobsWithFilteredDocs = data.map(job => ({
         ...job,
         job_documents: job.job_documents.filter((doc: any) => {
-          // Check if the document belongs to the current department
-          return doc.file_path.includes(`/${selectedDepartment}/`);
+          console.log("Checking document path:", doc.file_path, "for department:", selectedDepartment);
+          return doc.file_path.startsWith(`${selectedDepartment}/`);
         })
       }));
       
