@@ -5,11 +5,9 @@ import {
   Music2,
   Lightbulb,
   Video,
-  Users2,
   Settings,
   Briefcase
 } from "lucide-react";
-import { UserRole } from "@/types/user";
 
 interface SidebarNavigationProps {
   userRole: string | null;
@@ -84,20 +82,6 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
             <span>Video</span>
           </Button>
         </Link>
-
-        {(userRole === 'admin' || userRole === 'management') && (
-          <Link to="/users">
-            <Button
-              variant="ghost"
-              className={`w-full justify-start gap-2 ${
-                location.pathname === "/users" ? "bg-accent" : ""
-              }`}
-            >
-              <Users2 className="h-4 w-4" />
-              <span>Users</span>
-            </Button>
-          </Link>
-        )}
 
         <Link to="/settings">
           <Button

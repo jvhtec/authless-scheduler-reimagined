@@ -11,7 +11,6 @@ import Video from "@/pages/Video";
 import TechnicianDashboard from "@/pages/TechnicianDashboard";
 import Profile from "@/pages/Profile";
 import ProjectManagement from "@/pages/ProjectManagement";
-import Users from "@/pages/Users";
 import "./App.css";
 
 const queryClient = new QueryClient();
@@ -32,7 +31,6 @@ function App() {
             <Route path="/technician" element={<TechnicianDashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/project-management" element={<ProjectManagement />} />
-            <Route path="/users" element={<Users />} />
           </Route>
         </Routes>
       </Router>
