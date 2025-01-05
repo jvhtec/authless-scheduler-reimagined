@@ -30,7 +30,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
     try {
       console.log("Attempting login with email:", formData.email);
       
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email.toLowerCase(),
         password: formData.password,
       });
@@ -47,19 +47,37 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
         return;
       }
 
-      if (!data.user) {
+      if (!signInData.user) {
         setError("No user found with these credentials.");
         return;
       }
 
-      console.log("Login successful for user:", data.user.email);
+      // Fetch user role immediately after successful login
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', signInData.user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching user role:", profileError);
+        setError("Error fetching user role. Please try logging in again.");
+        return;
+      }
+
+      console.log("Login successful for user:", signInData.user.email, "with role:", profileData?.role);
       
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in.",
       });
 
-      navigate("/dashboard");
+      // Redirect based on role
+      if (profileData?.role === 'technician') {
+        navigate("/technician-dashboard");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error: any) {
       console.error("Unexpected error during login:", error);
       setError("An unexpected error occurred. Please try again.");

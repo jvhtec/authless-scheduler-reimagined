@@ -43,7 +43,27 @@ const Layout = ({ children }: LayoutProps) => {
         }
         
         setSession(currentSession);
-        await fetchUserRole(currentSession.user.id);
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', currentSession.user.id)
+          .single();
+
+        if (profileError) {
+          console.error("Error fetching user role:", profileError);
+          return;
+        }
+
+        if (profileData) {
+          console.log('User role fetched:', profileData.role);
+          setUserRole(profileData.role);
+          
+          // Redirect technicians to technician dashboard if they're on the main dashboard
+          if (profileData.role === 'technician' && 
+              (location.pathname === '/dashboard' || location.pathname === '/')) {
+            navigate('/technician-dashboard');
+          }
+        }
       } catch (error) {
         console.error("Error checking session:", error);
         navigate('/auth');
@@ -65,41 +85,33 @@ const Layout = ({ children }: LayoutProps) => {
       }
       
       setSession(session);
-      await fetchUserRole(session.user.id);
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching user role:", profileError);
+        return;
+      }
+
+      if (profileData) {
+        console.log('User role fetched:', profileData.role);
+        setUserRole(profileData.role);
+        
+        // Redirect technicians to technician dashboard if they're on the main dashboard
+        if (profileData.role === 'technician' && 
+            (location.pathname === '/dashboard' || location.pathname === '/')) {
+          navigate('/technician-dashboard');
+        }
+      }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
-
-  const fetchUserRole = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching user role:', error);
-        return;
-      }
-
-      if (data) {
-        console.log('User role fetched:', data.role);
-        setUserRole(data.role);
-        
-        // Redirect technicians to technician dashboard if they're on the main dashboard
-        if (data.role === 'technician' && 
-            (location.pathname === '/dashboard' || location.pathname === '/')) {
-          navigate('/technician-dashboard');
-        }
-      }
-    } catch (error) {
-      console.error('Error in fetchUserRole:', error);
-    }
-  };
+  }, [navigate, location.pathname]);
 
   const handleSignOut = async () => {
     if (isLoggingOut) return;
