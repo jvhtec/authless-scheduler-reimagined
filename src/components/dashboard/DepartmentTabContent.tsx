@@ -44,6 +44,7 @@ export const DepartmentTabContent = ({
           onJobClick={() => {}}
           department={department}
           onDeleteDocument={onDeleteDocument}
+          showUpload={true}
         />
       ))}
     </div>

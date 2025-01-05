@@ -24,6 +24,7 @@ interface JobCardNewProps {
   department?: Department;
   userRole?: string | null;
   onDeleteDocument?: (jobId: string, document: JobDocument) => void;
+  showUpload?: boolean;
 }
 
 export const JobCardNew = ({
@@ -33,7 +34,8 @@ export const JobCardNew = ({
   onJobClick,
   department,
   userRole,
-  onDeleteDocument
+  onDeleteDocument,
+  showUpload = false
 }: JobCardNewProps) => {
   const { toast } = useToast();
 
@@ -55,13 +57,11 @@ export const JobCardNew = ({
     try {
       console.log('Starting file upload for job:', job.id);
       
-      // Generate a unique file path that includes the department
       const fileExt = file.name.split('.').pop();
       const filePath = `${department}/${job.id}/${crypto.randomUUID()}.${fileExt}`;
 
       console.log('Generated file path:', filePath);
 
-      // Upload file to storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('job_documents')
         .upload(filePath, file);
@@ -73,7 +73,6 @@ export const JobCardNew = ({
 
       console.log('File uploaded successfully:', uploadData);
 
-      // Create document record in the database
       const { error: dbError } = await supabase
         .from('job_documents')
         .insert({
@@ -106,11 +105,9 @@ export const JobCardNew = ({
 
   const canEdit = userRole !== 'logistics';
 
-  // Get assigned technicians from profiles table through job_assignments
   const assignedTechnicians = job.job_assignments?.map((assignment: any) => {
     let role = null;
     
-    // Filter based on department
     switch (department) {
       case 'sound':
         role = assignment.sound_role;
@@ -122,7 +119,6 @@ export const JobCardNew = ({
         role = assignment.video_role;
         break;
       default:
-        // If no department specified, show any role
         role = assignment.sound_role || assignment.lights_role || assignment.video_role;
     }
 
@@ -163,17 +159,19 @@ export const JobCardNew = ({
                 </Button>
               </>
             )}
-            <div className="relative">
-              <input
-                type="file"
-                onChange={handleFileUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                onClick={(e) => e.stopPropagation()}
-              />
-              <Button variant="ghost" size="icon">
-                <Upload className="h-4 w-4" />
-              </Button>
-            </div>
+            {showUpload && (
+              <div className="relative">
+                <input
+                  type="file"
+                  onChange={handleFileUpload}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <Button variant="ghost" size="icon">
+                  <Upload className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </CardHeader>
