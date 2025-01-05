@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Department } from "@/types/department";
 import { JobAssignments } from "./JobAssignments";
+import { Button } from "../ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useState } from "react";
 import { toast } from "sonner";
-import { AssignmentForm } from "./AssignmentForm";
-import { JobData, TechnicianData } from "@/types/jobAssignment";
 
 interface JobAssignmentDialogProps {
   open: boolean;
@@ -28,7 +28,7 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
         .eq("department", department);
 
       if (error) throw error;
-      return data as TechnicianData[];
+      return data;
     },
   });
 
@@ -38,89 +38,37 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
       return;
     }
 
-    try {
-      // Check if assignment already exists
-      const { data: existingAssignment, error: checkError } = await supabase
-        .from("job_assignments")
-        .select("*")
-        .eq("job_id", jobId)
-        .eq("technician_id", selectedTechnician)
-        .maybeSingle();
-
-      if (checkError) throw checkError;
-
-      if (existingAssignment) {
-        toast.error("This technician is already assigned to this job");
-        return;
-      }
-
-      // Get technician details
-      const { data: technicianData, error: techError } = await supabase
-        .from("profiles")
-        .select("first_name, last_name, email")
-        .eq("id", selectedTechnician)
-        .single();
-
-      if (techError) throw techError;
-
-      // Get job details including location
-      const { data: jobData, error: jobError } = await supabase
-        .from("jobs")
-        .select(`
-          title,
-          start_time,
-          locations (
-            name
-          )
-        `)
-        .eq("id", jobId)
-        .single();
-
-      if (jobError) throw jobError;
-
-      // Create assignment with initial 'invited' status
-      const roleField = `${department}_role` as const;
-      const { error: assignError } = await supabase
-        .from("job_assignments")
-        .insert({
-          job_id: jobId,
-          technician_id: selectedTechnician,
-          [roleField]: selectedRole,
-          status: 'invited'
-        });
-
-      if (assignError) throw assignError;
-
-      // During development, only send emails to verified addresses
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Email sending is limited to verified addresses in development mode');
-        toast.info("Email sending is limited to verified addresses in development mode");
-      }
-
-      // Send email notification
-      const { error: emailError } = await supabase.functions.invoke('send-assignment-email', {
-        body: {
-          to: technicianData.email,
-          jobTitle: jobData.title,
-          technicianName: `${technicianData.first_name} ${technicianData.last_name}`,
-          startTime: new Date(jobData.start_time).toLocaleString(),
-          location: jobData.locations?.name || 'Location TBD'
-        }
+    const roleField = `${department}_role` as const;
+    const { error } = await supabase
+      .from("job_assignments")
+      .insert({
+        job_id: jobId,
+        technician_id: selectedTechnician,
+        [roleField]: selectedRole,
       });
 
-      if (emailError) {
-        console.error("Error sending email:", emailError);
-        toast.error("Assignment created but failed to send email notification");
-        return;
-      }
+    if (error) {
+      console.error("Error assigning technician:", error);
+      toast.error("Failed to assign technician");
+      return;
+    }
 
-      toast.success("Technician assigned successfully");
-      setSelectedTechnician("");
-      setSelectedRole("");
-      onOpenChange(false);
-    } catch (error: any) {
-      console.error("Error in assignment process:", error);
-      toast.error(error.message);
+    toast.success("Technician assigned successfully");
+    setSelectedTechnician("");
+    setSelectedRole("");
+    onOpenChange(false);
+  };
+
+  const getRoleOptions = (department: Department) => {
+    switch (department) {
+      case "sound":
+        return ["FOH Engineer", "Monitor Engineer", "PA Tech", "RF Tech"];
+      case "lights":
+        return ["Lighting Designer", "Lighting Tech", "Follow Spot"];
+      case "video":
+        return ["Video Director", "Camera Operator", "Video Tech"];
+      default:
+        return [];
     }
   };
 
@@ -132,18 +80,48 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
         </DialogHeader>
         
         <div className="space-y-4 mt-4">
-          <AssignmentForm
-            technicians={technicians}
-            selectedTechnician={selectedTechnician}
-            setSelectedTechnician={setSelectedTechnician}
-            selectedRole={selectedRole}
-            setSelectedRole={setSelectedRole}
-            department={department}
-            onCancel={() => onOpenChange(false)}
-            onAssign={handleAssign}
-          />
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Technician</label>
+            <Select value={selectedTechnician} onValueChange={setSelectedTechnician}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select technician" />
+              </SelectTrigger>
+              <SelectContent>
+                {technicians?.map((tech) => (
+                  <SelectItem key={tech.id} value={tech.id}>
+                    {tech.first_name} {tech.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Role</label>
+            <Select value={selectedRole} onValueChange={setSelectedRole}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                {getRoleOptions(department).map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {role}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <JobAssignments jobId={jobId} department={department} />
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAssign}>
+              Assign
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

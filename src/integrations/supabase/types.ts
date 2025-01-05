@@ -9,48 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      assignment_notifications: {
-        Row: {
-          created_at: string | null
-          id: string
-          job_id: string | null
-          message: string
-          read: boolean | null
-          technician_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          job_id?: string | null
-          message: string
-          read?: boolean | null
-          technician_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          job_id?: string | null
-          message?: string
-          read?: boolean | null
-          technician_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "assignment_notifications_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "assignment_notifications_technician_id_fkey"
-            columns: ["technician_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       direct_messages: {
         Row: {
           content: string
@@ -99,9 +57,7 @@ export type Database = {
           assigned_by: string | null
           job_id: string
           lights_role: string | null
-          response_time: string | null
           sound_role: string | null
-          status: Database["public"]["Enums"]["assignment_status"] | null
           technician_id: string
           video_role: string | null
         }
@@ -110,9 +66,7 @@ export type Database = {
           assigned_by?: string | null
           job_id: string
           lights_role?: string | null
-          response_time?: string | null
           sound_role?: string | null
-          status?: Database["public"]["Enums"]["assignment_status"] | null
           technician_id: string
           video_role?: string | null
         }
@@ -121,9 +75,7 @@ export type Database = {
           assigned_by?: string | null
           job_id?: string
           lights_role?: string | null
-          response_time?: string | null
           sound_role?: string | null
-          status?: Database["public"]["Enums"]["assignment_status"] | null
           technician_id?: string
           video_role?: string | null
         }
@@ -457,7 +409,6 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      assignment_status: "invited" | "confirmed" | "declined"
       department: "sound" | "lights" | "video"
       direct_message_status: "unread" | "read"
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
