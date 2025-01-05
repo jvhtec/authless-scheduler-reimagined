@@ -46,18 +46,20 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
           </Button>
         </Link>
 
-        {/* Profile link - accessible to all users */}
-        <Link to="/profile">
-          <Button
-            variant="ghost"
-            className={`w-full justify-start gap-2 ${
-              location.pathname === "/profile" ? "bg-accent" : ""
-            }`}
-          >
-            <UserCircle className="h-4 w-4" />
-            <span>Profile</span>
-          </Button>
-        </Link>
+        {/* Profile link - only visible to technicians */}
+        {isTechnician && (
+          <Link to="/profile">
+            <Button
+              variant="ghost"
+              className={`w-full justify-start gap-2 ${
+                location.pathname === "/profile" ? "bg-accent" : ""
+              }`}
+            >
+              <UserCircle className="h-4 w-4" />
+              <span>Profile</span>
+            </Button>
+          </Link>
+        )}
 
         {/* Project Management - only for admin, logistics, and management */}
         {isAuthorizedForProjectManagement && (
