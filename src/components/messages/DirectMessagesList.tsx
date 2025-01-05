@@ -12,8 +12,19 @@ export const DirectMessagesList = () => {
 
   useEffect(() => {
     const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUserId(user?.id);
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) {
+          console.error("Error getting current user:", error);
+          return;
+        }
+        if (user) {
+          console.log("Current user set:", user.id);
+          setCurrentUserId(user.id);
+        }
+      } catch (error) {
+        console.error("Error in getCurrentUser:", error);
+      }
     };
     getCurrentUser();
   }, []);
@@ -21,8 +32,8 @@ export const DirectMessagesList = () => {
   const fetchMessages = async () => {
     try {
       console.log("Fetching direct messages...");
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         console.log("No authenticated user found");
         return;
       }
@@ -36,7 +47,7 @@ export const DirectMessagesList = () => {
             sender:profiles!direct_messages_sender_id_fkey(first_name, last_name),
             recipient:profiles!direct_messages_recipient_id_fkey(first_name, last_name)
           `)
-          .eq('recipient_id', userData.user.id)
+          .eq('recipient_id', user.id)
           .order('created_at', { ascending: false }),
         
         supabase
@@ -46,7 +57,7 @@ export const DirectMessagesList = () => {
             sender:profiles!direct_messages_sender_id_fkey(first_name, last_name),
             recipient:profiles!direct_messages_recipient_id_fkey(first_name, last_name)
           `)
-          .eq('sender_id', userData.user.id)
+          .eq('sender_id', user.id)
           .order('created_at', { ascending: false })
       ]);
 
@@ -118,29 +129,31 @@ export const DirectMessagesList = () => {
   };
 
   useEffect(() => {
-    fetchMessages();
+    if (currentUserId) {
+      fetchMessages();
 
-    const channel = supabase
-      .channel('direct-messages-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'direct_messages'
-        },
-        () => {
-          console.log("Direct message changes detected, refreshing...");
-          fetchMessages();
-        }
-      )
-      .subscribe();
+      const channel = supabase
+        .channel('direct-messages-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'direct_messages'
+          },
+          () => {
+            console.log("Direct message changes detected, refreshing...");
+            fetchMessages();
+          }
+        )
+        .subscribe();
 
-    return () => {
-      console.log("Cleaning up direct messages subscription");
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      return () => {
+        console.log("Cleaning up direct messages subscription");
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [currentUserId]);
 
   if (loading) {
     return <div>Loading messages...</div>;
