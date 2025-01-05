@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Trash2 } from "lucide-react";
 import { MessageReplyDialog } from "./MessageReplyDialog";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   id: string;
@@ -22,6 +23,8 @@ export const MessagesList = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -38,6 +41,7 @@ export const MessagesList = () => {
 
         if (profileError) throw profileError;
 
+        setUserRole(profileData.role);
         console.log("User profile data:", profileData);
 
         const query = supabase
@@ -116,6 +120,32 @@ export const MessagesList = () => {
     };
   }, []);
 
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Message deleted",
+        description: "The message has been successfully deleted.",
+      });
+
+      // Update local state to remove the deleted message
+      setMessages(messages.filter(msg => msg.id !== messageId));
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the message. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return <div>Loading messages...</div>;
   }
@@ -140,7 +170,16 @@ export const MessagesList = () => {
                 </span>
               </div>
               <p className="mt-2">{message.content}</p>
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4 flex justify-end gap-2">
+                {(userRole === 'admin' || userRole === 'management') && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleDeleteMessage(message.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
