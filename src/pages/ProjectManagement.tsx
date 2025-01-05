@@ -9,16 +9,19 @@ import { MonthNavigation } from "@/components/project-management/MonthNavigation
 import { DepartmentTabs } from "@/components/project-management/DepartmentTabs";
 import { useJobManagement } from "@/hooks/useJobManagement";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
+import { useQueryClient } from "@tanstack/react-query";
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   const [currentDate, setCurrentDate] = useState(new Date());
+  const queryClient = useQueryClient();
 
   const startDate = startOfMonth(currentDate);
   const endDate = endOfMonth(currentDate);
 
+  // Set up tab visibility handling for jobs query
   useTabVisibility(['jobs']);
 
   const { jobs, jobsLoading, handleDeleteDocument } = useJobManagement(
@@ -27,47 +30,55 @@ const ProjectManagement = () => {
     endDate
   );
 
+  // Check user access
   useEffect(() => {
+    let mounted = true;
+
     const checkAccess = async () => {
       try {
         console.log("Checking session...");
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (!session) {
+        if (!session && mounted) {
           console.log("No session found, redirecting to auth");
           navigate('/auth');
           return;
         }
 
-        console.log("Session found, checking user role");
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
+        if (session && mounted) {
+          console.log("Session found, checking user role");
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
 
-        if (profileError) {
-          console.error("Error fetching profile:", profileError);
-          navigate('/dashboard');
-          return;
+          if (profileError) {
+            console.error("Error fetching profile:", profileError);
+            navigate('/dashboard');
+            return;
+          }
+
+          if (!profile || !['admin', 'logistics', 'management'].includes(profile.role)) {
+            console.log("Unauthorized access attempt, redirecting to dashboard");
+            navigate('/dashboard');
+            return;
+          }
+
+          console.log("Access granted for role:", profile.role);
         }
-
-        if (!profile || !['admin', 'logistics', 'management'].includes(profile.role)) {
-          console.log("Unauthorized access attempt, redirecting to dashboard");
-          navigate('/dashboard');
-          return;
-        }
-
-        console.log("Access granted for role:", profile.role);
       } catch (error) {
         console.error("Error in access check:", error);
-        navigate('/auth');
+        if (mounted) navigate('/auth');
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
     checkAccess();
+    return () => {
+      mounted = false;
+    };
   }, [navigate]);
 
   const handlePreviousMonth = () => {
