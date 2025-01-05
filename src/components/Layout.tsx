@@ -32,15 +32,20 @@ const Layout = ({ children }: LayoutProps) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [userDepartment, setUserDepartment] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkSession = async () => {
       try {
+        setIsLoading(true);
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         console.log("Initial session check:", currentSession ? "Session found" : "No session");
         
         if (!currentSession) {
           console.log("No session found, redirecting to auth");
+          setSession(null);
+          setUserRole(null);
+          setUserDepartment(null);
           navigate('/auth');
           return;
         }
@@ -71,6 +76,8 @@ const Layout = ({ children }: LayoutProps) => {
       } catch (error) {
         console.error("Error checking session:", error);
         navigate('/auth');
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -119,7 +126,6 @@ const Layout = ({ children }: LayoutProps) => {
     };
   }, [navigate, location.pathname]);
 
-  // Update effect to check for unread messages for both management and technician users
   useEffect(() => {
     if (!userRole || !userDepartment) return;
 
@@ -179,12 +185,11 @@ const Layout = ({ children }: LayoutProps) => {
     try {
       setSession(null);
       setUserRole(null);
-      localStorage.removeItem('supabase.auth.token');
-      localStorage.removeItem('supabase.auth.expires_at');
-      localStorage.removeItem('supabase.auth.refresh_token');
-      navigate('/auth');
+      setUserDepartment(null);
+      localStorage.clear(); // Clear all local storage
       await supabase.auth.signOut();
       console.log("Sign out successful");
+      navigate('/auth');
       toast({
         title: "Success",
         description: "You have been logged out successfully",
@@ -207,6 +212,19 @@ const Layout = ({ children }: LayoutProps) => {
       navigate('/technician-dashboard?showMessages=true');
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white" />
+      </div>
+    );
+  }
+
+  if (!session || !userRole) {
+    navigate('/auth');
+    return null;
+  }
 
   return (
     <SidebarProvider defaultOpen={true}>
