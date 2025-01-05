@@ -1,31 +1,22 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
-import { MessageSquare, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface DirectMessage {
-  id: string;
-  content: string;
-  created_at: string;
-  status: 'read' | 'unread';
-  sender: {
-    first_name: string;
-    last_name: string;
-  };
-  recipient: {
-    first_name: string;
-    last_name: string;
-  };
-  sender_id: string;
-}
+import { DirectMessage } from "./types";
+import { DirectMessageCard } from "./DirectMessageCard";
 
 export const DirectMessagesList = () => {
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string>();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id);
+    };
+    getCurrentUser();
+  }, []);
 
   const fetchMessages = async () => {
     try {
@@ -115,7 +106,6 @@ export const DirectMessagesList = () => {
         description: "The message has been successfully deleted.",
       });
 
-      // Update local state to remove the deleted message
       setMessages(messages.filter(msg => msg.id !== messageId));
     } catch (error: any) {
       console.error("Error deleting message:", error);
@@ -130,7 +120,6 @@ export const DirectMessagesList = () => {
   useEffect(() => {
     fetchMessages();
 
-    // Subscribe to real-time updates for both sent and received messages
     const channel = supabase
       .channel('direct-messages-changes')
       .on(
@@ -163,38 +152,12 @@ export const DirectMessagesList = () => {
         <p className="text-muted-foreground">No direct messages.</p>
       ) : (
         messages.map((message) => (
-          <Card key={message.id}>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex flex-col">
-                    <span className="font-medium">
-                      {message.sender.first_name} {message.sender.last_name}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      to {message.recipient.first_name} {message.recipient.last_name}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {format(new Date(message.created_at), 'PPp')}
-                  </span>
-                  {message.sender_id === supabase.auth.getUser().data.user?.id && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteMessage(message.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <p className="mt-2">{message.content}</p>
-            </CardContent>
-          </Card>
+          <DirectMessageCard
+            key={message.id}
+            message={message}
+            currentUserId={currentUserId}
+            onDelete={handleDeleteMessage}
+          />
         ))
       )}
     </div>
