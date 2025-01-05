@@ -58,10 +58,11 @@ const Layout = ({ children }: LayoutProps) => {
           console.log('User role fetched:', profileData.role);
           setUserRole(profileData.role);
           
-          // Redirect technicians to technician dashboard if they're on the main dashboard
+          // Redirect technicians to technician dashboard if they're on the main dashboard or root
           if (profileData.role === 'technician' && 
               (location.pathname === '/dashboard' || location.pathname === '/')) {
-            navigate('/technician-dashboard');
+            console.log('Redirecting technician to technician dashboard');
+            navigate('/technician-dashboard', { replace: true });
           }
         }
       } catch (error) {
@@ -100,10 +101,11 @@ const Layout = ({ children }: LayoutProps) => {
         console.log('User role fetched:', profileData.role);
         setUserRole(profileData.role);
         
-        // Redirect technicians to technician dashboard if they're on the main dashboard
+        // Redirect technicians to technician dashboard if they're on the main dashboard or root
         if (profileData.role === 'technician' && 
             (location.pathname === '/dashboard' || location.pathname === '/')) {
-          navigate('/technician-dashboard');
+          console.log('Redirecting technician to technician dashboard');
+          navigate('/technician-dashboard', { replace: true });
         }
       }
     });
@@ -120,21 +122,13 @@ const Layout = ({ children }: LayoutProps) => {
     console.log("Starting sign out process");
 
     try {
-      // First clear local state
       setSession(null);
       setUserRole(null);
-
-      // Clear all local storage related to auth
       localStorage.removeItem('supabase.auth.token');
       localStorage.removeItem('supabase.auth.expires_at');
       localStorage.removeItem('supabase.auth.refresh_token');
-      
-      // Navigate before signing out
       navigate('/auth');
-      
-      // Then sign out from Supabase
       await supabase.auth.signOut();
-      
       console.log("Sign out successful");
       toast({
         title: "Success",
