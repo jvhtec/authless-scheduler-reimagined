@@ -38,6 +38,8 @@ const handler = async (req: Request): Promise<Response> => {
       <p>Best regards,<br>Your Management Team</p>
     `;
 
+    console.log("Sending email to:", to);
+    
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -45,7 +47,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Job Assignments <notifications@yourdomain.com>",
+        from: "Job Assignments <onboarding@resend.dev>",
         to: [to],
         subject: `Job Assignment: ${jobTitle} - Confirmation Required`,
         html: html,
@@ -59,11 +61,13 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const data = await res.json();
+    console.log("Email sent successfully:", data);
+    
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in send-assignment-email function:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
