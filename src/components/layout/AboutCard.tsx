@@ -5,14 +5,18 @@ import {
 } from "@/components/ui/hover-card"
 import { Button } from "@/components/ui/button"
 import { Info } from "lucide-react"
+import { useState } from "react"
 
 export const AboutCard = () => {
+  const [isOpen, setIsOpen] = useState(false)
+
   return (
-    <HoverCard>
+    <HoverCard open={isOpen} onOpenChange={setIsOpen}>
       <HoverCardTrigger asChild>
         <Button 
           variant="ghost" 
           className="w-full justify-start gap-2"
+          onClick={() => setIsOpen(true)}
         >
           <Info className="h-4 w-4" />
           <span>About</span>
