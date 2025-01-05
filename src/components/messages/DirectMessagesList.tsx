@@ -4,14 +4,14 @@ import { useToast } from "@/hooks/use-toast";
 import { DirectMessage } from "./types";
 import { DirectMessageCard } from "./DirectMessageCard";
 import { useMessagesSubscription } from "./hooks/useMessagesSubscription";
-import { useMessageOperations } from "./hooks/useMessageOperations";
+import { useDirectMessageOperations } from "./hooks/useDirectMessageOperations";
 
 export const DirectMessagesList = () => {
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>();
   const { toast } = useToast();
-  const { handleDeleteMessage, handleMarkAsRead } = useMessageOperations(messages, setMessages, toast);
+  const { handleDeleteMessage, handleMarkAsRead } = useDirectMessageOperations(messages, setMessages, toast);
 
   useEffect(() => {
     const getCurrentUser = async () => {
