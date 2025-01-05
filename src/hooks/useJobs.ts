@@ -17,7 +17,8 @@ export const useJobs = () => {
             department
           )
         `)
-        .neq('job_type', 'tour'); // Exclude tour type jobs
+        .neq('job_type', 'tour')
+        .order('start_time', { ascending: true }); // Added ordering by start_time
 
       if (error) {
         console.error("Error fetching jobs:", error);
