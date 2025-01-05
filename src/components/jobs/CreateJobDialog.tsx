@@ -80,8 +80,10 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
 
       console.log("Job departments created");
 
-      // Invalidate the jobs query to refresh the data
+      // Invalidate both jobs and tours queries to refresh the data
       await queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      await queryClient.invalidateQueries({ queryKey: ['tours'] });
+      await queryClient.invalidateQueries({ queryKey: ['tours-with-dates'] });
 
       console.log("Job creation completed successfully");
 
