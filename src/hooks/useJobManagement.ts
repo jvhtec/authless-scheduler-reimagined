@@ -68,7 +68,7 @@ export const useJobManagement = (
   }, [selectedDepartment, startDate, endDate]);
 
   const { data: jobs, isLoading: jobsLoading } = useQuery({
-    queryKey: ['jobs', selectedDepartment, startDate, endDate],
+    queryKey: ['jobs', selectedDepartment, startDate.toISOString(), endDate.toISOString()],
     queryFn: fetchJobs,
     staleTime: 1000 * 30, // 30 seconds
     refetchOnWindowFocus: true,

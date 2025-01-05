@@ -22,7 +22,7 @@ const ProjectManagement = () => {
   const endDate = endOfMonth(currentDate);
 
   // Set up tab visibility handling for jobs query
-  useTabVisibility(['jobs']);
+  useTabVisibility(['jobs', selectedDepartment, startDate.toISOString(), endDate.toISOString()]);
 
   const { jobs, jobsLoading, handleDeleteDocument } = useJobManagement(
     selectedDepartment,
@@ -74,7 +74,7 @@ const ProjectManagement = () => {
           setAuthLoading(false);
           // Prefetch jobs data after auth check
           queryClient.prefetchQuery({
-            queryKey: ['jobs', selectedDepartment, startDate, endDate],
+            queryKey: ['jobs', selectedDepartment, startDate.toISOString(), endDate.toISOString()],
             queryFn: () => null // This will trigger the actual fetch in useJobManagement
           });
         }
