@@ -43,11 +43,6 @@ export const useSessionManager = () => {
       const profileData = await fetchUserProfile(currentSession.user.id);
       setUserRole(profileData.role);
       setUserDepartment(profileData.department);
-      
-      // Navigate based on role
-      if (profileData.role === 'technician') {
-        navigate('/technician-dashboard', { replace: true });
-      }
     } catch (error) {
       console.error("Error in session update:", error);
       navigate('/auth');
@@ -95,15 +90,15 @@ export const useSessionManager = () => {
               const profileData = await fetchUserProfile(session.user.id);
               console.log('Updated profile data:', profileData);
               
-              // First update the state
+              // Update state
               setUserRole(profileData.role);
               setUserDepartment(profileData.department);
               
-              // Then handle navigation based on the new role
-              if (profileData.role === 'technician') {
-                window.location.href = '/technician-dashboard';
-              } else {
-                window.location.href = '/dashboard';
+              // Only force reload if we're not on the settings page
+              const currentPath = window.location.pathname;
+              if (currentPath !== '/settings' && profileData.role !== userRole) {
+                const newPath = profileData.role === 'technician' ? '/technician-dashboard' : '/dashboard';
+                window.location.href = newPath;
               }
             } catch (error) {
               console.error('Error updating profile data:', error);
