@@ -19,28 +19,35 @@ export const DirectMessagesList = () => {
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        console.log("Fetching direct messages...");
-        const { data: userData } = await supabase.auth.getUser();
-        if (!userData.user) return;
+  const fetchMessages = async () => {
+    try {
+      console.log("Fetching direct messages...");
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        console.log("No authenticated user found");
+        return;
+      }
 
-        const { data, error } = await supabase
-          .from('direct_messages')
-          .select(`
-            *,
-            sender:profiles(first_name, last_name)
-          `)
-          .eq('recipient_id', userData.user.id)
-          .order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('direct_messages')
+        .select(`
+          *,
+          sender:profiles(first_name, last_name)
+        `)
+        .eq('recipient_id', userData.user.id)
+        .order('created_at', { ascending: false });
 
-        if (error) throw error;
+      if (error) {
+        console.error("Error fetching direct messages:", error);
+        throw error;
+      }
 
-        console.log("Fetched direct messages:", data);
-        setMessages(data || []);
+      console.log("Fetched direct messages:", data);
+      setMessages(data || []);
 
-        // Mark unread messages as read
+      // Mark unread messages as read
+      const unreadMessages = data?.filter(msg => msg.status === 'unread') || [];
+      if (unreadMessages.length > 0) {
         const { error: updateError } = await supabase
           .from('direct_messages')
           .update({ status: 'read' })
@@ -50,18 +57,20 @@ export const DirectMessagesList = () => {
         if (updateError) {
           console.error("Error updating message status:", updateError);
         }
-      } catch (error) {
-        console.error("Error fetching direct messages:", error);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Error in fetchMessages:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchMessages();
 
     // Subscribe to real-time updates
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel('direct-messages-changes')
       .on(
         'postgres_changes',
         {
@@ -69,14 +78,15 @@ export const DirectMessagesList = () => {
           schema: 'public',
           table: 'direct_messages'
         },
-        () => {
-          console.log("Direct message changes detected, refreshing...");
+        (payload) => {
+          console.log("Direct message changes detected:", payload);
           fetchMessages();
         }
       )
       .subscribe();
 
     return () => {
+      console.log("Cleaning up direct messages subscription");
       supabase.removeChannel(channel);
     };
   }, []);
