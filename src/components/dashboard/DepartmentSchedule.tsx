@@ -35,7 +35,13 @@ export const DepartmentSchedule = ({
     try {
       setIsRefreshing(true);
       console.log(`Refreshing ${name} department schedule...`);
-      await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      // Invalidate and refetch the jobs query
+      await queryClient.invalidateQueries({ 
+        queryKey: ["jobs"],
+        refetchType: "active",
+        exact: false
+      });
+      console.log(`${name} department schedule refreshed successfully`);
       toast.success(`${name} schedule refreshed`);
     } catch (error) {
       console.error(`Error refreshing ${name} schedule:`, error);
