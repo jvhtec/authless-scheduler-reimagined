@@ -49,6 +49,21 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
     }
 
     try {
+      // Check if assignment already exists
+      const { data: existingAssignment, error: checkError } = await supabase
+        .from("job_assignments")
+        .select("*")
+        .eq("job_id", jobId)
+        .eq("technician_id", selectedTechnician)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingAssignment) {
+        toast.error("This technician is already assigned to this job");
+        return;
+      }
+
       // Get technician details
       const { data: technicianData, error: techError } = await supabase
         .from("profiles")
@@ -86,6 +101,11 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
 
       if (assignError) throw assignError;
 
+      // During development, only send emails to verified addresses
+      if (process.env.NODE_ENV === 'development') {
+        toast.info("Email sending is limited to verified addresses in development mode");
+      }
+
       // Send email notification
       const { error: emailError } = await supabase.functions.invoke('send-assignment-email', {
         body: {
@@ -103,7 +123,7 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
         return;
       }
 
-      toast.success("Technician assigned and notification sent");
+      toast.success("Technician assigned successfully");
       setSelectedTechnician("");
       setSelectedRole("");
       onOpenChange(false);
