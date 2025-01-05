@@ -17,7 +17,6 @@ export const useSessionManager = () => {
 
   const handleSessionUpdate = useCallback(async (currentSession: any) => {
     console.log("Session update handler called with session:", !!currentSession);
-    setIsLoading(true);
     
     try {
       if (!currentSession) {
@@ -33,8 +32,12 @@ export const useSessionManager = () => {
       setSession(currentSession);
       
       const profileData = await fetchUserProfile(currentSession.user.id);
-      setUserRole(profileData.role);
-      setUserDepartment(profileData.department);
+      if (profileData) {
+        setUserRole(profileData.role);
+        setUserDepartment(profileData.department);
+      } else {
+        throw new Error("No profile data found");
+      }
     } catch (error) {
       console.error("Error in session update:", error);
       setSession(null);

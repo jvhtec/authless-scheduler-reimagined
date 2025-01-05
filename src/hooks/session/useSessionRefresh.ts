@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export const useSessionRefresh = () => {
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshTimeoutRef = useRef<NodeJS.Timeout>();
+  const visibilityTimeoutRef = useRef<NodeJS.Timeout>();
 
   const refreshSession = useCallback(async () => {
     console.log("Attempting session refresh...");
@@ -37,24 +39,57 @@ export const useSessionRefresh = () => {
     }
   }, [isRefreshing]);
 
-  // Periodic session refresh
+  // Handle tab visibility changes
   useEffect(() => {
-    const REFRESH_INTERVAL = 4 * 60 * 1000; // 4 minutes
-    let refreshTimer: NodeJS.Timeout;
-
-    const periodicRefresh = async () => {
-      if (Date.now() - lastRefresh >= REFRESH_INTERVAL) {
-        console.log("Initiating periodic session refresh");
-        await refreshSession();
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        console.log("Tab became visible, scheduling session refresh");
+        // Clear any existing timeout
+        if (visibilityTimeoutRef.current) {
+          clearTimeout(visibilityTimeoutRef.current);
+        }
+        // Add a small delay to ensure browser is ready
+        visibilityTimeoutRef.current = setTimeout(async () => {
+          await refreshSession();
+        }, 1000);
       }
     };
 
-    refreshTimer = setInterval(periodicRefresh, REFRESH_INTERVAL);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (visibilityTimeoutRef.current) {
+        clearTimeout(visibilityTimeoutRef.current);
+      }
+    };
+  }, [refreshSession]);
+
+  // Periodic session refresh
+  useEffect(() => {
+    const REFRESH_INTERVAL = 4 * 60 * 1000; // 4 minutes
+
+    const scheduleNextRefresh = () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+
+      refreshTimeoutRef.current = setTimeout(async () => {
+        if (document.visibilityState === 'visible') {
+          console.log("Initiating periodic session refresh");
+          await refreshSession();
+        }
+        scheduleNextRefresh();
+      }, REFRESH_INTERVAL);
+    };
+
+    scheduleNextRefresh();
 
     return () => {
-      clearInterval(refreshTimer);
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
     };
-  }, [lastRefresh, refreshSession]);
+  }, [refreshSession]);
 
   return { refreshSession, lastRefresh, isRefreshing };
 };
