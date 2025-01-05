@@ -55,19 +55,24 @@ const Layout = ({ children }: LayoutProps) => {
   }, [navigate]);
 
   const fetchUserRole = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
 
-    if (error) {
-      console.error('Error fetching user role:', error);
-      return;
-    }
+      if (error) {
+        console.error('Error fetching user role:', error);
+        return;
+      }
 
-    if (data) {
-      setUserRole(data.role);
+      if (data) {
+        console.log('User role fetched:', data.role);
+        setUserRole(data.role);
+      }
+    } catch (error) {
+      console.error('Error in fetchUserRole:', error);
     }
   };
 
@@ -75,51 +80,31 @@ const Layout = ({ children }: LayoutProps) => {
     try {
       console.log("Starting sign out process");
       
-      // First check if we have a valid session
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      
-      if (!currentSession) {
-        console.log("No valid session found, clearing state and redirecting");
-        setSession(null);
-        setUserRole(null);
-        navigate('/auth');
-        return;
-      }
+      // Clear local state first
+      setSession(null);
+      setUserRole(null);
 
-      // Attempt to sign out
+      // Attempt to sign out from Supabase
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error("Error during sign out:", error);
-        // If we get a session_not_found error, clear state and redirect anyway
-        if (error.message.includes('session_not_found')) {
-          setSession(null);
-          setUserRole(null);
-          navigate('/auth');
-          return;
-        }
-        
+        // Even if there's an error, we want to clear the local session
         toast({
-          title: "Error signing out",
-          description: "Please try again",
-          variant: "destructive",
+          title: "Warning",
+          description: "You have been logged out locally",
         });
-        return;
+      } else {
+        console.log("Sign out successful");
+        toast({
+          title: "Signed out successfully",
+          description: "You have been logged out",
+        });
       }
-
-      console.log("Sign out successful");
-      setSession(null);
-      setUserRole(null);
-      toast({
-        title: "Signed out successfully",
-        description: "You have been logged out",
-      });
-      navigate('/auth');
     } catch (error) {
       console.error("Unexpected error during sign out:", error);
-      // In case of any unexpected error, clear state and redirect
-      setSession(null);
-      setUserRole(null);
+    } finally {
+      // Always navigate to auth page
       navigate('/auth');
     }
   };
