@@ -44,6 +44,7 @@ export const useSessionManager = () => {
       setUserRole(profileData.role);
       setUserDepartment(profileData.department);
       
+      // Navigate based on role
       if (profileData.role === 'technician') {
         navigate('/technician-dashboard', { replace: true });
       }
@@ -94,19 +95,16 @@ export const useSessionManager = () => {
               const profileData = await fetchUserProfile(session.user.id);
               console.log('Updated profile data:', profileData);
               
-              // Update state with new role and department
+              // First update the state
               setUserRole(profileData.role);
               setUserDepartment(profileData.department);
               
-              // Redirect if role changed to/from technician
+              // Then handle navigation based on the new role
               if (profileData.role === 'technician') {
-                navigate('/technician-dashboard', { replace: true });
-              } else if (userRole === 'technician' && profileData.role !== 'technician') {
-                navigate('/dashboard', { replace: true });
+                window.location.href = '/technician-dashboard';
+              } else {
+                window.location.href = '/dashboard';
               }
-              
-              // Force a page reload to ensure all components update
-              window.location.reload();
             } catch (error) {
               console.error('Error updating profile data:', error);
             }
