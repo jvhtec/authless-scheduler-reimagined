@@ -1,16 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
-import { Music2, Lightbulb, Video, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Department } from "@/types/department";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { DepartmentTabContent } from "@/components/dashboard/DepartmentTabContent";
 import { JobDocument } from "@/types/job";
-import { Button } from "@/components/ui/button";
-import { startOfMonth, endOfMonth, addMonths, format } from "date-fns";
+import { startOfMonth, endOfMonth, addMonths } from "date-fns";
+import { MonthNavigation } from "@/components/project-management/MonthNavigation";
+import { DepartmentTabs } from "@/components/project-management/DepartmentTabs";
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
@@ -21,6 +20,23 @@ const ProjectManagement = () => {
 
   const startDate = startOfMonth(currentDate);
   const endDate = endOfMonth(currentDate);
+
+  // Add a loading timeout
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.log("Loading timeout reached, redirecting to dashboard");
+        navigate('/dashboard');
+        toast({
+          title: "Error",
+          description: "Loading took too long. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeoutId);
+  }, [loading, navigate, toast]);
 
   const { data: jobs, isLoading: jobsLoading, refetch: refetchJobs } = useQuery({
     queryKey: ['jobs', selectedDepartment, startDate, endDate],
@@ -70,47 +86,6 @@ const ProjectManagement = () => {
     }
   });
 
-  const handleDeleteDocument = async (jobId: string, document: JobDocument) => {
-    try {
-      // Delete from storage
-      const { error: storageError } = await supabase.storage
-        .from('job_documents')
-        .remove([document.file_path]);
-
-      if (storageError) throw storageError;
-
-      // Delete from database
-      const { error: dbError } = await supabase
-        .from('job_documents')
-        .delete()
-        .eq('id', document.id);
-
-      if (dbError) throw dbError;
-
-      toast({
-        title: "Document deleted",
-        description: "The document has been successfully deleted.",
-      });
-
-      refetchJobs();
-    } catch (error: any) {
-      console.error('Error deleting document:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete document: " + error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handlePreviousMonth = () => {
-    setCurrentDate(prev => addMonths(prev, -1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentDate(prev => addMonths(prev, 1));
-  };
-
   useEffect(() => {
     const checkAccess = async () => {
       try {
@@ -154,7 +129,48 @@ const ProjectManagement = () => {
     checkAccess();
   }, [navigate]);
 
-  if (loading) {
+  const handleDeleteDocument = async (jobId: string, document: JobDocument) => {
+    try {
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('job_documents')
+        .remove([document.file_path]);
+
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('job_documents')
+        .delete()
+        .eq('id', document.id);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Document deleted",
+        description: "The document has been successfully deleted.",
+      });
+
+      refetchJobs();
+    } catch (error: any) {
+      console.error('Error deleting document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete document: " + error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePreviousMonth = () => {
+    setCurrentDate(prev => addMonths(prev, -1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(prev => addMonths(prev, 1));
+  };
+
+  if (loading || jobsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -169,54 +185,18 @@ const ProjectManagement = () => {
           <CardTitle>Project Management</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between mb-6">
-            <Button variant="outline" size="sm" onClick={handlePreviousMonth}>
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Previous
-            </Button>
-            <h2 className="text-lg font-semibold">
-              {format(currentDate, 'MMMM yyyy')}
-            </h2>
-            <Button variant="outline" size="sm" onClick={handleNextMonth}>
-              Next
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-
-          <Tabs defaultValue="sound" onValueChange={(value) => setSelectedDepartment(value as Department)}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="sound" className="flex items-center gap-2">
-                <Music2 className="h-4 w-4" />
-                Sound
-              </TabsTrigger>
-              <TabsTrigger value="lights" className="flex items-center gap-2">
-                <Lightbulb className="h-4 w-4" />
-                Lights
-              </TabsTrigger>
-              <TabsTrigger value="video" className="flex items-center gap-2">
-                <Video className="h-4 w-4" />
-                Video
-              </TabsTrigger>
-            </TabsList>
-
-            {["sound", "lights", "video"].map((dept) => (
-              <TabsContent key={dept} value={dept}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="capitalize">{dept} Jobs</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <DepartmentTabContent
-                      department={dept as Department}
-                      jobs={jobs || []}
-                      isLoading={jobsLoading}
-                      onDeleteDocument={handleDeleteDocument}
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            ))}
-          </Tabs>
+          <MonthNavigation
+            currentDate={currentDate}
+            onPreviousMonth={handlePreviousMonth}
+            onNextMonth={handleNextMonth}
+          />
+          <DepartmentTabs
+            selectedDepartment={selectedDepartment}
+            onDepartmentChange={(value) => setSelectedDepartment(value as Department)}
+            jobs={jobs || []}
+            jobsLoading={jobsLoading}
+            onDeleteDocument={handleDeleteDocument}
+          />
         </CardContent>
       </Card>
     </div>
