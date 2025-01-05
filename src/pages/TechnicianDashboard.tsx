@@ -6,7 +6,7 @@ import { addWeeks, addMonths } from "date-fns";
 import { TimeSpanSelector } from "@/components/technician/TimeSpanSelector";
 import { MessageManagementDialog } from "@/components/technician/MessageManagementDialog";
 import { AssignmentsList } from "@/components/technician/AssignmentsList";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Dialog } from "@/components/ui/dialog";
 
 const TechnicianDashboard = () => {
@@ -16,10 +16,12 @@ const TechnicianDashboard = () => {
   const [userDepartment, setUserDepartment] = useState<string | null>(null);
   const [showMessages, setShowMessages] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
-    setShowMessages(searchParams.get('showMessages') === 'true');
+    const shouldShowMessages = searchParams.get('showMessages') === 'true';
+    setShowMessages(shouldShowMessages);
   }, [location.search]);
 
   useEffect(() => {
@@ -96,12 +98,18 @@ const TechnicianDashboard = () => {
     }
   };
 
+  const handleCloseMessages = () => {
+    setShowMessages(false);
+    navigate('/technician-dashboard');
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Technician Dashboard</h1>
         <div className="flex items-center gap-4">
           <TimeSpanSelector value={timeSpan} onValueChange={setTimeSpan} />
+          <MessageManagementDialog department={userDepartment} />
         </div>
       </div>
 
@@ -118,7 +126,7 @@ const TechnicianDashboard = () => {
       </Card>
 
       {showMessages && (
-        <Dialog open={showMessages} onOpenChange={setShowMessages}>
+        <Dialog open={showMessages} onOpenChange={handleCloseMessages}>
           <MessageManagementDialog department={userDepartment} trigger={false} />
         </Dialog>
       )}
