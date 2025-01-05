@@ -50,14 +50,14 @@ export const JobCardNew = ({
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !department) return;
 
     try {
       console.log('Starting file upload for job:', job.id);
       
-      // Generate a unique file path
+      // Generate a unique file path that includes the department
       const fileExt = file.name.split('.').pop();
-      const filePath = `${job.id}/${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${department}/${job.id}/${crypto.randomUUID()}.${fileExt}`;
 
       // Upload file to storage
       const { data: uploadData, error: uploadError } = await supabase.storage
