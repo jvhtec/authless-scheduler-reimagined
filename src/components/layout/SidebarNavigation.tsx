@@ -16,7 +16,7 @@ interface SidebarNavigationProps {
 
 export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
   const location = useLocation();
-  console.log('Current user role:', userRole);
+  console.log('Current user role in navigation:', userRole);
 
   // Only admin, logistics, and management can access project management
   const isAuthorizedForProjectManagement = ['admin', 'logistics', 'management'].includes(userRole || '');
@@ -29,6 +29,12 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
 
   // Technicians should only see technician dashboard
   const isTechnician = userRole === 'technician';
+
+  // Don't render navigation until role is loaded
+  if (!userRole) {
+    console.log('User role not yet loaded, waiting...');
+    return null;
+  }
 
   return (
     <div className="space-y-2">

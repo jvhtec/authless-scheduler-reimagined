@@ -3,6 +3,8 @@ import { supabase } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { MessageSquare } from "lucide-react";
+import { MessageReplyDialog } from "./MessageReplyDialog";
+import { Button } from "@/components/ui/button";
 
 interface Message {
   id: string;
@@ -19,6 +21,7 @@ interface Message {
 export const MessagesList = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -115,10 +118,25 @@ export const MessagesList = () => {
                 </span>
               </div>
               <p className="mt-2">{message.content}</p>
+              <div className="mt-4 flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedMessage(message)}
+                >
+                  Reply
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))
       )}
+
+      <MessageReplyDialog
+        message={selectedMessage}
+        open={!!selectedMessage}
+        onOpenChange={(open) => !open && setSelectedMessage(null)}
+      />
     </div>
   );
 };
