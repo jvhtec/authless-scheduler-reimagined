@@ -10,12 +10,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { LightsCalendar } from "@/components/lights/LightsCalendar";
-import { LightsSchedule } from "@/components/lights/LightsSchedule";
 import { TourChips } from "@/components/dashboard/TourChips";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, Music, Video, Lightbulb } from "lucide-react";
+import { CalendarDays, Music, Video, Lightbulb, MessageSquare } from "lucide-react";
 import { DepartmentSchedule } from "@/components/dashboard/DepartmentSchedule";
 import { JobCardNew } from "@/components/dashboard/JobCardNew";
+import { MessagesList } from "@/components/messages/MessagesList";
 
 const Dashboard = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -26,6 +26,7 @@ const Dashboard = () => {
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [showMessages, setShowMessages] = useState(false);
   
   const { data: jobs, isLoading } = useJobs();
   const { toast } = useToast();
@@ -49,6 +50,11 @@ const Dashboard = () => {
 
         if (data) {
           setUserRole(data.role);
+          // Show messages by default if we got here from notification
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('showMessages') === 'true') {
+            setShowMessages(true);
+          }
         }
       }
     };
@@ -88,63 +94,47 @@ const Dashboard = () => {
   };
 
   const handleJobClick = (jobId: string, department: Department) => {
-    if (userRole === 'logistics') return; // Prevent logistics users from assigning technicians
+    if (userRole === 'logistics') return;
     setSelectedJobId(jobId);
     setSelectedDepartment(department);
     setIsAssignmentDialogOpen(true);
   };
 
   const handleEditClick = (job: any) => {
-    if (userRole === 'logistics') return; // Prevent logistics users from editing jobs
+    if (userRole === 'logistics') return;
     setSelectedJob(job);
     setIsEditDialogOpen(true);
   };
 
   const handleDeleteClick = async (jobId: string) => {
-    if (userRole === 'logistics') return; // Prevent logistics users from deleting jobs
+    if (userRole === 'logistics') return;
     
     if (!window.confirm("Are you sure you want to delete this job?")) return;
 
     try {
       console.log("Starting job deletion process for job:", jobId);
 
-      // Delete job assignments
-      console.log("Deleting job assignments...");
       const { error: assignmentsError } = await supabase
         .from("job_assignments")
         .delete()
         .eq("job_id", jobId);
 
-      if (assignmentsError) {
-        console.error("Error deleting job assignments:", assignmentsError);
-        throw assignmentsError;
-      }
+      if (assignmentsError) throw assignmentsError;
 
-      // Delete job departments
-      console.log("Deleting job departments...");
       const { error: departmentsError } = await supabase
         .from("job_departments")
         .delete()
         .eq("job_id", jobId);
 
-      if (departmentsError) {
-        console.error("Error deleting job departments:", departmentsError);
-        throw departmentsError;
-      }
+      if (departmentsError) throw departmentsError;
 
-      // Delete the job
-      console.log("Deleting the job...");
       const { error: jobError } = await supabase
         .from("jobs")
         .delete()
         .eq("id", jobId);
 
-      if (jobError) {
-        console.error("Error deleting job:", jobError);
-        throw jobError;
-      }
+      if (jobError) throw jobError;
 
-      console.log("Job deletion completed successfully");
       toast({
         title: "Job deleted successfully",
         description: "The job and all related records have been removed.",
@@ -165,6 +155,28 @@ const Dashboard = () => {
     <div className="container mx-auto px-4 py-6 space-y-8">
       <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
       
+      {userRole === 'management' && (
+        <Card className="w-full">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="w-6 h-6" />
+              Messages
+            </CardTitle>
+            <button
+              onClick={() => setShowMessages(!showMessages)}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              {showMessages ? 'Hide' : 'Show'}
+            </button>
+          </CardHeader>
+          {showMessages && (
+            <CardContent>
+              <MessagesList />
+            </CardContent>
+          )}
+        </Card>
+      )}
+
       <Card className="w-full bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

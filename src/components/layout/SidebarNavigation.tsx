@@ -19,13 +19,13 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
   console.log('Current user role:', userRole);
 
   // Only admin, logistics, and management can access project management
-  const isAuthorizedForProjectManagement = ['admin', 'logistics', 'management'].includes(userRole as string);
+  const isAuthorizedForProjectManagement = ['admin', 'logistics', 'management'].includes(userRole || '');
   
   // Only admin and management can access department pages
-  const isAuthorizedForDepartments = ['admin', 'management'].includes(userRole as string);
+  const isAuthorizedForDepartments = ['admin', 'management'].includes(userRole || '');
   
   // Admin and management can access settings
-  const isAuthorizedForSettings = ['admin', 'management'].includes(userRole as string);
+  const isAuthorizedForSettings = ['admin', 'management'].includes(userRole || '');
 
   // Technicians should only see technician dashboard
   const isTechnician = userRole === 'technician';
@@ -33,7 +33,6 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
   return (
     <div className="space-y-2">
       <div>
-        {/* Show regular dashboard for admin/management/logistics, technician dashboard for technicians */}
         <Link to={isTechnician ? "/technician-dashboard" : "/dashboard"}>
           <Button
             variant="ghost"
@@ -46,7 +45,6 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
           </Button>
         </Link>
 
-        {/* Profile link - only visible to technicians */}
         {isTechnician && (
           <Link to="/profile">
             <Button
@@ -61,7 +59,6 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
           </Link>
         )}
 
-        {/* Project Management - only for admin, logistics, and management */}
         {isAuthorizedForProjectManagement && (
           <Link to="/project-management">
             <Button
@@ -76,7 +73,6 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
           </Link>
         )}
 
-        {/* Department pages - only for admin and management */}
         {isAuthorizedForDepartments && (
           <>
             <Link to="/sound">
@@ -117,7 +113,6 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
           </>
         )}
 
-        {/* Settings - only for admin and management */}
         {isAuthorizedForSettings && (
           <Link to="/settings">
             <Button

@@ -191,6 +191,10 @@ const Layout = ({ children }: LayoutProps) => {
     }
   };
 
+  const handleMessageNotificationClick = () => {
+    navigate('/dashboard?showMessages=true');
+  };
+
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full">
@@ -209,7 +213,7 @@ const Layout = ({ children }: LayoutProps) => {
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-2 text-yellow-500"
-                onClick={() => navigate('/dashboard')}
+                onClick={handleMessageNotificationClick}
               >
                 <BellDot className="h-4 w-4" />
                 <span>New Messages</span>
