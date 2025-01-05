@@ -6,7 +6,8 @@ import {
   Lightbulb,
   Video,
   Settings,
-  Briefcase
+  Briefcase,
+  UserCircle
 } from "lucide-react";
 
 interface SidebarNavigationProps {
@@ -15,29 +16,29 @@ interface SidebarNavigationProps {
 
 export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
   const location = useLocation();
+  console.log('Current user role:', userRole);
 
   // Only admin, logistics, and management can access project management
   const isAuthorizedForProjectManagement = ['admin', 'logistics', 'management'].includes(userRole as string);
   
-  // Only admin, management, and technicians can access department pages
-  const isAuthorizedForDepartments = ['admin', 'management', 'technician'].includes(userRole as string);
+  // Only admin and management can access department pages
+  const isAuthorizedForDepartments = ['admin', 'management'].includes(userRole as string);
   
   // Admin and management can access settings
   const isAuthorizedForSettings = ['admin', 'management'].includes(userRole as string);
 
-  console.log('Current user role:', userRole);
-  console.log('Can access project management:', isAuthorizedForProjectManagement);
-  console.log('Can access departments:', isAuthorizedForDepartments);
-  console.log('Can access settings:', isAuthorizedForSettings);
+  // Technicians should only see technician dashboard
+  const isTechnician = userRole === 'technician';
 
   return (
     <div className="space-y-2">
       <div>
-        <Link to="/dashboard">
+        {/* Show regular dashboard for admin/management/logistics, technician dashboard for technicians */}
+        <Link to={isTechnician ? "/technician-dashboard" : "/dashboard"}>
           <Button
             variant="ghost"
             className={`w-full justify-start gap-2 ${
-              location.pathname === "/dashboard" ? "bg-accent" : ""
+              location.pathname === (isTechnician ? "/technician-dashboard" : "/dashboard") ? "bg-accent" : ""
             }`}
           >
             <LayoutDashboard className="h-4 w-4" />
@@ -45,6 +46,20 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
           </Button>
         </Link>
 
+        {/* Profile link - accessible to all users */}
+        <Link to="/profile">
+          <Button
+            variant="ghost"
+            className={`w-full justify-start gap-2 ${
+              location.pathname === "/profile" ? "bg-accent" : ""
+            }`}
+          >
+            <UserCircle className="h-4 w-4" />
+            <span>Profile</span>
+          </Button>
+        </Link>
+
+        {/* Project Management - only for admin, logistics, and management */}
         {isAuthorizedForProjectManagement && (
           <Link to="/project-management">
             <Button
@@ -59,6 +74,7 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
           </Link>
         )}
 
+        {/* Department pages - only for admin and management */}
         {isAuthorizedForDepartments && (
           <>
             <Link to="/sound">
@@ -99,6 +115,7 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
           </>
         )}
 
+        {/* Settings - only for admin and management */}
         {isAuthorizedForSettings && (
           <Link to="/settings">
             <Button
