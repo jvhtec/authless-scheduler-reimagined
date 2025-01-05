@@ -9,7 +9,7 @@ import {
   SidebarSeparator,
   SidebarTrigger
 } from "@/components/ui/sidebar";
-import { LogOut } from "lucide-react";
+import { LogOut, BellDot } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -29,6 +29,8 @@ const Layout = ({ children }: LayoutProps) => {
   const [session, setSession] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [userDepartment, setUserDepartment] = useState<string | null>(null);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -115,6 +117,49 @@ const Layout = ({ children }: LayoutProps) => {
     };
   }, [navigate, location.pathname]);
 
+  // Add effect to check for unread messages for management users
+  useEffect(() => {
+    if (userRole !== 'management' || !userDepartment) return;
+
+    const fetchUnreadMessages = async () => {
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('department', userDepartment)
+        .eq('status', 'unread');
+
+      if (error) {
+        console.error('Error fetching unread messages:', error);
+        return;
+      }
+
+      setHasUnreadMessages(messages.length > 0);
+    };
+
+    fetchUnreadMessages();
+
+    // Subscribe to real-time updates for messages
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `department=eq.${userDepartment}`,
+        },
+        () => {
+          fetchUnreadMessages();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userRole, userDepartment]);
+
   const handleSignOut = async () => {
     if (isLoggingOut) return;
     
@@ -159,6 +204,16 @@ const Layout = ({ children }: LayoutProps) => {
           <SidebarFooter className="border-t border-sidebar-border">
             <ThemeToggle />
             <UserInfo />
+            {userRole === 'management' && hasUnreadMessages && location.pathname !== '/dashboard' && (
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-2 text-yellow-500"
+                onClick={() => navigate('/dashboard')}
+              >
+                <BellDot className="h-4 w-4" />
+                <span>New Messages</span>
+              </Button>
+            )}
             <Button 
               variant="ghost" 
               className="w-full justify-start gap-2" 

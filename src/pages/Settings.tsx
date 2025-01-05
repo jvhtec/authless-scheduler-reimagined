@@ -1,16 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserPlus, MessageSquare } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CreateUserDialog } from "@/components/users/CreateUserDialog";
 import { UsersList } from "@/components/users/UsersList";
 import { useState } from "react";
-import { MessagesList } from "@/components/messages/MessagesList";
-import { SendMessage } from "@/components/messages/SendMessage";
-import { Department } from "@/types/department";
 
 const Settings = () => {
   const [createUserOpen, setCreateUserOpen] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
 
   return (
     <div className="space-y-6">
@@ -30,32 +26,6 @@ const Settings = () => {
             </CardHeader>
             <CardContent>
               <UsersList />
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Messages
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <select 
-                  value={selectedDepartment}
-                  onChange={(e) => setSelectedDepartment(e.target.value as Department)}
-                  className="w-full p-2 border rounded"
-                >
-                  <option value="sound">Sound</option>
-                  <option value="lights">Lights</option>
-                  <option value="video">Video</option>
-                </select>
-                <SendMessage department={selectedDepartment} />
-              </div>
-              <MessagesList />
             </CardContent>
           </Card>
         </div>
