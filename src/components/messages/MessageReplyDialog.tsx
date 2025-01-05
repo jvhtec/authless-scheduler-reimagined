@@ -10,7 +10,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 interface MessageReplyDialogProps {
   message: any;
@@ -68,6 +68,17 @@ export const MessageReplyDialog = ({ message, open, onOpenChange }: MessageReply
     }
   };
 
+  const formatMessageDate = (dateString: string) => {
+    try {
+      if (!dateString) return '';
+      const date = parseISO(dateString);
+      return format(date, 'PPp');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '';
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -78,7 +89,7 @@ export const MessageReplyDialog = ({ message, open, onOpenChange }: MessageReply
           <div className="bg-muted p-4 rounded-lg">
             <div className="flex justify-between text-sm text-muted-foreground mb-2">
               <span>{message?.sender?.first_name} {message?.sender?.last_name}</span>
-              <span>{format(new Date(message?.created_at), 'PPp')}</span>
+              <span>{message?.created_at ? formatMessageDate(message.created_at) : ''}</span>
             </div>
             <p>{message?.content}</p>
           </div>
