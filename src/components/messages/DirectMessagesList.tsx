@@ -91,7 +91,12 @@ export const DirectMessagesList = () => {
     }
   };
 
-  useMessagesSubscription(currentUserId, () => currentUserId && fetchMessages(currentUserId));
+  useMessagesSubscription(currentUserId, () => {
+    if (currentUserId) {
+      console.log("Refreshing messages after subscription update");
+      fetchMessages(currentUserId);
+    }
+  });
 
   return (
     <div className="space-y-4">
