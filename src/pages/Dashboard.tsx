@@ -12,11 +12,13 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { TourChips } from "@/components/dashboard/TourChips";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, Music, Video, Lightbulb, MessageSquare } from "lucide-react";
+import { CalendarDays, Music, Video, Lightbulb, MessageSquare, Send } from "lucide-react";
 import { DepartmentSchedule } from "@/components/dashboard/DepartmentSchedule";
 import { JobCardNew } from "@/components/dashboard/JobCardNew";
 import { MessagesList } from "@/components/messages/MessagesList";
 import { DirectMessagesList } from "@/components/messages/DirectMessagesList";
+import { Button } from "@/components/ui/button";
+import { DirectMessageDialog } from "@/components/messages/DirectMessageDialog";
 
 const Dashboard = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -28,6 +30,8 @@ const Dashboard = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   const [userRole, setUserRole] = useState<string | null>(null);
   const [showMessages, setShowMessages] = useState(false);
+  const [newMessageDialogOpen, setNewMessageDialogOpen] = useState(false);
+  const [selectedRecipient, setSelectedRecipient] = useState<{ id: string; name: string } | null>(null);
   
   const { data: jobs, isLoading } = useJobs();
   const { toast } = useToast();
@@ -51,7 +55,6 @@ const Dashboard = () => {
 
         if (data) {
           setUserRole(data.role);
-          // Show messages by default if we got here from notification
           const params = new URLSearchParams(window.location.search);
           if (params.get('showMessages') === 'true') {
             setShowMessages(true);
@@ -152,6 +155,27 @@ const Dashboard = () => {
     }
   };
 
+  const handleNewMessage = async () => {
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .order('first_name');
+
+      if (error) throw error;
+
+      if (profiles && profiles.length > 0) {
+        setSelectedRecipient({
+          id: profiles[0].id,
+          name: `${profiles[0].first_name} ${profiles[0].last_name}`
+        });
+        setNewMessageDialogOpen(true);
+      }
+    } catch (error) {
+      console.error("Error fetching profiles:", error);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-6 space-y-8">
       <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
@@ -163,12 +187,23 @@ const Dashboard = () => {
               <MessageSquare className="w-6 h-6" />
               Messages
             </CardTitle>
-            <button
-              onClick={() => setShowMessages(!showMessages)}
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              {showMessages ? 'Hide' : 'Show'}
-            </button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNewMessage}
+                className="gap-2"
+              >
+                <Send className="h-4 w-4" />
+                New Message
+              </Button>
+              <button
+                onClick={() => setShowMessages(!showMessages)}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                {showMessages ? 'Hide' : 'Show'}
+              </button>
+            </div>
           </CardHeader>
           {showMessages && (
             <CardContent>
@@ -261,6 +296,15 @@ const Dashboard = () => {
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           job={selectedJob}
+        />
+      )}
+
+      {selectedRecipient && (
+        <DirectMessageDialog
+          recipientId={selectedRecipient.id}
+          recipientName={selectedRecipient.name}
+          open={newMessageDialogOpen}
+          onOpenChange={setNewMessageDialogOpen}
         />
       )}
     </div>
