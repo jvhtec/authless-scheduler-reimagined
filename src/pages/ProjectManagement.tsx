@@ -2,14 +2,44 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Music2, Lightbulb, Video, Users, Building } from "lucide-react";
+import { Loader2, Music2, Lightbulb, Video, Users, Building, Folder, FolderOpen } from "lucide-react";
 import { Department } from "@/types/department";
+import { useQuery } from "@tanstack/react-query";
+
+interface Project {
+  id: string;
+  title: string;
+  description: string | null;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  department: string;
+}
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
+
+  const { data: projects, isLoading: projectsLoading } = useQuery({
+    queryKey: ['projects', selectedDepartment],
+    queryFn: async () => {
+      console.log("Fetching projects for department:", selectedDepartment);
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('department', selectedDepartment)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("Error fetching projects:", error);
+        throw error;
+      }
+
+      console.log("Projects fetched:", data);
+      return data as Project[];
+    },
+  });
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -54,6 +84,49 @@ const ProjectManagement = () => {
     checkAccess();
   }, [navigate]);
 
+  const renderProjects = () => {
+    if (projectsLoading) {
+      return (
+        <div className="flex items-center justify-center p-4">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      );
+    }
+
+    if (!projects?.length) {
+      return (
+        <p className="text-muted-foreground p-4">
+          No projects found for this department.
+        </p>
+      );
+    }
+
+    return (
+      <Accordion type="single" collapsible className="w-full">
+        {projects.map((project) => (
+          <AccordionItem key={project.id} value={project.id}>
+            <AccordionTrigger className="hover:no-underline">
+              <div className="flex items-center gap-2">
+                <Folder className="h-4 w-4" />
+                <span>{project.title}</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-2 pl-6">
+                <p className="text-sm text-muted-foreground">
+                  {project.description || 'No description provided'}
+                </p>
+                <p className="text-sm">
+                  Status: <span className="capitalize">{project.status}</span>
+                </p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
@@ -70,7 +143,7 @@ const ProjectManagement = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="sound" onValueChange={(value) => setSelectedDepartment(value as Department)}>
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="sound" className="flex items-center gap-2">
                 <Music2 className="h-4 w-4" />
                 Sound
@@ -92,56 +165,19 @@ const ProjectManagement = () => {
                 Production
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="sound">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sound Department</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>Sound department management content will go here.</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="lights">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Lights Department</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>Lights department management content will go here.</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="video">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Video Department</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>Video department management content will go here.</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="personal">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Personal Department</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>Personal department management content will go here.</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="production">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Production Department</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>Production department management content will go here.</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
+
+            {["sound", "lights", "video", "personal", "production"].map((dept) => (
+              <TabsContent key={dept} value={dept}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="capitalize">{dept} Projects</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renderProjects()}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            ))}
           </Tabs>
         </CardContent>
       </Card>

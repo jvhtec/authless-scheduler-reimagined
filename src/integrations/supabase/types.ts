@@ -194,6 +194,57 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          department: string
+          description: string | null
+          id: string
+          job_id: string | null
+          status: Database["public"]["Enums"]["project_status"] | null
+          title: string
+          tour_date_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          department: string
+          description?: string | null
+          id?: string
+          job_id?: string | null
+          status?: Database["public"]["Enums"]["project_status"] | null
+          title: string
+          tour_date_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          department?: string
+          description?: string | null
+          id?: string
+          job_id?: string | null
+          status?: Database["public"]["Enums"]["project_status"] | null
+          title?: string
+          tour_date_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_tour_date_id_fkey"
+            columns: ["tour_date_id"]
+            isOneToOne: false
+            referencedRelation: "tour_dates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technician_departments: {
         Row: {
           department: Database["public"]["Enums"]["department"]
@@ -294,6 +345,7 @@ export type Database = {
       department: "sound" | "lights" | "video"
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
       job_type: "single" | "tour"
+      project_status: "pending" | "in_progress" | "completed" | "cancelled"
       user_role: "admin" | "user" | "management" | "logistics" | "technician"
     }
     CompositeTypes: {
