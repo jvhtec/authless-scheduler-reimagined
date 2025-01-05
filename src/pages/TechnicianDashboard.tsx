@@ -1,29 +1,17 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { MessageSquare, Calendar, Download } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { JobCard } from "@/components/jobs/JobCard";
-import { useToast } from "@/hooks/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { addWeeks, addMonths } from "date-fns";
-import { SendMessage } from "@/components/messages/SendMessage";
-import { MessagesList } from "@/components/messages/MessagesList";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-
-interface JobDocument {
-  id: string;
-  file_name: string;
-  file_path: string;
-  uploaded_at: string;
-}
+import { TimeSpanSelector } from "@/components/technician/TimeSpanSelector";
+import { MessageManagementDialog } from "@/components/technician/MessageManagementDialog";
+import { AssignmentsList } from "@/components/technician/AssignmentsList";
 
 const TechnicianDashboard = () => {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeSpan, setTimeSpan] = useState<string>("1week");
   const [userDepartment, setUserDepartment] = useState<string | null>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     const fetchUserDepartment = async () => {
@@ -99,72 +87,13 @@ const TechnicianDashboard = () => {
     }
   };
 
-  const handleDownload = async (jobDocument: JobDocument) => {
-    try {
-      console.log("Downloading document:", jobDocument);
-      
-      const { data, error } = await supabase.storage
-        .from('job_documents')
-        .download(jobDocument.file_path);
-
-      if (error) throw error;
-
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = jobDocument.file_name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Download Started",
-        description: `Downloading ${jobDocument.file_name}`,
-      });
-    } catch (error: any) {
-      console.error("Download error:", error);
-      toast({
-        title: "Download Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Technician Dashboard</h1>
         <div className="flex items-center gap-4">
-          <Select value={timeSpan} onValueChange={setTimeSpan}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select time span" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1week">Next Week</SelectItem>
-              <SelectItem value="2weeks">Next 2 Weeks</SelectItem>
-              <SelectItem value="1month">Next Month</SelectItem>
-              <SelectItem value="3months">Next 3 Months</SelectItem>
-            </SelectContent>
-          </Select>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <MessageSquare className="h-4 w-4" />
-                Message Management
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Messages</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                {userDepartment && <SendMessage department={userDepartment} />}
-                <MessagesList />
-              </div>
-            </DialogContent>
-          </Dialog>
+          <TimeSpanSelector value={timeSpan} onValueChange={setTimeSpan} />
+          <MessageManagementDialog department={userDepartment} />
         </div>
       </div>
 
@@ -176,45 +105,7 @@ const TechnicianDashboard = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <p className="text-muted-foreground">Loading assignments...</p>
-          ) : assignments.length === 0 ? (
-            <p className="text-muted-foreground">No upcoming assignments found.</p>
-          ) : (
-            <div className="grid gap-4">
-              {assignments.map((assignment) => (
-                <div key={assignment.job_id} className="space-y-4">
-                  <JobCard
-                    key={assignment.job_id}
-                    job={assignment.jobs}
-                    onEditClick={() => {}}
-                    onDeleteClick={() => {}}
-                    onJobClick={() => {}}
-                    showAssignments={false}
-                  />
-                  {assignment.jobs.job_documents?.length > 0 && (
-                    <div className="ml-4 space-y-2">
-                      <h3 className="text-sm font-medium">Documents:</h3>
-                      <div className="grid gap-2">
-                        {assignment.jobs.job_documents.map((doc: JobDocument) => (
-                          <Button
-                            key={doc.id}
-                            variant="outline"
-                            size="sm"
-                            className="w-full justify-start gap-2"
-                            onClick={() => handleDownload(doc)}
-                          >
-                            <Download className="h-4 w-4" />
-                            {doc.file_name}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          <AssignmentsList assignments={assignments} loading={loading} />
         </CardContent>
       </Card>
     </div>
