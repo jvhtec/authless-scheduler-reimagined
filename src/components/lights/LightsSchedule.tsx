@@ -38,7 +38,6 @@ export const LightsSchedule = ({
                 onEditClick={onEditClick}
                 onDeleteClick={onDeleteClick}
                 onJobClick={onJobClick}
-                department="lights"
                 userRole={userRole}
               />
             ))

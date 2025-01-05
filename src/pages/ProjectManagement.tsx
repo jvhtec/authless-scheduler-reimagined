@@ -24,8 +24,11 @@ const ProjectManagement = () => {
           location:locations(name),
           job_departments!inner(department),
           job_assignments(
-            technician:profiles(
-              id,
+            technician_id,
+            sound_role,
+            lights_role,
+            video_role,
+            profiles(
               first_name,
               last_name
             )
@@ -34,11 +37,8 @@ const ProjectManagement = () => {
         .eq('job_departments.department', selectedDepartment)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error("Error fetching jobs:", error);
-        throw error;
-      }
-
+      if (error) throw error;
+      
       console.log("Jobs fetched:", data);
       return data;
     }
