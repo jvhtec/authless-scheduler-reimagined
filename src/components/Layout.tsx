@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase";
 import { ThemeToggle } from "./layout/ThemeToggle";
 import { UserInfo } from "./layout/UserInfo";
 import { SidebarNavigation } from "./layout/SidebarNavigation";
+import { AboutCard } from "./layout/AboutCard";
 import { useToast } from "@/hooks/use-toast";
 
 interface LayoutProps {
@@ -240,6 +241,7 @@ const Layout = ({ children }: LayoutProps) => {
               <LogOut className="h-4 w-4" />
               <span>{isLoggingOut ? 'Signing out...' : 'Sign Out'}</span>
             </Button>
+            <AboutCard />
             <SidebarSeparator />
             <div className="px-2 py-4">
               <img
