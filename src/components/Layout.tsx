@@ -41,32 +41,58 @@ const Layout = ({ children }: LayoutProps) => {
   } = useSessionManager();
 
   useEffect(() => {
-    if (!userRole || !userDepartment) return;
+    if (!session?.user?.id) return;
 
     const fetchUnreadMessages = async () => {
-      let query = supabase
+      console.log("Checking for unread messages...");
+      
+      // Check for unread department messages
+      let deptQuery = supabase
         .from('messages')
         .select('*')
         .eq('status', 'unread');
 
       if (userRole === 'management') {
-        query = query.eq('department', userDepartment);
+        deptQuery = deptQuery.eq('department', userDepartment);
       } else if (userRole === 'technician') {
-        query = query.eq('sender_id', session?.user?.id);
+        deptQuery = deptQuery.eq('sender_id', session.user.id);
       }
 
-      const { data: messages, error } = await query;
+      // Check for unread direct messages
+      const directQuery = supabase
+        .from('direct_messages')
+        .select('*')
+        .eq('recipient_id', session.user.id)
+        .eq('status', 'unread');
 
-      if (error) {
-        console.error('Error fetching unread messages:', error);
+      const [deptMessages, directMessages] = await Promise.all([
+        deptQuery,
+        directQuery
+      ]);
+
+      if (deptMessages.error) {
+        console.error('Error fetching department messages:', deptMessages.error);
         return;
       }
 
-      setHasUnreadMessages(messages.length > 0);
+      if (directMessages.error) {
+        console.error('Error fetching direct messages:', directMessages.error);
+        return;
+      }
+
+      const hasUnread = deptMessages.data.length > 0 || directMessages.data.length > 0;
+      console.log("Unread messages status:", {
+        departmentMessages: deptMessages.data.length,
+        directMessages: directMessages.data.length,
+        hasUnread
+      });
+      
+      setHasUnreadMessages(hasUnread);
     };
 
     fetchUnreadMessages();
 
+    // Subscribe to changes in both messages and direct_messages tables
     const channel = supabase
       .channel('messages-changes')
       .on(
@@ -77,6 +103,20 @@ const Layout = ({ children }: LayoutProps) => {
           table: 'messages',
         },
         () => {
+          console.log("Messages table changed, checking unread status");
+          fetchUnreadMessages();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'direct_messages',
+          filter: `recipient_id=eq.${session.user.id}`,
+        },
+        () => {
+          console.log("Direct messages changed, checking unread status");
           fetchUnreadMessages();
         }
       )
@@ -85,7 +125,7 @@ const Layout = ({ children }: LayoutProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userRole, userDepartment, session?.user?.id]);
+  }, [session?.user?.id, userRole, userDepartment]);
 
   const handleSignOut = async () => {
     if (isLoggingOut) return;
