@@ -9,7 +9,12 @@ export const TimeSpanSelector = ({ value, onValueChange }: TimeSpanSelectorProps
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder="Select time span" />
+        <SelectValue placeholder="Select time span">
+          {value === "1week" && "Next Week"}
+          {value === "2weeks" && "Next 2 Weeks"}
+          {value === "1month" && "Next Month"}
+          {value === "3months" && "Next 3 Months"}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="1week">Next Week</SelectItem>

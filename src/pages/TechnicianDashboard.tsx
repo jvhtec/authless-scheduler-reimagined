@@ -73,6 +73,22 @@ const TechnicianDashboard = () => {
     };
   }, [queryClient]);
 
+  const getTimeSpanEndDate = () => {
+    const today = new Date();
+    switch (timeSpan) {
+      case "1week":
+        return addWeeks(today, 1);
+      case "2weeks":
+        return addWeeks(today, 2);
+      case "1month":
+        return addMonths(today, 1);
+      case "3months":
+        return addMonths(today, 3);
+      default:
+        return addWeeks(today, 1);
+    }
+  };
+
   const { data: assignments = [], isLoading, refetch } = useQuery({
     queryKey: ['assignments', timeSpan],
     queryFn: async () => {
@@ -81,8 +97,10 @@ const TechnicianDashboard = () => {
         if (!user) return [];
 
         console.log("Fetching assignments for user:", user.id);
+        console.log("Current timeSpan:", timeSpan);
         
         const endDate = getTimeSpanEndDate();
+        console.log("Fetching assignments until:", endDate);
         
         const { data, error } = await supabase
           .from('job_assignments')
@@ -104,7 +122,10 @@ const TechnicianDashboard = () => {
           .lte('jobs.start_time', endDate.toISOString())
           .order('jobs(start_time)', { ascending: true });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching assignments:", error);
+          throw error;
+        }
         
         console.log("Fetched assignments:", data);
         return data || [];
@@ -117,17 +138,6 @@ const TechnicianDashboard = () => {
     refetchOnMount: true,
     refetchOnReconnect: true
   });
-
-  const getTimeSpanEndDate = () => {
-    const today = new Date();
-    switch (timeSpan) {
-      case "1week": return addWeeks(today, 1);
-      case "2weeks": return addWeeks(today, 2);
-      case "1month": return addMonths(today, 1);
-      case "3months": return addMonths(today, 3);
-      default: return addWeeks(today, 1);
-    }
-  };
 
   const handleCloseMessages = () => {
     setShowMessages(false);
@@ -161,7 +171,13 @@ const TechnicianDashboard = () => {
           >
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
-          <TimeSpanSelector value={timeSpan} onValueChange={setTimeSpan} />
+          <TimeSpanSelector 
+            value={timeSpan} 
+            onValueChange={(value) => {
+              console.log("TimeSpan changed to:", value);
+              setTimeSpan(value);
+            }} 
+          />
           <MessageManagementDialog department={userDepartment} />
         </div>
       </div>
