@@ -13,6 +13,10 @@ interface DirectMessage {
     first_name: string;
     last_name: string;
   };
+  recipient: {
+    first_name: string;
+    last_name: string;
+  };
 }
 
 export const DirectMessagesList = () => {
@@ -28,25 +32,53 @@ export const DirectMessagesList = () => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('direct_messages')
-        .select(`
-          *,
-          sender:profiles!direct_messages_sender_id_fkey(first_name, last_name)
-        `)
-        .eq('recipient_id', userData.user.id)
-        .order('created_at', { ascending: false });
+      // Fetch both sent and received messages
+      const [receivedMessages, sentMessages] = await Promise.all([
+        supabase
+          .from('direct_messages')
+          .select(`
+            *,
+            sender:profiles!direct_messages_sender_id_fkey(first_name, last_name),
+            recipient:profiles!direct_messages_recipient_id_fkey(first_name, last_name)
+          `)
+          .eq('recipient_id', userData.user.id)
+          .order('created_at', { ascending: false }),
+        
+        supabase
+          .from('direct_messages')
+          .select(`
+            *,
+            sender:profiles!direct_messages_sender_id_fkey(first_name, last_name),
+            recipient:profiles!direct_messages_recipient_id_fkey(first_name, last_name)
+          `)
+          .eq('sender_id', userData.user.id)
+          .order('created_at', { ascending: false })
+      ]);
 
-      if (error) {
-        console.error("Error fetching direct messages:", error);
-        throw error;
+      if (receivedMessages.error) {
+        console.error("Error fetching received messages:", receivedMessages.error);
+        throw receivedMessages.error;
       }
 
-      console.log("Fetched direct messages:", data);
-      setMessages(data || []);
+      if (sentMessages.error) {
+        console.error("Error fetching sent messages:", sentMessages.error);
+        throw sentMessages.error;
+      }
 
-      // Mark unread messages as read
-      const unreadMessages = data?.filter(msg => msg.status === 'unread') || [];
+      // Combine and sort messages
+      const allMessages = [...(receivedMessages.data || []), ...(sentMessages.data || [])];
+      const uniqueMessages = Array.from(
+        new Map(allMessages.map(message => [message.id, message])).values()
+      );
+      const sortedMessages = uniqueMessages.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      console.log("All messages fetched:", sortedMessages);
+      setMessages(sortedMessages);
+
+      // Mark unread received messages as read
+      const unreadMessages = receivedMessages.data?.filter(msg => msg.status === 'unread') || [];
       if (unreadMessages.length > 0) {
         const { error: updateError } = await supabase
           .from('direct_messages')
@@ -68,7 +100,7 @@ export const DirectMessagesList = () => {
   useEffect(() => {
     fetchMessages();
 
-    // Subscribe to real-time updates
+    // Subscribe to real-time updates for both sent and received messages
     const channel = supabase
       .channel('direct-messages-changes')
       .on(
@@ -106,9 +138,14 @@ export const DirectMessagesList = () => {
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">
-                    {message.sender.first_name} {message.sender.last_name}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="font-medium">
+                      {message.sender.first_name} {message.sender.last_name}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      to {message.recipient.first_name} {message.recipient.last_name}
+                    </span>
+                  </div>
                 </div>
                 <span className="text-sm text-muted-foreground">
                   {format(new Date(message.created_at), 'PPp')}

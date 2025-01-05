@@ -70,7 +70,6 @@ export const DirectMessageDialog = ({
       setSending(true);
       console.log("Sending direct message to:", selectedRecipientId);
 
-      // Get the current user's session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
         throw new Error("No authenticated user found");
@@ -82,6 +81,7 @@ export const DirectMessageDialog = ({
           sender_id: session.user.id,
           recipient_id: selectedRecipientId,
           content: message,
+          status: 'unread'
         });
 
       if (error) throw error;
