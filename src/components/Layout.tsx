@@ -10,7 +10,7 @@ import {
   SidebarTrigger
 } from "@/components/ui/sidebar";
 import { LogOut } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { ThemeToggle } from "./layout/ThemeToggle";
@@ -24,6 +24,7 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [session, setSession] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -71,6 +72,12 @@ const Layout = ({ children }: LayoutProps) => {
       if (data) {
         console.log('User role fetched:', data.role);
         setUserRole(data.role);
+        
+        // Redirect technicians to technician dashboard if they're on the main dashboard
+        if (data.role === 'technician' && 
+            (location.pathname === '/dashboard' || location.pathname === '/')) {
+          navigate('/technician-dashboard');
+        }
       }
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
@@ -89,6 +96,9 @@ const Layout = ({ children }: LayoutProps) => {
       setUserRole(null);
       localStorage.removeItem('supabase.auth.token');
       
+      // Navigate before signing out
+      navigate('/auth');
+      
       // Then attempt to sign out from Supabase
       await supabase.auth.signOut();
       
@@ -105,7 +115,6 @@ const Layout = ({ children }: LayoutProps) => {
       });
     } finally {
       setIsLoggingOut(false);
-      navigate('/auth');
     }
   };
 

@@ -24,11 +24,11 @@ function App() {
           <Route element={<Layout><Outlet /></Layout>}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/technician-dashboard" element={<TechnicianDashboard />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/sound" element={<Sound />} />
             <Route path="/lights" element={<Lights />} />
             <Route path="/video" element={<Video />} />
-            <Route path="/technician" element={<TechnicianDashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/project-management" element={<ProjectManagement />} />
           </Route>
