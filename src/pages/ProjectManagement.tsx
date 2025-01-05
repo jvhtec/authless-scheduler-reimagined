@@ -3,21 +3,27 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
-import { Music2, Lightbulb, Video, Loader2 } from "lucide-react";
+import { Music2, Lightbulb, Video, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Department } from "@/types/department";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { DepartmentTabContent } from "@/components/dashboard/DepartmentTabContent";
 import { JobDocument } from "@/types/job";
+import { Button } from "@/components/ui/button";
+import { startOfMonth, endOfMonth, addMonths, format } from "date-fns";
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
+  const [currentDate, setCurrentDate] = useState(new Date());
   const { toast } = useToast();
 
+  const startDate = startOfMonth(currentDate);
+  const endDate = endOfMonth(currentDate);
+
   const { data: jobs, isLoading: jobsLoading, refetch: refetchJobs } = useQuery({
-    queryKey: ['jobs', selectedDepartment],
+    queryKey: ['jobs', selectedDepartment, startDate, endDate],
     queryFn: async () => {
       console.log("Fetching jobs for department:", selectedDepartment);
       const { data, error } = await supabase
@@ -44,11 +50,13 @@ const ProjectManagement = () => {
           )
         `)
         .eq('job_departments.department', selectedDepartment)
-        .order('created_at', { ascending: false });
+        .eq('job_type', 'single')
+        .gte('start_time', startDate.toISOString())
+        .lte('start_time', endDate.toISOString())
+        .order('start_time', { ascending: true });
 
       if (error) throw error;
       
-      // Filter job documents based on the selected department
       const jobsWithFilteredDocs = data.map(job => ({
         ...job,
         job_documents: job.job_documents.filter((doc: any) => {
@@ -93,6 +101,14 @@ const ProjectManagement = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handlePreviousMonth = () => {
+    setCurrentDate(prev => addMonths(prev, -1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(prev => addMonths(prev, 1));
   };
 
   useEffect(() => {
@@ -153,6 +169,20 @@ const ProjectManagement = () => {
           <CardTitle>Project Management</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="flex items-center justify-between mb-6">
+            <Button variant="outline" size="sm" onClick={handlePreviousMonth}>
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <h2 className="text-lg font-semibold">
+              {format(currentDate, 'MMMM yyyy')}
+            </h2>
+            <Button variant="outline" size="sm" onClick={handleNextMonth}>
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+
           <Tabs defaultValue="sound" onValueChange={(value) => setSelectedDepartment(value as Department)}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="sound" className="flex items-center gap-2">
