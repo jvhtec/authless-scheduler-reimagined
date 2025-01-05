@@ -13,7 +13,9 @@ export const useJobs = () => {
         .select(`
           *,
           location:locations(name),
-          job_departments!job_departments_job_id_fkey(department)
+          job_departments:job_departments!inner(
+            department
+          )
         `)
         .neq('job_type', 'tour'); // Exclude tour type jobs
 
