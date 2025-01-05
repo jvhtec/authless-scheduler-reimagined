@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
-import { JobCard } from "@/components/jobs/JobCard";
+import { JobCardNew } from "@/components/dashboard/JobCardNew";
 
 interface LightsScheduleProps {
   date: Date | undefined;
@@ -32,7 +32,7 @@ export const LightsSchedule = ({
             <p className="text-muted-foreground">Loading schedule...</p>
           ) : jobs.length > 0 ? (
             jobs.map((job) => (
-              <JobCard
+              <JobCardNew
                 key={job.id}
                 job={job}
                 onEditClick={onEditClick}
