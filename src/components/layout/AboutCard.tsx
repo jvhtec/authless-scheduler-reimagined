@@ -21,9 +21,9 @@ export const AboutCard = () => {
       <HoverCardContent className="w-80">
         <div className="flex flex-col gap-4">
           <img
-            src="/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png"
-            alt="Sector Pro"
-            className="rounded-lg w-full h-auto dark:invert"
+            src="/lovable-uploads/7bd0c1d7-3226-470d-bea4-5cd7222e3248.png"
+            alt="JVH"
+            className="rounded-lg w-full h-auto"
           />
           <p className="text-sm text-center text-muted-foreground">
             Created by JVH
