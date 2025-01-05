@@ -7,13 +7,15 @@ import { EditJobDialog } from "@/components/jobs/EditJobDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
-import { JobCard } from "@/components/jobs/JobCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { LightsSchedule } from "@/components/lights/LightsSchedule";
 import { TourChips } from "@/components/dashboard/TourChips";
 import { useNavigate } from "react-router-dom";
+import { CalendarDays, Music, Video, Lightbulb } from "lucide-react";
+import { DepartmentSchedule } from "@/components/dashboard/DepartmentSchedule";
+import { JobCardNew } from "@/components/dashboard/JobCardNew";
 
 const Dashboard = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -72,7 +74,7 @@ const Dashboard = () => {
       job.job_departments.some(dept => dept.department === department) &&
       isAfter(new Date(job.start_time), new Date()) &&
       isBefore(new Date(job.start_time), endDate) &&
-      job.job_type !== 'tour' // Filter out tour type jobs
+      job.job_type !== 'tour'
     );
   };
 
@@ -81,7 +83,7 @@ const Dashboard = () => {
     const selectedDate = format(date, 'yyyy-MM-dd');
     return jobs.filter(job => {
       const jobDate = format(new Date(job.start_time), 'yyyy-MM-dd');
-      return jobDate === selectedDate && job.job_type !== 'tour'; // Filter out tour type jobs
+      return jobDate === selectedDate && job.job_type !== 'tour';
     });
   };
 
@@ -160,17 +162,20 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 space-y-6">
+    <div className="container mx-auto px-4 py-6 space-y-8">
       <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
       
-      <Card className="w-full">
+      <Card className="w-full bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30">
         <CardHeader>
-          <CardTitle>Tours {new Date().getFullYear()}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarDays className="w-6 h-6" />
+            Tours {new Date().getFullYear()}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <TourChips 
             onTourClick={(tourId) => {
-              if (userRole === 'logistics') return; // Prevent logistics users from editing tours
+              if (userRole === 'logistics') return;
               const tour = jobs?.find(job => job.id === tourId);
               if (tour) handleEditClick(tour);
             }} 
@@ -178,50 +183,48 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="w-full">
           <LightsCalendar date={date} onSelect={setDate} />
         </div>
-        <div className="w-full">
-          <LightsSchedule
-            date={date}
-            jobs={getSelectedDateJobs()}
-            isLoading={isLoading}
-            onJobClick={(jobId) => handleJobClick(jobId, "sound")}
-            onEditClick={handleEditClick}
-            onDeleteClick={handleDeleteClick}
-            userRole={userRole}
-          />
-        </div>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Today's Schedule</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="space-y-4">
+              {getSelectedDateJobs().map(job => (
+                <JobCardNew
+                  key={job.id}
+                  job={job}
+                  onEditClick={handleEditClick}
+                  onDeleteClick={handleDeleteClick}
+                  onJobClick={(jobId) => handleJobClick(jobId, "sound")}
+                  userRole={userRole}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {["sound", "lights", "video"].map((dept) => (
-          <Card key={dept} className="w-full">
-            <CardHeader 
-              className="cursor-pointer hover:bg-accent/50 transition-colors"
-              onClick={() => navigate(`/${dept}`)}
-            >
-              <CardTitle className="capitalize">{dept} Schedule</CardTitle>
-            </CardHeader>
-            <CardContent className="h-[400px] overflow-y-auto">
-              {isLoading ? (
-                <p className="text-muted-foreground">Loading...</p>
-              ) : (
-                getDepartmentJobs(dept as Department).map(job => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    onEditClick={handleEditClick}
-                    onDeleteClick={handleDeleteClick}
-                    onJobClick={(jobId) => handleJobClick(jobId, dept as Department)}
-                    department={dept as Department}
-                    userRole={userRole}
-                  />
-                ))
-              )}
-            </CardContent>
-          </Card>
+        {[
+          { name: "sound", icon: Music, color: "text-blue-500" },
+          { name: "lights", icon: Lightbulb, color: "text-yellow-500" },
+          { name: "video", icon: Video, color: "text-purple-500" }
+        ].map(({ name, icon, color }) => (
+          <DepartmentSchedule
+            key={name}
+            name={name}
+            icon={icon}
+            color={color}
+            jobs={getDepartmentJobs(name as Department)}
+            onEditClick={handleEditClick}
+            onDeleteClick={handleDeleteClick}
+            onJobClick={(jobId) => handleJobClick(jobId, name as Department)}
+            userRole={userRole}
+          />
         ))}
       </div>
 
