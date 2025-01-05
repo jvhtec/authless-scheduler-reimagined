@@ -9,10 +9,12 @@ import { MonthNavigation } from "@/components/project-management/MonthNavigation
 import { DepartmentTabs } from "@/components/project-management/DepartmentTabs";
 import { useJobManagement } from "@/hooks/useJobManagement";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
+import { useQueryClient } from "@tanstack/react-query";
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const [authLoading, setAuthLoading] = useState(true);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -34,42 +36,48 @@ const ProjectManagement = () => {
 
     const checkAccess = async () => {
       try {
-        console.log("ProjectManagement: Checking session...");
+        console.log("ProjectManagement: Starting access check");
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (!session && mounted) {
+        if (!session) {
           console.log("ProjectManagement: No session found, redirecting to auth");
-          navigate('/auth');
+          if (mounted) navigate('/auth');
           return;
         }
 
-        if (session && mounted) {
-          console.log("ProjectManagement: Session found, checking user role");
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
+        console.log("ProjectManagement: Session found, checking user role");
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
 
-          if (profileError) {
-            console.error("ProjectManagement: Error fetching profile:", profileError);
-            navigate('/dashboard');
-            return;
-          }
-
-          if (!profile || !['admin', 'logistics', 'management'].includes(profile.role)) {
-            console.log("ProjectManagement: Unauthorized access attempt, redirecting to dashboard");
-            navigate('/dashboard');
-            return;
-          }
-
-          console.log("ProjectManagement: Access granted for role:", profile.role);
+        if (profileError) {
+          console.error("ProjectManagement: Error fetching profile:", profileError);
+          if (mounted) navigate('/dashboard');
+          return;
         }
+
+        if (!profile || !['admin', 'logistics', 'management'].includes(profile.role)) {
+          console.log("ProjectManagement: Unauthorized access attempt, redirecting to dashboard");
+          if (mounted) navigate('/dashboard');
+          return;
+        }
+
+        console.log("ProjectManagement: Access check completed successfully");
+        
       } catch (error) {
         console.error("ProjectManagement: Error in access check:", error);
         if (mounted) navigate('/auth');
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setAuthLoading(false);
+          // Prefetch jobs data after auth check
+          queryClient.prefetchQuery({
+            queryKey: ['jobs', selectedDepartment, startDate, endDate],
+            queryFn: () => null // This will trigger the actual fetch in useJobManagement
+          });
+        }
       }
     };
 
@@ -77,7 +85,7 @@ const ProjectManagement = () => {
     return () => {
       mounted = false;
     };
-  }, [navigate]);
+  }, [navigate, queryClient, selectedDepartment, startDate, endDate]);
 
   const handlePreviousMonth = () => {
     setCurrentDate(prev => addMonths(prev, -1));
@@ -87,8 +95,8 @@ const ProjectManagement = () => {
     setCurrentDate(prev => addMonths(prev, 1));
   };
 
-  // Only show loading state when both initial auth check and jobs are loading
-  if (loading || jobsLoading) {
+  // Show loading state only during initial auth check
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <Loader2 className="h-8 w-8 animate-spin" />
