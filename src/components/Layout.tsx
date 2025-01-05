@@ -27,6 +27,7 @@ const Layout = ({ children }: LayoutProps) => {
   const { toast } = useToast();
   const [session, setSession] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -77,34 +78,44 @@ const Layout = ({ children }: LayoutProps) => {
   };
 
   const handleSignOut = async () => {
-    try {
-      console.log("Starting sign out process");
-      
-      // Clear local state first
-      setSession(null);
-      setUserRole(null);
+    if (isLoggingOut) return; // Prevent multiple logout attempts
 
-      // Attempt to sign out from Supabase
+    try {
+      setIsLoggingOut(true);
+      console.log("Starting sign out process");
+
+      // First attempt to sign out from Supabase
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error("Error during sign out:", error);
-        // Even if there's an error, we want to clear the local session
-        toast({
-          title: "Warning",
-          description: "You have been logged out locally",
-        });
+        // If we get a session_not_found error, we can consider the user logged out
+        if (error.message.includes('session_not_found')) {
+          console.log("Session not found, considering user logged out");
+        } else {
+          toast({
+            title: "Warning",
+            description: "There was an issue during logout, but you have been logged out locally",
+          });
+        }
       } else {
         console.log("Sign out successful");
         toast({
-          title: "Signed out successfully",
-          description: "You have been logged out",
+          title: "Success",
+          description: "You have been logged out successfully",
         });
       }
     } catch (error) {
       console.error("Unexpected error during sign out:", error);
+      toast({
+        title: "Warning",
+        description: "An unexpected error occurred, but you have been logged out",
+      });
     } finally {
-      // Always navigate to auth page
+      // Always clear local state and redirect
+      setSession(null);
+      setUserRole(null);
+      setIsLoggingOut(false);
       navigate('/auth');
     }
   };
@@ -127,9 +138,10 @@ const Layout = ({ children }: LayoutProps) => {
               variant="ghost" 
               className="w-full justify-start gap-2" 
               onClick={handleSignOut}
+              disabled={isLoggingOut}
             >
               <LogOut className="h-4 w-4" />
-              <span>Sign Out</span>
+              <span>{isLoggingOut ? 'Signing out...' : 'Sign Out'}</span>
             </Button>
             <SidebarSeparator />
             <div className="px-2 py-4">
