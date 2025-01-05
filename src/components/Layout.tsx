@@ -31,29 +31,46 @@ const Layout = ({ children }: LayoutProps) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Initial session check:", session ? "Session found" : "No session");
-      setSession(session);
-      if (!session) {
+    const checkSession = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log("Initial session check:", currentSession ? "Session found" : "No session");
+        
+        if (!currentSession) {
+          console.log("No session found, redirecting to auth");
+          navigate('/auth');
+          return;
+        }
+        
+        setSession(currentSession);
+        await fetchUserRole(currentSession.user.id);
+      } catch (error) {
+        console.error("Error checking session:", error);
         navigate('/auth');
-      } else {
-        fetchUserRole(session.user.id);
       }
-    });
+    };
+
+    checkSession();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       console.log("Auth state changed:", _event, session ? "Session exists" : "No session");
-      setSession(session);
+      
       if (!session) {
+        setSession(null);
+        setUserRole(null);
         navigate('/auth');
-      } else {
-        fetchUserRole(session.user.id);
+        return;
       }
+      
+      setSession(session);
+      await fetchUserRole(session.user.id);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const fetchUserRole = async (userId: string) => {
@@ -91,15 +108,19 @@ const Layout = ({ children }: LayoutProps) => {
     console.log("Starting sign out process");
 
     try {
-      // Clear local state first
+      // First clear local state
       setSession(null);
       setUserRole(null);
+
+      // Clear all local storage related to auth
       localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('supabase.auth.expires_at');
+      localStorage.removeItem('supabase.auth.refresh_token');
       
       // Navigate before signing out
       navigate('/auth');
       
-      // Then attempt to sign out from Supabase
+      // Then sign out from Supabase
       await supabase.auth.signOut();
       
       console.log("Sign out successful");
