@@ -14,8 +14,8 @@ export const NotificationBadge = ({ userId, userRole, userDepartment }: Notifica
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchUnreadMessages = async () => {
+  const fetchUnreadMessages = async () => {
+    try {
       console.log("Checking for unread messages...");
       
       // Check for unread department messages
@@ -60,12 +60,16 @@ export const NotificationBadge = ({ userId, userRole, userDepartment }: Notifica
       });
       
       setHasUnreadMessages(hasUnread);
-    };
+    } catch (error) {
+      console.error("Error checking unread messages:", error);
+    }
+  };
 
+  useEffect(() => {
     fetchUnreadMessages();
 
-    // Subscribe to changes in both messages and direct_messages tables
-    const channel = supabase
+    // Subscribe to ALL changes in messages and direct_messages tables
+    const messagesChannel = supabase
       .channel('messages-changes')
       .on(
         'postgres_changes',
@@ -74,8 +78,8 @@ export const NotificationBadge = ({ userId, userRole, userDepartment }: Notifica
           schema: 'public',
           table: 'messages',
         },
-        () => {
-          console.log("Messages table changed, checking unread status");
+        (payload) => {
+          console.log("Messages table changed:", payload);
           fetchUnreadMessages();
         }
       )
@@ -85,10 +89,9 @@ export const NotificationBadge = ({ userId, userRole, userDepartment }: Notifica
           event: '*',
           schema: 'public',
           table: 'direct_messages',
-          filter: `recipient_id=eq.${userId}`,
         },
-        () => {
-          console.log("Direct messages changed, checking unread status");
+        (payload) => {
+          console.log("Direct messages changed:", payload);
           fetchUnreadMessages();
         }
       )
@@ -98,7 +101,7 @@ export const NotificationBadge = ({ userId, userRole, userDepartment }: Notifica
 
     return () => {
       console.log("Cleaning up messages notification subscription");
-      supabase.removeChannel(channel);
+      supabase.removeChannel(messagesChannel);
     };
   }, [userId, userRole, userDepartment]);
 
