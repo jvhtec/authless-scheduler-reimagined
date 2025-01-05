@@ -62,7 +62,12 @@ export const useMessagesQuery = (userRole: string | null, userDepartment: string
   }, [data]);
 
   // Set up real-time subscription
-  useMessagesSubscription(setMessages, userRole, userDepartment);
+  const userId = supabase.auth.getUser().then(res => res.data.user?.id);
+  useMessagesSubscription(userId ? String(userId) : undefined, () => {
+    if (data) {
+      setMessages(data);
+    }
+  });
 
   return {
     messages,
