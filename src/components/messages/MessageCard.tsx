@@ -2,23 +2,24 @@ import { format } from "date-fns";
 import { MessageSquare, Trash2, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DirectMessage } from "./types";
+import { Message } from "./types";
 
-interface DirectMessageCardProps {
-  message: DirectMessage;
+interface MessageCardProps {
+  message: Message;
   currentUserId: string | undefined;
-  onDelete: (messageId: string) => void;
-  onMarkAsRead: (messageId: string) => void;
+  onDelete?: (messageId: string) => void;
+  onMarkAsRead?: (messageId: string) => void;
+  isManagement?: boolean;
 }
 
-export const DirectMessageCard = ({ 
+export const MessageCard = ({ 
   message, 
   currentUserId,
   onDelete,
-  onMarkAsRead
-}: DirectMessageCardProps) => {
-  const isRecipient = currentUserId === message.recipient.id;
-  const showMarkAsRead = isRecipient && message.status === 'unread';
+  onMarkAsRead,
+  isManagement
+}: MessageCardProps) => {
+  const showMarkAsRead = isManagement && message.status === 'unread';
 
   return (
     <Card key={message.id}>
@@ -31,7 +32,7 @@ export const DirectMessageCard = ({
                 {message.sender.first_name} {message.sender.last_name}
               </span>
               <span className="text-sm text-muted-foreground">
-                to {message.recipient.first_name} {message.recipient.last_name}
+                Department: {message.department}
               </span>
             </div>
           </div>
@@ -39,7 +40,7 @@ export const DirectMessageCard = ({
             <span className="text-sm text-muted-foreground">
               {format(new Date(message.created_at), 'PPp')}
             </span>
-            {showMarkAsRead && (
+            {showMarkAsRead && onMarkAsRead && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -49,7 +50,7 @@ export const DirectMessageCard = ({
                 <CheckCircle className="h-4 w-4" />
               </Button>
             )}
-            {message.sender_id === currentUserId && (
+            {(message.sender_id === currentUserId || isManagement) && onDelete && (
               <Button
                 variant="ghost"
                 size="icon"
