@@ -10,14 +10,15 @@ import {
   SidebarTrigger
 } from "@/components/ui/sidebar";
 import { LogOut, BellDot } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { ThemeToggle } from "./layout/ThemeToggle";
 import { UserInfo } from "./layout/UserInfo";
 import { SidebarNavigation } from "./layout/SidebarNavigation";
 import { AboutCard } from "./layout/AboutCard";
 import { useToast } from "@/hooks/use-toast";
+import { useSessionManager } from "@/hooks/useSessionManager";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,106 +26,19 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
-  const [session, setSession] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
-  const [userDepartment, setUserDepartment] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        setIsLoading(true);
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        console.log("Initial session check:", currentSession ? "Session found" : "No session");
-        
-        if (!currentSession) {
-          console.log("No session found, redirecting to auth");
-          setSession(null);
-          setUserRole(null);
-          setUserDepartment(null);
-          navigate('/auth');
-          return;
-        }
-        
-        setSession(currentSession);
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('role, department')
-          .eq('id', currentSession.user.id)
-          .single();
-
-        if (profileError) {
-          console.error("Error fetching user role:", profileError);
-          return;
-        }
-
-        if (profileData) {
-          console.log('User role and department fetched:', profileData);
-          setUserRole(profileData.role);
-          setUserDepartment(profileData.department);
-          
-          if (profileData.role === 'technician' && 
-              (location.pathname === '/dashboard' || location.pathname === '/')) {
-            console.log('Redirecting technician to technician dashboard');
-            navigate('/technician-dashboard', { replace: true });
-          }
-        }
-      } catch (error) {
-        console.error("Error checking session:", error);
-        navigate('/auth');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log("Auth state changed:", _event, session ? "Session exists" : "No session");
-      
-      if (!session) {
-        setSession(null);
-        setUserRole(null);
-        setUserDepartment(null);
-        navigate('/auth');
-        return;
-      }
-      
-      setSession(session);
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('role, department')
-        .eq('id', session.user.id)
-        .single();
-
-      if (profileError) {
-        console.error("Error fetching user role:", profileError);
-        return;
-      }
-
-      if (profileData) {
-        console.log('User role and department fetched:', profileData);
-        setUserRole(profileData.role);
-        setUserDepartment(profileData.department);
-        
-        if (profileData.role === 'technician' && 
-            (location.pathname === '/dashboard' || location.pathname === '/')) {
-          console.log('Redirecting technician to technician dashboard');
-          navigate('/technician-dashboard', { replace: true });
-        }
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate, location.pathname]);
+  
+  const {
+    session,
+    userRole,
+    userDepartment,
+    isLoading,
+    setSession,
+    setUserRole,
+    setUserDepartment
+  } = useSessionManager();
 
   useEffect(() => {
     if (!userRole || !userDepartment) return;
@@ -135,11 +49,9 @@ const Layout = ({ children }: LayoutProps) => {
         .select('*')
         .eq('status', 'unread');
 
-      // For management users, show department messages
       if (userRole === 'management') {
         query = query.eq('department', userDepartment);
       } else if (userRole === 'technician') {
-        // For technicians, show their sent messages that got replies
         query = query.eq('sender_id', session?.user?.id);
       }
 
@@ -155,9 +67,8 @@ const Layout = ({ children }: LayoutProps) => {
 
     fetchUnreadMessages();
 
-    // Subscribe to real-time updates for messages
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel('messages-changes')
       .on(
         'postgres_changes',
         {
@@ -186,7 +97,7 @@ const Layout = ({ children }: LayoutProps) => {
       setSession(null);
       setUserRole(null);
       setUserDepartment(null);
-      localStorage.clear(); // Clear all local storage
+      localStorage.clear();
       await supabase.auth.signOut();
       console.log("Sign out successful");
       navigate('/auth');
