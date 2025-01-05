@@ -53,9 +53,17 @@ const Sound = () => {
 
   const getDepartmentJobs = () => {
     if (!jobs) return [];
-    return jobs.filter(job => 
-      job.job_departments.some(dept => dept.department === currentDepartment)
-    );
+    // Filter out jobs that are related to deleted tours
+    return jobs.filter(job => {
+      const isInDepartment = job.job_departments.some(dept => 
+        dept.department === currentDepartment
+      );
+      // If it's a tour job, make sure the tour_date_id exists and is valid
+      if (job.tour_date_id) {
+        return isInDepartment && job.tour_date;
+      }
+      return isInDepartment;
+    });
   };
 
   const getSelectedDateJobs = () => {
