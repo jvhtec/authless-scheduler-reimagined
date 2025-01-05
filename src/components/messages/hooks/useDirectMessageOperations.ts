@@ -1,6 +1,13 @@
 import { DirectMessage } from "../types";
 import { supabase } from "@/lib/supabase";
-import { Toast } from "@/components/ui/use-toast";
+import { ToastActionElement, ToastProps } from "@/components/ui/toast";
+
+type Toast = {
+  title?: string;
+  description?: string;
+  variant?: "default" | "destructive";
+  action?: ToastActionElement;
+} & Partial<ToastProps>;
 
 export const useDirectMessageOperations = (
   messages: DirectMessage[],
