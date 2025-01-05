@@ -38,7 +38,12 @@ const TechnicianDashboard = () => {
             jobs!inner (
               *,
               location:locations(name),
-              job_documents(*)
+              job_documents(
+                id,
+                file_name,
+                file_path,
+                uploaded_at
+              )
             )
           `)
           .eq('technician_id', user.id)
