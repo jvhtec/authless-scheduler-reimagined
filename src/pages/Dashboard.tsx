@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { TourChips } from "@/components/dashboard/TourChips";
-import { useNavigate } from "react-router-dom";
 import { CalendarDays, Music, Video, Lightbulb, MessageSquare, Send } from "lucide-react";
 import { DepartmentSchedule } from "@/components/dashboard/DepartmentSchedule";
 import { JobCardNew } from "@/components/dashboard/JobCardNew";
@@ -229,16 +228,21 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="p-4">
             <div className="space-y-4">
-              {getSelectedDateJobs().map(job => (
-                <JobCardNew
-                  key={job.id}
-                  job={job}
-                  onEditClick={handleEditClick}
-                  onDeleteClick={handleDeleteClick}
-                  onJobClick={(jobId) => handleJobClick(jobId, "sound")}
-                  userRole={userRole}
-                />
-              ))}
+              {getSelectedDateJobs().map(job => {
+                const department = job.job_departments?.[0]?.department || "sound";
+                
+                return (
+                  <JobCardNew
+                    key={job.id}
+                    job={job}
+                    department={department}
+                    onEditClick={handleEditClick}
+                    onDeleteClick={handleDeleteClick}
+                    onJobClick={(jobId) => handleJobClick(jobId, department as Department)}
+                    userRole={userRole}
+                  />
+                );
+              })}
             </div>
           </CardContent>
         </Card>
