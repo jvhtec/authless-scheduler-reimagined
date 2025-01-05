@@ -9,14 +9,15 @@ import {
   SidebarSeparator,
   SidebarTrigger
 } from "@/components/ui/sidebar";
-import { LogOut, BellDot } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { ThemeToggle } from "./layout/ThemeToggle";
 import { UserInfo } from "./layout/UserInfo";
 import { SidebarNavigation } from "./layout/SidebarNavigation";
 import { AboutCard } from "./layout/AboutCard";
+import { NotificationBadge } from "./layout/NotificationBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionManager } from "@/hooks/useSessionManager";
 
@@ -28,7 +29,6 @@ const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   
   const {
     session,
@@ -39,96 +39,6 @@ const Layout = ({ children }: LayoutProps) => {
     setUserRole,
     setUserDepartment
   } = useSessionManager();
-
-  useEffect(() => {
-    if (!session?.user?.id) return;
-
-    const fetchUnreadMessages = async () => {
-      console.log("Checking for unread messages...");
-      
-      // Check for unread department messages
-      let deptQuery = supabase
-        .from('messages')
-        .select('*')
-        .eq('status', 'unread');
-
-      if (userRole === 'management') {
-        deptQuery = deptQuery.eq('department', userDepartment);
-      } else if (userRole === 'technician') {
-        deptQuery = deptQuery.eq('sender_id', session.user.id);
-      }
-
-      // Check for unread direct messages
-      const directQuery = supabase
-        .from('direct_messages')
-        .select('*')
-        .eq('recipient_id', session.user.id)
-        .eq('status', 'unread');
-
-      const [deptMessages, directMessages] = await Promise.all([
-        deptQuery,
-        directQuery
-      ]);
-
-      if (deptMessages.error) {
-        console.error('Error fetching department messages:', deptMessages.error);
-        return;
-      }
-
-      if (directMessages.error) {
-        console.error('Error fetching direct messages:', directMessages.error);
-        return;
-      }
-
-      const hasUnread = deptMessages.data.length > 0 || directMessages.data.length > 0;
-      console.log("Unread messages status:", {
-        departmentMessages: deptMessages.data.length,
-        directMessages: directMessages.data.length,
-        hasUnread
-      });
-      
-      setHasUnreadMessages(hasUnread);
-    };
-
-    fetchUnreadMessages();
-
-    // Subscribe to changes in both messages and direct_messages tables
-    const channel = supabase
-      .channel('messages-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-        },
-        () => {
-          console.log("Messages table changed, checking unread status");
-          fetchUnreadMessages();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'direct_messages',
-          filter: `recipient_id=eq.${session.user.id}`,
-        },
-        () => {
-          console.log("Direct messages changed, checking unread status");
-          fetchUnreadMessages();
-        }
-      )
-      .subscribe((status) => {
-        console.log("Messages notification subscription status:", status);
-      });
-
-    return () => {
-      console.log("Cleaning up messages notification subscription");
-      supabase.removeChannel(channel);
-    };
-  }, [session?.user?.id, userRole, userDepartment]);
 
   const handleSignOut = async () => {
     if (isLoggingOut) return;
@@ -159,14 +69,6 @@ const Layout = ({ children }: LayoutProps) => {
     }
   };
 
-  const handleMessageNotificationClick = () => {
-    if (userRole === 'management') {
-      navigate('/dashboard?showMessages=true');
-    } else if (userRole === 'technician') {
-      navigate('/technician-dashboard?showMessages=true');
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -194,15 +96,12 @@ const Layout = ({ children }: LayoutProps) => {
           <SidebarFooter className="border-t border-sidebar-border">
             <ThemeToggle />
             <UserInfo />
-            {hasUnreadMessages && (
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-2 text-yellow-500"
-                onClick={handleMessageNotificationClick}
-              >
-                <BellDot className="h-4 w-4" />
-                <span>New Messages</span>
-              </Button>
+            {session?.user?.id && (
+              <NotificationBadge 
+                userId={session.user.id}
+                userRole={userRole}
+                userDepartment={userDepartment}
+              />
             )}
             <Button 
               variant="ghost" 
