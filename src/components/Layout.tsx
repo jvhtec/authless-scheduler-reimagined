@@ -47,7 +47,7 @@ const Layout = ({ children }: LayoutProps) => {
         setSession(currentSession);
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, department')
           .eq('id', currentSession.user.id)
           .single();
 
@@ -57,10 +57,10 @@ const Layout = ({ children }: LayoutProps) => {
         }
 
         if (profileData) {
-          console.log('User role fetched:', profileData.role);
+          console.log('User role and department fetched:', profileData);
           setUserRole(profileData.role);
+          setUserDepartment(profileData.department);
           
-          // Redirect technicians to technician dashboard if they're on the main dashboard or root
           if (profileData.role === 'technician' && 
               (location.pathname === '/dashboard' || location.pathname === '/')) {
             console.log('Redirecting technician to technician dashboard');
@@ -83,6 +83,7 @@ const Layout = ({ children }: LayoutProps) => {
       if (!session) {
         setSession(null);
         setUserRole(null);
+        setUserDepartment(null);
         navigate('/auth');
         return;
       }
@@ -90,7 +91,7 @@ const Layout = ({ children }: LayoutProps) => {
       setSession(session);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, department')
         .eq('id', session.user.id)
         .single();
 
@@ -100,10 +101,10 @@ const Layout = ({ children }: LayoutProps) => {
       }
 
       if (profileData) {
-        console.log('User role fetched:', profileData.role);
+        console.log('User role and department fetched:', profileData);
         setUserRole(profileData.role);
+        setUserDepartment(profileData.department);
         
-        // Redirect technicians to technician dashboard if they're on the main dashboard or root
         if (profileData.role === 'technician' && 
             (location.pathname === '/dashboard' || location.pathname === '/')) {
           console.log('Redirecting technician to technician dashboard');

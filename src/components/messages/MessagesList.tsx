@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { MessageSquare } from "lucide-react";
@@ -9,6 +9,7 @@ interface Message {
   content: string;
   created_at: string;
   status: 'read' | 'unread';
+  department: string;
   sender: {
     first_name: string;
     last_name: string;
@@ -34,6 +35,8 @@ export const MessagesList = () => {
 
         if (profileError) throw profileError;
 
+        console.log("User profile data:", profileData);
+
         const query = supabase
           .from('messages')
           .select(`
@@ -43,10 +46,12 @@ export const MessagesList = () => {
           .order('created_at', { ascending: false });
 
         // If user is management, fetch messages from their department
-        if (profileData.role === 'management') {
+        if (profileData.role === 'management' && profileData.department) {
+          console.log("Fetching messages for department:", profileData.department);
           query.eq('department', profileData.department);
         } else {
           // If user is technician, fetch only their messages
+          console.log("Fetching messages for technician:", userData.user.id);
           query.eq('sender_id', userData.user.id);
         }
 
@@ -63,6 +68,27 @@ export const MessagesList = () => {
     };
 
     fetchMessages();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages'
+        },
+        () => {
+          console.log("Message changes detected, refreshing...");
+          fetchMessages();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   if (loading) {
