@@ -44,14 +44,15 @@ export const JobAssignments = ({ jobId, department, userRole }: JobAssignmentsPr
     },
   });
 
-  const handleDelete = async (assignmentId: string) => {
+  const handleDelete = async (technicianId: string) => {
     if (userRole === 'logistics') return;
     
     try {
       const { error } = await supabase
         .from("job_assignments")
         .delete()
-        .eq("id", assignmentId);
+        .eq("job_id", jobId)
+        .eq("technician_id", technicianId);
 
       if (error) throw error;
 
@@ -95,7 +96,7 @@ export const JobAssignments = ({ jobId, department, userRole }: JobAssignmentsPr
         
         return (
           <div
-            key={assignment.id}
+            key={`${assignment.job_id}-${assignment.technician_id}`}
             className="flex items-center justify-between gap-2 text-sm text-muted-foreground bg-secondary/50 p-2 rounded-md"
           >
             <div className="flex items-center gap-2">
@@ -110,7 +111,7 @@ export const JobAssignments = ({ jobId, department, userRole }: JobAssignmentsPr
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={() => handleDelete(assignment.id)}
+                onClick={() => handleDelete(assignment.technician_id)}
               >
                 <X className="h-4 w-4" />
               </Button>
