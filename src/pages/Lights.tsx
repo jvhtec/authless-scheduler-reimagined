@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import CreateJobDialog from "@/components/jobs/CreateJobDialog";
 import CreateTourDialog from "@/components/tours/CreateTourDialog";
 import { useJobs } from "@/hooks/useJobs";
@@ -13,6 +14,7 @@ import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { LightsSchedule } from "@/components/lights/LightsSchedule";
 
 const Lights = () => {
+  const navigate = useNavigate();
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
   const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
@@ -28,14 +30,20 @@ const Lights = () => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const fetchUserRole = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.log("No session found, redirecting to auth");
+        navigate('/auth');
+        return;
+      }
 
+      console.log("Session found, fetching user role");
       const { data, error } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', user.id)
+        .eq('id', session.user.id)
         .single();
 
       if (error) {
@@ -44,12 +52,22 @@ const Lights = () => {
       }
 
       if (data) {
+        console.log("User role fetched:", data.role);
         setUserRole(data.role);
       }
     };
 
-    fetchUserRole();
-  }, []);
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        console.log("Auth state changed: no session, redirecting to auth");
+        navigate('/auth');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const getDepartmentJobs = () => {
     if (!jobs) return [];
