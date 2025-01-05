@@ -1,12 +1,16 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Department } from "@/types/department";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface SignUpFormData {
   email: string;
   password: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   phone: string;
   department: Department;
   dni: string;
@@ -14,20 +18,45 @@ interface SignUpFormData {
 }
 
 interface SignUpFormFieldsProps {
-  formData: SignUpFormData;
-  onChange: (field: keyof SignUpFormData, value: string | Department) => void;
+  onSubmit: (data: SignUpFormData) => void;
+  error: string | null;
+  isLoading: boolean;
 }
 
-export const SignUpFormFields = ({ formData, onChange }: SignUpFormFieldsProps) => {
+export const SignUpFormFields = ({ onSubmit, error, isLoading }: SignUpFormFieldsProps) => {
+  const [formData, setFormData] = useState<SignUpFormData>({
+    email: "",
+    password: "",
+    firstName: "",
+    lastName: "",
+    phone: "",
+    department: "sound",
+    dni: "",
+    residencia: "",
+  });
+
+  const handleChange = (field: keyof SignUpFormData, value: string | Department) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
   return (
-    <div className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="text-red-500 text-sm">{error}</div>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input
           id="email"
           type="email"
           value={formData.email}
-          onChange={(e) => onChange("email", e.target.value)}
+          onChange={(e) => handleChange("email", e.target.value)}
           required
         />
       </div>
@@ -38,18 +67,29 @@ export const SignUpFormFields = ({ formData, onChange }: SignUpFormFieldsProps) 
           id="password"
           type="password"
           value={formData.password}
-          onChange={(e) => onChange("password", e.target.value)}
+          onChange={(e) => handleChange("password", e.target.value)}
           required
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="name">Full Name</Label>
+        <Label htmlFor="firstName">First Name</Label>
         <Input
-          id="name"
+          id="firstName"
           type="text"
-          value={formData.name}
-          onChange={(e) => onChange("name", e.target.value)}
+          value={formData.firstName}
+          onChange={(e) => handleChange("firstName", e.target.value)}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="lastName">Last Name</Label>
+        <Input
+          id="lastName"
+          type="text"
+          value={formData.lastName}
+          onChange={(e) => handleChange("lastName", e.target.value)}
           required
         />
       </div>
@@ -60,7 +100,7 @@ export const SignUpFormFields = ({ formData, onChange }: SignUpFormFieldsProps) 
           id="phone"
           type="tel"
           value={formData.phone}
-          onChange={(e) => onChange("phone", e.target.value)}
+          onChange={(e) => handleChange("phone", e.target.value)}
         />
       </div>
 
@@ -68,7 +108,7 @@ export const SignUpFormFields = ({ formData, onChange }: SignUpFormFieldsProps) 
         <Label htmlFor="department">Department</Label>
         <Select
           value={formData.department}
-          onValueChange={(value) => onChange("department", value as Department)}
+          onValueChange={(value) => handleChange("department", value as Department)}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select department" />
@@ -87,7 +127,7 @@ export const SignUpFormFields = ({ formData, onChange }: SignUpFormFieldsProps) 
           id="dni"
           type="text"
           value={formData.dni}
-          onChange={(e) => onChange("dni", e.target.value)}
+          onChange={(e) => handleChange("dni", e.target.value)}
         />
       </div>
 
@@ -97,9 +137,20 @@ export const SignUpFormFields = ({ formData, onChange }: SignUpFormFieldsProps) 
           id="residencia"
           type="text"
           value={formData.residencia}
-          onChange={(e) => onChange("residencia", e.target.value)}
+          onChange={(e) => handleChange("residencia", e.target.value)}
         />
       </div>
-    </div>
+
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Creating account...
+          </>
+        ) : (
+          'Sign Up'
+        )}
+      </Button>
+    </form>
   );
 };

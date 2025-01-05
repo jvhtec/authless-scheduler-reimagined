@@ -85,7 +85,7 @@ export const SignUpForm = ({ onBack, preventAutoLogin = false }: SignUpFormProps
         error={error}
         isLoading={isLoading}
       />
-      <SignUpFormActions onBack={onBack} />
+      {onBack && <SignUpFormActions onBack={onBack} loading={isLoading} />}
     </div>
   );
 };
