@@ -41,7 +41,7 @@ export const useSessionRefresh = () => {
 
   // Handle tab visibility changes
   useEffect(() => {
-    const handleVisibilityChange = async () => {
+    const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log("Tab became visible, scheduling session refresh");
         // Clear any existing timeout
@@ -49,8 +49,8 @@ export const useSessionRefresh = () => {
           clearTimeout(visibilityTimeoutRef.current);
         }
         // Add a small delay to ensure browser is ready
-        visibilityTimeoutRef.current = setTimeout(async () => {
-          await refreshSession();
+        visibilityTimeoutRef.current = setTimeout(() => {
+          refreshSession();
         }, 1000);
       }
     };
@@ -73,10 +73,10 @@ export const useSessionRefresh = () => {
         clearTimeout(refreshTimeoutRef.current);
       }
 
-      refreshTimeoutRef.current = setTimeout(async () => {
+      refreshTimeoutRef.current = setTimeout(() => {
         if (document.visibilityState === 'visible') {
           console.log("Initiating periodic session refresh");
-          await refreshSession();
+          refreshSession();
         }
         scheduleNextRefresh();
       }, REFRESH_INTERVAL);

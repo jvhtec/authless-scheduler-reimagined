@@ -24,7 +24,6 @@ export const useSessionManager = () => {
         setSession(null);
         setUserRole(null);
         setUserDepartment(null);
-        navigate('/auth');
         return;
       }
 
@@ -36,18 +35,18 @@ export const useSessionManager = () => {
         setUserRole(profileData.role);
         setUserDepartment(profileData.department);
       } else {
-        throw new Error("No profile data found");
+        console.log("No profile data found");
+        setSession(null);
+        setUserRole(null);
+        setUserDepartment(null);
       }
     } catch (error) {
       console.error("Error in session update:", error);
       setSession(null);
       setUserRole(null);
       setUserDepartment(null);
-      navigate('/auth');
-    } finally {
-      setIsLoading(false);
     }
-  }, [navigate, fetchUserProfile]);
+  }, [fetchUserProfile]);
 
   // Initial session setup and auth state change listener
   useEffect(() => {
@@ -61,6 +60,7 @@ export const useSessionManager = () => {
 
         if (mounted) {
           await handleSessionUpdate(initialSession);
+          setIsLoading(false);
         }
 
         const {
@@ -69,6 +69,7 @@ export const useSessionManager = () => {
           console.log("Auth state changed:", _event);
           if (mounted) {
             await handleSessionUpdate(session);
+            setIsLoading(false);
           }
         });
 
@@ -79,18 +80,16 @@ export const useSessionManager = () => {
         console.error("Error in session setup:", error);
         if (mounted) {
           setIsLoading(false);
-          navigate('/auth');
         }
       }
     };
 
-    const setupPromise = setupSession();
+    setupSession();
     
     return () => {
       mounted = false;
-      setupPromise.then(cleanup => cleanup && cleanup());
     };
-  }, [navigate, handleSessionUpdate]);
+  }, [handleSessionUpdate]);
 
   // Profile changes subscription
   useProfileChanges(
