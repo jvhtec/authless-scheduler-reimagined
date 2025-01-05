@@ -120,9 +120,12 @@ const Layout = ({ children }: LayoutProps) => {
           fetchUnreadMessages();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Messages notification subscription status:", status);
+      });
 
     return () => {
+      console.log("Cleaning up messages notification subscription");
       supabase.removeChannel(channel);
     };
   }, [session?.user?.id, userRole, userDepartment]);
