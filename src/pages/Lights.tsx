@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { LightsHeader } from "@/components/lights/LightsHeader";
 import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { LightsSchedule } from "@/components/lights/LightsSchedule";
+import { useEffect } from "react";
 
 const Lights = () => {
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
@@ -20,11 +21,36 @@ const Lights = () => {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [userRole, setUserRole] = useState<string | null>(null);
   const currentDepartment = "lights";
   
   const { data: jobs, isLoading } = useJobs();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user role:', error);
+        return;
+      }
+
+      if (data) {
+        setUserRole(data.role);
+      }
+    };
+
+    fetchUserRole();
+  }, []);
 
   const getDepartmentJobs = () => {
     if (!jobs) return [];
