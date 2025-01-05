@@ -33,11 +33,15 @@ export const JobCardNew = ({
 
   const canEdit = userRole !== 'logistics';
 
-  // Get assigned technicians from job_assignments
-  const assignedTechnicians = job.job_assignments?.map((assignment: any) => ({
+  // Get assigned technicians from job_assignments, ensuring we have valid data
+  const assignedTechnicians = job.job_assignments?.filter((assignment: any) => 
+    assignment.technician && 
+    (assignment.technician.first_name || assignment.technician.last_name)
+  ).map((assignment: any) => ({
+    id: assignment.technician_id,
     name: `${assignment.technician?.first_name || ''} ${assignment.technician?.last_name || ''}`.trim(),
     role: assignment.sound_role || assignment.lights_role || assignment.video_role
-  })).filter((tech: any) => tech.name);
+  }));
 
   return (
     <Card 
@@ -84,9 +88,9 @@ export const JobCardNew = ({
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
               <div className="flex gap-1 flex-wrap">
-                {assignedTechnicians.map((tech: any, index: number) => (
+                {assignedTechnicians.map((tech: any) => (
                   <Badge 
-                    key={`${tech.name}-${index}`} 
+                    key={tech.id} 
                     variant="secondary"
                     className="text-xs"
                   >
