@@ -28,11 +28,11 @@ export const JobDocuments = ({
 }: JobDocumentsProps) => {
   const { toast } = useToast();
 
-  const handleDownload = async (document: JobDocument) => {
+  const handleDownload = async (jobDocument: JobDocument) => {
     try {
       const { data, error } = await supabase.storage
         .from('job_documents')
-        .download(document.file_path);
+        .download(jobDocument.file_path);
 
       if (error) throw error;
 
@@ -40,7 +40,7 @@ export const JobDocuments = ({
       const url = window.URL.createObjectURL(data);
       const link = document.createElement('a');
       link.href = url;
-      link.download = document.file_name;
+      link.download = jobDocument.file_name;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
