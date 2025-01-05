@@ -210,19 +210,19 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {[
-          { name: "sound", icon: Music, color: "text-blue-500" },
-          { name: "lights", icon: Lightbulb, color: "text-yellow-500" },
-          { name: "video", icon: Video, color: "text-purple-500" }
+          { name: "sound" as Department, icon: Music, color: "text-blue-500" },
+          { name: "lights" as Department, icon: Lightbulb, color: "text-yellow-500" },
+          { name: "video" as Department, icon: Video, color: "text-purple-500" }
         ].map(({ name, icon, color }) => (
           <DepartmentSchedule
             key={name}
             name={name}
             icon={icon}
             color={color}
-            jobs={getDepartmentJobs(name as Department)}
+            jobs={getDepartmentJobs(name)}
             onEditClick={handleEditClick}
             onDeleteClick={handleDeleteClick}
-            onJobClick={(jobId) => handleJobClick(jobId, name as Department)}
+            onJobClick={(jobId) => handleJobClick(jobId, name)}
             userRole={userRole}
           />
         ))}
