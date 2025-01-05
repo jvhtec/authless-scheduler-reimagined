@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "lucide-react";
+import { Calendar, RefreshCw } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { addWeeks, addMonths } from "date-fns";
 import { TimeSpanSelector } from "@/components/technician/TimeSpanSelector";
@@ -9,6 +9,7 @@ import { AssignmentsList } from "@/components/technician/AssignmentsList";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Dialog } from "@/components/ui/dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 
 const TechnicianDashboard = () => {
   const [timeSpan, setTimeSpan] = useState<string>("1week");
@@ -70,7 +71,7 @@ const TechnicianDashboard = () => {
     };
   }, [queryClient]);
 
-  const { data: assignments = [], isLoading } = useQuery({
+  const { data: assignments = [], isLoading, refetch } = useQuery({
     queryKey: ['assignments', timeSpan],
     queryFn: async () => {
       try {
@@ -131,11 +132,25 @@ const TechnicianDashboard = () => {
     navigate('/technician-dashboard');
   };
 
+  const handleRefresh = async () => {
+    console.log("Manually refreshing assignments data");
+    await refetch();
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Technician Dashboard</h1>
         <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className={isLoading ? "animate-spin" : ""}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
           <TimeSpanSelector value={timeSpan} onValueChange={setTimeSpan} />
           <MessageManagementDialog department={userDepartment} />
         </div>
