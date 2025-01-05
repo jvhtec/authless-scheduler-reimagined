@@ -47,6 +47,7 @@ export const DirectMessageDialog = ({
 
   useEffect(() => {
     const fetchProfiles = async () => {
+      console.log("Fetching profiles for direct message dialog");
       const { data, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name')
@@ -57,6 +58,7 @@ export const DirectMessageDialog = ({
         return;
       }
 
+      console.log("Fetched profiles:", data);
       setProfiles(data || []);
     };
 
@@ -80,12 +82,16 @@ export const DirectMessageDialog = ({
         .insert({
           sender_id: session.user.id,
           recipient_id: selectedRecipientId,
-          content: message,
+          content: message.trim(),
           status: 'unread'
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error inserting direct message:", error);
+        throw error;
+      }
 
+      console.log("Direct message sent successfully");
       toast({
         title: "Message sent",
         description: "Your message has been sent successfully.",

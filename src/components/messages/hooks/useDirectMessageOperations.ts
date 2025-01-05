@@ -54,6 +54,11 @@ export const useDirectMessageOperations = (
           ? { ...message, status: 'read' }
           : message
       ));
+      
+      toast({
+        title: "Success",
+        description: "Message marked as read",
+      });
     } catch (error) {
       console.error("Error marking direct message as read:", error);
       toast({

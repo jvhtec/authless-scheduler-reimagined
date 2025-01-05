@@ -63,8 +63,13 @@ export const DirectMessagesList = () => {
           .order('created_at', { ascending: false })
       ]);
 
-      if (receivedMessages.error || sentMessages.error) {
-        throw receivedMessages.error || sentMessages.error;
+      if (receivedMessages.error) {
+        console.error("Error fetching received messages:", receivedMessages.error);
+        throw receivedMessages.error;
+      }
+      if (sentMessages.error) {
+        console.error("Error fetching sent messages:", sentMessages.error);
+        throw sentMessages.error;
       }
 
       const allMessages = [...(receivedMessages.data || []), ...(sentMessages.data || [])];
