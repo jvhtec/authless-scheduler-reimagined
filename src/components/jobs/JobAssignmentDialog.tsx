@@ -15,6 +15,16 @@ interface JobAssignmentDialogProps {
   department: Department;
 }
 
+interface LocationData {
+  name: string;
+}
+
+interface JobData {
+  title: string;
+  start_time: string;
+  locations: LocationData | null;
+}
+
 export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: JobAssignmentDialogProps) => {
   const [selectedTechnician, setSelectedTechnician] = useState<string>("");
   const [selectedRole, setSelectedRole] = useState<string>("");
@@ -63,6 +73,8 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
 
       if (jobError) throw jobError;
 
+      const typedJobData = jobData as JobData;
+
       // Create assignment with initial 'invited' status
       const roleField = `${department}_role` as const;
       const { error: assignError } = await supabase
@@ -80,10 +92,10 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
       const { error: emailError } = await supabase.functions.invoke('send-assignment-email', {
         body: {
           to: technicianData.email,
-          jobTitle: jobData.title,
+          jobTitle: typedJobData.title,
           technicianName: `${technicianData.first_name} ${technicianData.last_name}`,
-          startTime: new Date(jobData.start_time).toLocaleString(),
-          location: jobData.locations?.name || 'Location TBD'
+          startTime: new Date(typedJobData.start_time).toLocaleString(),
+          location: typedJobData.locations?.name || 'Location TBD'
         }
       });
 
