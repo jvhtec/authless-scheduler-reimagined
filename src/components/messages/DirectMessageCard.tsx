@@ -21,7 +21,7 @@ export const DirectMessageCard = ({
   const showMarkAsRead = isRecipient && message.status === 'unread';
 
   return (
-    <Card key={message.id} className={message.status === 'unread' ? 'border-primary' : ''}>
+    <Card key={message.id} className={`${message.status === 'unread' ? 'border-primary' : ''}`}>
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
@@ -41,12 +41,13 @@ export const DirectMessageCard = ({
             </span>
             {showMarkAsRead && (
               <Button
-                variant="ghost"
-                size="icon"
+                variant="outline"
+                size="sm"
                 onClick={() => onMarkAsRead(message.id)}
-                title="Mark as read"
+                className="flex items-center gap-1"
               >
                 <CheckCircle className="h-4 w-4" />
+                <span>Mark as Read</span>
               </Button>
             )}
             {message.sender_id === currentUserId && (
