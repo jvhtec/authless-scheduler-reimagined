@@ -4,11 +4,15 @@ import { useToast } from "@/hooks/use-toast";
 import { MessageCard } from "./MessageCard";
 import { useMessagesQuery } from "./hooks/useMessagesQuery";
 import { useMessageOperations } from "./hooks/useMessageOperations";
+import { useTabVisibility } from "@/hooks/useTabVisibility";
 
 export const MessagesList = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userDepartment, setUserDepartment] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Add tab visibility hook to refresh messages when tab becomes visible
+  useTabVisibility(['messages', 'direct_messages']);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -34,7 +38,7 @@ export const MessagesList = () => {
     fetchUserProfile();
   }, []);
 
-  const { messages, loading, setMessages } = useMessagesQuery(userRole, userDepartment);
+  const { messages, loading, isFetching, setMessages } = useMessagesQuery(userRole, userDepartment);
   const { handleDeleteMessage, handleMarkAsRead } = useMessageOperations(messages, setMessages, toast);
 
   if (loading) {
@@ -43,6 +47,9 @@ export const MessagesList = () => {
 
   return (
     <div className="space-y-4">
+      {isFetching && !loading && (
+        <div className="text-xs text-muted-foreground mb-2">Refreshing messages...</div>
+      )}
       {messages.length === 0 ? (
         <p className="text-muted-foreground">No messages in this department.</p>
       ) : (

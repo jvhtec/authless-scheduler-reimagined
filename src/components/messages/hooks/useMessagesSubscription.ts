@@ -1,50 +1,68 @@
-import { useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { Message } from '../types';
 
 export const useMessagesSubscription = (
-  currentUserId: string | undefined,
-  fetchMessages: () => Promise<void>
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
+  userRole: string | null,
+  userDepartment: string | null
 ) => {
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!userRole) return;
 
-    console.log("Setting up direct messages subscription for user:", currentUserId);
-    
+    console.log('Setting up messages subscription for role:', userRole, 'department:', userDepartment);
+
     const channel = supabase
-      .channel('direct-messages-changes')
+      .channel('messages-changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'direct_messages',
-          filter: `recipient_id=eq.${currentUserId}`,
+          table: 'messages',
         },
-        (payload) => {
-          console.log("Direct message changes detected for recipient:", payload);
-          fetchMessages();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'direct_messages',
-          filter: `sender_id=eq.${currentUserId}`,
-        },
-        (payload) => {
-          console.log("Direct message changes detected for sender:", payload);
-          fetchMessages();
+        async (payload) => {
+          console.log('Received message change:', payload);
+
+          // Fetch the complete message data including sender information
+          const { data: updatedMessage } = await supabase
+            .from('messages')
+            .select(`
+              *,
+              sender:profiles!messages_sender_id_fkey (
+                id,
+                first_name,
+                last_name
+              )
+            `)
+            .eq('id', payload.new.id)
+            .single();
+
+          if (!updatedMessage) return;
+
+          setMessages(prevMessages => {
+            switch (payload.eventType) {
+              case 'INSERT':
+                return [updatedMessage, ...prevMessages];
+              case 'UPDATE':
+                return prevMessages.map(msg => 
+                  msg.id === updatedMessage.id ? updatedMessage : msg
+                );
+              case 'DELETE':
+                return prevMessages.filter(msg => msg.id !== payload.old.id);
+              default:
+                return prevMessages;
+            }
+          });
         }
       )
       .subscribe((status) => {
-        console.log("Subscription status:", status);
+        console.log('Messages subscription status:', status);
       });
 
     return () => {
-      console.log("Cleaning up direct messages subscription");
+      console.log('Cleaning up messages subscription');
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, fetchMessages]);
+  }, [userRole, userDepartment, setMessages]);
 };
