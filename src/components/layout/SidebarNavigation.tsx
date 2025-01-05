@@ -22,8 +22,8 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
   // Only admin, management, and technicians can access department pages
   const isAuthorizedForDepartments = ['admin', 'management', 'technician'].includes(userRole as string);
   
-  // Only admin can access settings
-  const isAuthorizedForSettings = userRole === 'admin';
+  // Admin and management can access settings
+  const isAuthorizedForSettings = ['admin', 'management'].includes(userRole as string);
 
   console.log('Current user role:', userRole);
   console.log('Can access project management:', isAuthorizedForProjectManagement);
