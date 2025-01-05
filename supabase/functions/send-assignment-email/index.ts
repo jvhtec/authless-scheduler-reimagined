@@ -25,6 +25,9 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { to, jobTitle, technicianName, startTime, location }: EmailRequest = await req.json();
 
+    console.log("Sending email to:", to);
+    console.log("Email details:", { jobTitle, technicianName, startTime, location });
+
     const html = `
       <h2>Job Assignment Confirmation Required</h2>
       <p>Hello ${technicianName},</p>
@@ -37,8 +40,6 @@ const handler = async (req: Request): Promise<Response> => {
       <p>Please log in to your dashboard to confirm your availability for this assignment.</p>
       <p>Best regards,<br>Your Management Team</p>
     `;
-
-    console.log("Sending email to:", to);
     
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -47,7 +48,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Job Assignments <onboarding@resend.dev>",
+        from: "Sector Pro <jvadillotecnico@gmail.com>",
         to: [to],
         subject: `Job Assignment: ${jobTitle} - Confirmation Required`,
         html: html,

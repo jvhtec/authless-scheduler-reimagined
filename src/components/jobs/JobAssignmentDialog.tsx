@@ -22,7 +22,7 @@ interface LocationData {
 interface JobData {
   title: string;
   start_time: string;
-  locations: LocationData;
+  locations: LocationData | null;
 }
 
 export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: JobAssignmentDialogProps) => {
