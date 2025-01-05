@@ -1,11 +1,11 @@
 import { DirectMessage } from "../types";
 import { supabase } from "@/lib/supabase";
-import { Toast } from "@/hooks/use-toast";
+import { toast as toastFunction } from "@/hooks/use-toast";
 
 export const useMessageOperations = (
   messages: DirectMessage[],
   setMessages: React.Dispatch<React.SetStateAction<DirectMessage[]>>,
-  toast: Toast
+  toast: typeof toastFunction
 ) => {
   const handleDeleteMessage = async (messageId: string) => {
     try {
