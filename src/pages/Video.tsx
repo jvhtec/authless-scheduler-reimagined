@@ -28,12 +28,7 @@ const Video = () => {
   const { toast } = useToast();
   
   // Use the tab visibility hook to handle tab switching
-  useTabVisibility({
-    onTabVisible: () => {
-      console.log("Video page: Tab became visible, invalidating jobs query");
-      queryClient.invalidateQueries({ queryKey: ["jobs"] });
-    }
-  });
+  useTabVisibility(['jobs']);
 
   const { data: jobs, isLoading } = useJobs({
     staleTime: 30000, // Consider data fresh for 30 seconds
