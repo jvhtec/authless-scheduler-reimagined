@@ -1,7 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { JobCardNew } from "./JobCardNew";
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, RefreshCw } from "lucide-react";
 import { Department } from "@/types/department";
+import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface DepartmentScheduleProps {
   name: Department;
@@ -24,13 +28,43 @@ export const DepartmentSchedule = ({
   onJobClick,
   userRole
 }: DepartmentScheduleProps) => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      console.log(`Refreshing ${name} department schedule...`);
+      await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      toast.success(`${name} schedule refreshed`);
+    } catch (error) {
+      console.error(`Error refreshing ${name} schedule:`, error);
+      toast.error(`Failed to refresh ${name} schedule`);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <Card className="w-full transition-all hover:shadow-lg">
       <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
-        <CardTitle className="flex items-center gap-2">
-          <Icon className={`w-6 h-6 ${color}`} />
-          <span className="capitalize">{name} Schedule</span>
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Icon className={`w-6 h-6 ${color}`} />
+            <span className="capitalize">{name} Schedule</span>
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRefresh();
+            }}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="h-[400px] overflow-y-auto">
         <div className="space-y-4">
