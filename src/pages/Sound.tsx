@@ -56,27 +56,57 @@ const Sound = () => {
     if (!window.confirm("Are you sure you want to delete this job?")) return;
 
     try {
+      console.log("Starting deletion process for job:", jobId);
+
+      // First delete related projects
+      console.log("Deleting related projects...");
+      const { error: projectsError } = await supabase
+        .from("projects")
+        .delete()
+        .eq("job_id", jobId);
+
+      if (projectsError) {
+        console.error("Error deleting projects:", projectsError);
+        throw projectsError;
+      }
+
+      // Then delete job assignments
+      console.log("Deleting job assignments...");
       const { error: assignmentsError } = await supabase
         .from("job_assignments")
         .delete()
         .eq("job_id", jobId);
 
-      if (assignmentsError) throw assignmentsError;
+      if (assignmentsError) {
+        console.error("Error deleting job assignments:", assignmentsError);
+        throw assignmentsError;
+      }
 
+      // Then delete job departments
+      console.log("Deleting job departments...");
       const { error: departmentsError } = await supabase
         .from("job_departments")
         .delete()
         .eq("job_id", jobId);
 
-      if (departmentsError) throw departmentsError;
+      if (departmentsError) {
+        console.error("Error deleting job departments:", departmentsError);
+        throw departmentsError;
+      }
 
+      // Finally delete the job
+      console.log("Deleting the job...");
       const { error: jobError } = await supabase
         .from("jobs")
         .delete()
         .eq("id", jobId);
 
-      if (jobError) throw jobError;
+      if (jobError) {
+        console.error("Error deleting job:", jobError);
+        throw jobError;
+      }
 
+      console.log("Job deletion completed successfully");
       toast({
         title: "Job deleted successfully",
         description: "The job and all related records have been removed.",
@@ -84,7 +114,7 @@ const Sound = () => {
       
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
     } catch (error: any) {
-      console.error("Error deleting job:", error);
+      console.error("Error in deletion process:", error);
       toast({
         title: "Error deleting job",
         description: error.message,
