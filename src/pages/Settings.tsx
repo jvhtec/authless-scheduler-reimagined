@@ -6,9 +6,11 @@ import { UsersList } from "@/components/users/UsersList";
 import { useState } from "react";
 import { MessagesList } from "@/components/messages/MessagesList";
 import { SendMessage } from "@/components/messages/SendMessage";
+import { Department } from "@/types/department";
 
 const Settings = () => {
   const [createUserOpen, setCreateUserOpen] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
 
   return (
     <div className="space-y-6">
@@ -41,7 +43,18 @@ const Settings = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <SendMessage />
+              <div className="space-y-4">
+                <select 
+                  value={selectedDepartment}
+                  onChange={(e) => setSelectedDepartment(e.target.value as Department)}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="sound">Sound</option>
+                  <option value="lights">Lights</option>
+                  <option value="video">Video</option>
+                </select>
+                <SendMessage department={selectedDepartment} />
+              </div>
               <MessagesList />
             </CardContent>
           </Card>
