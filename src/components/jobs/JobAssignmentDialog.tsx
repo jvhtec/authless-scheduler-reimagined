@@ -104,7 +104,7 @@ export const JobAssignmentDialog = ({ open, onOpenChange, jobId, department }: J
           jobTitle: jobData.title,
           technicianName: `${technicianData.first_name} ${technicianData.last_name}`,
           startTime: new Date(jobData.start_time).toLocaleString(),
-          location: jobData.locations ? jobData.locations.name : 'Location TBD'
+          location: jobData.locations?.name || 'Location TBD'
         }
       });
 
