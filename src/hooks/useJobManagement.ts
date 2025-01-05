@@ -1,9 +1,9 @@
-import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Department } from "@/types/department";
 import { JobDocument } from "@/types/job";
+import { useCallback } from "react";
 
 export const useJobManagement = (
   selectedDepartment: Department,
@@ -13,12 +13,7 @@ export const useJobManagement = (
   const { toast } = useToast();
 
   const fetchJobs = useCallback(async () => {
-    console.log("useJobManagement: Starting jobs fetch", {
-      department: selectedDepartment,
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString()
-    });
-
+    console.log("useJobManagement: Fetching jobs for department:", selectedDepartment);
     const { data, error } = await supabase
       .from('jobs')
       .select(`
@@ -56,47 +51,38 @@ export const useJobManagement = (
     const jobsWithFilteredDocs = data.map(job => ({
       ...job,
       job_documents: job.job_documents.filter((doc: any) => {
+        console.log("useJobManagement: Checking document path:", doc.file_path, "for department:", selectedDepartment);
         return doc.file_path.startsWith(`${selectedDepartment}/`);
       })
     }));
     
-    console.log("useJobManagement: Jobs fetch completed successfully", {
-      jobCount: jobsWithFilteredDocs.length
-    });
-    
+    console.log("useJobManagement: Jobs fetched with filtered documents:", jobsWithFilteredDocs);
     return jobsWithFilteredDocs;
   }, [selectedDepartment, startDate, endDate]);
 
   const { data: jobs, isLoading: jobsLoading } = useQuery({
-    queryKey: ['jobs', selectedDepartment, startDate.toISOString(), endDate.toISOString()],
+    queryKey: ['jobs', selectedDepartment, startDate, endDate],
     queryFn: fetchJobs,
     staleTime: 1000 * 30, // 30 seconds
     refetchOnWindowFocus: true,
-    retry: 2,
-    retryDelay: 1000,
   });
 
   const handleDeleteDocument = async (jobId: string, document: JobDocument) => {
     try {
-      console.log("useJobManagement: Starting document deletion", {
-        jobId,
-        documentId: document.id
-      });
-
+      // Delete from storage
       const { error: storageError } = await supabase.storage
         .from('job_documents')
         .remove([document.file_path]);
 
       if (storageError) throw storageError;
 
+      // Delete from database
       const { error: dbError } = await supabase
         .from('job_documents')
         .delete()
         .eq('id', document.id);
 
       if (dbError) throw dbError;
-
-      console.log("useJobManagement: Document deleted successfully");
 
       toast({
         title: "Document deleted",

@@ -1,4 +1,6 @@
-import { JobCardNew } from "@/components/dashboard/JobCardNew";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
+import { JobCardNew } from "./JobCardNew";
 import { Department } from "@/types/department";
 import { JobDocument } from "@/types/job";
 
@@ -6,27 +8,29 @@ interface DepartmentTabContentProps {
   department: Department;
   jobs: any[];
   isLoading: boolean;
-  onDeleteDocument: (jobId: string, document: JobDocument) => Promise<void>;
+  onDeleteDocument: (jobId: string, document: JobDocument) => void;
 }
 
 export const DepartmentTabContent = ({
   department,
   jobs,
   isLoading,
-  onDeleteDocument,
+  onDeleteDocument
 }: DepartmentTabContentProps) => {
-  console.log("DepartmentTabContent: Rendering with jobs:", {
-    jobCount: jobs?.length,
-    department,
-    isLoading
-  });
-
   if (isLoading) {
-    return <p className="text-muted-foreground">Loading jobs...</p>;
+    return (
+      <div className="flex items-center justify-center p-4">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
   }
 
   if (!jobs?.length) {
-    return <p className="text-muted-foreground">No jobs found</p>;
+    return (
+      <p className="text-muted-foreground p-4">
+        No jobs found for this department.
+      </p>
+    );
   }
 
   return (
@@ -35,8 +39,12 @@ export const DepartmentTabContent = ({
         <JobCardNew
           key={job.id}
           job={job}
+          onEditClick={() => {}}
+          onDeleteClick={() => {}}
+          onJobClick={() => {}}
           department={department}
           onDeleteDocument={onDeleteDocument}
+          showUpload={true}
         />
       ))}
     </div>

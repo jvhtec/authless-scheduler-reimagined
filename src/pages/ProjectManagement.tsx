@@ -9,12 +9,10 @@ import { MonthNavigation } from "@/components/project-management/MonthNavigation
 import { DepartmentTabs } from "@/components/project-management/DepartmentTabs";
 import { useJobManagement } from "@/hooks/useJobManagement";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
-import { useQueryClient } from "@tanstack/react-query";
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [authLoading, setAuthLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -22,7 +20,7 @@ const ProjectManagement = () => {
   const endDate = endOfMonth(currentDate);
 
   // Set up tab visibility handling for jobs query
-  useTabVisibility(['jobs', selectedDepartment, startDate.toISOString(), endDate.toISOString()]);
+  useTabVisibility(['jobs']);
 
   const { jobs, jobsLoading, handleDeleteDocument } = useJobManagement(
     selectedDepartment,
@@ -36,48 +34,42 @@ const ProjectManagement = () => {
 
     const checkAccess = async () => {
       try {
-        console.log("ProjectManagement: Starting access check");
+        console.log("ProjectManagement: Checking session...");
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (!session) {
+        if (!session && mounted) {
           console.log("ProjectManagement: No session found, redirecting to auth");
-          if (mounted) navigate('/auth');
+          navigate('/auth');
           return;
         }
 
-        console.log("ProjectManagement: Session found, checking user role");
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
+        if (session && mounted) {
+          console.log("ProjectManagement: Session found, checking user role");
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
 
-        if (profileError) {
-          console.error("ProjectManagement: Error fetching profile:", profileError);
-          if (mounted) navigate('/dashboard');
-          return;
+          if (profileError) {
+            console.error("ProjectManagement: Error fetching profile:", profileError);
+            navigate('/dashboard');
+            return;
+          }
+
+          if (!profile || !['admin', 'logistics', 'management'].includes(profile.role)) {
+            console.log("ProjectManagement: Unauthorized access attempt, redirecting to dashboard");
+            navigate('/dashboard');
+            return;
+          }
+
+          console.log("ProjectManagement: Access granted for role:", profile.role);
         }
-
-        if (!profile || !['admin', 'logistics', 'management'].includes(profile.role)) {
-          console.log("ProjectManagement: Unauthorized access attempt, redirecting to dashboard");
-          if (mounted) navigate('/dashboard');
-          return;
-        }
-
-        console.log("ProjectManagement: Access check completed successfully");
-        
       } catch (error) {
         console.error("ProjectManagement: Error in access check:", error);
         if (mounted) navigate('/auth');
       } finally {
-        if (mounted) {
-          setAuthLoading(false);
-          // Prefetch jobs data after auth check
-          queryClient.prefetchQuery({
-            queryKey: ['jobs', selectedDepartment, startDate.toISOString(), endDate.toISOString()],
-            queryFn: () => null // This will trigger the actual fetch in useJobManagement
-          });
-        }
+        if (mounted) setLoading(false);
       }
     };
 
@@ -85,7 +77,7 @@ const ProjectManagement = () => {
     return () => {
       mounted = false;
     };
-  }, [navigate, queryClient, selectedDepartment, startDate, endDate]);
+  }, [navigate]);
 
   const handlePreviousMonth = () => {
     setCurrentDate(prev => addMonths(prev, -1));
@@ -95,8 +87,8 @@ const ProjectManagement = () => {
     setCurrentDate(prev => addMonths(prev, 1));
   };
 
-  // Show loading state only during initial auth check
-  if (authLoading) {
+  // Only show loading state when both initial auth check and jobs are loading
+  if (loading || jobsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <Loader2 className="h-8 w-8 animate-spin" />
