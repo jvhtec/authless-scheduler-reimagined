@@ -1,5 +1,4 @@
 #root {
-  max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
@@ -11,4 +10,9 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/* Remove Lovable button */
+#lovable-edit-button {
+  display: none !important;
 }
