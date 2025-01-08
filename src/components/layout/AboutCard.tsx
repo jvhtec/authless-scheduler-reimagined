@@ -7,23 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Info } from "lucide-react"
 import { useState } from "react"
 
-// Get the build timestamp from Vite's env variables
-const buildTimestamp = import.meta.env.VITE_BUILD_TIMESTAMP || 'development';
-
-// Format the timestamp into a version number (YYYYMMDD.HHMMSS)
-const formatVersion = (timestamp: string) => {
-  if (timestamp === 'development') return 'dev';
-  const date = new Date(timestamp);
-  const version = date.toISOString()
-    .replace(/[-:]/g, '')
-    .replace('T', '.')
-    .split('.')[0];
-  return version;
-};
+// Get the version from Vite's env variables
+const version = import.meta.env.VITE_APP_VERSION || 'dev';
 
 export const AboutCard = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const version = formatVersion(buildTimestamp);
 
   return (
     <HoverCard open={isOpen} onOpenChange={setIsOpen}>
@@ -49,7 +37,7 @@ export const AboutCard = () => {
               Created by JVH
             </p>
             <p className="text-xs text-center text-muted-foreground">
-              Version {version}
+              v{version}
             </p>
           </div>
         </div>
