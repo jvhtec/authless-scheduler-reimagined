@@ -19,6 +19,7 @@ export const EditUserDialog = ({ user, onOpenChange, onSave }: EditUserDialogPro
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const updatedData: Partial<Profile> = {
+      id: user.id, // Include the user ID in the update data
       first_name: formData.get('firstName') as string,
       last_name: formData.get('lastName') as string,
       phone: formData.get('phone') as string,
