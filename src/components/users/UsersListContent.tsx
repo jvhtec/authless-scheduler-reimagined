@@ -15,15 +15,29 @@ export const UsersListContent = ({ users }: UsersListContentProps) => {
   
   const { handleDelete, handleSaveEdit } = useUserManagement();
 
+  const handleEdit = (user: Profile) => {
+    if (user?.id) {
+      setEditingUser(user);
+    }
+  };
+
+  const handleDeleteClick = (user: Profile) => {
+    if (user?.id) {
+      setDeletingUser(user);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {users.map((user) => (
-        <UserCard
-          key={user.id}
-          user={user}
-          onEdit={setEditingUser}
-          onDelete={setDeletingUser}
-        />
+        user?.id ? (
+          <UserCard
+            key={user.id}
+            user={user}
+            onEdit={handleEdit}
+            onDelete={handleDeleteClick}
+          />
+        ) : null
       ))}
 
       <EditUserDialog
