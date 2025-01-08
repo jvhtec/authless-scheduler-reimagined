@@ -14,7 +14,7 @@ export const useProfileData = () => {
         .from('profiles')
         .select('role, department')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error("Error fetching user profile:", profileError);

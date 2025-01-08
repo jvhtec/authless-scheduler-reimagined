@@ -19,8 +19,8 @@ export const useSessionManager = () => {
     console.log("Session update handler called with session:", !!currentSession);
     
     try {
-      if (!currentSession) {
-        console.log("No session, clearing user data");
+      if (!currentSession?.user?.id) {
+        console.log("No valid session or user ID, clearing user data");
         setSession(null);
         setUserRole(null);
         setUserDepartment(null);
@@ -28,21 +28,16 @@ export const useSessionManager = () => {
         return;
       }
 
-      console.log("Session found, updating user data");
+      console.log("Session found, updating user data for ID:", currentSession.user.id);
       setSession(currentSession);
       
-      if (!currentSession.user?.id) {
-        console.log("No user ID found in session");
-        throw new Error("No user ID found in session");
-      }
-
       const profileData = await fetchUserProfile(currentSession.user.id);
+      
       if (profileData) {
         setUserRole(profileData.role);
         setUserDepartment(profileData.department);
       } else {
-        console.log("No profile data found");
-        setSession(null);
+        console.log("No profile data found for user");
         setUserRole(null);
         setUserDepartment(null);
       }
@@ -56,7 +51,6 @@ export const useSessionManager = () => {
     }
   }, [fetchUserProfile]);
 
-  // Initial session setup and auth state change listener
   useEffect(() => {
     let mounted = true;
     console.log("Setting up session...");
@@ -97,7 +91,6 @@ export const useSessionManager = () => {
     };
   }, [handleSessionUpdate]);
 
-  // Profile changes subscription
   useProfileChanges(
     session,
     userRole,
