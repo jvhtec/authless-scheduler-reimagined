@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { SignUpFormFields } from "./signup/SignUpFormFields";
 import { SignUpFormActions } from "./signup/SignUpFormActions";
+import { AuthApiError } from "@supabase/supabase-js";
 
 interface SignUpFormProps {
   onBack?: () => void;
@@ -23,6 +24,25 @@ export const SignUpForm = ({ onBack, preventAutoLogin = false }: SignUpFormProps
     try {
       console.log("Starting user creation process");
       
+      // First, check if the user exists in auth.users
+      const { data: { users }, error: getUserError } = await supabase.auth.admin.listUsers();
+      if (getUserError) {
+        console.error("Error checking existing users:", getUserError);
+        throw getUserError;
+      }
+
+      const existingUser = users?.find(user => user.email === formData.email.toLowerCase());
+      
+      if (existingUser) {
+        console.log("User exists, attempting to delete first");
+        const { error: deleteError } = await supabase.auth.admin.deleteUser(existingUser.id);
+        if (deleteError) {
+          console.error("Error deleting existing user:", deleteError);
+          throw deleteError;
+        }
+      }
+
+      // Now proceed with user creation
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email.toLowerCase(),
         password: formData.password,
@@ -40,7 +60,11 @@ export const SignUpForm = ({ onBack, preventAutoLogin = false }: SignUpFormProps
 
       if (signUpError) {
         console.error("Signup error:", signUpError);
-        setError(signUpError.message);
+        if (signUpError instanceof AuthApiError && signUpError.message === "User already registered") {
+          setError("This email is already registered. Please use a different email or contact an administrator.");
+        } else {
+          setError(signUpError.message);
+        }
         return;
       }
 
