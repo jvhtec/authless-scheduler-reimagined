@@ -4,11 +4,13 @@ import { Card } from "@/components/ui/card";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { SignUpForm } from "@/components/auth/SignUpForm";
 import { supabase } from "@/lib/supabase";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Auth = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<any>(null);
   const [showSignUp, setShowSignUp] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Remove dark mode class when entering auth page
   useEffect(() => {
@@ -24,13 +26,29 @@ const Auth = () => {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        
+        console.log("Auth: Current session status:", !!session);
+        setSession(session);
+        
+        if (session) {
+          navigate("/dashboard");
+        }
+      } catch (error: any) {
+        console.error("Auth: Session check error:", error);
+        setError(error.message);
+      }
+    };
+
+    checkSession();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log("Auth: Auth state changed:", _event);
       setSession(session);
       if (session) {
         navigate("/dashboard");
@@ -39,13 +57,6 @@ const Auth = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (session) {
-      navigate("/dashboard");
-    }
-  }, [session, navigate]);
 
   return (
     <div className="min-h-screen flex flex-col px-4 py-8 md:py-12">
@@ -56,6 +67,12 @@ const Auth = () => {
             al Area Tecnica Sector-Pro
           </p>
         </div>
+
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         <Card className="p-6 w-full shadow-lg">
           {showSignUp ? (
