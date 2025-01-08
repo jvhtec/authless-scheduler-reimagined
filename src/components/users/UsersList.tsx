@@ -30,8 +30,10 @@ export const UsersList = () => {
           return [];
         }
 
-        console.log("Profiles fetch successful:", profileData);
-        return profileData;
+        // Filter out any profiles with undefined or null IDs
+        const validProfiles = profileData.filter(profile => profile && profile.id);
+        console.log("Profiles fetch successful:", validProfiles);
+        return validProfiles;
       } catch (error) {
         console.error("Unexpected error in profiles fetch:", error);
         throw error;
