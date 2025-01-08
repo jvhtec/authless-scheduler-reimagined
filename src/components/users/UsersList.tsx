@@ -5,11 +5,13 @@ import { UsersListContent } from "./UsersListContent";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 
 export const UsersList = () => {
   useTabVisibility(['profiles']);
 
-  const { data: users, isLoading, error, isFetching } = useQuery({
+  const { data: users, isLoading, error, isFetching, refetch } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
       console.log("Starting profiles fetch...");
@@ -50,9 +52,21 @@ export const UsersList = () => {
 
   if (error) {
     return (
-      <Alert variant="destructive">
-        <AlertDescription>
-          Error loading users: {error instanceof Error ? error.message : 'Unknown error occurred'}
+      <Alert variant="destructive" className="mb-4">
+        <AlertDescription className="flex items-center justify-between">
+          <span>
+            Error loading users: {error instanceof Error ? error.message : 'Network error occurred'}
+          </span>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="ml-2"
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 ${isFetching ? 'animate-spin' : ''}`} />
+            Retry
+          </Button>
         </AlertDescription>
       </Alert>
     );
