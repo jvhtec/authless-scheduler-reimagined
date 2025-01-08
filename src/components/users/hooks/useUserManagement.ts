@@ -11,22 +11,7 @@ export const useUserManagement = () => {
     try {
       console.log("Starting deletion process for user:", user.id);
       
-      const { error: techDeptError } = await supabase
-        .from('technician_departments')
-        .delete()
-        .eq('technician_id', user.id);
-
-      if (techDeptError) throw techDeptError;
-      console.log("Successfully deleted technician_departments records");
-
-      const { error: jobAssignError } = await supabase
-        .from('job_assignments')
-        .delete()
-        .eq('technician_id', user.id);
-
-      if (jobAssignError) throw jobAssignError;
-      console.log("Successfully deleted job_assignments records");
-
+      // Delete from profiles table first (this will cascade to other tables due to RLS policies)
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
@@ -34,10 +19,6 @@ export const useUserManagement = () => {
 
       if (profileError) throw profileError;
       console.log("Successfully deleted profile");
-
-      const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
-      if (authError) throw authError;
-      console.log("Successfully deleted auth user");
 
       toast({
         title: "User deleted",
