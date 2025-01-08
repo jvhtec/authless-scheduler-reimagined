@@ -324,39 +324,48 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          dark_mode: boolean | null
           department: string | null
           dni: string | null
           email: string
           first_name: string | null
           id: string
+          last_activity: string | null
           last_name: string | null
           phone: string | null
           residencia: string | null
           role: Database["public"]["Enums"]["user_role"]
+          time_span: string | null
         }
         Insert: {
           created_at?: string
+          dark_mode?: boolean | null
           department?: string | null
           dni?: string | null
           email: string
           first_name?: string | null
           id: string
+          last_activity?: string | null
           last_name?: string | null
           phone?: string | null
           residencia?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          time_span?: string | null
         }
         Update: {
           created_at?: string
+          dark_mode?: boolean | null
           department?: string | null
           dni?: string | null
           email?: string
           first_name?: string | null
           id?: string
+          last_activity?: string | null
           last_name?: string | null
           phone?: string | null
           residencia?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          time_span?: string | null
         }
         Relationships: []
       }
