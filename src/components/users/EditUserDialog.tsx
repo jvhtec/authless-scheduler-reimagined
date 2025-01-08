@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Profile } from "./types";
 import { Department } from "@/types/department";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface EditUserDialogProps {
   user: Profile | null;
@@ -13,13 +14,23 @@ interface EditUserDialogProps {
 }
 
 export const EditUserDialog = ({ user, onOpenChange, onSave }: EditUserDialogProps) => {
-  if (!user) return null;
+  if (!user?.id) {
+    console.error("EditUserDialog: No valid user ID provided");
+    return null;
+  }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    
+    // Ensure we have a valid user ID
+    if (!user.id) {
+      console.error("Cannot update user: No valid ID");
+      return;
+    }
+
     const updatedData: Partial<Profile> = {
-      id: user.id, // Include the user ID in the update data
+      id: user.id,
       first_name: formData.get('firstName') as string,
       last_name: formData.get('lastName') as string,
       phone: formData.get('phone') as string,
@@ -28,6 +39,8 @@ export const EditUserDialog = ({ user, onOpenChange, onSave }: EditUserDialogPro
       residencia: formData.get('residencia') as string,
       role: formData.get('role') as string,
     };
+
+    console.log("Submitting user update with data:", updatedData);
     onSave(updatedData);
   };
 

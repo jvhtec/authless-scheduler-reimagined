@@ -4,23 +4,43 @@ import { Profile } from "./types";
 import { UsersListContent } from "./UsersListContent";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export const UsersList = () => {
   useTabVisibility(['profiles']);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setIsAuthenticated(!!session);
+      });
+
+      return () => subscription.unsubscribe();
+    };
+
+    checkAuth();
+  }, []);
 
   const { data: users, isLoading, error, isFetching, refetch } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
+      if (!isAuthenticated) {
+        console.log("Not authenticated, skipping profiles fetch");
+        return [];
+      }
+
       console.log("Starting profiles fetch...");
       
       try {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, email, role, phone, department, dni, residencia')
-          .returns<Profile[]>();
+          .select('id, first_name, last_name, email, role, phone, department, dni, residencia');
 
         if (profileError) {
           console.error("Error in profiles fetch:", profileError);
@@ -41,6 +61,7 @@ export const UsersList = () => {
         throw error;
       }
     },
+    enabled: isAuthenticated, // Only run query when authenticated
     staleTime: 1000 * 60 * 2, // 2 minutes
     gcTime: 1000 * 60 * 5, // 5 minutes
     refetchOnMount: true,
@@ -49,6 +70,14 @@ export const UsersList = () => {
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
+
+  if (!isAuthenticated) {
+    return (
+      <Alert>
+        <AlertDescription>Please sign in to view users.</AlertDescription>
+      </Alert>
+    );
+  }
 
   if (error) {
     return (
