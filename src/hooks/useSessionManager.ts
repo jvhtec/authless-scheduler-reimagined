@@ -30,6 +30,11 @@ export const useSessionManager = () => {
       console.log("Session found, updating user data");
       setSession(currentSession);
       
+      if (!currentSession.user?.id) {
+        console.log("No user ID found in session");
+        throw new Error("No user ID found in session");
+      }
+
       const profileData = await fetchUserProfile(currentSession.user.id);
       if (profileData) {
         setUserRole(profileData.role);

@@ -5,6 +5,11 @@ export const useProfileData = () => {
   const fetchUserProfile = useCallback(async (userId: string) => {
     console.log('Fetching user profile for:', userId);
     try {
+      if (!userId) {
+        console.error("No user ID provided to fetchUserProfile");
+        return null;
+      }
+
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role, department')
