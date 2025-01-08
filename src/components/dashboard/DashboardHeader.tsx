@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useUserPreferences } from "@/hooks/useUserPreferences";
+import { useEffect } from "react";
 
 interface DashboardHeaderProps {
   timeSpan: string;
@@ -7,10 +9,23 @@ interface DashboardHeaderProps {
 }
 
 export const DashboardHeader = ({ timeSpan, onTimeSpanChange }: DashboardHeaderProps) => {
+  const { preferences, updatePreferences } = useUserPreferences();
+
+  useEffect(() => {
+    if (preferences?.time_span && preferences.time_span !== timeSpan) {
+      onTimeSpanChange(preferences.time_span);
+    }
+  }, [preferences, onTimeSpanChange, timeSpan]);
+
+  const handleTimeSpanChange = (value: string) => {
+    onTimeSpanChange(value);
+    updatePreferences({ time_span: value });
+  };
+
   return (
     <div className="flex justify-between items-center">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
-      <Select value={timeSpan} onValueChange={onTimeSpanChange}>
+      <Select value={timeSpan} onValueChange={handleTimeSpanChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Select time span" />
         </SelectTrigger>
