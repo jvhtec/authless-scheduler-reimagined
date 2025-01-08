@@ -24,6 +24,7 @@ export const useSessionManager = () => {
         setSession(null);
         setUserRole(null);
         setUserDepartment(null);
+        setIsLoading(false);
         return;
       }
 
@@ -50,6 +51,8 @@ export const useSessionManager = () => {
       setSession(null);
       setUserRole(null);
       setUserDepartment(null);
+    } finally {
+      setIsLoading(false);
     }
   }, [fetchUserProfile]);
 
@@ -65,7 +68,6 @@ export const useSessionManager = () => {
 
         if (mounted) {
           await handleSessionUpdate(initialSession);
-          setIsLoading(false);
         }
 
         const {
@@ -74,7 +76,6 @@ export const useSessionManager = () => {
           console.log("Auth state changed:", _event);
           if (mounted) {
             await handleSessionUpdate(session);
-            setIsLoading(false);
           }
         });
 
