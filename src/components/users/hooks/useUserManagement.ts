@@ -11,13 +11,27 @@ export const useUserManagement = () => {
     try {
       console.log("Starting deletion process for user:", user.id);
       
-      // Delete from profiles table first (this will cascade to other tables due to RLS policies)
+      // Delete from auth.users first (this requires admin privileges)
+      const { error: authError } = await supabase.auth.admin.deleteUser(
+        user.id
+      );
+
+      if (authError) {
+        console.error("Auth deletion error:", authError);
+        throw authError;
+      }
+      console.log("Successfully deleted auth user");
+
+      // Delete from profiles table (this will cascade to other tables due to RLS policies)
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
         .eq('id', user.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Profile deletion error:", profileError);
+        throw profileError;
+      }
       console.log("Successfully deleted profile");
 
       toast({
