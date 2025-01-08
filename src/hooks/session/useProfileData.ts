@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export const useProfileData = () => {
-  const fetchUserProfile = useCallback(async (userId: string) => {
+  const fetchUserProfile = useCallback(async (userId: string | undefined) => {
     console.log('Fetching user profile for:', userId);
     try {
       if (!userId) {
