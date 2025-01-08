@@ -13,11 +13,13 @@ export const DashboardHeader = ({ timeSpan, onTimeSpanChange }: DashboardHeaderP
 
   useEffect(() => {
     if (preferences?.time_span && preferences.time_span !== timeSpan) {
+      console.log('Applying saved time span preference:', preferences.time_span);
       onTimeSpanChange(preferences.time_span);
     }
   }, [preferences, onTimeSpanChange, timeSpan]);
 
   const handleTimeSpanChange = (value: string) => {
+    console.log('Changing time span to:', value);
     onTimeSpanChange(value);
     updatePreferences({ time_span: value });
   };

@@ -9,15 +9,19 @@ export const ThemeToggle = () => {
 
   useEffect(() => {
     if (preferences?.dark_mode !== undefined) {
+      console.log('Applying saved dark mode preference:', preferences.dark_mode);
       setIsDarkMode(preferences.dark_mode);
       if (preferences.dark_mode) {
         document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
       }
     }
   }, [preferences]);
 
   const toggleDarkMode = () => {
     const newDarkMode = !isDarkMode;
+    console.log('Toggling dark mode to:', newDarkMode);
     setIsDarkMode(newDarkMode);
     
     if (newDarkMode) {

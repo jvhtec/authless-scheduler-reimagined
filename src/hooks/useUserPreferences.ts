@@ -15,8 +15,12 @@ export const useUserPreferences = () => {
 
   const updatePreferences = async (newPreferences: Partial<UserPreferences>) => {
     try {
+      console.log('Updating preferences:', newPreferences);
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) return;
+      if (!session?.user?.id) {
+        console.log('No session found, cannot update preferences');
+        return;
+      }
 
       const { error } = await supabase
         .from('profiles')
@@ -26,9 +30,13 @@ export const useUserPreferences = () => {
         })
         .eq('id', session.user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating preferences:', error);
+        throw error;
+      }
 
       setPreferences(prev => prev ? { ...prev, ...newPreferences } : null);
+      console.log('Preferences updated successfully');
     } catch (error) {
       console.error('Error updating preferences:', error);
       toast({
@@ -47,6 +55,7 @@ export const useUserPreferences = () => {
     const hoursDiff = (now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60);
     
     if (hoursDiff >= 8) {
+      console.log('Session expired due to inactivity');
       await supabase.auth.signOut();
       toast({
         title: "Session Expired",
@@ -59,24 +68,34 @@ export const useUserPreferences = () => {
   useEffect(() => {
     const loadPreferences = async () => {
       try {
+        console.log('Loading user preferences...');
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user?.id) return;
+        if (!session?.user?.id) {
+          console.log('No session found');
+          return;
+        }
 
         const { data, error } = await supabase
           .from('profiles')
           .select('dark_mode, time_span, last_activity')
           .eq('id', session.user.id)
-          .single();
+          .maybeSingle();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error loading preferences:', error);
+          throw error;
+        }
 
-        setPreferences(data);
-        
-        // Apply dark mode if saved
-        if (data.dark_mode) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
+        if (data) {
+          console.log('Preferences loaded:', data);
+          setPreferences(data);
+          
+          // Apply dark mode if saved
+          if (data.dark_mode) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
         }
       } catch (error) {
         console.error('Error loading preferences:', error);
