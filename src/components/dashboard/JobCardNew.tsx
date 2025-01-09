@@ -8,6 +8,8 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
 import { useEffect, useState } from "react";
+import { Progress } from "@/components/ui/progress";
+import { useQuery } from "@tanstack/react-query";
 
 interface JobDocument {
   id: string;
@@ -41,50 +43,32 @@ export const JobCardNew = ({
   const { toast } = useToast();
   const [assignments, setAssignments] = useState(job.job_assignments || []);
 
-  useEffect(() => {
-    console.log("Setting up real-time subscription for job:", job.id);
-    
-    const channel = supabase
-      .channel(`job_assignments_${job.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'job_assignments',
-          filter: `job_id=eq.${job.id}`
-        },
-        async (payload) => {
-          console.log("Received real-time update:", payload);
-          
-          // Fetch updated assignments
-          const { data: updatedAssignments, error } = await supabase
-            .from('job_assignments')
-            .select(`
-              *,
-              profiles (
-                first_name,
-                last_name
-              )
-            `)
-            .eq('job_id', job.id);
+  const { data: soundTasks } = useQuery({
+    queryKey: ['sound-tasks', job.id],
+    queryFn: async () => {
+      if (department !== 'sound') return null;
+      
+      const { data, error } = await supabase
+        .from('sound_job_tasks')
+        .select('*')
+        .eq('job_id', job.id);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: department === 'sound'
+  });
 
-          if (error) {
-            console.error("Error fetching updated assignments:", error);
-            return;
-          }
+  const calculateTotalProgress = () => {
+    if (!soundTasks?.length) return 0;
+    const totalProgress = soundTasks.reduce((acc, task) => acc + (task.progress || 0), 0);
+    return Math.round(totalProgress / soundTasks.length);
+  };
 
-          console.log("Updated assignments:", updatedAssignments);
-          setAssignments(updatedAssignments);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log("Cleaning up real-time subscription");
-      supabase.removeChannel(channel);
-    };
-  }, [job.id]);
+  const getCompletedTasks = () => {
+    if (!soundTasks?.length) return 0;
+    return soundTasks.filter(task => task.status === 'completed').length;
+  };
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -248,6 +232,18 @@ export const JobCardNew = ({
                   </Badge>
                 ))}
               </div>
+            </div>
+          )}
+          {department === 'sound' && soundTasks?.length > 0 && (
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Task Progress ({getCompletedTasks()}/{soundTasks.length} completed)</span>
+                <span>{calculateTotalProgress()}%</span>
+              </div>
+              <Progress 
+                value={calculateTotalProgress()} 
+                className="h-1"
+              />
             </div>
           )}
           {job.job_documents && onDeleteDocument && (
