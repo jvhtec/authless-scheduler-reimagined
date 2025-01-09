@@ -279,7 +279,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="p-4 w-full max-w-[800px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -295,7 +295,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
               <img
                 src={createFolderIcon}
                 alt="Create Flex Folders"
-               className="h-8 w-8"
+               className="h-10 w-10"
                />
               <span className="absolute -top-8 scale-0 transition-all group-hover:scale-100 bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded">
                 Create Flex Folders
