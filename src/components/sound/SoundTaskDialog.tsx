@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Upload, Download, Trash2, FolderPlus } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -20,6 +20,7 @@ interface SoundTaskDialogProps {
 export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogProps) => {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: managementUsers } = useQuery({
     queryKey: ['management-users'],
@@ -54,24 +55,44 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       if (error) throw error;
       return data;
     },
-    enabled: !!jobId // Only run query when jobId is available
+    enabled: !!jobId
   });
 
   const { data: personnel } = useQuery({
     queryKey: ['sound-personnel', jobId],
     queryFn: async () => {
       if (!jobId) return null;
-      
-      const { data, error } = await supabase
+
+      // First try to get existing record
+      const { data: existingData, error: fetchError } = await supabase
         .from('sound_job_personnel')
         .select('*')
         .eq('job_id', jobId)
         .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') throw error;
-      return data;
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+
+      // If no record exists, create one with default values
+      if (!existingData) {
+        const { data: newData, error: insertError } = await supabase
+          .from('sound_job_personnel')
+          .insert({
+            job_id: jobId,
+            foh_engineers: 0,
+            mon_engineers: 0,
+            pa_techs: 0,
+            rf_techs: 0
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        return newData;
+      }
+
+      return existingData;
     },
-    enabled: !!jobId // Only run query when jobId is available
+    enabled: !!jobId
   });
 
   const handleFileUpload = async (taskId: string, file: File) => {
@@ -207,6 +228,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
         });
 
       if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['sound-personnel', jobId] });
     } catch (error: any) {
       toast({
         title: "Update failed",
