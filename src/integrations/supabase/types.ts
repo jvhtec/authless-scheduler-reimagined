@@ -369,6 +369,131 @@ export type Database = {
         }
         Relationships: []
       }
+      sound_job_personnel: {
+        Row: {
+          foh_engineers: number | null
+          id: string
+          job_id: string | null
+          mon_engineers: number | null
+          pa_techs: number | null
+          rf_techs: number | null
+        }
+        Insert: {
+          foh_engineers?: number | null
+          id?: string
+          job_id?: string | null
+          mon_engineers?: number | null
+          pa_techs?: number | null
+          rf_techs?: number | null
+        }
+        Update: {
+          foh_engineers?: number | null
+          id?: string
+          job_id?: string | null
+          mon_engineers?: number | null
+          pa_techs?: number | null
+          rf_techs?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sound_job_personnel_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sound_job_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          id: string
+          job_id: string | null
+          progress: number | null
+          status: Database["public"]["Enums"]["task_status"] | null
+          task_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string | null
+          progress?: number | null
+          status?: Database["public"]["Enums"]["task_status"] | null
+          task_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string | null
+          progress?: number | null
+          status?: Database["public"]["Enums"]["task_status"] | null
+          task_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sound_job_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sound_job_tasks_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_documents: {
+        Row: {
+          file_name: string
+          file_path: string
+          id: string
+          task_id: string | null
+          uploaded_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          file_name: string
+          file_path: string
+          id?: string
+          task_id?: string | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          file_name?: string
+          file_path?: string
+          id?: string
+          task_id?: string | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_documents_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "sound_job_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technician_departments: {
         Row: {
           department: Database["public"]["Enums"]["department"]
@@ -473,6 +598,7 @@ export type Database = {
       job_type: "single" | "tour"
       message_status: "unread" | "read"
       project_status: "pending" | "in_progress" | "completed" | "cancelled"
+      task_status: "not_started" | "in_progress" | "completed"
       user_role: "admin" | "user" | "management" | "logistics" | "technician"
     }
     CompositeTypes: {

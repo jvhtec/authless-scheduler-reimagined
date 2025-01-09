@@ -3,6 +3,8 @@ import { Loader2 } from "lucide-react";
 import { JobCardNew } from "./JobCardNew";
 import { Department } from "@/types/department";
 import { JobDocument } from "@/types/job";
+import { useState } from "react";
+import { SoundTaskDialog } from "@/components/sound/SoundTaskDialog";
 
 interface DepartmentTabContentProps {
   department: Department;
@@ -17,6 +19,8 @@ export const DepartmentTabContent = ({
   isLoading,
   onDeleteDocument
 }: DepartmentTabContentProps) => {
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-4">
@@ -33,6 +37,12 @@ export const DepartmentTabContent = ({
     );
   }
 
+  const handleJobClick = (jobId: string) => {
+    if (department === 'sound') {
+      setSelectedJobId(jobId);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {jobs.map((job) => (
@@ -41,12 +51,20 @@ export const DepartmentTabContent = ({
           job={job}
           onEditClick={() => {}}
           onDeleteClick={() => {}}
-          onJobClick={() => {}}
+          onJobClick={handleJobClick}
           department={department}
           onDeleteDocument={onDeleteDocument}
           showUpload={true}
         />
       ))}
+      
+      {department === 'sound' && (
+        <SoundTaskDialog
+          jobId={selectedJobId!}
+          open={!!selectedJobId}
+          onOpenChange={(open) => !open && setSelectedJobId(null)}
+        />
+      )}
     </div>
   );
 };
