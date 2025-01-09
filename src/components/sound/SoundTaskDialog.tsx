@@ -8,7 +8,6 @@ import { Upload, Download, Trash2, FolderPlus, Table } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
 import { useState } from "react";
 import { Table as UITable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -464,8 +463,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
                         )}
                       </TableCell>
                     </TableRow>
-                  );
-                })}
+                  ))}
               </TableBody>
             </UITable>
           </div>
