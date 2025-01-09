@@ -48,12 +48,23 @@ export const JobCardNew = ({
     queryFn: async () => {
       if (department !== 'sound') return null;
       
+      console.log("Fetching sound tasks for job:", job.id);
       const { data, error } = await supabase
         .from('sound_job_tasks')
-        .select('*')
+        .select(`
+          *,
+          assigned_to (
+            first_name,
+            last_name
+          )
+        `)
         .eq('job_id', job.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching sound tasks:", error);
+        throw error;
+      }
+      console.log("Fetched sound tasks:", data);
       return data;
     },
     enabled: department === 'sound'
@@ -235,7 +246,7 @@ export const JobCardNew = ({
             </div>
           )}
           {department === 'sound' && soundTasks?.length > 0 && (
-            <div className="mt-2 space-y-1">
+            <div className="mt-4 space-y-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Task Progress ({getCompletedTasks()}/{soundTasks.length} completed)</span>
                 <span>{calculateTotalProgress()}%</span>
@@ -244,6 +255,25 @@ export const JobCardNew = ({
                 value={calculateTotalProgress()} 
                 className="h-1"
               />
+              <div className="space-y-1">
+                {soundTasks.map((task: any) => (
+                  <div key={task.id} className="flex items-center justify-between text-xs">
+                    <span>{task.task_type}</span>
+                    <div className="flex items-center gap-2">
+                      {task.assigned_to && (
+                        <span className="text-muted-foreground">
+                          {task.assigned_to.first_name} {task.assigned_to.last_name}
+                        </span>
+                      )}
+                      <Badge variant={task.status === 'completed' ? 'default' : 'secondary'}>
+                        {task.status === 'not_started' ? 'Not Started' : 
+                         task.status === 'in_progress' ? 'In Progress' : 
+                         'Completed'}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           {job.job_documents && onDeleteDocument && (
