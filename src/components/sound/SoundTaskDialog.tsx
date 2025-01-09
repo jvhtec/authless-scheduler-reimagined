@@ -365,12 +365,14 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
               <TableBody>
                 {TASK_TYPES.map((taskType) => {
                   const task = tasks?.find(t => t.task_type === taskType);
+                  const assignedUser = task?.assigned_to;
+                  
                   return (
                     <TableRow key={taskType}>
                       <TableCell className="font-medium">{taskType}</TableCell>
                       <TableCell>
                         <Select
-                          value={task?.assigned_to?.id || ""}
+                          value={assignedUser?.id || ""}
                           onValueChange={async (value) => {
                             if (!task) {
                               const { error } = await supabase
@@ -392,7 +394,9 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
                           }}
                         >
                           <SelectTrigger className="w-[200px]">
-                            <SelectValue placeholder="Assign to..." />
+                            <SelectValue placeholder="Assign to...">
+                              {assignedUser ? `${assignedUser.first_name} ${assignedUser.last_name}` : "Assign to..."}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             {managementUsers?.map((user) => (
