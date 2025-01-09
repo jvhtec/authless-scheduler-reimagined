@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Clock, MapPin, Users, Edit, Trash2, Upload } from "lucide-react";
+import { Clock, MapPin, Users, Edit, Trash2, Upload, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { Department } from "@/types/department";
 import { supabase } from "@/lib/supabase";
@@ -50,7 +50,14 @@ export const JobCardNew = ({
       
       const { data, error } = await supabase
         .from('sound_job_tasks')
-        .select('*')
+        .select(`
+          *,
+          assigned_to (
+            id,
+            first_name,
+            last_name
+          )
+        `)
         .eq('job_id', job.id);
       
       if (error) throw error;
@@ -235,7 +242,7 @@ export const JobCardNew = ({
             </div>
           )}
           {department === 'sound' && soundTasks?.length > 0 && (
-            <div className="mt-2 space-y-1">
+            <div className="mt-2 space-y-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Task Progress ({getCompletedTasks()}/{soundTasks.length} completed)</span>
                 <span>{calculateTotalProgress()}%</span>
@@ -244,6 +251,24 @@ export const JobCardNew = ({
                 value={calculateTotalProgress()} 
                 className="h-1"
               />
+              <div className="grid grid-cols-2 gap-2">
+                {soundTasks.map((task) => (
+                  <div 
+                    key={task.id}
+                    className="flex items-center gap-1 text-xs text-muted-foreground"
+                  >
+                    <CheckCircle2 
+                      className={`h-3 w-3 ${task.status === 'completed' ? 'text-green-500' : 'text-gray-300'}`} 
+                    />
+                    <span>{task.task_type}</span>
+                    {task.assigned_to && (
+                      <span className="text-[10px]">
+                        ({task.assigned_to.first_name} {task.assigned_to.last_name})
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           {job.job_documents && onDeleteDocument && (
