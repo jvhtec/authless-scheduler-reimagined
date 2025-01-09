@@ -96,6 +96,32 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     enabled: !!jobId
   });
 
+  const updatePersonnel = async (field: string, value: number) => {
+    try {
+      if (!jobId || !personnel?.id) return;
+
+      const { error } = await supabase
+        .from('sound_job_personnel')
+        .update({ [field]: value })
+        .eq('id', personnel.id);
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ['sound-personnel', jobId] });
+
+      toast({
+        title: "Personnel updated",
+        description: "The personnel requirements have been updated successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleFileUpload = async (taskId: string, file: File) => {
     try {
       setUploading(true);
