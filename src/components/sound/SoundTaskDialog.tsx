@@ -297,8 +297,8 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
                 alt="Create Flex Folders"
                className="h-10 w-10"
                />
-              <span className="absolute -top-8 scale-0 transition-all group-hover:scale-100 bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded">
-                Create Flex Folders
+              <span className="absolute top-full mt-2 scale-0 transition-all group-hover:scale-100 bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded">
+               Create Flex Folders
               </span>
             </Button>
           </DialogTitle>
