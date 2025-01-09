@@ -17,8 +17,6 @@ interface SoundTaskDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const TASK_TYPES = ["QT", "Rigging Plot", "Prediccion", "Pesos", "Consumos", "PS"];
-
 export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogProps) => {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
@@ -39,6 +37,8 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
   const { data: tasks, refetch: refetchTasks } = useQuery({
     queryKey: ['sound-tasks', jobId],
     queryFn: async () => {
+      if (!jobId) return null;
+      
       const { data, error } = await supabase
         .from('sound_job_tasks')
         .select(`
@@ -53,21 +53,25 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !!jobId // Only run query when jobId is available
   });
 
   const { data: personnel } = useQuery({
     queryKey: ['sound-personnel', jobId],
     queryFn: async () => {
+      if (!jobId) return null;
+      
       const { data, error } = await supabase
         .from('sound_job_personnel')
         .select('*')
         .eq('job_id', jobId)
-        .single();
+        .maybeSingle();
       
       if (error && error.code !== 'PGRST116') throw error;
       return data;
-    }
+    },
+    enabled: !!jobId // Only run query when jobId is available
   });
 
   const handleFileUpload = async (taskId: string, file: File) => {
@@ -211,6 +215,12 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       });
     }
   };
+
+  const TASK_TYPES = ["QT", "Rigging Plot", "Prediccion", "Pesos", "Consumos", "PS"];
+
+  if (!jobId) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
