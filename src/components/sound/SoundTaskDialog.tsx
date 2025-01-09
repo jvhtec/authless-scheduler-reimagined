@@ -5,6 +5,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import createFolderIcon from "@/assets/icons/icon.png";
 import {
   Select,
   SelectContent,
@@ -291,7 +292,11 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
               title="Create Flex Folders"
               className="group relative"
             >
-              <FolderPlus className="h-4 w-4" />
+              <img
+                src={createFolderIcon}
+                alt="Create Flex Folders"
+               className="h-4 w-4"
+               />
               <span className="absolute -top-8 scale-0 transition-all group-hover:scale-100 bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded">
                 Create Flex Folders
               </span>
