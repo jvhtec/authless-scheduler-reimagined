@@ -1,10 +1,10 @@
+// src/components/jobs/JobCard.tsx
+
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Pencil, Trash2, MapPin, Calendar } from "lucide-react";
 import { Department } from "@/types/department";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 interface JobCardProps {
@@ -16,7 +16,7 @@ interface JobCardProps {
   userRole?: string | null;
 }
 
-export const JobCardSimple = ({
+export const JobCard = ({
   job,
   onEditClick,
   onDeleteClick,
