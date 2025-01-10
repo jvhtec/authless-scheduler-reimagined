@@ -66,16 +66,16 @@ export const JobCard = ({
       }}
       onClick={() => canEdit && onJobClick(job.id)}
     >
-      {/* Header Area with Expand/Collapse Toggle */}
+      {/* Header Area with Toggle Button Always Visible */}
       <div 
         className={`flex justify-between items-center p-2 ${isTourJob ? 'bg-accent/20' : ''}`}
         style={{ 
           borderBottom: `1px solid ${job.color || '#7E69AB'}30`
         }}
       >
-        <div className="flex-1">
-          <div className="flex justify-between items-center">
-            <div className="flex justify-between items-start">
+        <div className="flex items-center flex-1">
+          <div className="flex justify-between items-center w-full">
+            <div className="flex items-center">
               <p className="font-medium">{job.title}</p>
               {isTourJob && (
                 <span className="text-xs bg-primary/10 px-2 py-0.5 rounded-full ml-2">
@@ -83,6 +83,7 @@ export const JobCard = ({
                 </span>
               )}
             </div>
+            {/* Toggle button */}
             <Button 
               variant="ghost" 
               size="icon" 
@@ -95,7 +96,7 @@ export const JobCard = ({
         </div>
         {canEdit && !collapsed && (
           <div 
-            className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" 
+            className="flex gap-1"
             onClick={e => e.stopPropagation()}
           >
             <Button variant="ghost" size="icon" onClick={handleEditClick}>
@@ -139,7 +140,7 @@ export const JobCard = ({
       {!collapsed && (
         <div className="p-2 space-y-2 border-t">
           {/* Place additional details or actions here if needed */}
-          {/* For now, we only added edit/delete in the header when expanded */}
+          {/* For demonstration, we only added placeholder text */}
           <p className="text-sm text-muted-foreground">
             Additional job details can be displayed here.
           </p>
