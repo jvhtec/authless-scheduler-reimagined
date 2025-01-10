@@ -187,7 +187,6 @@ export const VideoTaskDialog = ({ jobId, open, onOpenChange }: VideoTaskDialogPr
 
   const handleDeleteFile = async (taskId: string, documentId: string, filePath: string) => {
     try {
-      // Step 1: Delete the file from Supabase Storage
       const { error: storageError } = await supabase.storage
         .from('task_documents')
         .remove([filePath]);
@@ -196,7 +195,6 @@ export const VideoTaskDialog = ({ jobId, open, onOpenChange }: VideoTaskDialogPr
         throw new Error(`Failed to delete file from storage: ${storageError.message}`);
       }
   
-      // Step 2: Delete the record from the task_documents table
       const { error: dbError } = await supabase
         .from('task_documents')
         .delete()
@@ -206,7 +204,6 @@ export const VideoTaskDialog = ({ jobId, open, onOpenChange }: VideoTaskDialogPr
         throw new Error(`Failed to delete file record: ${dbError.message}`);
       }
   
-      // Step 3: Update task status
       const { error: taskError } = await supabase
         .from('video_job_tasks')
         .update({ 
@@ -286,26 +283,15 @@ export const VideoTaskDialog = ({ jobId, open, onOpenChange }: VideoTaskDialogPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-4 w-[95vw] max-w-[800px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Table className="h-5 w-5" />
-              <span>Video Department Tasks</span>
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
+          <DialogTitle className="flex items-center gap-2">
+            <Table className="h-5 w-5" />
+            <span>Video Department Tasks</span>
+            <img
+              src={createFolderIcon}
+              alt="Create Flex Folders"
+              className="h-6 w-6 ml-2 cursor-pointer"
               title="Create Flex Folders"
-              className="group relative"
-            >
-              <img
-                src={createFolderIcon}
-                alt="Create Flex Folders"
-                className="h-10 w-10"
-              />
-              <span className="absolute top-full mt-2 scale-0 transition-all group-hover:scale-100 bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded">
-                Create Flex Folders
-              </span>
-            </Button>
+            />
           </DialogTitle>
         </DialogHeader>
 

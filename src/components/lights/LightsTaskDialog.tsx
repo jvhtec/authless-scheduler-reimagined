@@ -283,26 +283,15 @@ export const LightsTaskDialog = ({ jobId, open, onOpenChange }: LightsTaskDialog
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-4 w-[95vw] max-w-[800px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Table className="h-5 w-5" />
-              <span>Lights Department Tasks</span>
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
+          <DialogTitle className="flex items-center gap-2">
+            <Table className="h-5 w-5" />
+            <span>Lights Department Tasks</span>
+            <img
+              src={createFolderIcon}
+              alt="Create Flex Folders"
+              className="h-6 w-6 ml-2 cursor-pointer"
               title="Create Flex Folders"
-              className="group relative"
-            >
-              <img
-                src={createFolderIcon}
-                alt="Create Flex Folders"
-                className="h-10 w-10"
-              />
-              <span className="absolute top-full mt-2 scale-0 transition-all group-hover:scale-100 bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded">
-                Create Flex Folders
-              </span>
-            </Button>
+            />
           </DialogTitle>
         </DialogHeader>
 
