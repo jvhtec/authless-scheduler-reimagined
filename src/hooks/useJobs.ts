@@ -23,7 +23,10 @@ export const useJobs = () => {
             )
           ),
           job_documents(*),
-          tour_date:tour_dates(*)
+          tour_date:tour_dates(*),
+          sound_personnel:sound_job_personnel(*),
+          lights_personnel:lights_job_personnel(*),
+          video_personnel:video_job_personnel(*)
         `)
         .order("start_time", { ascending: true });
 
