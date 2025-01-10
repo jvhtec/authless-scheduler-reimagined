@@ -1,13 +1,14 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw } from "lucide-react";
+import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { Department } from "@/types/department";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
-import { useEffect, useState } from "react";
+import { useEffect, useState as useReactState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -42,6 +43,7 @@ export const JobCardNew = ({
 }: JobCardNewProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [collapsed, setCollapsed] = useState(true);
   const [assignments, setAssignments] = useState(job.job_assignments || []);
 
   const { data: soundTasks } = useQuery({
@@ -49,7 +51,6 @@ export const JobCardNew = ({
     queryFn: async () => {
       if (department !== 'sound') return null;
 
-      console.log("Fetching sound tasks for job:", job.id);
       const { data, error } = await supabase
         .from('sound_job_tasks')
         .select(`
@@ -62,11 +63,7 @@ export const JobCardNew = ({
         `)
         .eq('job_id', job.id);
 
-      if (error) {
-        console.error("Error fetching sound tasks:", error);
-        throw error;
-      }
-      console.log("Fetched sound tasks:", data);
+      if (error) throw error;
       return data;
     },
     enabled: department === 'sound'
@@ -144,23 +141,14 @@ export const JobCardNew = ({
     if (!file || !department) return;
 
     try {
-      console.log('Starting file upload for job:', job.id);
-
       const fileExt = file.name.split('.').pop();
       const filePath = `${department}/${job.id}/${crypto.randomUUID()}.${fileExt}`;
-
-      console.log('Generated file path:', filePath);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('job_documents')
         .upload(filePath, file);
 
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw uploadError;
-      }
-
-      console.log('File uploaded successfully:', uploadData);
+      if (uploadError) throw uploadError;
 
       const { error: dbError } = await supabase
         .from('job_documents')
@@ -172,21 +160,15 @@ export const JobCardNew = ({
           file_size: file.size
         });
 
-      if (dbError) {
-        console.error('Database error:', dbError);
-        throw dbError;
-      }
+      if (dbError) throw dbError;
 
-      // Refresh the job documents data
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
 
       toast({
         title: "Document uploaded",
         description: "The document has been successfully uploaded.",
       });
-
     } catch (error: any) {
-      console.error('Error in upload process:', error);
       toast({
         title: "Upload failed",
         description: error.message,
@@ -197,7 +179,6 @@ export const JobCardNew = ({
 
   const refreshData = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Invalidate queries to force refetch
     queryClient.invalidateQueries({ queryKey: ['sound-tasks', job.id] });
     queryClient.invalidateQueries({ queryKey: ['sound-personnel', job.id] });
   };
@@ -239,16 +220,24 @@ export const JobCardNew = ({
         backgroundColor: `${job.color}05` || '#7E69AB05'
       }}
     >
-      <CardHeader className="pb-2 flex justify-between items-start">
-        <div className="flex-grow">
+      <CardHeader className="pb-2 flex justify-between items-center">
+        <div className="flex items-center flex-grow">
           <div className="font-medium">
             {job.title}
             {job.job_type === 'tour' && (
               <Badge variant="secondary" className="ml-2">Tour</Badge>
             )}
           </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
+            title="Toggle Details"
+            className="ml-2"
+          >
+            {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+          </Button>
         </div>
-        {/* Wrap button container with stopPropagation */}
         <div className="flex gap-2" onClick={e => e.stopPropagation()}>
           <Button 
             variant="ghost" 
