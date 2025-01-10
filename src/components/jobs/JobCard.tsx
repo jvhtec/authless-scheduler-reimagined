@@ -1,8 +1,11 @@
+// src/components/jobs/JobCard.tsx
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Pencil, Trash2, MapPin, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { Department } from "@/types/department";
+import { useToast } from "@/hooks/use-toast";
 
 interface JobCardProps {
   job: any;
@@ -11,7 +14,6 @@ interface JobCardProps {
   onJobClick: (jobId: string) => void;
   department?: Department;
   userRole?: string | null;
-  showAssignments?: boolean; // Added this prop
 }
 
 export const JobCard = ({
@@ -20,8 +22,7 @@ export const JobCard = ({
   onDeleteClick,
   onJobClick,
   department,
-  userRole,
-  showAssignments = true // Default to true to maintain existing behavior
+  userRole
 }: JobCardProps) => {
   const { toast } = useToast();
   const [collapsed, setCollapsed] = useState(true);
@@ -125,7 +126,7 @@ export const JobCard = ({
           </div>
         )}
 
-        {showAssignments && assignedTechnicians.length > 0 && (
+        {assignedTechnicians.length > 0 && (
           <div className="flex flex-col text-sm text-muted-foreground">
             <div>Assigned Personnel:</div>
             <div>{assignedTechnicians.join(', ')}</div>
