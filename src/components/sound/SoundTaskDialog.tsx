@@ -161,13 +161,28 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
   const handleFileUpload = async (taskId: string, file: File) => {
     try {
       setUploading(true);
-      const filePath = `${taskId}/${crypto.randomUUID()}-${file.name}`;
+      console.log('Starting file upload for task:', taskId);
       
+      // Sanitize filename - remove spaces and special characters
+      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const timestamp = new Date().getTime();
+      const filePath = `sound/${jobId}/${taskId}/${timestamp}_${sanitizedFileName}`;
+      
+      console.log('Uploading file to path:', filePath);
+
       const { error: uploadError } = await supabase.storage
         .from('task_documents')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('File uploaded successfully to storage');
 
       const { error: dbError } = await supabase
         .from('task_documents')
@@ -175,25 +190,33 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
           sound_task_id: taskId,
           file_name: file.name,
           file_path: filePath,
+          uploaded_by: (await supabase.auth.getUser()).data.user?.id
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Database insert error:', dbError);
+        throw dbError;
+      }
+
+      console.log('File metadata saved to database');
 
       await supabase
         .from('sound_job_tasks')
         .update({ 
           status: 'completed',
-          progress: 100 
+          progress: 100,
+          updated_at: new Date().toISOString()
         })
         .eq('id', taskId);
 
-      refetchTasks();
-      
       toast({
-        title: "File uploaded",
-        description: "The document has been uploaded successfully.",
+        title: "File uploaded successfully",
+        description: "The document has been uploaded and task marked as completed.",
       });
+
+      refetchTasks();
     } catch (error: any) {
+      console.error('Upload process error:', error);
       toast({
         title: "Upload failed",
         description: error.message,
