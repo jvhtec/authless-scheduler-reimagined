@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Clock, MapPin, Users, Edit, Trash2, Upload } from "lucide-react";
+import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { Department } from "@/types/department";
 import { supabase } from "@/lib/supabase";
@@ -107,51 +107,6 @@ export const JobCardNew = ({
     enabled: department === 'sound'
   });
 
-  // Real-time subscriptions for personnel and tasks
-  useEffect(() => {
-    if (department !== 'sound' || !job.id) return;
-
-    console.log("Setting up realtime subscriptions for job:", job.id);
-
-    // Create a channel for both personnel and tasks
-    const channel = supabase.channel(`job_${job.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'sound_job_personnel',
-          filter: `job_id=eq.${job.id}`
-        },
-        (payload) => {
-          console.log("Personnel update received:", payload);
-          queryClient.invalidateQueries({ queryKey: ['sound-personnel', job.id] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sound_job_tasks',
-          filter: `job_id=eq.${job.id}`
-        },
-        (payload) => {
-          console.log("Task update received:", payload);
-          queryClient.invalidateQueries({ queryKey: ['sound-tasks', job.id] });
-        }
-      )
-      .subscribe(status => {
-        console.log("Subscription status:", status);
-      });
-
-    // Cleanup subscription on unmount
-    return () => {
-      console.log("Cleaning up realtime subscription");
-      channel.unsubscribe();
-    };
-  }, [department, job.id, queryClient]);
-
   const calculateTotalProgress = () => {
     if (!soundTasks?.length) return 0;
     const totalProgress = soundTasks.reduce((acc, task) => acc + (task.progress || 0), 0);
@@ -240,6 +195,12 @@ export const JobCardNew = ({
     }
   };
 
+  const refreshData = () => {
+    // Invalidate queries to force refetch
+    queryClient.invalidateQueries({ queryKey: ['sound-tasks', job.id] });
+    queryClient.invalidateQueries({ queryKey: ['sound-personnel', job.id] });
+  };
+
   const canEdit = userRole !== 'logistics';
 
   const assignedTechnicians = assignments.map((assignment: any) => {
@@ -277,39 +238,42 @@ export const JobCardNew = ({
         backgroundColor: `${job.color}05` || '#7E69AB05'
       }}
     >
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
+      <CardHeader className="pb-2 flex justify-between items-start">
+        <div className="flex-grow">
           <div className="font-medium">
             {job.title}
             {job.job_type === 'tour' && (
               <Badge variant="secondary" className="ml-2">Tour</Badge>
             )}
           </div>
-          <div className="flex gap-2">
-            {canEdit && (
-              <>
-                <Button variant="ghost" size="icon" onClick={handleEditClick}>
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={handleDeleteClick}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </>
-            )}
-            {showUpload && (
-              <div className="relative">
-                <input
-                  type="file"
-                  onChange={handleFileUpload}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <Button variant="ghost" size="icon">
-                  <Upload className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="icon" onClick={refreshData} title="Refresh">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          {canEdit && (
+            <>
+              <Button variant="ghost" size="icon" onClick={handleEditClick}>
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleDeleteClick}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+          {showUpload && (
+            <div className="relative">
+              <input
+                type="file"
+                onChange={handleFileUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <Button variant="ghost" size="icon">
+                <Upload className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
