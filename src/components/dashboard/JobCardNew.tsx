@@ -8,7 +8,6 @@ import { Department } from "@/types/department";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
-import { useEffect, useState as useReactState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -135,6 +134,11 @@ export const JobCardNew = ({
     onDeleteClick(job.id);
   };
 
+  const toggleCollapse = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCollapsed(!collapsed);
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
     const file = e.target.files?.[0];
@@ -231,7 +235,7 @@ export const JobCardNew = ({
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={(e) => { e.stopPropagation(); setCollapsed(!collapsed); }}
+            onClick={toggleCollapse}
             title="Toggle Details"
             className="ml-2"
           >
@@ -300,55 +304,60 @@ export const JobCardNew = ({
               </div>
             </div>
           )}
-          {department === 'sound' && personnel && (
-            <div className="mt-2 p-2 bg-accent/20 rounded-md">
-              <div className="text-xs font-medium mb-1">Required Personnel: {getTotalPersonnel()}</div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>FOH Engineers: {personnel.foh_engineers || 0}</div>
-                <div>MON Engineers: {personnel.mon_engineers || 0}</div>
-                <div>PA Techs: {personnel.pa_techs || 0}</div>
-                <div>RF Techs: {personnel.rf_techs || 0}</div>
-              </div>
-            </div>
-          )}
-          {department === 'sound' && soundTasks?.length > 0 && (
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Task Progress ({getCompletedTasks()}/{soundTasks.length} completed)</span>
-                <span>{calculateTotalProgress()}%</span>
-              </div>
-              <Progress 
-                value={calculateTotalProgress()} 
-                className="h-1"
-              />
-              <div className="space-y-1">
-                {soundTasks.map((task: any) => (
-                  <div key={task.id} className="flex items-center justify-between text-xs">
-                    <span>{task.task_type}</span>
-                    <div className="flex items-center gap-2">
-                      {task.assigned_to && (
-                        <span className="text-muted-foreground">
-                          {task.assigned_to.first_name} {task.assigned_to.last_name}
-                        </span>
-                      )}
-                      <Badge variant={task.status === 'completed' ? 'default' : 'secondary'}>
-                        {task.status === 'not_started' ? 'Not Started' : 
-                         task.status === 'in_progress' ? 'In Progress' : 
-                         'Completed'}
-                      </Badge>
-                    </div>
+          {/* Only show additional details when expanded */}
+          {!collapsed && (
+            <>
+              {department === 'sound' && personnel && (
+                <div className="mt-2 p-2 bg-accent/20 rounded-md">
+                  <div className="text-xs font-medium mb-1">Required Personnel: {getTotalPersonnel()}</div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>FOH Engineers: {personnel.foh_engineers || 0}</div>
+                    <div>MON Engineers: {personnel.mon_engineers || 0}</div>
+                    <div>PA Techs: {personnel.pa_techs || 0}</div>
+                    <div>RF Techs: {personnel.rf_techs || 0}</div>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {job.job_documents && onDeleteDocument && (
-            <JobDocuments
-              jobId={job.id}
-              documents={job.job_documents}
-              department={department}
-              onDeleteDocument={onDeleteDocument}
-            />
+                </div>
+              )}
+              {department === 'sound' && soundTasks?.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Task Progress ({getCompletedTasks()}/{soundTasks.length} completed)</span>
+                    <span>{calculateTotalProgress()}%</span>
+                  </div>
+                  <Progress 
+                    value={calculateTotalProgress()} 
+                    className="h-1"
+                  />
+                  <div className="space-y-1">
+                    {soundTasks.map((task: any) => (
+                      <div key={task.id} className="flex items-center justify-between text-xs">
+                        <span>{task.task_type}</span>
+                        <div className="flex items-center gap-2">
+                          {task.assigned_to && (
+                            <span className="text-muted-foreground">
+                              {task.assigned_to.first_name} {task.assigned_to.last_name}
+                            </span>
+                          )}
+                          <Badge variant={task.status === 'completed' ? 'default' : 'secondary'}>
+                            {task.status === 'not_started' ? 'Not Started' : 
+                             task.status === 'in_progress' ? 'In Progress' : 
+                             'Completed'}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {job.job_documents && onDeleteDocument && (
+                <JobDocuments
+                  jobId={job.id}
+                  documents={job.job_documents}
+                  department={department}
+                  onDeleteDocument={onDeleteDocument}
+                />
+              )}
+            </>
           )}
         </div>
       </CardContent>
