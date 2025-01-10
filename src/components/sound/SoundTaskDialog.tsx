@@ -211,22 +211,36 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     }
   };
 
-  const handleDeleteFile = async (taskId: string, documentId: string) => {
+  const handleDeleteFile = async (taskId: string, documentId: string, filePath: string) => {
     try {
-      const { error } = await supabase
+      // Step 1: Delete the file from Supabase Storage
+      const { error: storageError } = await supabase.storage
+        .from('task_documents')
+        .remove([filePath]);
+  
+      if (storageError) {
+        throw new Error(`Failed to delete file from storage: ${storageError.message}`);
+      }
+  
+      // Step 2: Delete the record from the task_documents table
+      const { error: dbError } = await supabase
         .from('task_documents')
         .delete()
         .eq('id', documentId);
-
-      if (error) throw error;
-
+  
+      if (dbError) {
+        throw new Error(`Failed to delete file record: ${dbError.message}`);
+      }
+  
+      // Step 3: Notify user and refresh task list
       toast({
         title: "File deleted",
         description: "The document has been removed from the task.",
       });
-
+  
       refetchTasks();
     } catch (error: any) {
+      // Handle errors and display appropriate message
       toast({
         title: "Delete failed",
         description: error.message,
@@ -234,6 +248,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       });
     }
   };
+  
 
   const updateTaskStatus = async (taskId: string, status: string) => {
     try {
