@@ -21,7 +21,7 @@ import { Upload, Download, Trash2, Table, X } from "lucide-react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Table as UITable,
   TableBody,
@@ -67,10 +67,39 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     pa_techs: 0,
     rf_techs: 0,
   });
-  const [jobDetails, setJobDetails] = useState(null);
+  const [jobDetails, setJobDetails] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Fetch jobDetails
+  const { data: fetchedJobDetails } = useQuery({
+    queryKey: ['job-details', jobId],
+    queryFn: async () => {
+      if (!jobId) return null;
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('id', jobId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!jobId,
+    onSuccess: (data) => setJobDetails(data),
+  });
+
+  // Synchronize personnel state with jobDetails when fetched or updated
+  useEffect(() => {
+    if (jobDetails) {
+      setPersonnel({
+        foh_engineers: jobDetails.foh_engineers || 0,
+        mon_engineers: jobDetails.mon_engineers || 0,
+        pa_techs: jobDetails.pa_techs || 0,
+        rf_techs: jobDetails.rf_techs || 0,
+      });
+    }
+  }, [jobDetails]);
 
   const { data: managementUsers } = useQuery({
     queryKey: ['management-users'],
@@ -79,7 +108,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
         .from('profiles')
         .select('id, first_name, last_name')
         .in('role', ['management', 'admin']);
-      
       if (error) throw error;
       return data;
     }
@@ -89,7 +117,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     queryKey: ['sound-tasks', jobId],
     queryFn: async () => {
       if (!jobId) return null;
-      
       const { data, error } = await supabase
         .from('sound_job_tasks')
         .select(`
@@ -102,7 +129,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
           task_documents (*)
         `)
         .eq('job_id', jobId);
-      
       if (error) throw error;
       return data as Task[];
     },
@@ -115,7 +141,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
         .from('jobs')
         .update({ flex_folders_created: true })
         .eq('id', jobId);
-      
       if (error) throw error;
     }
   });
@@ -129,7 +154,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       });
       return;
     }
-
     try {
       toast({
         title: "Creating folders",
@@ -161,14 +185,9 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
   const handleFileUpload = async (taskId: string, file: File) => {
     try {
       setUploading(true);
-      console.log('Starting file upload for task:', taskId);
-      
-      // Sanitize filename - remove spaces and special characters
       const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const timestamp = new Date().getTime();
       const filePath = `${taskId}/${timestamp}_${sanitizedFileName}`;
-      
-      console.log('Uploading file to path:', filePath);
 
       const { error: uploadError } = await supabase.storage
         .from('task_documents')
@@ -177,12 +196,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
           upsert: false
         });
 
-      if (uploadError) {
-        console.error('Storage upload error:', uploadError);
-        throw uploadError;
-      }
-
-      console.log('File uploaded successfully to storage');
+      if (uploadError) throw uploadError;
 
       const { error: dbError } = await supabase
         .from('task_documents')
@@ -193,12 +207,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
           uploaded_by: (await supabase.auth.getUser()).data.user?.id
         });
 
-      if (dbError) {
-        console.error('Database insert error:', dbError);
-        throw dbError;
-      }
-
-      console.log('File metadata saved to database');
+      if (dbError) throw dbError;
 
       await supabase
         .from('sound_job_tasks')
@@ -216,7 +225,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
 
       refetchTasks();
     } catch (error: any) {
-      console.error('Upload process error:', error);
       toast({
         title: "Upload failed",
         description: error.message,
@@ -232,14 +240,12 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       const { error: storageError } = await supabase.storage
         .from('task_documents')
         .remove([filePath]);
-
       if (storageError) throw storageError;
 
       const { error: dbError } = await supabase
         .from('task_documents')
         .delete()
         .eq('id', docId);
-
       if (dbError) throw dbError;
 
       await supabase
@@ -251,7 +257,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
         .eq('id', taskId);
 
       refetchTasks();
-      
+
       toast({
         title: "File deleted",
         description: "The document has been removed successfully.",
@@ -266,7 +272,29 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
   };
 
   const updatePersonnel = (key: string, value: number) => {
-    setPersonnel((prev) => ({ ...prev, [key]: value }));
+    setPersonnel((prev) => ({ ...prev, [key]: isNaN(value) ? 0 : value }));
+  };
+
+  const updatePersonnelField = async (field: string, value: number) => {
+    try {
+      const { error } = await supabase
+        .from('jobs')
+        .update({ [field]: value })
+        .eq('id', jobId);
+      if (error) throw error;
+      toast({
+        title: "Update successful",
+        description: `${field} updated to ${value}`,
+      });
+      // Update local jobDetails state to reflect changes
+      setJobDetails((prev: any) => ({ ...prev, [field]: value }));
+    } catch (error: any) {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const calculateTotalProgress = () => {
@@ -289,7 +317,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
   const updateTaskStatus = async (taskId: string, status: string) => {
     try {
       const progress = status === 'completed' ? 100 : status === 'in_progress' ? 50 : 0;
-      
       const { error } = await supabase
         .from('sound_job_tasks')
         .update({ 
@@ -298,10 +325,8 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
           updated_at: new Date().toISOString()
         })
         .eq('id', taskId);
-
       if (error) throw error;
       refetchTasks();
-      
       toast({
         title: "Task updated",
         description: "Task status has been updated successfully.",
@@ -320,9 +345,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       const { data, error } = await supabase.storage
         .from('task_documents')
         .download(filePath);
-
       if (error) throw error;
-
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
@@ -382,8 +405,9 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
                 <Input
                   type="number"
                   min="0"
-                  value={personnel?.foh_engineers || 0}
+                  value={personnel.foh_engineers}
                   onChange={(e) => updatePersonnel('foh_engineers', parseInt(e.target.value))}
+                  onBlur={(e) => updatePersonnelField('foh_engineers', parseInt(e.target.value))}
                 />
               </div>
               <div>
@@ -391,8 +415,9 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
                 <Input
                   type="number"
                   min="0"
-                  value={personnel?.mon_engineers || 0}
+                  value={personnel.mon_engineers}
                   onChange={(e) => updatePersonnel('mon_engineers', parseInt(e.target.value))}
+                  onBlur={(e) => updatePersonnelField('mon_engineers', parseInt(e.target.value))}
                 />
               </div>
               <div>
@@ -400,8 +425,9 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
                 <Input
                   type="number"
                   min="0"
-                  value={personnel?.pa_techs || 0}
+                  value={personnel.pa_techs}
                   onChange={(e) => updatePersonnel('pa_techs', parseInt(e.target.value))}
+                  onBlur={(e) => updatePersonnelField('pa_techs', parseInt(e.target.value))}
                 />
               </div>
               <div>
@@ -409,8 +435,9 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
                 <Input
                   type="number"
                   min="0"
-                  value={personnel?.rf_techs || 0}
+                  value={personnel.rf_techs}
                   onChange={(e) => updatePersonnel('rf_techs', parseInt(e.target.value))}
+                  onBlur={(e) => updatePersonnelField('rf_techs', parseInt(e.target.value))}
                 />
               </div>
             </div>
