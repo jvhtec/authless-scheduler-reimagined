@@ -540,30 +540,43 @@ export type Database = {
           file_name: string
           file_path: string
           id: string
-          task_id: string | null
+          lights_task_id: string | null
+          sound_task_id: string | null
           uploaded_at: string | null
           uploaded_by: string | null
+          video_task_id: string | null
         }
         Insert: {
           file_name: string
           file_path: string
           id?: string
-          task_id?: string | null
+          lights_task_id?: string | null
+          sound_task_id?: string | null
           uploaded_at?: string | null
           uploaded_by?: string | null
+          video_task_id?: string | null
         }
         Update: {
           file_name?: string
           file_path?: string
           id?: string
-          task_id?: string | null
+          lights_task_id?: string | null
+          sound_task_id?: string | null
           uploaded_at?: string | null
           uploaded_by?: string | null
+          video_task_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "task_documents_task_id_fkey"
-            columns: ["task_id"]
+            foreignKeyName: "task_documents_lights_task_id_fkey"
+            columns: ["lights_task_id"]
+            isOneToOne: false
+            referencedRelation: "lights_job_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_documents_sound_task_id_fkey"
+            columns: ["sound_task_id"]
             isOneToOne: false
             referencedRelation: "sound_job_tasks"
             referencedColumns: ["id"]
@@ -573,6 +586,13 @@ export type Database = {
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_documents_video_task_id_fkey"
+            columns: ["video_task_id"]
+            isOneToOne: false
+            referencedRelation: "video_job_tasks"
             referencedColumns: ["id"]
           },
         ]

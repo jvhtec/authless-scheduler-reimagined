@@ -30,7 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const TASK_TYPES = ["QT", "Rigging Plot", "Pesos", "Consumos"];
+const TASK_TYPES = ["QT", "Rigging Plot", "Pesos", "Consumos", "PS"];
 
 interface LightsTaskDialogProps {
   jobId: string;
@@ -128,7 +128,7 @@ export const LightsTaskDialog = ({ jobId, open, onOpenChange }: LightsTaskDialog
       const { error: dbError } = await supabase
         .from('task_documents')
         .insert({
-          task_id: taskId,
+          lights_task_id: taskId, // Updated to use lights_task_id
           file_name: file.name,
           file_path: filePath,
         });
@@ -187,7 +187,6 @@ export const LightsTaskDialog = ({ jobId, open, onOpenChange }: LightsTaskDialog
 
   const handleDeleteFile = async (taskId: string, documentId: string, filePath: string) => {
     try {
-      // Step 1: Delete the file from Supabase Storage
       const { error: storageError } = await supabase.storage
         .from('task_documents')
         .remove([filePath]);
@@ -196,7 +195,6 @@ export const LightsTaskDialog = ({ jobId, open, onOpenChange }: LightsTaskDialog
         throw new Error(`Failed to delete file from storage: ${storageError.message}`);
       }
   
-      // Step 2: Delete the record from the task_documents table
       const { error: dbError } = await supabase
         .from('task_documents')
         .delete()
@@ -206,7 +204,6 @@ export const LightsTaskDialog = ({ jobId, open, onOpenChange }: LightsTaskDialog
         throw new Error(`Failed to delete file record: ${dbError.message}`);
       }
   
-      // Step 3: Update task status
       const { error: taskError } = await supabase
         .from('lights_job_tasks')
         .update({ 
