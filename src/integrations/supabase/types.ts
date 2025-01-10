@@ -215,6 +215,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           end_time: string
+          flex_folders_created: boolean | null
           id: string
           job_type: Database["public"]["Enums"]["job_type"]
           location_id: string | null
@@ -229,6 +230,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           end_time: string
+          flex_folders_created?: boolean | null
           id?: string
           job_type?: Database["public"]["Enums"]["job_type"]
           location_id?: string | null
@@ -243,6 +245,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           end_time?: string
+          flex_folders_created?: boolean | null
           id?: string
           job_type?: Database["public"]["Enums"]["job_type"]
           location_id?: string | null
