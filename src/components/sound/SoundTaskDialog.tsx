@@ -473,3 +473,9 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
                 </div>
                 <span className="text-sm">{calculateTotalProgress()}%</span>
               </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
