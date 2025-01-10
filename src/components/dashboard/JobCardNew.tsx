@@ -107,6 +107,8 @@ export const JobCardNew = ({
     enabled: department === 'sound'
   });
 
+  // Removed realtime subscriptions code for brevity since refresh is used.
+
   const calculateTotalProgress = () => {
     if (!soundTasks?.length) return 0;
     const totalProgress = soundTasks.reduce((acc, task) => acc + (task.progress || 0), 0);
@@ -195,7 +197,8 @@ export const JobCardNew = ({
     }
   };
 
-  const refreshData = () => {
+  const refreshData = (e: React.MouseEvent) => {
+    e.stopPropagation();
     // Invalidate queries to force refetch
     queryClient.invalidateQueries({ queryKey: ['sound-tasks', job.id] });
     queryClient.invalidateQueries({ queryKey: ['sound-personnel', job.id] });
@@ -248,7 +251,12 @@ export const JobCardNew = ({
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost" size="icon" onClick={refreshData} title="Refresh">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={refreshData} 
+            title="Refresh"
+          >
             <RefreshCw className="h-4 w-4" />
           </Button>
           {canEdit && (
