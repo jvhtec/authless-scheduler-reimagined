@@ -299,7 +299,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-4 w-full max-w-[800px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="p-4 w-[95vw] max-w-[800px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -376,140 +376,151 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
               <span className="text-sm">{calculateTotalProgress()}%</span>
             </div>
 
-            <UITable>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Task</TableHead>
-                  <TableHead>Assigned To</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Progress</TableHead>
-                  <TableHead>Documents</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {TASK_TYPES.map((taskType) => {
-                  const task = tasks?.find(t => t.task_type === taskType);
-                  return (
-                    <TableRow key={taskType}>
-                      <TableCell className="font-medium">{taskType}</TableCell>
-                      <TableCell>
-                        <Select
-                          value={task?.assigned_to?.id || ""}
-                          onValueChange={async (value) => {
-                            if (!task) {
-                              const { error } = await supabase
-                                .from('sound_job_tasks')
-                                .insert({
-                                  job_id: jobId,
-                                  task_type: taskType,
-                                  assigned_to: value,
-                                });
-                              if (error) throw error;
-                            } else {
-                              const { error } = await supabase
-                                .from('sound_job_tasks')
-                                .update({ assigned_to: value })
-                                .eq('id', task.id);
-                              if (error) throw error;
-                            }
-                            refetchTasks();
-                          }}
-                        >
-                          <SelectTrigger className="w-[200px]">
-                            <SelectValue placeholder="Assign to..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {managementUsers?.map((user) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                {user.first_name} {user.last_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        {task && (
+            <div className="w-full overflow-x-auto">
+              <UITable className="w-full">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[15%]">Task</TableHead>
+                    <TableHead className="w-[20%]">Assigned To</TableHead>
+                    <TableHead className="w-[15%]">Status</TableHead>
+                    <TableHead className="w-[15%]">Progress</TableHead>
+                    <TableHead className="w-[20%]">Documents</TableHead>
+                    <TableHead className="w-[15%]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {TASK_TYPES.map((taskType) => {
+                    const task = tasks?.find(t => t.task_type === taskType);
+                    return (
+                      <TableRow key={taskType}>
+                        <TableCell className="font-medium truncate max-w-[100px]">
+                          {taskType}
+                        </TableCell>
+                        <TableCell>
                           <Select
-                            value={task.status}
-                            onValueChange={(value) => updateTaskStatus(task.id, value)}
+                            value={task?.assigned_to?.id || ""}
+                            onValueChange={async (value) => {
+                              if (!task) {
+                                const { error } = await supabase
+                                  .from('sound_job_tasks')
+                                  .insert({
+                                    job_id: jobId,
+                                    task_type: taskType,
+                                    assigned_to: value,
+                                  });
+                                if (error) throw error;
+                              } else {
+                                const { error } = await supabase
+                                  .from('sound_job_tasks')
+                                  .update({ assigned_to: value })
+                                  .eq('id', task.id);
+                                if (error) throw error;
+                              }
+                              refetchTasks();
+                            }}
                           >
-                            <SelectTrigger className="w-[140px]">
-                              <SelectValue />
+                            <SelectTrigger className="w-[150px]">
+                              <SelectValue placeholder="Assign to..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="not_started">Not Started</SelectItem>
-                              <SelectItem value="in_progress">In Progress</SelectItem>
-                              <SelectItem value="completed">Completed</SelectItem>
+                              {managementUsers?.map((user) => (
+                                <SelectItem key={user.id} value={user.id}>
+                                  {user.first_name} {user.last_name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {task && (
-                          <div className="flex items-center gap-2">
-                            <Progress 
-                              value={task.progress} 
-                              className={`h-2 ${getProgressColor(task.status)}`}
-                            />
-                            <span className="text-sm w-9">{task.progress}%</span>
+                        </TableCell>
+                        <TableCell>
+                          {task && (
+                            <Select
+                              value={task.status}
+                              onValueChange={(value) => updateTaskStatus(task.id, value)}
+                            >
+                              <SelectTrigger className="w-[120px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="not_started">Not Started</SelectItem>
+                                <SelectItem value="in_progress">In Progress</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {task && (
+                            <div className="flex items-center gap-1">
+                              <Progress 
+                                value={task.progress} 
+                                className={`h-2 ${getProgressColor(task.status)}`}
+                              />
+                              <span className="text-xs w-7">{task.progress}%</span>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="max-h-[60px] overflow-y-auto">
+                            {task?.task_documents?.map((doc) => (
+                              <div
+                                key={doc.id}
+                                className="flex items-center justify-between p-1 text-xs"
+                              >
+                                <span className="truncate max-w-[100px]" title={doc.file_name}>
+                                  {doc.file_name}
+                                </span>
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5"
+                                    onClick={() => handleDownload(doc.file_path, doc.file_name)}
+                                  >
+                                    <Download className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5"
+                                    onClick={() => handleDeleteFile(task.id, doc.id, doc.file_path)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {task?.task_documents?.map((doc) => (
-                          <div
-                            key={doc.id}
-                            className="flex items-center justify-between p-1 text-sm"
-                          >
-                            <span className="truncate max-w-[150px]" title={doc.file_name}>
-                              {doc.file_name}
-                            </span>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => handleDownload(doc.file_path, doc.file_name)}
+                        </TableCell>
+                        <TableCell>
+                          {task && (
+                            <div className="relative">
+                              <input
+                                type="file"
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleFileUpload(task.id, file);
+                                }}
+                                disabled={uploading}
+                              />
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                disabled={uploading}
+                                className="w-[100px]"
                               >
-                                <Download className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => handleDeleteFile(task.id, doc.id, doc.file_path)}
-                              >
-                                <Trash2 className="h-3 w-3" />
+                                <Upload className="h-3 w-3 mr-1" />
+                                Upload
                               </Button>
                             </div>
-                          </div>
-                        ))}
-                      </TableCell>
-                      <TableCell>
-                        {task && (
-                          <div className="relative">
-                            <input
-                              type="file"
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleFileUpload(task.id, file);
-                              }}
-                              disabled={uploading}
-                            />
-                            <Button variant="outline" size="sm" disabled={uploading}>
-                              <Upload className="h-4 w-4 mr-2" />
-                              Upload
-                            </Button>
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </UITable>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </UITable>
+            </div>
           </div>
         </div>
       </DialogContent>
