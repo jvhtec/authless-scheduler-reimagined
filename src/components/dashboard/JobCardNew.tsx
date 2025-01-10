@@ -48,7 +48,7 @@ export const JobCardNew = ({
     queryKey: ['sound-tasks', job.id],
     queryFn: async () => {
       if (department !== 'sound') return null;
-      
+
       console.log("Fetching sound tasks for job:", job.id);
       const { data, error } = await supabase
         .from('sound_job_tasks')
@@ -61,7 +61,7 @@ export const JobCardNew = ({
           task_documents(*)
         `)
         .eq('job_id', job.id);
-      
+
       if (error) {
         console.error("Error fetching sound tasks:", error);
         throw error;
@@ -76,13 +76,13 @@ export const JobCardNew = ({
     queryKey: ['sound-personnel', job.id],
     queryFn: async () => {
       if (department !== 'sound') return null;
-      
+
       const { data: existingData, error: fetchError } = await supabase
         .from('sound_job_personnel')
         .select('*')
         .eq('job_id', job.id)
         .maybeSingle();
-      
+
       if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
 
       if (!existingData) {
@@ -106,6 +106,35 @@ export const JobCardNew = ({
     },
     enabled: department === 'sound'
   });
+
+  // Real-time subscriptions for personnel and tasks
+  useEffect(() => {
+    if (department !== 'sound' || !job.id) return;
+
+    // Subscribe to changes in sound_job_personnel for this job
+    const personnelSub = supabase
+      .from(`sound_job_personnel:job_id=eq.${job.id}`)
+      .on('UPDATE', payload => {
+        // Invalidate personnel query to refetch updated data
+        queryClient.invalidateQueries(['sound-personnel', job.id]);
+      })
+      .subscribe();
+
+    // Subscribe to changes in sound_job_tasks for this job
+    const tasksSub = supabase
+      .from(`sound_job_tasks:job_id=eq.${job.id}`)
+      .on('*', payload => {
+        // Invalidate tasks query to refetch updated data
+        queryClient.invalidateQueries(['sound-tasks', job.id]);
+      })
+      .subscribe();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      supabase.removeSubscription(personnelSub);
+      supabase.removeSubscription(tasksSub);
+    };
+  }, [department, job.id, queryClient]);
 
   const calculateTotalProgress = () => {
     if (!soundTasks?.length) return 0;
@@ -145,7 +174,7 @@ export const JobCardNew = ({
 
     try {
       console.log('Starting file upload for job:', job.id);
-      
+
       const fileExt = file.name.split('.').pop();
       const filePath = `${department}/${job.id}/${crypto.randomUUID()}.${fileExt}`;
 
@@ -199,7 +228,7 @@ export const JobCardNew = ({
 
   const assignedTechnicians = assignments.map((assignment: any) => {
     let role = null;
-    
+
     switch (department) {
       case 'sound':
         role = assignment.sound_role;
@@ -226,7 +255,7 @@ export const JobCardNew = ({
   return (
     <Card 
       className="mb-4 hover:shadow-md transition-shadow cursor-pointer"
-      onClick={() => canEdit && onJobClick(job.id)}
+      onClick={() => userRole !== 'logistics' && onJobClick(job.id)}
       style={{ 
         borderColor: `${job.color}30` || '#7E69AB30',
         backgroundColor: `${job.color}05` || '#7E69AB05'
