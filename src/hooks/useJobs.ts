@@ -24,9 +24,9 @@ export const useJobs = () => {
           ),
           job_documents(*),
           tour_date:tour_dates(*),
-          sound_personnel:sound_job_personnel(*),
-          lights_personnel:lights_job_personnel(*),
-          video_personnel:video_job_personnel(*)
+          sound_personnel:sound_job_personnel!sound_job_personnel_job_id_fkey(*),
+          lights_personnel:lights_job_personnel!lights_job_personnel_job_id_fkey(*),
+          video_personnel:video_job_personnel!video_job_personnel_job_id_fkey(*)
         `)
         .order("start_time", { ascending: true });
 
