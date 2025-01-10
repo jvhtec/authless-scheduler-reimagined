@@ -1,3 +1,5 @@
+// src/pages/Dashboard.tsx
+
 import { useState, useEffect } from "react";
 import { Department } from "@/types/department";
 import { useJobs } from "@/hooks/useJobs";
@@ -14,7 +16,7 @@ import { TourChips } from "@/components/dashboard/TourChips";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, Music, Video, Lightbulb, MessageSquare, Send } from "lucide-react";
 import { DepartmentSchedule } from "@/components/dashboard/DepartmentSchedule";
-import { JobCardNew } from "@/components/dashboard/JobCardNew";
+import { JobCard } from "@/components/jobs/JobCard"; 
 import { MessagesList } from "@/components/messages/MessagesList";
 import { DirectMessagesList } from "@/components/messages/DirectMessagesList";
 import { Button } from "@/components/ui/button";
@@ -80,7 +82,7 @@ const Dashboard = () => {
     if (!jobs) return [];
     const endDate = getTimeSpanEndDate();
     return jobs.filter(job => 
-      job.job_departments.some(dept => dept.department === department) &&
+      job.job_departments.some((dept: any) => dept.department === department) &&
       isAfter(new Date(job.start_time), new Date()) &&
       isBefore(new Date(job.start_time), endDate) &&
       job.job_type !== 'tour'
@@ -230,13 +232,14 @@ const Dashboard = () => {
           <CardContent className="p-4">
             <div className="space-y-4">
               {getSelectedDateJobs().map(job => (
-                <JobCardNew
+                <JobCard
                   key={job.id}
                   job={job}
                   onEditClick={handleEditClick}
                   onDeleteClick={handleDeleteClick}
                   onJobClick={(jobId) => handleJobClick(jobId, "sound")}
                   userRole={userRole}
+                  department="sound"
                 />
               ))}
             </div>
