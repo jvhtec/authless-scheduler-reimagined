@@ -1,28 +1,32 @@
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Pencil, Trash2, MapPin, Calendar } from "lucide-react";
-import { JobAssignments } from "./JobAssignments";
 import { Department } from "@/types/department";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 interface JobCardProps {
   job: any;
   onEditClick: (job: any) => void;
   onDeleteClick: (jobId: string) => void;
   onJobClick: (jobId: string) => void;
-  showAssignments?: boolean;
   department?: Department;
   userRole?: string | null;
 }
 
-export const JobCard = ({
+export const JobCardSimple = ({
   job,
   onEditClick,
   onDeleteClick,
   onJobClick,
-  showAssignments = true,
   department,
   userRole
 }: JobCardProps) => {
+  const { toast } = useToast();
+  const [assignments] = useState(job.job_assignments || []);
+
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onEditClick(job);
@@ -33,12 +37,24 @@ export const JobCard = ({
     onDeleteClick(job.id);
   };
 
-  const isTourJob = job.job_type === 'tour' || !!job.tour_date_id;
   const canEdit = userRole !== 'logistics';
+  const isTourJob = job.job_type === 'tour' || !!job.tour_date_id;
+
+  // Summarize assigned technicians' names
+  const assignedTechnicians = assignments
+    .map((assignment: any) => {
+      let role = null;
+      if (department === 'sound') role = assignment.sound_role;
+      else if (department === 'lights') role = assignment.lights_role;
+      else if (department === 'video') role = assignment.video_role;
+      else role = assignment.sound_role || assignment.lights_role || assignment.video_role;
+      if (!role) return null;
+      return `${assignment.profiles?.first_name || ''} ${assignment.profiles?.last_name || ''}`.trim();
+    })
+    .filter((name: string | null) => name && name !== '');
 
   return (
     <div 
-      key={job.id} 
       className="flex flex-col border rounded cursor-pointer hover:bg-accent/50 transition-colors group overflow-hidden"
       style={{ 
         borderColor: job.color || '#7E69AB',
@@ -64,19 +80,14 @@ export const JobCard = ({
           </div>
         </div>
         {canEdit && (
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleEditClick}
-            >
+          <div 
+            className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" 
+            onClick={e => e.stopPropagation()}
+          >
+            <Button variant="ghost" size="icon" onClick={handleEditClick}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleDeleteClick}
-            >
+            <Button variant="ghost" size="icon" onClick={handleDeleteClick}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
@@ -102,12 +113,11 @@ export const JobCard = ({
           </div>
         )}
 
-        {showAssignments && (
-          <JobAssignments 
-            jobId={job.id} 
-            department={department}
-            userRole={userRole}
-          />
+        {assignedTechnicians.length > 0 && (
+          <div className="flex flex-col text-sm text-muted-foreground">
+            <div>Assigned Personnel:</div>
+            <div>{assignedTechnicians.join(', ')}</div>
+          </div>
         )}
       </div>
     </div>
