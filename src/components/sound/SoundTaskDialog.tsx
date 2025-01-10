@@ -37,6 +37,12 @@ interface SoundTaskDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface AssignedUser {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+}
+
 interface TaskDocument {
   id: string;
   file_name: string;
@@ -46,7 +52,7 @@ interface TaskDocument {
 interface Task {
   id: string;
   task_type: string;
-  assigned_to: string | null;
+  assigned_to: AssignedUser | null;
   progress: number;
   status: 'not_started' | 'in_progress' | 'completed';
   task_documents?: TaskDocument[];
@@ -89,6 +95,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
         .select(`
           *,
           assigned_to (
+            id,
             first_name,
             last_name
           ),
