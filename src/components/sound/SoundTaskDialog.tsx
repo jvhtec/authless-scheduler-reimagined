@@ -1,7 +1,94 @@
-// [Previous imports remain the same...]
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import createFolderIcon from "@/assets/icons/icon.png";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Upload, Download, Trash2, Table, X } from "lucide-react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import {
+  Table as UITable,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+interface SoundTaskDialogProps {
+  jobId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+const TASK_TYPES = ["QT", "Rigging Plot", "Prediccion", "Pesos", "Consumos", "PS"];
+
+const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
+const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
 
 export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogProps) => {
-  // [Previous state and queries remain the same...]
+  const [personnel, setPersonnel] = useState({
+    foh_engineers: 0,
+    mon_engineers: 0,
+    pa_techs: 0,
+    rf_techs: 0,
+  });
+  const [jobDetails, setJobDetails] = useState(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: tasks, refetch: refetchTasks } = useQuery(['tasks', jobId], async () => {
+    const { data } = await supabase
+      .from('sound_job_tasks')
+      .select('*')
+      .eq('job_id', jobId);
+    return data;
+  });
+
+  const createFlexFolders = async () => {
+    // Logic to create flex folders
+  };
+
+  const updatePersonnel = (key: string, value: number) => {
+    setPersonnel((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const calculateTotalProgress = () => {
+    // Logic to calculate total progress
+    return 0; // Placeholder
+  };
+
+  const updateTaskStatus = async (taskId: string, status: string) => {
+    // Logic to update task status
+  };
+
+  const handleDownload = (filePath: string, fileName: string) => {
+    // Logic to handle file download
+  };
+
+  const handleDeleteFile = async (taskId: string, docId: string, filePath: string) => {
+    // Logic to handle file deletion
+  };
+
+  const handleFileUpload = async (taskId: string, file: File) => {
+    // Logic to handle file upload
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -231,7 +318,8 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
                             )}
                           </TableCell>
                         </TableRow>
-                      ))}
+                      );
+                    })}
                   </TableBody>
                 </UITable>
               </div>
