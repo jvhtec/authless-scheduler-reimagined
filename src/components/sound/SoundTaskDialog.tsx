@@ -36,6 +36,13 @@ interface SoundTaskDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface Personnel {
+  foh_engineers: number;
+  mon_engineers: number;
+  pa_techs: number;
+  rf_techs: number;
+}
+
 const TASK_TYPES = ["QT", "Rigging Plot", "Prediccion", "Pesos", "Consumos", "PS"];
 
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
@@ -45,8 +52,13 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
+  const [personnel, setPersonnel] = useState<Personnel>({
+    foh_engineers: 0,
+    mon_engineers: 0,
+    pa_techs: 0,
+    rf_techs: 0
+  });
 
-  // Add query for job details
   const { data: jobDetails } = useQuery({
     queryKey: ['job-details', jobId],
     queryFn: async () => {
@@ -63,7 +75,13 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     enabled: !!jobId
   });
 
-  // Create mutation for updating flex_folders_created status
+  const updatePersonnel = (field: keyof Personnel, value: number) => {
+    setPersonnel(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   const updateFolderStatus = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
@@ -75,7 +93,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     }
   });
 
-  // Function to create Flex folders
   const createFlexFolders = async () => {
     if (!jobDetails || jobDetails.flex_folders_created) {
       toast({
@@ -87,7 +104,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     }
 
     try {
-      // Format document number from start date (YYMMDD)
       const startDate = new Date(jobDetails.start_date);
       const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
 
@@ -98,7 +114,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
         documentNumber
       };
 
-      // Create main folder
       const mainFolderPayload = {
         definitionId: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
         parentElementId: null,
@@ -126,9 +141,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const mainFolderResult = await response.json();
-
-      // Update folder creation status in database
+      await response.json();
       await updateFolderStatus.mutateAsync();
 
       toast({
@@ -145,8 +158,10 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     }
   };
 
-  // Rest of your existing component code...
-  // [Previous queries and state remain the same]
+  const calculateTotalProgress = () => {
+    // Implement your progress calculation logic here
+    return 0; // Placeholder return
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -172,21 +187,45 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Personnel section with grid layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>FOH Engineers Required</Label>
               <Input
                 type="number"
                 min="0"
-                value={personnel?.foh_engineers || 0}
-                onChange={(e) => updatePersonnel('foh_engineers', parseInt(e.target.value))}
+                value={personnel.foh_engineers}
+                onChange={(e) => updatePersonnel('foh_engineers', parseInt(e.target.value) || 0)}
               />
             </div>
-            {/* Rest of your personnel inputs... */}
+            <div>
+              <Label>Monitor Engineers Required</Label>
+              <Input
+                type="number"
+                min="0"
+                value={personnel.mon_engineers}
+                onChange={(e) => updatePersonnel('mon_engineers', parseInt(e.target.value) || 0)}
+              />
+            </div>
+            <div>
+              <Label>PA Techs Required</Label>
+              <Input
+                type="number"
+                min="0"
+                value={personnel.pa_techs}
+                onChange={(e) => updatePersonnel('pa_techs', parseInt(e.target.value) || 0)}
+              />
+            </div>
+            <div>
+              <Label>RF Techs Required</Label>
+              <Input
+                type="number"
+                min="0"
+                value={personnel.rf_techs}
+                onChange={(e) => updatePersonnel('rf_techs', parseInt(e.target.value) || 0)}
+              />
+            </div>
           </div>
 
-          {/* Tasks section */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <span className="font-medium">Total Progress:</span>
@@ -199,10 +238,36 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
               <span className="text-sm">{calculateTotalProgress()}%</span>
             </div>
 
-            {/* Table with horizontal scroll */}
             <div className="overflow-x-auto">
               <UITable>
-                {/* Your existing table content... */}
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Task Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {TASK_TYPES.map((taskType) => (
+                    <TableRow key={taskType}>
+                      <TableCell>{taskType}</TableCell>
+                      <TableCell>Pending</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="icon">
+                            <Upload className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
               </UITable>
             </div>
           </div>
