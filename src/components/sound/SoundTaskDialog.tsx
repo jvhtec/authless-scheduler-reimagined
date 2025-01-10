@@ -72,8 +72,8 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch jobDetails
-  const { data: fetchedJobDetails } = useQuery({
+  // Fetch jobDetails from jobs table
+  useQuery({
     queryKey: ['job-details', jobId],
     queryFn: async () => {
       if (!jobId) return null;
@@ -89,17 +89,31 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     onSuccess: (data) => setJobDetails(data),
   });
 
-  // Synchronize personnel state with jobDetails when fetched or updated
-  useEffect(() => {
-    if (jobDetails) {
-      setPersonnel({
-        foh_engineers: jobDetails.foh_engineers || 0,
-        mon_engineers: jobDetails.mon_engineers || 0,
-        pa_techs: jobDetails.pa_techs || 0,
-        rf_techs: jobDetails.rf_techs || 0,
-      });
-    }
-  }, [jobDetails]);
+  // Fetch personnel details from sound_job_personnel table
+  useQuery({
+    queryKey: ['job-personnel', jobId],
+    queryFn: async () => {
+      if (!jobId) return null;
+      const { data, error } = await supabase
+        .from('sound_job_personnel')
+        .select('*')
+        .eq('job_id', jobId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!jobId,
+    onSuccess: (data) => {
+      if (data) {
+        setPersonnel({
+          foh_engineers: data.foh_engineers || 0,
+          mon_engineers: data.mon_engineers || 0,
+          pa_techs: data.pa_techs || 0,
+          rf_techs: data.rf_techs || 0,
+        });
+      }
+    },
+  });
 
   const { data: managementUsers } = useQuery({
     queryKey: ['management-users'],
@@ -195,7 +209,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
           cacheControl: '3600',
           upsert: false
         });
-
       if (uploadError) throw uploadError;
 
       const { error: dbError } = await supabase
@@ -206,7 +219,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
           file_path: filePath,
           uploaded_by: (await supabase.auth.getUser()).data.user?.id
         });
-
       if (dbError) throw dbError;
 
       await supabase
@@ -277,17 +289,18 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
 
   const updatePersonnelField = async (field: string, value: number) => {
     try {
+      // Update the corresponding field in sound_job_personnel
       const { error } = await supabase
-        .from('jobs')
+        .from('sound_job_personnel')
         .update({ [field]: value })
-        .eq('id', jobId);
+        .eq('job_id', jobId);
       if (error) throw error;
       toast({
         title: "Update successful",
         description: `${field} updated to ${value}`,
       });
-      // Update local jobDetails state to reflect changes
-      setJobDetails((prev: any) => ({ ...prev, [field]: value }));
+      // Reflect update locally
+      setPersonnel((prev) => ({ ...prev, [field]: value }));
     } catch (error: any) {
       toast({
         title: "Update failed",
