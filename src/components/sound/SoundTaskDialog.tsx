@@ -380,7 +380,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     }
   };
 
-  return (
+   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-4xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-4 py-2 flex flex-row items-center justify-between border-b">
@@ -405,11 +405,13 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
                 {jobDetails?.flex_folders_created ? "Folders already created" : "Create Flex Folders"}
               </span>
             </Button>
-            <DialogClose asChild>
-              <Button variant="ghost" size="icon">
-                <X className="h-4 w-4" />
-              </Button>
-            </DialogClose>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => onOpenChange(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         </DialogHeader>
 
@@ -463,7 +465,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
                 <span className="font-medium">Total Progress:</span>
-                <div className="flex-1">
+                <div className="flex-1 overflow-y-auto p-4">
                   <Progress 
                     value={calculateTotalProgress()} 
                     className="h-2"
