@@ -168,21 +168,15 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       <DialogContent className="max-w-4xl w-full p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
+            <img
+              src={createFolderIcon}
+              alt="Create Flex Folders"
+              className="h-5 w-5 cursor-pointer"
+              onClick={createFlexFolders}
+              title={jobDetails?.flex_folders_created ? "Folders already created" : "Create Flex Folders"}
+            />
             <Table className="h-5 w-5" />
             <span>Sound Department Tasks</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={createFlexFolders}
-              disabled={!jobDetails || jobDetails.flex_folders_created}
-              title={jobDetails?.flex_folders_created ? "Folders already created" : "Create Flex Folders"}
-            >
-              <img
-                src={createFolderIcon}
-                alt="Create Flex Folders"
-                className="h-6 w-6"
-              />
-            </Button>
           </DialogTitle>
         </DialogHeader>
 
