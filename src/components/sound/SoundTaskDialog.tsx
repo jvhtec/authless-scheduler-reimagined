@@ -61,7 +61,63 @@ interface Task {
 const TASK_TYPES = ["QT", "Rigging Plot", "Prediccion", "Pesos", "Consumos", "PS"];
 
 export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogProps) => {
-  // ... (rest of your SoundTaskDialog logic remains unchanged)
+  const [jobDetails, setJobDetails] = useState<any>(null);
+  const [personnel, setPersonnel] = useState<any>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  // Fetch jobDetails from jobs table
+  const { data: jobData } = useQuery({
+    queryKey: ['job-details', jobId],
+    queryFn: async () => {
+      if (!jobId) return null;
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('id', jobId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!jobId
+  });
+
+  // Update jobDetails when data changes
+  useEffect(() => {
+    if (jobData) {
+      setJobDetails(jobData);
+    }
+  }, [jobData]);
+
+  // Function to create flex folders
+  const createFlexFolders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('jobs')
+        .update({ flex_folders_created: true })
+        .eq('id', jobId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Flex folders have been created successfully",
+      });
+
+      // Refresh job details
+      queryClient.invalidateQueries({ queryKey: ['job-details', jobId] });
+    } catch (error) {
+      console.error('Error creating flex folders:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create flex folders",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -88,7 +144,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
                 {jobDetails?.flex_folders_created ? "Folders already created" : "Create Flex Folders"}
               </span>
             </Button>
-            {/* Removed redundant close button */}
             <DialogClose asChild>
               <Button variant="ghost" size="icon">
                 <X className="h-4 w-4" />
