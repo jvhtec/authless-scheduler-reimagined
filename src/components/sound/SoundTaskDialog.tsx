@@ -166,7 +166,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       // Sanitize filename - remove spaces and special characters
       const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const timestamp = new Date().getTime();
-      const filePath = `sound/${jobId}/${taskId}/${timestamp}_${sanitizedFileName}`;
+      const filePath = `${taskId}/${timestamp}_${sanitizedFileName}`;
       
       console.log('Uploading file to path:', filePath);
 
