@@ -248,7 +248,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       });
     }
   };
-  
 
   const updateTaskStatus = async (taskId: string, status: string) => {
     try {
@@ -258,12 +257,18 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
         .from('sound_job_tasks')
         .update({ 
           status,
-          progress 
+          progress,
+          updated_at: new Date().toISOString()
         })
         .eq('id', taskId);
 
       if (error) throw error;
       refetchTasks();
+      
+      toast({
+        title: "Task updated",
+        description: "Task status has been updated successfully.",
+      });
     } catch (error: any) {
       toast({
         title: "Update failed",
@@ -473,7 +478,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
                                 variant="ghost"
                                 size="icon"
                                 className="h-6 w-6"
-                                onClick={() => handleDeleteFile(task.id, doc.id)}
+                                onClick={() => handleDeleteFile(task.id, doc.id, doc.file_path)}
                               >
                                 <Trash2 className="h-3 w-3" />
                               </Button>

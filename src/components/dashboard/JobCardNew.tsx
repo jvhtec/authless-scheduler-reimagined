@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
 import { useEffect, useState } from "react";
 import { Progress } from "@/components/ui/progress";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface JobDocument {
   id: string;
@@ -41,6 +41,7 @@ export const JobCardNew = ({
   showUpload = false
 }: JobCardNewProps) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [assignments, setAssignments] = useState(job.job_assignments || []);
 
   const { data: soundTasks } = useQuery({
@@ -56,7 +57,8 @@ export const JobCardNew = ({
           assigned_to (
             first_name,
             last_name
-          )
+          ),
+          task_documents(*)
         `)
         .eq('job_id', job.id);
       
@@ -65,6 +67,23 @@ export const JobCardNew = ({
         throw error;
       }
       console.log("Fetched sound tasks:", data);
+      return data;
+    },
+    enabled: department === 'sound'
+  });
+
+  const { data: personnel } = useQuery({
+    queryKey: ['sound-personnel', job.id],
+    queryFn: async () => {
+      if (department !== 'sound') return null;
+      
+      const { data, error } = await supabase
+        .from('sound_job_personnel')
+        .select('*')
+        .eq('job_id', job.id)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
       return data;
     },
     enabled: department === 'sound'
@@ -79,6 +98,16 @@ export const JobCardNew = ({
   const getCompletedTasks = () => {
     if (!soundTasks?.length) return 0;
     return soundTasks.filter(task => task.status === 'completed').length;
+  };
+
+  const getTotalPersonnel = () => {
+    if (!personnel) return 0;
+    return (
+      (personnel.foh_engineers || 0) +
+      (personnel.mon_engineers || 0) +
+      (personnel.pa_techs || 0) +
+      (personnel.rf_techs || 0)
+    );
   };
 
   const handleEditClick = (e: React.MouseEvent) => {
@@ -129,6 +158,9 @@ export const JobCardNew = ({
         console.error('Database error:', dbError);
         throw dbError;
       }
+
+      // Refresh the job documents data
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
 
       toast({
         title: "Document uploaded",
@@ -242,6 +274,17 @@ export const JobCardNew = ({
                     {tech.name} {tech.role && `(${tech.role})`}
                   </Badge>
                 ))}
+              </div>
+            </div>
+          )}
+          {department === 'sound' && personnel && (
+            <div className="mt-2 p-2 bg-accent/20 rounded-md">
+              <div className="text-xs font-medium mb-1">Required Personnel: {getTotalPersonnel()}</div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>FOH Engineers: {personnel.foh_engineers || 0}</div>
+                <div>MON Engineers: {personnel.mon_engineers || 0}</div>
+                <div>PA Techs: {personnel.pa_techs || 0}</div>
+                <div>RF Techs: {personnel.rf_techs || 0}</div>
               </div>
             </div>
           )}
