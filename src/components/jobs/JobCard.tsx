@@ -12,6 +12,7 @@ interface JobCardProps {
   onJobClick: (jobId: string) => void;
   department?: Department;
   userRole?: string | null;
+  showAssignments?: boolean;
 }
 
 export const JobCard = ({
@@ -20,7 +21,8 @@ export const JobCard = ({
   onDeleteClick,
   onJobClick,
   department,
-  userRole
+  userRole,
+  showAssignments = true
 }: JobCardProps) => {
   const { toast } = useToast();
   const [collapsed, setCollapsed] = useState(true);
@@ -124,7 +126,7 @@ export const JobCard = ({
           </div>
         )}
 
-        {assignedTechnicians.length > 0 && (
+        {showAssignments && assignedTechnicians.length > 0 && (
           <div className="flex flex-col text-sm text-muted-foreground">
             <div>Assigned Personnel:</div>
             <div>{assignedTechnicians.join(', ')}</div>
