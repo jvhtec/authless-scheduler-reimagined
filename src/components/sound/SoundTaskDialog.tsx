@@ -109,197 +109,156 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     enabled: !!jobId
   });
 
-  // In your SoundTaskDialog component, update the createFlexFolders function:
-
-const createFlexFolders = async () => {
-  if (!jobDetails || jobDetails.flex_folders_created) {
-    toast({
-      title: "Folders already created",
-      description: "Flex folders have already been created for this job.",
-      variant: "destructive"
-    });
-    return;
-  }
-
-  try {
-    toast({
-      title: "Creating folders",
-      description: "Please wait while the folders are being created...",
-    });
-
-    // Format document number from start date (YYMMDD)
-    const startDate = new Date(jobDetails.start_date);
-    const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
-
-    const mainFolderPayload = {
-      definitionId: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
-      parentElementId: null,
-      open: true,
-      locked: false,
-      name: jobDetails.name,
-      plannedStartDate: jobDetails.start_date,
-      plannedEndDate: jobDetails.end_date,
-      locationId: "2f49c62c-b139-11df-b8d5-00e08175e43e",
-      notes: "Automated folder creation from Web App",
-      documentNumber,
-      personResponsibleId: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb"
-    };
-
-    console.log('Sending request to Flex API:', mainFolderPayload); // Debug log
-
-    const response = await fetch(BASE_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Auth-Token': API_KEY
-      },
-      body: JSON.stringify(mainFolderPayload)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+  const createFlexFolders = async () => {
+    if (!jobDetails || jobDetails.flex_folders_created) {
+      toast({
+        title: "Folders already created",
+        description: "Flex folders have already been created for this job.",
+        variant: "destructive"
+      });
+      return;
     }
 
-    const mainFolderResult = await response.json();
-    console.log('Flex API response:', mainFolderResult); // Debug log
-
-    // Update folder creation status in database
-    await updateFolderStatus.mutateAsync();
-
-    toast({
-      title: "Success",
-      description: "Flex folders have been created successfully.",
-    });
-
-    // Refresh job details to update UI
-    queryClient.invalidateQueries(['job-details', jobId]);
-
-  } catch (error: any) {
-    console.error('Error creating folders:', error); // Debug log
-    toast({
-      title: "Error creating folders",
-      description: error.message,
-      variant: "destructive"
-    });
-  }
-};
-
-// Update the button in the JSX:
-<Button
-  variant="ghost"
-  size="icon"
-  onClick={() => {
-    console.log('Button clicked'); // Debug log
-    createFlexFolders();
-  }}
-  disabled={!jobDetails || jobDetails.flex_folders_created}
-  className="hover:bg-gray-100 group relative"
->
-  <img
-    src={createFolderIcon}
-    alt="Create Flex Folders"
-    className="h-6 w-6 pointer-events-none" // Prevent image from catching clicks
-  />
-  <span className="absolute -bottom-8 scale-0 transition-all rounded bg-gray-800 p-2 text-xs text-white group-hover:scale-100 whitespace-nowrap">
-    {jobDetails?.flex_folders_created ? "Folders already created" : "Create Flex Folders"}
-  </span>
-</Button>
-
-// Update the file upload function:
-const handleFileUpload = async (taskId: string, file: File) => {
-  try {
-    setUploading(true);
-    
-    // Create a more unique file path using timestamp
-    const timestamp = new Date().getTime();
-    const filePath = `sound-tasks/${taskId}/${timestamp}-${file.name}`;
-    
-    console.log('Uploading file:', filePath); // Debug log
-
-    const { error: uploadError, data: uploadData } = await supabase.storage
-      .from('task_documents')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
+    try {
+      toast({
+        title: "Creating folders",
+        description: "Please wait while the folders are being created...",
       });
 
-    if (uploadError) throw uploadError;
+      const startDate = new Date(jobDetails.start_date);
+      const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
 
-    console.log('File uploaded successfully:', uploadData); // Debug log
+      const mainFolderPayload = {
+        definitionId: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
+        parentElementId: null,
+        open: true,
+        locked: false,
+        name: jobDetails.name,
+        plannedStartDate: jobDetails.start_date,
+        plannedEndDate: jobDetails.end_date,
+        locationId: "2f49c62c-b139-11df-b8d5-00e08175e43e",
+        notes: "Automated folder creation from Web App",
+        documentNumber,
+        personResponsibleId: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb"
+      };
 
-    const { error: dbError } = await supabase
-      .from('task_documents')
-      .insert({
-        task_id: taskId,
-        file_name: file.name,
-        file_path: filePath,
-        uploaded_by: (await supabase.auth.getUser()).data.user?.id
+      console.log('Sending request to Flex API:', mainFolderPayload); // Debug log
+
+      const response = await fetch(BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Auth-Token': API_KEY
+        },
+        body: JSON.stringify(mainFolderPayload)
       });
 
-    if (dbError) throw dbError;
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
 
-    await supabase
-      .from('sound_job_tasks')
-      .update({ 
-        status: 'completed',
-        progress: 100,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', taskId);
+      const mainFolderResult = await response.json();
+      console.log('Flex API response:', mainFolderResult); // Debug log
 
-    toast({
-      title: "File uploaded successfully",
-      description: "The document has been uploaded and task marked as completed.",
-    });
+      await updateFolderStatus.mutateAsync();
 
-    refetchTasks();
-  } catch (error: any) {
-    console.error('Upload error:', error); // Debug log
-    toast({
-      title: "Upload failed",
-      description: error.message,
-      variant: "destructive",
-    });
-  } finally {
-    setUploading(false);
-  }
-};
+      toast({
+        title: "Success",
+        description: "Flex folders have been created successfully.",
+      });
 
-// Update the file delete function:
-const handleDeleteFile = async (taskId: string, documentId: string, filePath: string) => {
-  try {
-    console.log('Deleting file:', filePath); // Debug log
+      queryClient.invalidateQueries(['job-details', jobId]);
 
-    const { error: storageError } = await supabase.storage
-      .from('task_documents')
-      .remove([filePath]);
+    } catch (error: any) {
+      console.error('Error creating folders:', error); // Debug log
+      toast({
+        title: "Error creating folders",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
 
-    if (storageError) throw storageError;
+  const handleFileUpload = async (taskId: string, file: File) => {
+    try {
+      setUploading(true);
+      const filePath = `${taskId}/${crypto.randomUUID()}-${file.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('task_documents')
+        .upload(filePath, file);
 
-    const { error: dbError } = await supabase
-      .from('task_documents')
-      .delete()
-      .eq('id', documentId)
-      .eq('task_id', taskId); // Additional safety check
+      if (uploadError) throw uploadError;
 
-    if (dbError) throw dbError;
+      const { error: dbError } = await supabase
+        .from('task_documents')
+        .insert({
+          sound_task_id: taskId,
+          file_name: file.name,
+          file_path: filePath,
+        });
 
-    toast({
-      title: "File deleted",
-      description: "The document has been removed from the task.",
-    });
+      if (dbError) throw dbError;
 
-    refetchTasks();
-  } catch (error: any) {
-    console.error('Delete error:', error); // Debug log
-    toast({
-      title: "Delete failed",
-      description: error.message,
-      variant: "destructive",
-    });
-  }
-};
+      await supabase
+        .from('sound_job_tasks')
+        .update({ 
+          status: 'completed',
+          progress: 100 
+        })
+        .eq('id', taskId);
+
+      refetchTasks();
+      
+      toast({
+        title: "File uploaded",
+        description: "The document has been uploaded successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteFile = async (taskId: string, documentId: string, filePath: string) => {
+    try {
+      console.log('Deleting file:', filePath); // Debug log
+
+      const { error: storageError } = await supabase.storage
+        .from('task_documents')
+        .remove([filePath]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from('task_documents')
+        .delete()
+        .eq('id', documentId)
+        .eq('task_id', taskId); // Additional safety check
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "File deleted",
+        description: "The document has been removed from the task.",
+      });
+
+      refetchTasks();
+    } catch (error: any) {
+      console.error('Delete error:', error); // Debug log
+      toast({
+        title: "Delete failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const updatePersonnel = (key: string, value: number) => {
     setPersonnel((prev) => ({ ...prev, [key]: value }));
@@ -373,90 +332,6 @@ const handleDeleteFile = async (taskId: string, documentId: string, filePath: st
         description: error.message,
         variant: "destructive",
       });
-    }
-  };
-
-  const handleDeleteFile = async (taskId: string, docId: string, filePath: string) => {
-    try {
-      const { error: storageError } = await supabase.storage
-        .from('task_documents')
-        .remove([filePath]);
-
-      if (storageError) throw storageError;
-
-      const { error: dbError } = await supabase
-        .from('task_documents')
-        .delete()
-        .eq('id', docId);
-
-      if (dbError) throw dbError;
-
-      await supabase
-        .from('sound_job_tasks')
-        .update({ 
-          status: 'in_progress',
-          progress: 50 
-        })
-        .eq('id', taskId);
-
-      refetchTasks();
-      
-      toast({
-        title: "File deleted",
-        description: "The document has been removed successfully.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Delete failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleFileUpload = async (taskId: string, file: File) => {
-    try {
-      setUploading(true);
-      const filePath = `${taskId}/${crypto.randomUUID()}-${file.name}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('task_documents')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { error: dbError } = await supabase
-        .from('task_documents')
-        .insert({
-          sound_task_id: taskId,
-          file_name: file.name,
-          file_path: filePath,
-        });
-
-      if (dbError) throw dbError;
-
-      await supabase
-        .from('sound_job_tasks')
-        .update({ 
-          status: 'completed',
-          progress: 100 
-        })
-        .eq('id', taskId);
-
-      refetchTasks();
-      
-      toast({
-        title: "File uploaded",
-        description: "The document has been uploaded successfully.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Upload failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setUploading(false);
     }
   };
 
