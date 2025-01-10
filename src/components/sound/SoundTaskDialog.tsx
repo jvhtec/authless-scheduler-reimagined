@@ -54,7 +54,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       if (!jobId) return null;
       const { data, error } = await supabase
         .from('jobs')
-        .select('name, start_date, end_date, flex_folders_created')
+        .select('title, start_time, end_time, flex_folders_created')
         .eq('id', jobId)
         .single();
       
@@ -286,13 +286,13 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
 
     try {
       // Format document number from start date (YYMMDD)
-      const startDate = new Date(jobDetails.start_date);
+      const startDate = new Date(jobDetails.start_time);
       const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
 
       const params = {
-        projectName: jobDetails.name,
-        plannedStartDate: jobDetails.start_date,
-        plannedEndDate: jobDetails.end_date,
+        projectName: jobDetails.title,
+        plannedStartDate: jobDetails.start_time,
+        plannedEndDate: jobDetails.end_time,
         documentNumber
       };
 
