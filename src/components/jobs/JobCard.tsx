@@ -1,3 +1,5 @@
+// src/components/jobs/JobCard.tsx
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -66,7 +68,7 @@ export const JobCard = ({
       }}
       onClick={() => canEdit && onJobClick(job.id)}
     >
-      {/* Header Area with Toggle Button Always Visible */}
+      {/* Header Area with Always Visible Toggle Button */}
       <div 
         className={`flex justify-between items-center p-2 ${isTourJob ? 'bg-accent/20' : ''}`}
         style={{ 
@@ -74,29 +76,25 @@ export const JobCard = ({
         }}
       >
         <div className="flex items-center flex-1">
-          <div className="flex justify-between items-center w-full">
-            <div className="flex items-center">
-              <p className="font-medium">{job.title}</p>
-              {isTourJob && (
-                <span className="text-xs bg-primary/10 px-2 py-0.5 rounded-full ml-2">
-                  {job.tour_date_id ? 'Tour Date' : 'Tour'}
-                </span>
-              )}
-            </div>
-            {/* Toggle button */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={toggleCollapse}
-              className="ml-2"
-            >
-              {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-            </Button>
-          </div>
+          <p className="font-medium">{job.title}</p>
+          {isTourJob && (
+            <span className="text-xs bg-primary/10 px-2 py-0.5 rounded-full ml-2">
+              {job.tour_date_id ? 'Tour Date' : 'Tour'}
+            </span>
+          )}
         </div>
+        {/* Toggle Button */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={toggleCollapse}
+          className="ml-2"
+        >
+          {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+        </Button>
         {canEdit && !collapsed && (
           <div 
-            className="flex gap-1"
+            className="flex gap-1 ml-2"
             onClick={e => e.stopPropagation()}
           >
             <Button variant="ghost" size="icon" onClick={handleEditClick}>
@@ -109,7 +107,7 @@ export const JobCard = ({
         )}
       </div>
 
-      {/* Content Area - Always Visible Summary */}
+      {/* Always Visible Summary */}
       <div className="p-2 space-y-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4" />
@@ -136,11 +134,9 @@ export const JobCard = ({
         )}
       </div>
 
-      {/* Expanded Additional Details */}
+      {/* Expanded Details Placeholder */}
       {!collapsed && (
         <div className="p-2 space-y-2 border-t">
-          {/* Place additional details or actions here if needed */}
-          {/* For demonstration, we only added placeholder text */}
           <p className="text-sm text-muted-foreground">
             Additional job details can be displayed here.
           </p>
