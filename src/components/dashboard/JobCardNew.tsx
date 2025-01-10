@@ -125,7 +125,7 @@ export const JobCardNew = ({
         },
         (payload) => {
           console.log("Personnel update received:", payload);
-          queryClient.invalidateQueries(['sound-personnel', job.id]);
+          queryClient.invalidateQueries({ queryKey: ['sound-personnel', job.id] });
         }
       )
       .on(
@@ -138,7 +138,7 @@ export const JobCardNew = ({
         },
         (payload) => {
           console.log("Task update received:", payload);
-          queryClient.invalidateQueries(['sound-tasks', job.id]);
+          queryClient.invalidateQueries({ queryKey: ['sound-tasks', job.id] });
         }
       )
       .subscribe(status => {

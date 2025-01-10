@@ -73,7 +73,7 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
   const { toast } = useToast();
 
   // Fetch jobDetails from jobs table
-  useQuery({
+  const { data: jobData } = useQuery({
     queryKey: ['job-details', jobId],
     queryFn: async () => {
       if (!jobId) return null;
@@ -85,12 +85,18 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       if (error) throw error;
       return data;
     },
-    enabled: !!jobId,
-    onSuccess: (data) => setJobDetails(data),
+    enabled: !!jobId
   });
 
+  // Update jobDetails when data changes
+  useEffect(() => {
+    if (jobData) {
+      setJobDetails(jobData);
+    }
+  }, [jobData]);
+
   // Fetch personnel details from sound_job_personnel table
-  useQuery({
+  const { data: personnelData } = useQuery({
     queryKey: ['job-personnel', jobId],
     queryFn: async () => {
       if (!jobId) return null;
@@ -102,18 +108,20 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       if (error) throw error;
       return data;
     },
-    enabled: !!jobId,
-    onSuccess: (data) => {
-      if (data) {
-        setPersonnel({
-          foh_engineers: data.foh_engineers || 0,
-          mon_engineers: data.mon_engineers || 0,
-          pa_techs: data.pa_techs || 0,
-          rf_techs: data.rf_techs || 0,
-        });
-      }
-    },
+    enabled: !!jobId
   });
+
+  // Update personnel when data changes
+  useEffect(() => {
+    if (personnelData) {
+      setPersonnel({
+        foh_engineers: personnelData.foh_engineers || 0,
+        mon_engineers: personnelData.mon_engineers || 0,
+        pa_techs: personnelData.pa_techs || 0,
+        rf_techs: personnelData.rf_techs || 0,
+      });
+    }
+  }, [personnelData]);
 
   const { data: managementUsers } = useQuery({
     queryKey: ['management-users'],
