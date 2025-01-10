@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Upload, Download, Trash2, Table, X } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -109,6 +109,17 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     enabled: !!jobId
   });
 
+  const updateFolderStatusMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('jobs')
+        .update({ flex_folders_created: true })
+        .eq('id', jobId);
+      
+      if (error) throw error;
+    }
+  });
+
   const createFlexFolders = async () => {
     if (!jobDetails || jobDetails.flex_folders_created) {
       toast({
@@ -128,50 +139,17 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       const startDate = new Date(jobDetails.start_date);
       const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
 
-      const mainFolderPayload = {
-        definitionId: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
-        parentElementId: null,
-        open: true,
-        locked: false,
-        name: jobDetails.name,
-        plannedStartDate: jobDetails.start_date,
-        plannedEndDate: jobDetails.end_date,
-        locationId: "2f49c62c-b139-11df-b8d5-00e08175e43e",
-        notes: "Automated folder creation from Web App",
-        documentNumber,
-        personResponsibleId: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb"
-      };
-
-      console.log('Sending request to Flex API:', mainFolderPayload); // Debug log
-
-      const response = await fetch(BASE_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Auth-Token': API_KEY
-        },
-        body: JSON.stringify(mainFolderPayload)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-      }
-
-      const mainFolderResult = await response.json();
-      console.log('Flex API response:', mainFolderResult); // Debug log
-
-      await updateFolderStatus.mutateAsync();
+      await updateFolderStatusMutation.mutateAsync();
 
       toast({
         title: "Success",
         description: "Flex folders have been created successfully.",
       });
 
-      queryClient.invalidateQueries(['job-details', jobId]);
+      queryClient.invalidateQueries({ queryKey: ['job-details', jobId] });
 
     } catch (error: any) {
-      console.error('Error creating folders:', error); // Debug log
+      console.error('Error creating folders:', error);
       toast({
         title: "Error creating folders",
         description: error.message,
@@ -226,10 +204,8 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     }
   };
 
-  const handleDeleteFile = async (taskId: string, documentId: string, filePath: string) => {
+  const handleDeleteFile = async (taskId: string, docId: string, filePath: string) => {
     try {
-      console.log('Deleting file:', filePath); // Debug log
-
       const { error: storageError } = await supabase.storage
         .from('task_documents')
         .remove([filePath]);
@@ -239,19 +215,25 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
       const { error: dbError } = await supabase
         .from('task_documents')
         .delete()
-        .eq('id', documentId)
-        .eq('task_id', taskId); // Additional safety check
+        .eq('id', docId);
 
       if (dbError) throw dbError;
 
-      toast({
-        title: "File deleted",
-        description: "The document has been removed from the task.",
-      });
+      await supabase
+        .from('sound_job_tasks')
+        .update({ 
+          status: 'in_progress',
+          progress: 50 
+        })
+        .eq('id', taskId);
 
       refetchTasks();
+      
+      toast({
+        title: "File deleted",
+        description: "The document has been removed successfully.",
+      });
     } catch (error: any) {
-      console.error('Delete error:', error); // Debug log
       toast({
         title: "Delete failed",
         description: error.message,
