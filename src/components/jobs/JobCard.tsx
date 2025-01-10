@@ -1,5 +1,3 @@
-// src/components/jobs/JobCard.tsx
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
