@@ -77,14 +77,32 @@ export const JobCardNew = ({
     queryFn: async () => {
       if (department !== 'sound') return null;
       
-      const { data, error } = await supabase
+      const { data: existingData, error: fetchError } = await supabase
         .from('sound_job_personnel')
         .select('*')
         .eq('job_id', job.id)
-        .single();
+        .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') throw error;
-      return data;
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+
+      if (!existingData) {
+        const { data: newData, error: insertError } = await supabase
+          .from('sound_job_personnel')
+          .insert({
+            job_id: job.id,
+            foh_engineers: 0,
+            mon_engineers: 0,
+            pa_techs: 0,
+            rf_techs: 0
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        return newData;
+      }
+
+      return existingData;
     },
     enabled: department === 'sound'
   });
