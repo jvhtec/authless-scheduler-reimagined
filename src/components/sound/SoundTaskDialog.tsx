@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Upload, Download, Trash2, Table, X } from "lucide-react";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -37,10 +37,22 @@ interface SoundTaskDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const TASK_TYPES = ["QT", "Rigging Plot", "Prediccion", "Pesos", "Consumos", "PS"];
+interface TaskDocument {
+  id: string;
+  file_name: string;
+  file_path: string;
+}
 
-const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
-const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
+interface Task {
+  id: string;
+  task_type: string;
+  assigned_to: string | null;
+  progress: number;
+  status: 'not_started' | 'in_progress' | 'completed';
+  task_documents?: TaskDocument[];
+}
+
+const TASK_TYPES = ["QT", "Rigging Plot", "Prediccion", "Pesos", "Consumos", "PS"];
 
 export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogProps) => {
   const [personnel, setPersonnel] = useState({
@@ -50,15 +62,44 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     rf_techs: 0,
   });
   const [jobDetails, setJobDetails] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: tasks, refetch: refetchTasks } = useQuery(['tasks', jobId], async () => {
-    const { data } = await supabase
-      .from('sound_job_tasks')
-      .select('*')
-      .eq('job_id', jobId);
-    return data;
+  const { data: managementUsers } = useQuery({
+    queryKey: ['management-users'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('role', ['management', 'admin']);
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: tasks, refetch: refetchTasks } = useQuery({
+    queryKey: ['sound-tasks', jobId],
+    queryFn: async () => {
+      if (!jobId) return null;
+      
+      const { data, error } = await supabase
+        .from('sound_job_tasks')
+        .select(`
+          *,
+          assigned_to (
+            first_name,
+            last_name
+          ),
+          task_documents (*)
+        `)
+        .eq('job_id', jobId);
+      
+      if (error) throw error;
+      return data as Task[];
+    },
+    enabled: !!jobId
   });
 
   const createFlexFolders = async () => {
@@ -70,24 +111,158 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
   };
 
   const calculateTotalProgress = () => {
-    // Logic to calculate total progress
-    return 0; // Placeholder
+    if (!tasks?.length) return 0;
+    const totalProgress = tasks.reduce((acc, task) => acc + (task.progress || 0), 0);
+    return Math.round(totalProgress / tasks.length);
+  };
+
+  const getProgressColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-500';
+      case 'in_progress':
+        return 'bg-blue-500';
+      default:
+        return 'bg-gray-300';
+    }
   };
 
   const updateTaskStatus = async (taskId: string, status: string) => {
-    // Logic to update task status
+    try {
+      const progress = status === 'completed' ? 100 : status === 'in_progress' ? 50 : 0;
+      
+      const { error } = await supabase
+        .from('sound_job_tasks')
+        .update({ 
+          status,
+          progress,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', taskId);
+
+      if (error) throw error;
+      refetchTasks();
+      
+      toast({
+        title: "Task updated",
+        description: "Task status has been updated successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDownload = (filePath: string, fileName: string) => {
-    // Logic to handle file download
+  const handleDownload = async (filePath: string, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('task_documents')
+        .download(filePath);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast({
+        title: "Download failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteFile = async (taskId: string, docId: string, filePath: string) => {
-    // Logic to handle file deletion
+    try {
+      const { error: storageError } = await supabase.storage
+        .from('task_documents')
+        .remove([filePath]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from('task_documents')
+        .delete()
+        .eq('id', docId);
+
+      if (dbError) throw dbError;
+
+      await supabase
+        .from('sound_job_tasks')
+        .update({ 
+          status: 'in_progress',
+          progress: 50 
+        })
+        .eq('id', taskId);
+
+      refetchTasks();
+      
+      toast({
+        title: "File deleted",
+        description: "The document has been removed successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Delete failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleFileUpload = async (taskId: string, file: File) => {
-    // Logic to handle file upload
+    try {
+      setUploading(true);
+      const filePath = `${taskId}/${crypto.randomUUID()}-${file.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('task_documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase
+        .from('task_documents')
+        .insert({
+          sound_task_id: taskId,
+          file_name: file.name,
+          file_path: filePath,
+        });
+
+      if (dbError) throw dbError;
+
+      await supabase
+        .from('sound_job_tasks')
+        .update({ 
+          status: 'completed',
+          progress: 100 
+        })
+        .eq('id', taskId);
+
+      refetchTasks();
+      
+      toast({
+        title: "File uploaded",
+        description: "The document has been uploaded successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
