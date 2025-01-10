@@ -268,6 +268,89 @@ export type Database = {
           },
         ]
       }
+      lights_job_personnel: {
+        Row: {
+          id: string
+          job_id: string | null
+          lighting_designers: number | null
+          lighting_techs: number | null
+          riggers: number | null
+          spot_ops: number | null
+        }
+        Insert: {
+          id?: string
+          job_id?: string | null
+          lighting_designers?: number | null
+          lighting_techs?: number | null
+          riggers?: number | null
+          spot_ops?: number | null
+        }
+        Update: {
+          id?: string
+          job_id?: string | null
+          lighting_designers?: number | null
+          lighting_techs?: number | null
+          riggers?: number | null
+          spot_ops?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lights_job_personnel_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lights_job_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          id: string
+          job_id: string | null
+          progress: number | null
+          status: Database["public"]["Enums"]["task_status"] | null
+          task_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string | null
+          progress?: number | null
+          status?: Database["public"]["Enums"]["task_status"] | null
+          task_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string | null
+          progress?: number | null
+          status?: Database["public"]["Enums"]["task_status"] | null
+          task_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lights_job_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lights_job_tasks_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           created_at: string
@@ -582,6 +665,89 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      video_job_personnel: {
+        Row: {
+          camera_ops: number | null
+          id: string
+          job_id: string | null
+          playback_techs: number | null
+          video_directors: number | null
+          video_techs: number | null
+        }
+        Insert: {
+          camera_ops?: number | null
+          id?: string
+          job_id?: string | null
+          playback_techs?: number | null
+          video_directors?: number | null
+          video_techs?: number | null
+        }
+        Update: {
+          camera_ops?: number | null
+          id?: string
+          job_id?: string | null
+          playback_techs?: number | null
+          video_directors?: number | null
+          video_techs?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_job_personnel_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_job_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          id: string
+          job_id: string | null
+          progress: number | null
+          status: Database["public"]["Enums"]["task_status"] | null
+          task_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string | null
+          progress?: number | null
+          status?: Database["public"]["Enums"]["task_status"] | null
+          task_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string | null
+          progress?: number | null
+          status?: Database["public"]["Enums"]["task_status"] | null
+          task_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_job_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_job_tasks_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

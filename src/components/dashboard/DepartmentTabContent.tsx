@@ -5,6 +5,8 @@ import { Department } from "@/types/department";
 import { JobDocument } from "@/types/job";
 import { useState } from "react";
 import { SoundTaskDialog } from "@/components/sound/SoundTaskDialog";
+import { LightsTaskDialog } from "@/components/lights/LightsTaskDialog";
+import { VideoTaskDialog } from "@/components/video/VideoTaskDialog";
 
 interface DepartmentTabContentProps {
   department: Department;
@@ -38,8 +40,39 @@ export const DepartmentTabContent = ({
   }
 
   const handleJobClick = (jobId: string) => {
-    if (department === 'sound') {
-      setSelectedJobId(jobId);
+    setSelectedJobId(jobId);
+  };
+
+  const getTaskDialog = () => {
+    if (!selectedJobId) return null;
+
+    switch (department) {
+      case 'sound':
+        return (
+          <SoundTaskDialog
+            jobId={selectedJobId}
+            open={!!selectedJobId}
+            onOpenChange={(open) => !open && setSelectedJobId(null)}
+          />
+        );
+      case 'lights':
+        return (
+          <LightsTaskDialog
+            jobId={selectedJobId}
+            open={!!selectedJobId}
+            onOpenChange={(open) => !open && setSelectedJobId(null)}
+          />
+        );
+      case 'video':
+        return (
+          <VideoTaskDialog
+            jobId={selectedJobId}
+            open={!!selectedJobId}
+            onOpenChange={(open) => !open && setSelectedJobId(null)}
+          />
+        );
+      default:
+        return null;
     }
   };
 
@@ -58,13 +91,7 @@ export const DepartmentTabContent = ({
         />
       ))}
       
-      {department === 'sound' && (
-        <SoundTaskDialog
-          jobId={selectedJobId!}
-          open={!!selectedJobId}
-          onOpenChange={(open) => !open && setSelectedJobId(null)}
-        />
-      )}
+      {getTaskDialog()}
     </div>
   );
 };
