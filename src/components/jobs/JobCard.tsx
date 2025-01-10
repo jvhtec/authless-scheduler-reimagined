@@ -1,11 +1,9 @@
-// src/components/jobs/JobCard.tsx
-
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { Pencil, Trash2, MapPin, Calendar } from "lucide-react";
+import { Pencil, Trash2, MapPin, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { Department } from "@/types/department";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
 
 interface JobCardProps {
   job: any;
@@ -25,6 +23,7 @@ export const JobCard = ({
   userRole
 }: JobCardProps) => {
   const { toast } = useToast();
+  const [collapsed, setCollapsed] = useState(true);
   const [assignments] = useState(job.job_assignments || []);
 
   const handleEditClick = (e: React.MouseEvent) => {
@@ -35,6 +34,11 @@ export const JobCard = ({
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDeleteClick(job.id);
+  };
+
+  const toggleCollapse = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCollapsed(!collapsed);
   };
 
   const canEdit = userRole !== 'logistics';
@@ -62,7 +66,7 @@ export const JobCard = ({
       }}
       onClick={() => canEdit && onJobClick(job.id)}
     >
-      {/* Header Area */}
+      {/* Header Area with Expand/Collapse Toggle */}
       <div 
         className={`flex justify-between items-center p-2 ${isTourJob ? 'bg-accent/20' : ''}`}
         style={{ 
@@ -70,16 +74,26 @@ export const JobCard = ({
         }}
       >
         <div className="flex-1">
-          <div className="flex justify-between items-start">
-            <p className="font-medium">{job.title}</p>
-            {isTourJob && (
-              <span className="text-xs bg-primary/10 px-2 py-0.5 rounded-full ml-2">
-                {job.tour_date_id ? 'Tour Date' : 'Tour'}
-              </span>
-            )}
+          <div className="flex justify-between items-center">
+            <div className="flex justify-between items-start">
+              <p className="font-medium">{job.title}</p>
+              {isTourJob && (
+                <span className="text-xs bg-primary/10 px-2 py-0.5 rounded-full ml-2">
+                  {job.tour_date_id ? 'Tour Date' : 'Tour'}
+                </span>
+              )}
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={toggleCollapse}
+              className="ml-2"
+            >
+              {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
-        {canEdit && (
+        {canEdit && !collapsed && (
           <div 
             className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" 
             onClick={e => e.stopPropagation()}
@@ -94,7 +108,7 @@ export const JobCard = ({
         )}
       </div>
 
-      {/* Content Area */}
+      {/* Content Area - Always Visible Summary */}
       <div className="p-2 space-y-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4" />
@@ -120,6 +134,17 @@ export const JobCard = ({
           </div>
         )}
       </div>
+
+      {/* Expanded Additional Details */}
+      {!collapsed && (
+        <div className="p-2 space-y-2 border-t">
+          {/* Place additional details or actions here if needed */}
+          {/* For now, we only added edit/delete in the header when expanded */}
+          <p className="text-sm text-muted-foreground">
+            Additional job details can be displayed here.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
