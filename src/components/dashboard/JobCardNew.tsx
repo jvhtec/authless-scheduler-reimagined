@@ -107,8 +107,6 @@ export const JobCardNew = ({
     enabled: department === 'sound'
   });
 
-  // Removed realtime subscriptions code for brevity since refresh is used.
-
   const calculateTotalProgress = () => {
     if (!soundTasks?.length) return 0;
     const totalProgress = soundTasks.reduce((acc, task) => acc + (task.progress || 0), 0);
@@ -250,7 +248,8 @@ export const JobCardNew = ({
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        {/* Wrap button container with stopPropagation */}
+        <div className="flex gap-2" onClick={e => e.stopPropagation()}>
           <Button 
             variant="ghost" 
             size="icon" 
