@@ -88,7 +88,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     enabled: !!jobId
   });
 
-  // Update jobDetails when data changes
   useEffect(() => {
     if (jobData) {
       setJobDetails(jobData);
@@ -111,7 +110,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
     enabled: !!jobId
   });
 
-  // Update personnel when data changes
   useEffect(() => {
     if (personnelData) {
       setPersonnel({
@@ -297,7 +295,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
 
   const updatePersonnelField = async (field: string, value: number) => {
     try {
-      // Update the corresponding field in sound_job_personnel
       const { error } = await supabase
         .from('sound_job_personnel')
         .update({ [field]: value })
@@ -307,7 +304,6 @@ export const SoundTaskDialog = ({ jobId, open, onOpenChange }: SoundTaskDialogPr
         title: "Update successful",
         description: `${field} updated to ${value}`,
       });
-      // Reflect update locally
       setPersonnel((prev) => ({ ...prev, [field]: value }));
     } catch (error: any) {
       toast({
