@@ -111,28 +111,44 @@ export const JobCardNew = ({
   useEffect(() => {
     if (department !== 'sound' || !job.id) return;
 
-    // Subscribe to changes in sound_job_personnel for this job
-    const personnelSub = supabase
-      .from(`sound_job_personnel:job_id=eq.${job.id}`)
-      .on('UPDATE', payload => {
-        // Invalidate personnel query to refetch updated data
-        queryClient.invalidateQueries(['sound-personnel', job.id]);
-      })
-      .subscribe();
+    console.log("Setting up realtime subscriptions for job:", job.id);
 
-    // Subscribe to changes in sound_job_tasks for this job
-    const tasksSub = supabase
-      .from(`sound_job_tasks:job_id=eq.${job.id}`)
-      .on('*', payload => {
-        // Invalidate tasks query to refetch updated data
-        queryClient.invalidateQueries(['sound-tasks', job.id]);
-      })
-      .subscribe();
+    // Create a channel for both personnel and tasks
+    const channel = supabase.channel(`job_${job.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'sound_job_personnel',
+          filter: `job_id=eq.${job.id}`
+        },
+        (payload) => {
+          console.log("Personnel update received:", payload);
+          queryClient.invalidateQueries(['sound-personnel', job.id]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sound_job_tasks',
+          filter: `job_id=eq.${job.id}`
+        },
+        (payload) => {
+          console.log("Task update received:", payload);
+          queryClient.invalidateQueries(['sound-tasks', job.id]);
+        }
+      )
+      .subscribe(status => {
+        console.log("Subscription status:", status);
+      });
 
-    // Cleanup subscriptions on unmount
+    // Cleanup subscription on unmount
     return () => {
-      supabase.removeSubscription(personnelSub);
-      supabase.removeSubscription(tasksSub);
+      console.log("Cleaning up realtime subscription");
+      channel.unsubscribe();
     };
   }, [department, job.id, queryClient]);
 
