@@ -11,8 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { LightsHeader } from "@/components/lights/LightsHeader";
 import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { LightsSchedule } from "@/components/lights/LightsSchedule";
-
-import { CalculatorIcon, ChartPieIcon, DocumentTextIcon, SparklesIcon } from '@heroicons/react/outline';
+import { Calculator, PieChart, FileText, Sparkles } from 'lucide-react';
 
 const Sound = () => {
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
@@ -199,39 +198,35 @@ const Sound = () => {
 
       {/* New section for future feature buttons */}
       <div className="mt-12 p-6 bg-gray-50 rounded-lg shadow-md flex flex-wrap justify-around space-y-4 md:space-y-0">
-        {/* Calculadora de pesos */}
         <button
           type="button"
           className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
         >
-          <CalculatorIcon className="h-6 w-6 text-gray-700" />
+          <Calculator className="h-6 w-6 text-gray-700" />
           <span className="text-gray-800 font-medium">Calculadora de pesos</span>
         </button>
 
-        {/* Calculadora de consumos */}
         <button
           type="button"
           className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
         >
-          <ChartPieIcon className="h-6 w-6 text-gray-700" />
+          <PieChart className="h-6 w-6 text-gray-700" />
           <span className="text-gray-800 font-medium">Calculadora de consumos</span>
         </button>
 
-        {/* Generador de informes SV */}
         <button
           type="button"
           className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
         >
-          <DocumentTextIcon className="h-6 w-6 text-gray-700" />
+          <FileText className="h-6 w-6 text-gray-700" />
           <span className="text-gray-800 font-medium">Generador de informes SV</span>
         </button>
 
-        {/* Análisis de riders IA */}
         <button
           type="button"
           className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
         >
-          <SparklesIcon className="h-6 w-6 text-gray-700" />
+          <Sparkles className="h-6 w-6 text-gray-700" />
           <span className="text-gray-800 font-medium">Análisis de riders IA</span>
         </button>
       </div>

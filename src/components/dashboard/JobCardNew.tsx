@@ -29,7 +29,7 @@ interface JobCardNewProps {
   onDeleteClick: (jobId: string) => void;
   onJobClick: (jobId: string) => void;
   showAssignments?: boolean;
-  department?: string;
+  department?: Department;
   userRole?: string | null;
   onDeleteDocument?: (jobId: string, document: JobDocument) => void;
   showUpload?: boolean;
@@ -40,7 +40,7 @@ export const JobCardNew = ({
   onEditClick,
   onDeleteClick,
   onJobClick,
-  department,
+  department = 'sound',
   userRole,
   onDeleteDocument,
   showUpload = false
