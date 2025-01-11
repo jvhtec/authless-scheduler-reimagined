@@ -10,8 +10,7 @@ import { JobDocuments } from "./JobDocuments";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import createFolderIcon from "@/assets/icons/icon.png";
-import Image from 'next/image'; // Import Next.js Image component
-
+import { Department } from "@/types/department";
 
 // Flex API constants
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
