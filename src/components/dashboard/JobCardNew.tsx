@@ -145,6 +145,16 @@ export const JobCardNew = ({
     personnel: "HR"
   };
 
+  const refreshData = () => {
+    queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    queryClient.invalidateQueries({ queryKey: ['sound-tasks', job.id] });
+    queryClient.invalidateQueries({ queryKey: ['sound-personnel', job.id] });
+    toast({
+      title: "Refreshing data",
+      description: "The job data is being refreshed.",
+    });
+  };
+
   const createFlexFolders = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (job.flex_folders_created) {
@@ -245,8 +255,6 @@ export const JobCardNew = ({
       });
     }
   };
-
-  // ... Other functions like calculateTotalProgress, getCompletedTasks, getTotalPersonnel, handleEditClick, handleDeleteClick, handleFileUpload, handleViewDocument, handleDeleteDocument, refreshData, etc.
 
   const toggleCollapse = (e: React.MouseEvent) => {
     e.stopPropagation();
