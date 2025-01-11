@@ -579,20 +579,6 @@ export const JobCardNew = ({
               </div>
             </div>
           )}
-          {/* Upload Button */}
-          {showUpload && (
-            <div className="relative">
-              <input
-                type="file"
-                onChange={handleFileUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                onClick={(e) => e.stopPropagation()}
-              />
-              <Button variant="ghost" size="icon">
-                <Upload className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
         </div>
       </CardContent>
       
