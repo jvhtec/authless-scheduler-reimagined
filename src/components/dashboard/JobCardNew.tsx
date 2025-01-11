@@ -3,13 +3,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp, Download, Eye, FolderPlus } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { Department } from "@/types/department";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
 import { Progress } from "@/components/ui/progress";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 // Flex API constants
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
@@ -49,8 +58,9 @@ export const JobCardNew = ({
   const [collapsed, setCollapsed] = useState(true);
   const [assignments, setAssignments] = useState(job.job_assignments || []);
   const [documents, setDocuments] = useState<JobDocument[]>(job.job_documents || []);
+  const [uploading, setUploading] = useState(false);
 
-  const { data: soundTasks } = useQuery({
+  const { data: soundTasks, refetch: refetchTasks } = useQuery({
     queryKey: ['sound-tasks', job.id],
     queryFn: async () => {
       if (department !== 'sound') return null;
@@ -69,6 +79,18 @@ export const JobCardNew = ({
       return data;
     },
     enabled: department === 'sound'
+  });
+
+  const { data: managementUsers } = useQuery({
+    queryKey: ['management-users'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'management');
+      if (error) throw error;
+      return data;
+    }
   });
 
   const { data: personnel } = useQuery({
@@ -101,152 +123,55 @@ export const JobCardNew = ({
     enabled: department === 'sound'
   });
 
-  const updateFolderStatus = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from('jobs')
-        .update({ flex_folders_created: true })
-        .eq('id', job.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
-    }
-  });
-
-  const FLEX_FOLDER_IDS = {
-    mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
-    subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
-    location: "2f49c62c-b139-11df-b8d5-00e08175e43e",
-    mainResponsible: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb"
+  const refreshData = () => {
+    console.log('Refreshing data...');
+    queryClient.invalidateQueries({ queryKey: ['sound-tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['sound-personnel'] });
+    queryClient.invalidateQueries({ queryKey: ['jobs'] });
   };
 
-  const DEPARTMENT_IDS = {
-    sound: "cdd5e372-d124-11e1-bba1-00e08175e43e",
-    lights: "d5af7892-d124-11e1-bba1-00e08175e43e",
-    video: "a89d124d-7a95-4384-943e-49f5c0f46b23",
-    production: "890811c3-fe3f-45d7-af6b-7ca4a807e84d",
-    personnel: "b972d682-598d-4802-a390-82e28dc4480e"
-  };
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const RESPONSIBLE_PERSON_IDS = {
-    sound: "4b0d98e0-e700-11ea-97d0-2a0a4490a7fb",
-    lights: "4b559e60-e700-11ea-97d0-2a0a4490a7fb",
-    video: "bb9690ac-f22e-4bc4-94a2-6d341ca0138d",
-    production: "4ce97ce3-5159-401a-9cf8-542d3e479ade",
-    personnel: "4b618540-e700-11ea-97d0-2a0a4490a7fb"
-  };
-
-  const DEPARTMENT_SUFFIXES = {
-    sound: "S",
-    lights: "L",
-    video: "V",
-    production: "P",
-    personnel: "HR"
-  };
-
-  const createFlexFolders = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (job.flex_folders_created) {
-      toast({
-        title: "Folders already created",
-        description: "Flex folders have already been created for this job.",
-        variant: "destructive"
-      });
-      return;
-    }
+    setUploading(true);
     try {
-      const startDate = new Date(job.start_time);
-      const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
-      const formattedStartDate = new Date(job.start_time).toISOString().split('.')[0] + '.000Z';
-      const formattedEndDate = new Date(job.end_time).toISOString().split('.')[0] + '.000Z';
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${department}/${crypto.randomUUID()}.${fileExt}`;
 
-      const mainFolderPayload = {
-        definitionId: FLEX_FOLDER_IDS.mainFolder,
-        parentElementId: null,
-        open: true,
-        locked: false,
-        name: job.title,
-        plannedStartDate: formattedStartDate,
-        plannedEndDate: formattedEndDate,
-        locationId: FLEX_FOLDER_IDS.location,
-        notes: "Automated folder creation from Web App",
-        documentNumber,
-        personResponsibleId: FLEX_FOLDER_IDS.mainResponsible
-      };
+      const { error: uploadError } = await supabase.storage
+        .from('task_documents')
+        .upload(filePath, file);
 
-      const mainResponse = await fetch(BASE_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Auth-Token': API_KEY
-        },
-        body: JSON.stringify(mainFolderPayload)
-      });
+      if (uploadError) throw uploadError;
 
-      if (!mainResponse.ok) {
-        const errorData = await mainResponse.json();
-        throw new Error(errorData.exceptionMessage || 'Failed to create main folder');
-      }
+      const { error: dbError } = await supabase
+        .from('task_documents')
+        .insert({
+          file_name: file.name,
+          file_path: filePath,
+          sound_task_id: department === 'sound' ? soundTasks?.[0]?.id : null,
+        });
 
-      const mainFolder = await mainResponse.json();
+      if (dbError) throw dbError;
 
-      const departments = ['sound', 'lights', 'video', 'production', 'personnel'];
-      for (const dept of departments) {
-        const subFolderPayload = {
-          definitionId: FLEX_FOLDER_IDS.subFolder,
-          parentElementId: mainFolder.elementId,
-          open: true,
-          locked: false,
-          name: `${job.title} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
-          plannedStartDate: formattedStartDate,
-          plannedEndDate: formattedEndDate,
-          locationId: FLEX_FOLDER_IDS.location,
-          departmentId: DEPARTMENT_IDS[dept as keyof typeof DEPARTMENT_IDS],
-          notes: `Automated subfolder creation for ${dept}`,
-          documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}`,
-          personResponsibleId: RESPONSIBLE_PERSON_IDS[dept as keyof typeof RESPONSIBLE_PERSON_IDS]
-        };
-
-        try {
-          const subResponse = await fetch(BASE_URL, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Auth-Token': API_KEY
-            },
-            body: JSON.stringify(subFolderPayload)
-          });
-
-          if (!subResponse.ok) {
-            const errorData = await subResponse.json();
-            console.error(`Error creating ${dept} subfolder:`, errorData);
-            continue;
-          }
-
-          await subResponse.json();
-        } catch (error) {
-          console.error(`Error creating ${dept} subfolder:`, error);
-          continue;
-        }
-      }
-
-      await updateFolderStatus.mutateAsync();
       toast({
         title: "Success",
-        description: "Flex folders have been created successfully.",
+        description: "File uploaded successfully",
       });
+
+      refreshData();
     } catch (error: any) {
-      console.error('Error creating Flex folders:', error);
+      console.error('Error uploading file:', error);
       toast({
-        title: "Error creating folders",
+        title: "Error",
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setUploading(false);
     }
   };
-
-  // ... Other functions like calculateTotalProgress, getCompletedTasks, getTotalPersonnel, handleEditClick, handleDeleteClick, handleFileUpload, handleViewDocument, handleDeleteDocument, refreshData, etc.
 
   const toggleCollapse = (e: React.MouseEvent) => {
     e.stopPropagation();
