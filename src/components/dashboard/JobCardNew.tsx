@@ -6,13 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Department } from "@/types/department";
 import { useState } from "react";
-
-interface JobDocument {
-  id: string;
-  file_name: string;
-  file_path: string;
-  uploaded_at: string;
-}
+import { JobDocument } from "@/types/job";
 
 interface JobCardNewProps {
   job: any;
@@ -22,6 +16,8 @@ interface JobCardNewProps {
   department?: Department;
   userRole?: string | null;
   showAssignments?: boolean;
+  onDeleteDocument?: (jobId: string, document: JobDocument) => void;
+  showUpload?: boolean;
 }
 
 export const JobCardNew = ({
@@ -31,7 +27,9 @@ export const JobCardNew = ({
   onJobClick,
   department,
   userRole,
-  showAssignments = true
+  showAssignments = true,
+  onDeleteDocument,
+  showUpload = false
 }: JobCardNewProps) => {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
@@ -103,6 +101,7 @@ export const JobCardNew = ({
         throw error;
       }
 
+      // Create a temporary anchor element for download
       const url = window.URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
@@ -126,29 +125,33 @@ export const JobCardNew = ({
     }
   };
 
-  const handleDeleteDocument = async (document: JobDocument) => {
+  const handleDeleteDocument = async (jobDocument: JobDocument) => {
     try {
-      console.log('Deleting document:', document.file_name);
+      console.log('Deleting document:', jobDocument.file_name);
       
-      const { error: storageError } = await supabase.storage
-        .from('job_documents')
-        .remove([document.file_path]);
+      if (onDeleteDocument) {
+        onDeleteDocument(job.id, jobDocument);
+      } else {
+        const { error: storageError } = await supabase.storage
+          .from('job_documents')
+          .remove([jobDocument.file_path]);
 
-      if (storageError) throw storageError;
+        if (storageError) throw storageError;
 
-      const { error: dbError } = await supabase
-        .from('job_documents')
-        .delete()
-        .eq('id', document.id);
+        const { error: dbError } = await supabase
+          .from('job_documents')
+          .delete()
+          .eq('id', jobDocument.id);
 
-      if (dbError) throw dbError;
+        if (dbError) throw dbError;
 
-      setDocuments(documents.filter(doc => doc.id !== document.id));
+        setDocuments(documents.filter(doc => doc.id !== jobDocument.id));
 
-      toast({
-        title: "Document deleted",
-        description: "The document has been removed.",
-      });
+        toast({
+          title: "Document deleted",
+          description: "The document has been removed.",
+        });
+      }
     } catch (error: any) {
       console.error('Delete error:', error);
       toast({
@@ -230,41 +233,39 @@ export const JobCardNew = ({
         </div>
       </div>
 
-      <div className="absolute top-4 right-4 flex gap-2">
-        {(userRole === 'admin' || userRole === 'management') && (
-          <>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => {
+      {showUpload && (userRole === 'admin' || userRole === 'management') && (
+        <div className="absolute top-4 right-4 flex gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditClick(job);
+            }}
+          >
+            <Upload className="h-4 w-4" />
+          </Button>
+          <div className="relative">
+            <input
+              type="file"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              onChange={(e) => {
                 e.stopPropagation();
-                onEditClick();
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(file);
               }}
+              disabled={uploading}
+            />
+            <Button 
+              variant="ghost" 
+              size="icon"
+              disabled={uploading}
             >
               <Upload className="h-4 w-4" />
             </Button>
-            <div className="relative">
-              <input
-                type="file"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                onChange={(e) => {
-                  e.stopPropagation();
-                  const file = e.target.files?.[0];
-                  if (file) handleFileUpload(file);
-                }}
-                disabled={uploading}
-              />
-              <Button 
-                variant="ghost" 
-                size="icon"
-                disabled={uploading}
-              >
-                <Upload className="h-4 w-4" />
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
