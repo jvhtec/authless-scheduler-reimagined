@@ -485,7 +485,7 @@ export const JobCardNew = ({
   title={job.flex_folders_created ? "Folders already created" : "Create Flex folders"}
 >
   <img
-    src="/assets/icons/icon.png"
+    src="/src/assets/icons/icon.png"
     alt="Create Flex folders"
     className="h-4 w-4"
   />
