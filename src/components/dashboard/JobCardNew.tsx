@@ -9,10 +9,33 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
 import { Progress } from "@/components/ui/progress";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
 const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
+
+const FLEX_FOLDER_IDS = {
+  mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
+  subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
+  location: "2f49c62c-b139-11df-b8d5-00e08175e43e",
+  mainResponsible: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb",
+};
+
+const DEPARTMENT_IDS = {
+  sound: "cdd5e372-d124-11e1-bba1-00e08175e43e",
+  lights: "d5af7892-d124-11e1-bba1-00e08175e43e",
+  video: "a89d124d-7a95-4384-943e-49f5c0f46b23",
+  production: "890811c3-fe3f-45d7-af6b-7ca4a807e84d",
+  personnel: "b972d682-598d-4802-a390-82e28dc4480e",
+};
+
+const RESPONSIBLE_PERSON_IDS = {
+  sound: "4b0d98e0-e700-11ea-97d0-2a0a4490a7fb",
+  lights: "4b559e60-e700-11ea-97d0-2a0a4490a7fb",
+  video: "bb9690ac-f22e-4bc4-94a2-6d341ca0138d",
+  production: "4ce97ce3-5159-401a-9cf8-542d3e479ade",
+  personnel: "4b618540-e700-11ea-97d0-2a0a4490a7fb",
+};
 
 interface JobDocument {
   id: string;
@@ -46,6 +69,7 @@ export const JobCardNew = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(true);
+  const [documents, setDocuments] = useState<JobDocument[]>(job.job_documents || []);
 
   const { data: soundTasks } = useQuery({
     queryKey: ["sound-tasks", job.id],
@@ -87,80 +111,75 @@ export const JobCardNew = ({
     enabled: department === "sound",
   });
 
-  const toggleCollapse = (e: React.MouseEvent) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
-    setCollapsed(!collapsed);
-  };
-
-  const refreshData = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    await queryClient.invalidateQueries({ queryKey: ["jobs"] });
-    await queryClient.invalidateQueries({ queryKey: ["sound-tasks", job.id] });
-    await queryClient.invalidateQueries({ queryKey: ["sound-personnel", job.id] });
-
-    toast({
-      title: "Data refreshed",
-      description: "The job information has been updated.",
-    });
-  };
-
-  const createFlexFolders = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    if (job.flex_folders_created) {
-      toast({
-        title: "Folders already created",
-        description: "Flex folders have already been created for this job.",
-        variant: "destructive",
-      });
-      return;
-    }
+    const file = e.target.files?.[0];
+    if (!file || !department) return;
 
     try {
-      const startDate = new Date(job.start_time);
-      const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, "");
+      const fileExt = file.name.split(".").pop();
+      const filePath = `${department}/${job.id}/${crypto.randomUUID()}.${fileExt}`;
 
-      const formattedStartDate = new Date(job.start_time).toISOString().split(".")[0] + ".000Z";
-      const formattedEndDate = new Date(job.end_time).toISOString().split(".")[0] + ".000Z";
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("job_documents")
+        .upload(filePath, file);
 
-      const mainFolderPayload = {
-        definitionId: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
-        name: job.title,
-        plannedStartDate: formattedStartDate,
-        plannedEndDate: formattedEndDate,
-        locationId: "2f49c62c-b139-11df-b8d5-00e08175e43e",
-        notes: "Automated folder creation from Web App",
-        documentNumber,
-        personResponsibleId: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb",
-      };
+      if (uploadError) throw uploadError;
 
-      const mainResponse = await fetch(BASE_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Auth-Token": API_KEY,
-        },
-        body: JSON.stringify(mainFolderPayload),
-      });
+      const { error: dbError } = await supabase
+        .from("job_documents")
+        .insert({
+          job_id: job.id,
+          file_name: file.name,
+          file_path: filePath,
+          file_type: file.type,
+          file_size: file.size,
+        });
 
-      if (!mainResponse.ok) throw new Error("Failed to create main folder");
+      if (dbError) throw dbError;
 
-      const { error } = await supabase
-        .from("jobs")
-        .update({ flex_folders_created: true })
-        .eq("id", job.id);
-
-      if (error) throw error;
-
-      await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
 
       toast({
-        title: "Success",
-        description: "Flex folders have been created successfully.",
+        title: "Document uploaded",
+        description: "The document has been successfully uploaded.",
       });
     } catch (error: any) {
       toast({
-        title: "Error creating folders",
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteDocument = async (document: JobDocument) => {
+    if (!window.confirm("Are you sure you want to delete this document?")) return;
+
+    try {
+      const { error: storageError } = await supabase.storage
+        .from("job_documents")
+        .remove([document.file_path]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from("job_documents")
+        .delete()
+        .eq("id", document.id);
+
+      if (dbError) throw dbError;
+
+      setDocuments(documents.filter((doc) => doc.id !== document.id));
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+
+      toast({
+        title: "Document deleted",
+        description: "The document has been successfully deleted.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error deleting document",
         description: error.message,
         variant: "destructive",
       });
@@ -192,10 +211,6 @@ export const JobCardNew = ({
     <Card
       className="mb-4 hover:shadow-md transition-shadow cursor-pointer"
       onClick={() => userRole !== "logistics" && onJobClick(job.id)}
-      style={{
-        borderColor: `${job.color}30` || "#7E69AB30",
-        backgroundColor: `${job.color}05` || "#7E69AB05",
-      }}
     >
       <CardHeader className="pb-2 flex justify-between items-center">
         <div className="flex items-center flex-grow">
@@ -203,39 +218,17 @@ export const JobCardNew = ({
             {job.title}
             {job.job_type === "tour" && <Badge variant="secondary" className="ml-2">Tour</Badge>}
           </div>
-          <Button variant="ghost" size="icon" onClick={toggleCollapse} className="ml-2">
+          <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} className="ml-2">
             {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
           </Button>
         </div>
-        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="icon" onClick={refreshData} title="Refresh Data">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={createFlexFolders}
-            disabled={job.flex_folders_created}
-            title={job.flex_folders_created ? "Folders already created" : "Create Flex folders"}
-          >
-            <FolderPlus className="h-4 w-4" />
-          </Button>
-        </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-2 text-sm">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            {format(new Date(job.start_time), "HH:mm")}
-          </div>
-          {job.location?.name && (
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              {job.location.name}
-            </div>
-          )}
-          {!collapsed && (
-            <>
+      {!collapsed && (
+        <CardContent>
+          <div className="space-y-2 text-sm">
+            {/* Collapsible Content */}
+            <div>
+              <div className="font-medium">Personnel Details</div>
               {department === "sound" && personnel && (
                 <div className="mt-2 p-2 bg-accent/20 rounded-md">
                   <div className="text-xs font-medium mb-1">
@@ -249,6 +242,9 @@ export const JobCardNew = ({
                   </div>
                 </div>
               )}
+            </div>
+            <div>
+              <div className="font-medium">Task Progress</div>
               {department === "sound" && soundTasks?.length > 0 && (
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -263,11 +259,6 @@ export const JobCardNew = ({
                       <div key={task.id} className="flex items-center justify-between text-xs">
                         <span>{task.task_type}</span>
                         <div className="flex items-center gap-2">
-                          {task.assigned_to && (
-                            <span className="text-muted-foreground">
-                              {task.assigned_to.first_name} {task.assigned_to.last_name}
-                            </span>
-                          )}
                           <Badge
                             variant={task.status === "completed" ? "default" : "secondary"}
                           >
@@ -283,18 +274,21 @@ export const JobCardNew = ({
                   </div>
                 </div>
               )}
-              {job.job_documents && onDeleteDocument && (
-                <JobDocuments
-                  jobId={job.id}
-                  documents={job.job_documents}
-                  department={department}
-                  onDeleteDocument={onDeleteDocument}
-                />
-              )}
-            </>
-          )}
-        </div>
-      </CardContent>
+            </div>
+            <div>
+              <div className="font-medium">Documents</div>
+              {documents.map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between text-sm">
+                  <span>{doc.file_name}</span>
+                  <Button size="icon" onClick={() => handleDeleteDocument(doc)}>
+                    <Trash2 />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      )}
     </Card>
   );
 };
