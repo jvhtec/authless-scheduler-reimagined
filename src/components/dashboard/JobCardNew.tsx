@@ -477,15 +477,19 @@ export const JobCardNew = ({
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={createFlexFolders}
-            disabled={job.flex_folders_created}
-            title={job.flex_folders_created ? "Folders already created" : "Create Flex folders"}
-          >
-            <FolderPlus className="h-4 w-4" />
-          </Button>
+         <Button
+  variant="ghost"
+  size="icon"
+  onClick={createFlexFolders}
+  disabled={job.flex_folders_created}
+  title={job.flex_folders_created ? "Folders already created" : "Create Flex folders"}
+>
+  <img
+    src="/assets/icons/icon.png"
+    alt="Create Flex folders"
+    className="h-4 w-4"
+  />
+</Button>
           {canEdit && (
             <>
               <Button variant="ghost" size="icon" onClick={handleEditClick}>
