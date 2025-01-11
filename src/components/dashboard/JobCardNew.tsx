@@ -170,9 +170,11 @@ export const JobCardNew = ({
       const startDate = new Date(job.start_time);
       const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
       
-      // Format dates correctly for the API - fix the double .000 issue
-      const formattedStartDate = new Date(job.start_time).toISOString().replace('Z', '.000Z');
-      const formattedEndDate = new Date(job.end_time).toISOString().replace('Z', '.000Z');
+      // Format dates correctly for the API - ensure single .000Z suffix
+      const formattedStartDate = new Date(job.start_time).toISOString().split('.')[0] + '.000Z';
+      const formattedEndDate = new Date(job.end_time).toISOString().split('.')[0] + '.000Z';
+
+      console.log('Formatted dates:', { formattedStartDate, formattedEndDate });
 
       // Create main folder
       const mainFolderPayload = {
