@@ -2,9 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp, Download, Eye, FolderPlus } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { Department } from "@/types/department";
+import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp, Eye, FolderPlus } from "lucide-react";
+import { format } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
@@ -28,7 +27,7 @@ interface JobCardNewProps {
   onDeleteClick: (jobId: string) => void;
   onJobClick: (jobId: string) => void;
   showAssignments?: boolean;
-  department?: Department;
+  department?: string;
   userRole?: string | null;
   onDeleteDocument?: (jobId: string, document: JobDocument) => void;
   showUpload?: boolean;
@@ -122,7 +121,7 @@ export const JobCardNew = ({
     }
   });
 
-  // Add these constants at the top of the file, after imports
+  // Flex Folder and Department constants
   const FLEX_FOLDER_IDS = {
     mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
     subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
@@ -580,8 +579,64 @@ export const JobCardNew = ({
             </div>
           )}
         </div>
+
+        {/* Only show additional details when expanded */}
+        {!collapsed && (
+          <>
+            {department === 'sound' && personnel && (
+              <div className="mt-2 p-2 bg-accent/20 rounded-md">
+                <div className="text-xs font-medium mb-1">Required Personnel: {getTotalPersonnel()}</div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>FOH Engineers: {personnel.foh_engineers || 0}</div>
+                  <div>MON Engineers: {personnel.mon_engineers || 0}</div>
+                  <div>PA Techs: {personnel.pa_techs || 0}</div>
+                  <div>RF Techs: {personnel.rf_techs || 0}</div>
+                </div>
+              </div>
+            )}
+            {department === 'sound' && soundTasks?.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Task Progress ({getCompletedTasks()}/{soundTasks.length} completed)</span>
+                  <span>{calculateTotalProgress()}%</span>
+                </div>
+                <Progress 
+                  value={calculateTotalProgress()} 
+                  className="h-1"
+                />
+                <div className="space-y-1">
+                  {soundTasks.map((task: any) => (
+                    <div key={task.id} className="flex items-center justify-between text-xs">
+                      <span>{task.task_type}</span>
+                      <div className="flex items-center gap-2">
+                        {task.assigned_to && (
+                          <span className="text-muted-foreground">
+                            {task.assigned_to.first_name} {task.assigned_to.last_name}
+                          </span>
+                        )}
+                        <Badge variant={task.status === 'completed' ? 'default' : 'secondary'}>
+                          {task.status === 'not_started' ? 'Not Started' : 
+                           task.status === 'in_progress' ? 'In Progress' : 
+                           'Completed'}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {job.job_documents && onDeleteDocument && (
+              <JobDocuments
+                jobId={job.id}
+                documents={job.job_documents}
+                department={department}
+                onDeleteDocument={onDeleteDocument}
+              />
+            )}
+          </>
+        )}
+
       </CardContent>
-      
     </Card>
   );
 };
