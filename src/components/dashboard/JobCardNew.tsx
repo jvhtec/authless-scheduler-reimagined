@@ -9,9 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Department } from "@/types/department";
 
-// Flex API constants - Remove port specification from URL
+// Flex API constants
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
 const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
 
@@ -28,7 +27,7 @@ interface JobCardNewProps {
   onDeleteClick: (jobId: string) => void;
   onJobClick: (jobId: string) => void;
   showAssignments?: boolean;
-  department?: Department;
+  department?: string;
   userRole?: string | null;
   onDeleteDocument?: (jobId: string, document: JobDocument) => void;
   showUpload?: boolean;
@@ -170,11 +169,13 @@ export const JobCardNew = ({
       const startDate = new Date(job.start_time);
       const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
       
+      // Format dates correctly for the API - ensure single .000Z suffix
       const formattedStartDate = new Date(job.start_time).toISOString().split('.')[0] + '.000Z';
       const formattedEndDate = new Date(job.end_time).toISOString().split('.')[0] + '.000Z';
 
-      console.log('Creating folders with dates:', { formattedStartDate, formattedEndDate });
+      console.log('Formatted dates:', { formattedStartDate, formattedEndDate });
 
+      // Create main folder
       const mainFolderPayload = {
         definitionId: FLEX_FOLDER_IDS.mainFolder,
         parentElementId: null,
@@ -202,14 +203,14 @@ export const JobCardNew = ({
 
       if (!mainResponse.ok) {
         const errorData = await mainResponse.json();
-        console.error('Flex API error:', errorData);
+        console.error('Flex API error creating main folder:', errorData);
         throw new Error(errorData.exceptionMessage || 'Failed to create main folder');
       }
 
       const mainFolder = await mainResponse.json();
       console.log('Main folder created:', mainFolder);
 
-      // Create subfolders for each department
+      // Create subfolders
       const departments = ['sound', 'lights', 'video', 'production', 'personnel'];
       
       for (const dept of departments) {
@@ -228,6 +229,8 @@ export const JobCardNew = ({
           personResponsibleId: RESPONSIBLE_PERSON_IDS[dept as keyof typeof RESPONSIBLE_PERSON_IDS]
         };
 
+        console.log(`Creating subfolder for ${dept} with payload:`, subFolderPayload);
+
         try {
           const subResponse = await fetch(BASE_URL, {
             method: 'POST',
@@ -241,13 +244,14 @@ export const JobCardNew = ({
           if (!subResponse.ok) {
             const errorData = await subResponse.json();
             console.error(`Error creating ${dept} subfolder:`, errorData);
-            continue;
+            continue; // Continue with other folders even if one fails
           }
 
           const subFolder = await subResponse.json();
           console.log(`${dept} subfolder created:`, subFolder);
         } catch (error) {
           console.error(`Error creating ${dept} subfolder:`, error);
+          // Continue with other folders even if one fails
         }
       }
 
@@ -473,19 +477,19 @@ export const JobCardNew = ({
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={createFlexFolders}
-            disabled={job.flex_folders_created}
-            title={job.flex_folders_created ? "Folders already created" : "Create Flex folders"}
-          >
-            <img
-              src="/src/assets/icons/icon.png"
-              alt="Create Flex folders"
-              className="h-4 w-4"
-            />
-          </Button>
+         <Button
+  variant="ghost"
+  size="icon"
+  onClick={createFlexFolders}
+  disabled={job.flex_folders_created}
+  title={job.flex_folders_created ? "Folders already created" : "Create Flex folders"}
+>
+  <img
+    src="/src/assets/icons/icon.png"
+    alt="Create Flex folders"
+    className="h-4 w-4"
+  />
+</Button>
           {canEdit && (
             <>
               <Button variant="ghost" size="icon" onClick={handleEditClick}>
