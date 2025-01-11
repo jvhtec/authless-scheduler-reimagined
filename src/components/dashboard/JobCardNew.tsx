@@ -138,9 +138,9 @@ export const JobCardNew = ({
       const startDate = new Date(job.start_time);
       const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
       
-      // Ensure dates are in YYYY-MM-DD format without time component
-      const formattedStartDate = format(parseISO(job.start_time), 'yyyy-MM-dd');
-      const formattedEndDate = format(parseISO(job.end_time), 'yyyy-MM-dd');
+      // Format dates to include time in ISO format
+      const formattedStartDate = parseISO(job.start_time).toISOString();
+      const formattedEndDate = parseISO(job.end_time).toISOString();
 
       const mainFolderPayload = {
         definitionId: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
