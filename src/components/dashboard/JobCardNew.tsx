@@ -9,6 +9,9 @@ import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import createFolderIcon from "@/assets/icons/icon.png";
+import Image from 'next/image'; // Import Next.js Image component
+
 
 // Flex API constants
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
@@ -485,7 +488,7 @@ export const JobCardNew = ({
   title={job.flex_folders_created ? "Folders already created" : "Create Flex folders"}
 >
   <img
-    src="/public/icon.png"
+    src={createFolderIcon}
     alt="Create Flex folders"
     className="h-4 w-4"
   />
