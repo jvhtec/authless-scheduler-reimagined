@@ -261,6 +261,18 @@ export const JobCardNew = ({
     };
   }).filter((tech: any) => tech !== null && tech.name !== '');
 
+  const refreshData = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    await queryClient.invalidateQueries({ queryKey: ['sound-tasks', job.id] });
+    await queryClient.invalidateQueries({ queryKey: ['sound-personnel', job.id] });
+    
+    toast({
+      title: "Data refreshed",
+      description: "The job information has been updated.",
+    });
+  };
+
   return (
     <Card 
       className="mb-4 hover:shadow-md transition-shadow cursor-pointer"
