@@ -2,14 +2,18 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp, Download, Eye } from "lucide-react";
+import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp, Download, Eye, FolderPlus } from "lucide-react";
 import { format } from "date-fns";
 import { Department } from "@/types/department";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
 import { Progress } from "@/components/ui/progress";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+
+// Flex API constants
+const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
+const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
 
 interface JobDocument {
   id: string;
@@ -103,6 +107,81 @@ export const JobCardNew = ({
     },
     enabled: department === 'sound'
   });
+
+  const updateFolderStatus = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('jobs')
+        .update({ flex_folders_created: true })
+        .eq('id', job.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    }
+  });
+
+  const createFlexFolders = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (job.flex_folders_created) {
+      toast({
+        title: "Folders already created",
+        description: "Flex folders have already been created for this job.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const startDate = new Date(job.start_time);
+      const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
+
+      const mainFolderPayload = {
+        definitionId: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
+        parentElementId: null,
+        open: true,
+        locked: false,
+        name: job.title,
+        plannedStartDate: job.start_time,
+        plannedEndDate: job.end_time,
+        locationId: "2f49c62c-b139-11df-b8d5-00e08175e43e",
+        notes: "Automated folder creation from Web App",
+        documentNumber,
+        personResponsibleId: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb"
+      };
+
+      const response = await fetch(BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Auth-Token': API_KEY
+        },
+        body: JSON.stringify(mainFolderPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      await response.json();
+      await updateFolderStatus.mutateAsync();
+
+      toast({
+        title: "Success",
+        description: "Flex folders have been created successfully.",
+      });
+
+    } catch (error: any) {
+      console.error('Error creating Flex folders:', error);
+      toast({
+        title: "Error creating folders",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
 
   const calculateTotalProgress = () => {
     if (!soundTasks?.length) return 0;
@@ -309,6 +388,15 @@ export const JobCardNew = ({
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={createFlexFolders}
+            disabled={job.flex_folders_created}
+            title={job.flex_folders_created ? "Folders already created" : "Create Flex folders"}
+          >
+            <FolderPlus className="h-4 w-4" />
+          </Button>
           {canEdit && (
             <>
               <Button variant="ghost" size="icon" onClick={handleEditClick}>
@@ -334,6 +422,7 @@ export const JobCardNew = ({
           )}
         </div>
       </CardHeader>
+      
       <CardContent>
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2">
@@ -416,6 +505,7 @@ export const JobCardNew = ({
           )}
         </div>
       </CardContent>
+      
     </Card>
   );
 };
