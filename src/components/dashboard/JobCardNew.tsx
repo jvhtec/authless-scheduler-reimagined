@@ -492,6 +492,9 @@ export const JobCardNew = ({
     alt="Create Flex folders"
     className="h-4 w-4"
   />
+  <span className="absolute -bottom-8 scale-0 transition-all rounded bg-gray-800 p-2 text-xs text-white group-hover:scale-100 whitespace-nowrap">
+                {jobDetails?.flex_folders_created ? "Folders already created" : "Create Flex Folders"}
+              </span>
 </Button>
           {canEdit && (
             <>
