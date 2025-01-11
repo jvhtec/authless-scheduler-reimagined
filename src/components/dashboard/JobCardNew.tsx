@@ -103,12 +103,12 @@ export const JobCardNew = ({
 
       // Create a temporary anchor element for download
       const url = window.URL.createObjectURL(data);
-      const a = document.createElement('a');
+      const a = window.document.createElement('a');
       a.href = url;
       a.download = document.file_name;
-      document.body.appendChild(a);
+      window.document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      window.document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
       toast({
