@@ -3,13 +3,30 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp, Download, Eye, FolderPlus } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { Department } from "@/types/department";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Flex API constants
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
@@ -49,6 +66,7 @@ export const JobCardNew = ({
   const [collapsed, setCollapsed] = useState(true);
   const [assignments, setAssignments] = useState(job.job_assignments || []);
   const [documents, setDocuments] = useState<JobDocument[]>(job.job_documents || []);
+  const [uploading, setUploading] = useState(false);
 
   const { data: soundTasks } = useQuery({
     queryKey: ['sound-tasks', job.id],
@@ -286,6 +304,172 @@ export const JobCardNew = ({
     };
   }).filter((tech: any) => tech !== null && tech.name !== '');
 
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEditClick(job);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDeleteClick(job.id);
+  };
+
+  const handleFileUpload = async (taskId: string, file: File) => {
+    try {
+      setUploading(true);
+      const filePath = `${department}/${job.id}/${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('task_documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase
+        .from('task_documents')
+        .insert({
+          file_name: file.name,
+          file_path: filePath,
+          [`${department}_task_id`]: taskId,
+          uploaded_by: (await supabase.auth.getUser()).data.user?.id
+        });
+
+      if (dbError) throw dbError;
+
+      queryClient.invalidateQueries({ queryKey: [`${department}-tasks`, job.id] });
+      toast({
+        title: "File uploaded",
+        description: "The file has been uploaded successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDownload = async (filePath: string, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('task_documents')
+        .download(filePath);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast({
+        title: "Download failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteFile = async (taskId: string, fileId: string, filePath: string) => {
+    try {
+      const { error: storageError } = await supabase.storage
+        .from('task_documents')
+        .remove([filePath]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from('task_documents')
+        .delete()
+        .eq('id', fileId);
+
+      if (dbError) throw dbError;
+
+      queryClient.invalidateQueries({ queryKey: [`${department}-tasks`, job.id] });
+      toast({
+        title: "File deleted",
+        description: "The file has been deleted successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Delete failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updatePersonnel = (field: string, value: number) => {
+    const data = { [field]: value };
+    queryClient.setQueryData([`${department}-personnel`, job.id], (old: any) => ({
+      ...old,
+      ...data
+    }));
+  };
+
+  const updatePersonnelField = async (field: string, value: number) => {
+    try {
+      const { error } = await supabase
+        .from(`${department}_job_personnel`)
+        .update({ [field]: value })
+        .eq('job_id', job.id);
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: [`${department}-personnel`, job.id] });
+    } catch (error: any) {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateTaskStatus = async (taskId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from(`${department}_job_tasks`)
+        .update({ 
+          status,
+          progress: status === 'completed' ? 100 : status === 'not_started' ? 0 : 50
+        })
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: [`${department}-tasks`, job.id] });
+    } catch (error: any) {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getProgressColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-500';
+      case 'in_progress': return 'bg-blue-500';
+      default: return 'bg-gray-200';
+    }
+  };
+
+  const calculateTotalProgress = () => {
+    if (!soundTasks?.length) return 0;
+    const total = soundTasks.reduce((acc, task) => acc + (task.progress || 0), 0);
+    return Math.round(total / soundTasks.length);
+  };
+
+  const TASK_TYPES = ['Setup', 'Soundcheck', 'Show', 'Loadout'];
+
   return (
     <Card 
       className="mb-4 hover:shadow-md transition-shadow cursor-pointer"
@@ -450,7 +634,7 @@ export const JobCardNew = ({
             </div>
 
             <div className="overflow-x-auto">
-              <UITable>
+              <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[15%]">Task</TableHead>
@@ -463,7 +647,7 @@ export const JobCardNew = ({
                 </TableHeader>
                 <TableBody>
                   {TASK_TYPES.map((taskType) => {
-                    const task = tasks?.find(t => t.task_type === taskType);
+                    const task = soundTasks?.find(t => t.task_type === taskType);
                     return (
                       <TableRow key={taskType}>
                         <TableCell className="font-medium truncate max-w-[100px]">
@@ -592,7 +776,7 @@ export const JobCardNew = ({
                     );
                   })}
                 </TableBody>
-              </UITable>
+              </Table>
             </div>
           </div>
         </CardContent>
