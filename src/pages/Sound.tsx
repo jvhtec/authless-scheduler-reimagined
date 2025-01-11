@@ -12,6 +12,8 @@ import { LightsHeader } from "@/components/lights/LightsHeader";
 import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { LightsSchedule } from "@/components/lights/LightsSchedule";
 
+import { CalculatorIcon, ChartPieIcon, DocumentTextIcon, SparklesIcon } from '@heroicons/react/outline';
+
 const Sound = () => {
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
   const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
@@ -22,7 +24,7 @@ const Sound = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [userRole, setUserRole] = useState<string | null>(null);
   const currentDepartment = "sound";
-  
+
   const { data: jobs, isLoading } = useJobs();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -194,6 +196,45 @@ const Sound = () => {
           job={selectedJob}
         />
       )}
+
+      {/* New section for future feature buttons */}
+      <div className="mt-12 p-6 bg-gray-50 rounded-lg shadow-md flex flex-wrap justify-around space-y-4 md:space-y-0">
+        {/* Calculadora de pesos */}
+        <button
+          type="button"
+          className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
+        >
+          <CalculatorIcon className="h-6 w-6 text-gray-700" />
+          <span className="text-gray-800 font-medium">Calculadora de pesos</span>
+        </button>
+
+        {/* Calculadora de consumos */}
+        <button
+          type="button"
+          className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
+        >
+          <ChartPieIcon className="h-6 w-6 text-gray-700" />
+          <span className="text-gray-800 font-medium">Calculadora de consumos</span>
+        </button>
+
+        {/* Generador de informes SV */}
+        <button
+          type="button"
+          className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
+        >
+          <DocumentTextIcon className="h-6 w-6 text-gray-700" />
+          <span className="text-gray-800 font-medium">Generador de informes SV</span>
+        </button>
+
+        {/* Análisis de riders IA */}
+        <button
+          type="button"
+          className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
+        >
+          <SparklesIcon className="h-6 w-6 text-gray-700" />
+          <span className="text-gray-800 font-medium">Análisis de riders IA</span>
+        </button>
+      </div>
     </div>
   );
 };
