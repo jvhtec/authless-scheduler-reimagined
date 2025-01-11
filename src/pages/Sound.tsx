@@ -132,17 +132,12 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
     `;
 
     try {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      const response = await fetch("/api/analyze-documents", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${Deno.env.get('OPENAI_API_KEY')}`
         },
-        body: JSON.stringify({
-          model: "gpt-3.5-turbo",
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 1000
-        })
+        body: JSON.stringify({ prompt })
       });
 
       if (!response.ok) {
@@ -159,8 +154,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
       }
 
       const data = await response.json();
-      const result = data.choices && data.choices[0].message.content;
-      setAnalysisResult(result);
+      setAnalysisResult(data.result);
       toast({
         title: "Analysis complete",
         description: "The documents have been summarized.",
