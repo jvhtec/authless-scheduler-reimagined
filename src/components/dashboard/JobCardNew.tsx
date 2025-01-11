@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp, Download, Eye, FolderPlus } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { Department } from "@/types/department";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -138,9 +138,9 @@ export const JobCardNew = ({
       const startDate = new Date(job.start_time);
       const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
       
-      // Format dates to match Flex API requirements (YYYY-MM-DD)
-      const formattedStartDate = format(new Date(job.start_time), 'yyyy-MM-dd');
-      const formattedEndDate = format(new Date(job.end_time), 'yyyy-MM-dd');
+      // Ensure dates are in YYYY-MM-DD format without time component
+      const formattedStartDate = format(parseISO(job.start_time), 'yyyy-MM-dd');
+      const formattedEndDate = format(parseISO(job.end_time), 'yyyy-MM-dd');
 
       const mainFolderPayload = {
         definitionId: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
