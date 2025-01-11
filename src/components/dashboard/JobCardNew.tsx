@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { Department } from "@/types/department";
 
 // Flex API constants - Remove port specification from URL
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
@@ -27,7 +28,7 @@ interface JobCardNewProps {
   onDeleteClick: (jobId: string) => void;
   onJobClick: (jobId: string) => void;
   showAssignments?: boolean;
-  department?: string;
+  department?: Department;
   userRole?: string | null;
   onDeleteDocument?: (jobId: string, document: JobDocument) => void;
   showUpload?: boolean;
