@@ -99,46 +99,60 @@ export const JobCardNew = ({
     }
   });
 
-  const { data: personnel } = useQuery({
-    queryKey: ['sound-personnel', job.id],
-    queryFn: async () => {
-      if (department !== 'sound') return null;
-      const { data: existingData, error: fetchError } = await supabase
-        .from('sound_job_personnel')
-        .select('*')
-        .eq('job_id', job.id)
-        .maybeSingle();
-      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
-      if (!existingData) {
-        const { data: newData, error: insertError } = await supabase
-          .from('sound_job_personnel')
-          .insert({
-            job_id: job.id,
-            foh_engineers: 0,
-            mon_engineers: 0,
-            pa_techs: 0,
-            rf_techs: 0
-          })
-          .select()
-          .single();
-        if (insertError) throw insertError;
-        return newData;
-      }
-      return existingData;
-    },
-    enabled: department === 'sound'
-  });
-
-  const refreshData = () => {
+  const refreshData = async () => {
     console.log('Refreshing data...');
-    queryClient.invalidateQueries({ queryKey: ['sound-tasks'] });
-    queryClient.invalidateQueries({ queryKey: ['sound-personnel'] });
-    queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    await queryClient.invalidateQueries({ queryKey: ['sound-tasks'] });
+    await queryClient.invalidateQueries({ queryKey: ['sound-personnel'] });
+    await queryClient.invalidateQueries({ queryKey: ['jobs'] });
   };
 
   const createFlexFolders = async () => {
-    // Implementation for creating Flex folders
     console.log('Creating Flex folders...');
+    // Implementation for creating Flex folders
+  };
+
+  const updatePersonnel = async (field: string, value: number) => {
+    console.log('Updating personnel...', field, value);
+    // Implementation for updating personnel
+  };
+
+  const updatePersonnelField = async (field: string, value: number) => {
+    console.log('Updating personnel field...', field, value);
+    // Implementation for updating personnel field
+  };
+
+  const calculateTotalProgress = () => {
+    if (!soundTasks?.length) return 0;
+    const total = soundTasks.reduce((acc, task) => acc + (task.progress || 0), 0);
+    return Math.round(total / soundTasks.length);
+  };
+
+  const updateTaskStatus = async (taskId: string, status: string) => {
+    console.log('Updating task status...', taskId, status);
+    // Implementation for updating task status
+  };
+
+  const getProgressColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-500';
+      case 'in_progress': return 'bg-blue-500';
+      default: return 'bg-gray-200';
+    }
+  };
+
+  const handleDownload = async (filePath: string, fileName: string) => {
+    console.log('Downloading file...', filePath, fileName);
+    // Implementation for file download
+  };
+
+  const handleDeleteFile = async (taskId: string, fileId: string, filePath: string) => {
+    console.log('Deleting file...', taskId, fileId, filePath);
+    // Implementation for file deletion
+  };
+
+  const handleTaskFileUpload = async (taskId: string, file: File) => {
+    console.log('Uploading task file...', taskId, file);
+    // Implementation for task file upload
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,50 +196,6 @@ export const JobCardNew = ({
     } finally {
       setUploading(false);
     }
-  };
-
-  const handleTaskFileUpload = async (taskId: string, file: File) => {
-    // Implementation for task file upload
-    console.log('Uploading task file...', taskId, file);
-  };
-
-  const updatePersonnel = async (field: string, value: number) => {
-    // Implementation for updating personnel
-    console.log('Updating personnel...', field, value);
-  };
-
-  const updatePersonnelField = async (field: string, value: number) => {
-    // Implementation for updating personnel field
-    console.log('Updating personnel field...', field, value);
-  };
-
-  const calculateTotalProgress = () => {
-    if (!soundTasks?.length) return 0;
-    const total = soundTasks.reduce((acc, task) => acc + (task.progress || 0), 0);
-    return Math.round(total / soundTasks.length);
-  };
-
-  const updateTaskStatus = async (taskId: string, status: string) => {
-    // Implementation for updating task status
-    console.log('Updating task status...', taskId, status);
-  };
-
-  const getProgressColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-500';
-      case 'in_progress': return 'bg-blue-500';
-      default: return 'bg-gray-200';
-    }
-  };
-
-  const handleDownload = async (filePath: string, fileName: string) => {
-    // Implementation for file download
-    console.log('Downloading file...', filePath, fileName);
-  };
-
-  const handleDeleteFile = async (taskId: string, fileId: string, filePath: string) => {
-    // Implementation for file deletion
-    console.log('Deleting file...', taskId, fileId, filePath);
   };
 
   const toggleCollapse = (e: React.MouseEvent) => {
@@ -371,7 +341,7 @@ export const JobCardNew = ({
               <Input
                 type="number"
                 min="0"
-                value={personnel?.foh_engineers}
+                value={job.sound_personnel?.[0]?.foh_engineers || 0}
                 onChange={(e) => updatePersonnel('foh_engineers', parseInt(e.target.value))}
                 onBlur={(e) => updatePersonnelField('foh_engineers', parseInt(e.target.value))}
               />
@@ -381,7 +351,7 @@ export const JobCardNew = ({
               <Input
                 type="number"
                 min="0"
-                value={personnel?.mon_engineers}
+                value={job.sound_personnel?.[0]?.mon_engineers || 0}
                 onChange={(e) => updatePersonnel('mon_engineers', parseInt(e.target.value))}
                 onBlur={(e) => updatePersonnelField('mon_engineers', parseInt(e.target.value))}
               />
@@ -391,7 +361,7 @@ export const JobCardNew = ({
               <Input
                 type="number"
                 min="0"
-                value={personnel?.pa_techs}
+                value={job.sound_personnel?.[0]?.pa_techs || 0}
                 onChange={(e) => updatePersonnel('pa_techs', parseInt(e.target.value))}
                 onBlur={(e) => updatePersonnelField('pa_techs', parseInt(e.target.value))}
               />
@@ -401,7 +371,7 @@ export const JobCardNew = ({
               <Input
                 type="number"
                 min="0"
-                value={personnel?.rf_techs}
+                value={job.sound_personnel?.[0]?.rf_techs || 0}
                 onChange={(e) => updatePersonnel('rf_techs', parseInt(e.target.value))}
                 onBlur={(e) => updatePersonnelField('rf_techs', parseInt(e.target.value))}
               />
