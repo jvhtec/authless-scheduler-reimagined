@@ -9,41 +9,10 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
 import { Progress } from "@/components/ui/progress";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
 const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
-
-const FLEX_FOLDER_IDS = {
-  mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
-  subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
-  location: "2f49c62c-b139-11df-b8d5-00e08175e43e",
-  mainResponsible: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb",
-};
-
-const DEPARTMENT_IDS = {
-  sound: "cdd5e372-d124-11e1-bba1-00e08175e43e",
-  lights: "d5af7892-d124-11e1-bba1-00e08175e43e",
-  video: "a89d124d-7a95-4384-943e-49f5c0f46b23",
-  production: "890811c3-fe3f-45d7-af6b-7ca4a807e84d",
-  personnel: "b972d682-598d-4802-a390-82e28dc4480e",
-};
-
-const RESPONSIBLE_PERSON_IDS = {
-  sound: "4b0d98e0-e700-11ea-97d0-2a0a4490a7fb",
-  lights: "4b559e60-e700-11ea-97d0-2a0a4490a7fb",
-  video: "bb9690ac-f22e-4bc4-94a2-6d341ca0138d",
-  production: "4ce97ce3-5159-401a-9cf8-542d3e479ade",
-  personnel: "4b618540-e700-11ea-97d0-2a0a4490a7fb",
-};
-
-const DEPARTMENT_SUFFIXES = {
-  sound: "S",
-  lights: "L",
-  video: "V",
-  production: "P",
-  personnel: "HR",
-};
 
 interface JobDocument {
   id: string;
@@ -77,7 +46,6 @@ export const JobCardNew = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(true);
-  const [documents, setDocuments] = useState<JobDocument[]>(job.job_documents || []);
 
   const { data: soundTasks } = useQuery({
     queryKey: ["sound-tasks", job.id],
@@ -119,20 +87,6 @@ export const JobCardNew = ({
     enabled: department === "sound",
   });
 
-  const updateFolderStatus = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from("jobs")
-        .update({ flex_folders_created: true })
-        .eq("id", job.id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["jobs"] });
-    },
-  });
-
   const toggleCollapse = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCollapsed(!collapsed);
@@ -170,14 +124,14 @@ export const JobCardNew = ({
       const formattedEndDate = new Date(job.end_time).toISOString().split(".")[0] + ".000Z";
 
       const mainFolderPayload = {
-        definitionId: FLEX_FOLDER_IDS.mainFolder,
+        definitionId: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
         name: job.title,
         plannedStartDate: formattedStartDate,
         plannedEndDate: formattedEndDate,
-        locationId: FLEX_FOLDER_IDS.location,
+        locationId: "2f49c62c-b139-11df-b8d5-00e08175e43e",
         notes: "Automated folder creation from Web App",
         documentNumber,
-        personResponsibleId: FLEX_FOLDER_IDS.mainResponsible,
+        personResponsibleId: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb",
       };
 
       const mainResponse = await fetch(BASE_URL, {
@@ -191,7 +145,14 @@ export const JobCardNew = ({
 
       if (!mainResponse.ok) throw new Error("Failed to create main folder");
 
-      await updateFolderStatus.mutateAsync();
+      const { error } = await supabase
+        .from("jobs")
+        .update({ flex_folders_created: true })
+        .eq("id", job.id);
+
+      if (error) throw error;
+
+      await queryClient.invalidateQueries({ queryKey: ["jobs"] });
 
       toast({
         title: "Success",
