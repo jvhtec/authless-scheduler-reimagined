@@ -11,6 +11,7 @@ import Video from "@/pages/Video";
 import TechnicianDashboard from "@/pages/TechnicianDashboard";
 import Profile from "@/pages/Profile";
 import ProjectManagement from "@/pages/ProjectManagement";
+import ExcelTool from './ExcelTool';
 import { useSessionManager } from "@/hooks/useSessionManager";
 import "./App.css";
 
@@ -69,6 +70,7 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/project-management" element={<ProjectManagement />} />
             <Route path="*" element={<RoleBasedRedirect />} />
+            <Route path="/excel-tool" element={<ExcelTool />} />
           </Route>
         </Routes>
       </Router>

@@ -225,6 +225,8 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
       <div className="mt-12 p-6 bg-gray-50 rounded-lg shadow-md flex flex-wrap justify-around space-y-4 md:space-y-0">
         <button
           type="button"
+          onClick={() => navigate('/excel-tool')}>Open Excel Tool</button>
+
           className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
         >
           <Calculator className="h-6 w-6 text-gray-700" />
