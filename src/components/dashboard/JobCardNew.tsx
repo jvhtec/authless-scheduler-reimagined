@@ -137,6 +137,10 @@ export const JobCardNew = ({
     try {
       const startDate = new Date(job.start_time);
       const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
+      
+      // Format dates to match Flex API requirements (YYYY-MM-DD)
+      const formattedStartDate = format(new Date(job.start_time), 'yyyy-MM-dd');
+      const formattedEndDate = format(new Date(job.end_time), 'yyyy-MM-dd');
 
       const mainFolderPayload = {
         definitionId: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
@@ -144,13 +148,15 @@ export const JobCardNew = ({
         open: true,
         locked: false,
         name: job.title,
-        plannedStartDate: job.start_time,
-        plannedEndDate: job.end_time,
+        plannedStartDate: formattedStartDate,
+        plannedEndDate: formattedEndDate,
         locationId: "2f49c62c-b139-11df-b8d5-00e08175e43e",
         notes: "Automated folder creation from Web App",
         documentNumber,
         personResponsibleId: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb"
       };
+
+      console.log('Sending request to Flex API:', mainFolderPayload);
 
       const response = await fetch(BASE_URL, {
         method: 'POST',
@@ -162,7 +168,9 @@ export const JobCardNew = ({
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        console.error('Flex API error:', errorData);
+        throw new Error(errorData.exceptionMessage || 'Failed to create folders');
       }
 
       await response.json();
