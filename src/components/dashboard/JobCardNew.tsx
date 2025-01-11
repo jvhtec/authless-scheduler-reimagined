@@ -122,6 +122,38 @@ export const JobCardNew = ({
     }
   });
 
+  // Add these constants at the top of the file, after imports
+  const FLEX_FOLDER_IDS = {
+    mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
+    subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
+    location: "2f49c62c-b139-11df-b8d5-00e08175e43e",
+    mainResponsible: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb"
+  };
+
+  const DEPARTMENT_IDS = {
+    sound: "cdd5e372-d124-11e1-bba1-00e08175e43e",
+    lights: "d5af7892-d124-11e1-bba1-00e08175e43e",
+    video: "a89d124d-7a95-4384-943e-49f5c0f46b23",
+    production: "890811c3-fe3f-45d7-af6b-7ca4a807e84d",
+    personnel: "b972d682-598d-4802-a390-82e28dc4480e"
+  };
+
+  const RESPONSIBLE_PERSON_IDS = {
+    sound: "4b0d98e0-e700-11ea-97d0-2a0a4490a7fb",
+    lights: "4b559e60-e700-11ea-97d0-2a0a4490a7fb",
+    video: "bb9690ac-f22e-4bc4-94a2-6d341ca0138d",
+    production: "4ce97ce3-5159-401a-9cf8-542d3e479ade",
+    personnel: "4b618540-e700-11ea-97d0-2a0a4490a7fb"
+  };
+
+  const DEPARTMENT_SUFFIXES = {
+    sound: "S",
+    lights: "L",
+    video: "V",
+    production: "P",
+    personnel: "HR"
+  };
+
   const createFlexFolders = async (e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -138,27 +170,28 @@ export const JobCardNew = ({
       const startDate = new Date(job.start_time);
       const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
       
-      // Format dates to include time in ISO format
-      const formattedStartDate = parseISO(job.start_time).toISOString();
-      const formattedEndDate = parseISO(job.end_time).toISOString();
+      // Format dates with milliseconds as required by the API
+      const formattedStartDate = new Date(job.start_time).toISOString().slice(0, -1) + ".000Z";
+      const formattedEndDate = new Date(job.end_time).toISOString().slice(0, -1) + ".000Z";
 
+      // Create main folder
       const mainFolderPayload = {
-        definitionId: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
+        definitionId: FLEX_FOLDER_IDS.mainFolder,
         parentElementId: null,
         open: true,
         locked: false,
         name: job.title,
         plannedStartDate: formattedStartDate,
         plannedEndDate: formattedEndDate,
-        locationId: "2f49c62c-b139-11df-b8d5-00e08175e43e",
+        locationId: FLEX_FOLDER_IDS.location,
         notes: "Automated folder creation from Web App",
         documentNumber,
-        personResponsibleId: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb"
+        personResponsibleId: FLEX_FOLDER_IDS.mainResponsible
       };
 
-      console.log('Sending request to Flex API:', mainFolderPayload);
+      console.log('Creating main folder with payload:', mainFolderPayload);
 
-      const response = await fetch(BASE_URL, {
+      const mainResponse = await fetch(BASE_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,13 +200,60 @@ export const JobCardNew = ({
         body: JSON.stringify(mainFolderPayload)
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Flex API error:', errorData);
-        throw new Error(errorData.exceptionMessage || 'Failed to create folders');
+      if (!mainResponse.ok) {
+        const errorData = await mainResponse.json();
+        console.error('Flex API error creating main folder:', errorData);
+        throw new Error(errorData.exceptionMessage || 'Failed to create main folder');
       }
 
-      await response.json();
+      const mainFolder = await mainResponse.json();
+      console.log('Main folder created:', mainFolder);
+
+      // Create subfolders
+      const departments = ['sound', 'lights', 'video', 'production', 'personnel'];
+      
+      for (const dept of departments) {
+        const subFolderPayload = {
+          definitionId: FLEX_FOLDER_IDS.subFolder,
+          parentElementId: mainFolder.elementId,
+          open: true,
+          locked: false,
+          name: `${job.title} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+          plannedStartDate: formattedStartDate,
+          plannedEndDate: formattedEndDate,
+          locationId: FLEX_FOLDER_IDS.location,
+          departmentId: DEPARTMENT_IDS[dept as keyof typeof DEPARTMENT_IDS],
+          notes: `Automated subfolder creation for ${dept}`,
+          documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}`,
+          personResponsibleId: RESPONSIBLE_PERSON_IDS[dept as keyof typeof RESPONSIBLE_PERSON_IDS]
+        };
+
+        console.log(`Creating subfolder for ${dept} with payload:`, subFolderPayload);
+
+        try {
+          const subResponse = await fetch(BASE_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Auth-Token': API_KEY
+            },
+            body: JSON.stringify(subFolderPayload)
+          });
+
+          if (!subResponse.ok) {
+            const errorData = await subResponse.json();
+            console.error(`Error creating ${dept} subfolder:`, errorData);
+            continue; // Continue with other folders even if one fails
+          }
+
+          const subFolder = await subResponse.json();
+          console.log(`${dept} subfolder created:`, subFolder);
+        } catch (error) {
+          console.error(`Error creating ${dept} subfolder:`, error);
+          // Continue with other folders even if one fails
+        }
+      }
+
       await updateFolderStatus.mutateAsync();
 
       toast({
