@@ -3,30 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp, Download, Eye, FolderPlus } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { Department } from "@/types/department";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { JobDocuments } from "./JobDocuments";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 // Flex API constants
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
@@ -66,12 +49,12 @@ export const JobCardNew = ({
   const [collapsed, setCollapsed] = useState(true);
   const [assignments, setAssignments] = useState(job.job_assignments || []);
   const [documents, setDocuments] = useState<JobDocument[]>(job.job_documents || []);
-  const [uploading, setUploading] = useState(false);
 
   const { data: soundTasks } = useQuery({
     queryKey: ['sound-tasks', job.id],
     queryFn: async () => {
       if (department !== 'sound') return null;
+
       const { data, error } = await supabase
         .from('sound_job_tasks')
         .select(`
@@ -83,6 +66,7 @@ export const JobCardNew = ({
           task_documents(*)
         `)
         .eq('job_id', job.id);
+
       if (error) throw error;
       return data;
     },
@@ -93,12 +77,15 @@ export const JobCardNew = ({
     queryKey: ['sound-personnel', job.id],
     queryFn: async () => {
       if (department !== 'sound') return null;
+
       const { data: existingData, error: fetchError } = await supabase
         .from('sound_job_personnel')
         .select('*')
         .eq('job_id', job.id)
         .maybeSingle();
+
       if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+
       if (!existingData) {
         const { data: newData, error: insertError } = await supabase
           .from('sound_job_personnel')
@@ -111,9 +98,11 @@ export const JobCardNew = ({
           })
           .select()
           .single();
+
         if (insertError) throw insertError;
         return newData;
       }
+
       return existingData;
     },
     enabled: department === 'sound'
@@ -125,6 +114,7 @@ export const JobCardNew = ({
         .from('jobs')
         .update({ flex_folders_created: true })
         .eq('id', job.id);
+      
       if (error) throw error;
     },
     onSuccess: () => {
@@ -132,6 +122,7 @@ export const JobCardNew = ({
     }
   });
 
+  // Add these constants at the top of the file, after imports
   const FLEX_FOLDER_IDS = {
     mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
     subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
@@ -163,18 +154,9 @@ export const JobCardNew = ({
     personnel: "HR"
   };
 
-  const refreshData = () => {
-    queryClient.invalidateQueries({ queryKey: ['jobs'] });
-    queryClient.invalidateQueries({ queryKey: ['sound-tasks', job.id] });
-    queryClient.invalidateQueries({ queryKey: ['sound-personnel', job.id] });
-    toast({
-      title: "Refreshing data",
-      description: "The job data is being refreshed.",
-    });
-  };
-
   const createFlexFolders = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    
     if (job.flex_folders_created) {
       toast({
         title: "Folders already created",
@@ -183,12 +165,18 @@ export const JobCardNew = ({
       });
       return;
     }
+
     try {
       const startDate = new Date(job.start_time);
       const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
+      
+      // Format dates correctly for the API - ensure single .000Z suffix
       const formattedStartDate = new Date(job.start_time).toISOString().split('.')[0] + '.000Z';
       const formattedEndDate = new Date(job.end_time).toISOString().split('.')[0] + '.000Z';
 
+      console.log('Formatted dates:', { formattedStartDate, formattedEndDate });
+
+      // Create main folder
       const mainFolderPayload = {
         definitionId: FLEX_FOLDER_IDS.mainFolder,
         parentElementId: null,
@@ -203,6 +191,8 @@ export const JobCardNew = ({
         personResponsibleId: FLEX_FOLDER_IDS.mainResponsible
       };
 
+      console.log('Creating main folder with payload:', mainFolderPayload);
+
       const mainResponse = await fetch(BASE_URL, {
         method: 'POST',
         headers: {
@@ -214,12 +204,16 @@ export const JobCardNew = ({
 
       if (!mainResponse.ok) {
         const errorData = await mainResponse.json();
+        console.error('Flex API error creating main folder:', errorData);
         throw new Error(errorData.exceptionMessage || 'Failed to create main folder');
       }
 
       const mainFolder = await mainResponse.json();
+      console.log('Main folder created:', mainFolder);
 
+      // Create subfolders
       const departments = ['sound', 'lights', 'video', 'production', 'personnel'];
+      
       for (const dept of departments) {
         const subFolderPayload = {
           definitionId: FLEX_FOLDER_IDS.subFolder,
@@ -236,6 +230,8 @@ export const JobCardNew = ({
           personResponsibleId: RESPONSIBLE_PERSON_IDS[dept as keyof typeof RESPONSIBLE_PERSON_IDS]
         };
 
+        console.log(`Creating subfolder for ${dept} with payload:`, subFolderPayload);
+
         try {
           const subResponse = await fetch(BASE_URL, {
             method: 'POST',
@@ -249,21 +245,24 @@ export const JobCardNew = ({
           if (!subResponse.ok) {
             const errorData = await subResponse.json();
             console.error(`Error creating ${dept} subfolder:`, errorData);
-            continue;
+            continue; // Continue with other folders even if one fails
           }
 
-          await subResponse.json();
+          const subFolder = await subResponse.json();
+          console.log(`${dept} subfolder created:`, subFolder);
         } catch (error) {
           console.error(`Error creating ${dept} subfolder:`, error);
-          continue;
+          // Continue with other folders even if one fails
         }
       }
 
       await updateFolderStatus.mutateAsync();
+
       toast({
         title: "Success",
         description: "Flex folders have been created successfully.",
       });
+
     } catch (error: any) {
       console.error('Error creating Flex folders:', error);
       toast({
@@ -274,15 +273,140 @@ export const JobCardNew = ({
     }
   };
 
+  const calculateTotalProgress = () => {
+    if (!soundTasks?.length) return 0;
+    const totalProgress = soundTasks.reduce((acc, task) => acc + (task.progress || 0), 0);
+    return Math.round(totalProgress / soundTasks.length);
+  };
+
+  const getCompletedTasks = () => {
+    if (!soundTasks?.length) return 0;
+    return soundTasks.filter(task => task.status === 'completed').length;
+  };
+
+  const getTotalPersonnel = () => {
+    if (!personnel) return 0;
+    return (
+      (personnel.foh_engineers || 0) +
+      (personnel.mon_engineers || 0) +
+      (personnel.pa_techs || 0) +
+      (personnel.rf_techs || 0)
+    );
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEditClick(job);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDeleteClick(job.id);
+  };
+
   const toggleCollapse = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCollapsed(!collapsed);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    const file = e.target.files?.[0];
+    if (!file || !department) return;
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${department}/${job.id}/${crypto.randomUUID()}.${fileExt}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('job_documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase
+        .from('job_documents')
+        .insert({
+          job_id: job.id,
+          file_name: file.name,
+          file_path: filePath,
+          file_type: file.type,
+          file_size: file.size
+        });
+
+      if (dbError) throw dbError;
+
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+
+      toast({
+        title: "Document uploaded",
+        description: "The document has been successfully uploaded.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewDocument = async (document: JobDocument) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('job_documents')
+        .createSignedUrl(document.file_path, 60);
+
+      if (error) throw error;
+
+      window.open(data.signedUrl, '_blank');
+    } catch (error: any) {
+      toast({
+        title: "Error viewing document",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteDocument = async (document: JobDocument) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
+
+    try {
+      const { error: storageError } = await supabase.storage
+        .from('job_documents')
+        .remove([document.file_path]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from('job_documents')
+        .delete()
+        .eq('id', document.id);
+
+      if (dbError) throw dbError;
+
+      setDocuments(documents.filter(doc => doc.id !== document.id));
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+
+      toast({
+        title: "Document deleted",
+        description: "The document has been successfully deleted.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error deleting document",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const canEdit = userRole !== 'logistics';
 
   const assignedTechnicians = assignments.map((assignment: any) => {
     let role = null;
+
     switch (department) {
       case 'sound':
         role = assignment.sound_role;
@@ -296,7 +420,9 @@ export const JobCardNew = ({
       default:
         role = assignment.sound_role || assignment.lights_role || assignment.video_role;
     }
+
     if (!role) return null;
+
     return {
       id: assignment.technician_id,
       name: `${assignment.profiles?.first_name || ''} ${assignment.profiles?.last_name || ''}`.trim(),
@@ -304,171 +430,17 @@ export const JobCardNew = ({
     };
   }).filter((tech: any) => tech !== null && tech.name !== '');
 
-  const handleEditClick = (e: React.MouseEvent) => {
+  const refreshData = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    onEditClick(job);
+    await queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    await queryClient.invalidateQueries({ queryKey: ['sound-tasks', job.id] });
+    await queryClient.invalidateQueries({ queryKey: ['sound-personnel', job.id] });
+    
+    toast({
+      title: "Data refreshed",
+      description: "The job information has been updated.",
+    });
   };
-
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDeleteClick(job.id);
-  };
-
-  const handleFileUpload = async (taskId: string, file: File) => {
-    try {
-      setUploading(true);
-      const filePath = `${department}/${job.id}/${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from('task_documents')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { error: dbError } = await supabase
-        .from('task_documents')
-        .insert({
-          file_name: file.name,
-          file_path: filePath,
-          [`${department}_task_id`]: taskId,
-          uploaded_by: (await supabase.auth.getUser()).data.user?.id
-        });
-
-      if (dbError) throw dbError;
-
-      queryClient.invalidateQueries({ queryKey: [`${department}-tasks`, job.id] });
-      toast({
-        title: "File uploaded",
-        description: "The file has been uploaded successfully.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Upload failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDownload = async (filePath: string, fileName: string) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from('task_documents')
-        .download(filePath);
-
-      if (error) throw error;
-
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error: any) {
-      toast({
-        title: "Download failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleDeleteFile = async (taskId: string, fileId: string, filePath: string) => {
-    try {
-      const { error: storageError } = await supabase.storage
-        .from('task_documents')
-        .remove([filePath]);
-
-      if (storageError) throw storageError;
-
-      const { error: dbError } = await supabase
-        .from('task_documents')
-        .delete()
-        .eq('id', fileId);
-
-      if (dbError) throw dbError;
-
-      queryClient.invalidateQueries({ queryKey: [`${department}-tasks`, job.id] });
-      toast({
-        title: "File deleted",
-        description: "The file has been deleted successfully.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Delete failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const updatePersonnel = (field: string, value: number) => {
-    const data = { [field]: value };
-    queryClient.setQueryData([`${department}-personnel`, job.id], (old: any) => ({
-      ...old,
-      ...data
-    }));
-  };
-
-  const updatePersonnelField = async (field: string, value: number) => {
-    try {
-      const { error } = await supabase
-        .from(`${department}_job_personnel`)
-        .update({ [field]: value })
-        .eq('job_id', job.id);
-
-      if (error) throw error;
-
-      queryClient.invalidateQueries({ queryKey: [`${department}-personnel`, job.id] });
-    } catch (error: any) {
-      toast({
-        title: "Update failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const updateTaskStatus = async (taskId: string, status: string) => {
-    try {
-      const { error } = await supabase
-        .from(`${department}_job_tasks`)
-        .update({ 
-          status,
-          progress: status === 'completed' ? 100 : status === 'not_started' ? 0 : 50
-        })
-        .eq('id', taskId);
-
-      if (error) throw error;
-
-      queryClient.invalidateQueries({ queryKey: [`${department}-tasks`, job.id] });
-    } catch (error: any) {
-      toast({
-        title: "Update failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const getProgressColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-500';
-      case 'in_progress': return 'bg-blue-500';
-      default: return 'bg-gray-200';
-    }
-  };
-
-  const calculateTotalProgress = () => {
-    if (!soundTasks?.length) return 0;
-    const total = soundTasks.reduce((acc, task) => acc + (task.progress || 0), 0);
-    return Math.round(total / soundTasks.length);
-  };
-
-  const TASK_TYPES = ['Setup', 'Soundcheck', 'Show', 'Loadout'];
 
   return (
     <Card 
@@ -541,7 +513,6 @@ export const JobCardNew = ({
         </div>
       </CardHeader>
       
-      {/* Basic Info Always Visible */}
       <CardContent>
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2">
@@ -570,217 +541,61 @@ export const JobCardNew = ({
               </div>
             </div>
           )}
+          {/* Documents Section */}
+          {documents.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <div className="text-sm font-medium">Documents</div>
+              <div className="space-y-2">
+                {documents.map((doc) => (
+                  <div 
+                    key={doc.id} 
+                    className="flex items-center justify-between p-2 rounded-md bg-accent/20"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{doc.file_name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        Uploaded {format(new Date(doc.uploaded_at), 'MMM d, yyyy')}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleViewDocument(doc)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteDocument(doc)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Upload Button */}
+          {showUpload && (
+            <div className="relative">
+              <input
+                type="file"
+                onChange={handleFileUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <Button variant="ghost" size="icon">
+                <Upload className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
-
-      {/* Collapsible Section */}
-      {!collapsed && (
-        <CardContent>
-          {/* Personnel Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>FOH Engineers Required</Label>
-              <Input
-                type="number"
-                min="0"
-                value={personnel?.foh_engineers}
-                onChange={(e) => updatePersonnel('foh_engineers', parseInt(e.target.value))}
-                onBlur={(e) => updatePersonnelField('foh_engineers', parseInt(e.target.value))}
-              />
-            </div>
-            <div>
-              <Label>MON Engineers Required</Label>
-              <Input
-                type="number"
-                min="0"
-                value={personnel?.mon_engineers}
-                onChange={(e) => updatePersonnel('mon_engineers', parseInt(e.target.value))}
-                onBlur={(e) => updatePersonnelField('mon_engineers', parseInt(e.target.value))}
-              />
-            </div>
-            <div>
-              <Label>PA Techs Required</Label>
-              <Input
-                type="number"
-                min="0"
-                value={personnel?.pa_techs}
-                onChange={(e) => updatePersonnel('pa_techs', parseInt(e.target.value))}
-                onBlur={(e) => updatePersonnelField('pa_techs', parseInt(e.target.value))}
-              />
-            </div>
-            <div>
-              <Label>RF Techs Required</Label>
-              <Input
-                type="number"
-                min="0"
-                value={personnel?.rf_techs}
-                onChange={(e) => updatePersonnel('rf_techs', parseInt(e.target.value))}
-                onBlur={(e) => updatePersonnelField('rf_techs', parseInt(e.target.value))}
-              />
-            </div>
-          </div>
-
-          {/* Tasks Section */}
-          <div className="space-y-4 mt-4">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="font-medium">Total Progress:</span>
-              <div className="flex-1">
-                <Progress 
-                  value={calculateTotalProgress()} 
-                  className="h-2"
-                />
-              </div>
-              <span className="text-sm">{calculateTotalProgress()}%</span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[15%]">Task</TableHead>
-                    <TableHead className="w-[20%]">Assigned To</TableHead>
-                    <TableHead className="w-[15%]">Status</TableHead>
-                    <TableHead className="w-[15%]">Progress</TableHead>
-                    <TableHead className="w-[20%]">Documents</TableHead>
-                    <TableHead className="w-[15%]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {TASK_TYPES.map((taskType) => {
-                    const task = soundTasks?.find(t => t.task_type === taskType);
-                    return (
-                      <TableRow key={taskType}>
-                        <TableCell className="font-medium truncate max-w-[100px]">
-                          {taskType}
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={task?.assigned_to?.id || ""}
-                            onValueChange={async (value) => {
-                              if (!task) {
-                                const { error } = await supabase
-                                  .from('sound_job_tasks')
-                                  .insert({
-                                    job_id: job.id,
-                                    task_type: taskType,
-                                    assigned_to: value,
-                                  });
-                                if (error) throw error;
-                              } else {
-                                const { error } = await supabase
-                                  .from('sound_job_tasks')
-                                  .update({ assigned_to: value })
-                                  .eq('id', task.id);
-                                if (error) throw error;
-                              }
-                              refetchTasks();
-                            }}
-                          >
-                            <SelectTrigger className="w-[150px]">
-                              <SelectValue placeholder="Assign to..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {managementUsers?.map((user) => (
-                                <SelectItem key={user.id} value={user.id}>
-                                  {user.first_name} {user.last_name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          {task && (
-                            <Select
-                              value={task.status}
-                              onValueChange={(value) => updateTaskStatus(task.id, value)}
-                            >
-                              <SelectTrigger className="w-[120px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="not_started">Not Started</SelectItem>
-                                <SelectItem value="in_progress">In Progress</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {task && (
-                            <div className="flex items-center gap-1">
-                              <Progress 
-                                value={task.progress} 
-                                className={`h-2 ${getProgressColor(task.status)}`}
-                              />
-                              <span className="text-xs w-7">{task.progress}%</span>
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="max-h-[60px] overflow-y-auto">
-                            {task?.task_documents?.map((doc) => (
-                              <div
-                                key={doc.id}
-                                className="flex items-center justify-between p-1 text-xs"
-                              >
-                                <span className="truncate max-w-[100px]" title={doc.file_name}>
-                                  {doc.file_name}
-                                </span>
-                                <div className="flex gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-5 w-5"
-                                    onClick={() => handleDownload(doc.file_path, doc.file_name)}
-                                  >
-                                    <Download className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-5 w-5"
-                                    onClick={() => handleDeleteFile(task.id, doc.id, doc.file_path)}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {task && (
-                            <div className="relative">
-                              <input
-                                type="file"
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) handleFileUpload(task.id, file);
-                                }}
-                                disabled={uploading}
-                              />
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                disabled={uploading}
-                                className="w-[100px]"
-                              >
-                                <Upload className="h-3 w-3 mr-1" />
-                                Upload
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </CardContent>
-      )}
+      
     </Card>
   );
 };
