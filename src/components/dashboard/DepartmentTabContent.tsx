@@ -82,9 +82,9 @@ export const DepartmentTabContent = ({
         <JobCardNew
           key={job.id}
           job={job}
-          onEditClick={() => {}}
-          onDeleteClick={() => {}}
-          onJobClick={handleJobClick}
+          onEditClick={(job) => {}}
+          onDeleteClick={(jobId) => {}}
+          onJobClick={(jobId) => handleJobClick(jobId)}
           department={department}
           onDeleteDocument={onDeleteDocument}
           showUpload={true}

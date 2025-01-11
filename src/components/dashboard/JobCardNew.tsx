@@ -16,9 +16,9 @@ interface JobDocument {
 
 interface JobCardNewProps {
   job: any;
-  onEditClick: () => void;
-  onDeleteClick: () => void;
-  onJobClick: () => void;
+  onEditClick: (job: any) => void;
+  onDeleteClick: (jobId: string) => void;
+  onJobClick: (jobId: string) => void;
   department?: Department;
   userRole?: string | null;
   showAssignments?: boolean;
