@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp, Download, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { Department } from "@/types/department";
 import { supabase } from "@/lib/supabase";
@@ -44,6 +44,7 @@ export const JobCardNew = ({
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(true);
   const [assignments, setAssignments] = useState(job.job_assignments || []);
+  const [documents, setDocuments] = useState<JobDocument[]>(job.job_documents || []);
 
   const { data: soundTasks } = useQuery({
     queryKey: ['sound-tasks', job.id],
@@ -181,10 +182,55 @@ export const JobCardNew = ({
     }
   };
 
-  const refreshData = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    queryClient.invalidateQueries({ queryKey: ['sound-tasks', job.id] });
-    queryClient.invalidateQueries({ queryKey: ['sound-personnel', job.id] });
+  const handleViewDocument = async (document: JobDocument) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('job_documents')
+        .createSignedUrl(document.file_path, 60);
+
+      if (error) throw error;
+
+      window.open(data.signedUrl, '_blank');
+    } catch (error: any) {
+      toast({
+        title: "Error viewing document",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteDocument = async (document: JobDocument) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
+
+    try {
+      const { error: storageError } = await supabase.storage
+        .from('job_documents')
+        .remove([document.file_path]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from('job_documents')
+        .delete()
+        .eq('id', document.id);
+
+      if (dbError) throw dbError;
+
+      setDocuments(documents.filter(doc => doc.id !== document.id));
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+
+      toast({
+        title: "Document deleted",
+        description: "The document has been successfully deleted.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error deleting document",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const canEdit = userRole !== 'logistics';
@@ -304,60 +350,57 @@ export const JobCardNew = ({
               </div>
             </div>
           )}
-          {/* Only show additional details when expanded */}
-          {!collapsed && (
-            <>
-              {department === 'sound' && personnel && (
-                <div className="mt-2 p-2 bg-accent/20 rounded-md">
-                  <div className="text-xs font-medium mb-1">Required Personnel: {getTotalPersonnel()}</div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>FOH Engineers: {personnel.foh_engineers || 0}</div>
-                    <div>MON Engineers: {personnel.mon_engineers || 0}</div>
-                    <div>PA Techs: {personnel.pa_techs || 0}</div>
-                    <div>RF Techs: {personnel.rf_techs || 0}</div>
+          {/* Documents Section */}
+          {documents.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <div className="text-sm font-medium">Documents</div>
+              <div className="space-y-2">
+                {documents.map((doc) => (
+                  <div 
+                    key={doc.id} 
+                    className="flex items-center justify-between p-2 rounded-md bg-accent/20"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{doc.file_name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        Uploaded {format(new Date(doc.uploaded_at), 'MMM d, yyyy')}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleViewDocument(doc)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteDocument(doc)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
-              {department === 'sound' && soundTasks?.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Task Progress ({getCompletedTasks()}/{soundTasks.length} completed)</span>
-                    <span>{calculateTotalProgress()}%</span>
-                  </div>
-                  <Progress 
-                    value={calculateTotalProgress()} 
-                    className="h-1"
-                  />
-                  <div className="space-y-1">
-                    {soundTasks.map((task: any) => (
-                      <div key={task.id} className="flex items-center justify-between text-xs">
-                        <span>{task.task_type}</span>
-                        <div className="flex items-center gap-2">
-                          {task.assigned_to && (
-                            <span className="text-muted-foreground">
-                              {task.assigned_to.first_name} {task.assigned_to.last_name}
-                            </span>
-                          )}
-                          <Badge variant={task.status === 'completed' ? 'default' : 'secondary'}>
-                            {task.status === 'not_started' ? 'Not Started' : 
-                             task.status === 'in_progress' ? 'In Progress' : 
-                             'Completed'}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {job.job_documents && onDeleteDocument && (
-                <JobDocuments
-                  jobId={job.id}
-                  documents={job.job_documents}
-                  department={department}
-                  onDeleteDocument={onDeleteDocument}
-                />
-              )}
-            </>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Upload Button */}
+          {showUpload && (
+            <div className="relative">
+              <input
+                type="file"
+                onChange={handleFileUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <Button variant="ghost" size="icon">
+                <Upload className="h-4 w-4" />
+              </Button>
+            </div>
           )}
         </div>
       </CardContent>
