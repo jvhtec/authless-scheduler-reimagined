@@ -487,7 +487,7 @@ export const JobCardNew = ({
   <img
     src="/assets/icons/icon.png"
     alt="Create Flex folders"
-    className="h-2 w-2"
+    className="h-4 w-4"
   />
 </Button>
           {canEdit && (
