@@ -91,10 +91,9 @@ const Sound = () => {
     if (!window.confirm("Are you sure you want to delete this job?")) return;
 
     try {
-      // Deletion logic...
-      // (Omitted for brevity; same as previous code)
+      // ... deletion logic (omitted for brevity)
     } catch (error: any) {
-      // Error handling...
+      // ... error handling
     }
   };
 
@@ -117,12 +116,11 @@ const Sound = () => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
           reader.onerror = () => reject(reader.error);
-          reader.readAsText(file); // Reading as text may not work well for PDFs.
+          reader.readAsText(file); 
         });
       })
     );
 
-    // Construct the prompt including the text content of the files.
     const prompt = `Read carefully these documents and summarize in a table:
 - Microphone models with quantities broken down by document name
 - Microphone stands type and quantities broken down by document name
@@ -138,7 +136,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer YOUR_OPENAI_API_KEY`
+          "Authorization": `Bearer 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`
         },
         body: JSON.stringify({
           model: "gpt-3.5-turbo",
@@ -154,6 +152,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
         title: "Analysis complete",
         description: "The documents have been summarized.",
       });
+      setShowAnalysisForm(false);
     } catch (error: any) {
       console.error("Error during analysis:", error);
       toast({
@@ -165,7 +164,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 relative">
       <LightsHeader 
         onCreateJob={() => setIsJobDialogOpen(true)}
         onCreateTour={() => setIsTourDialogOpen(true)}
@@ -215,7 +214,32 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
         />
       )}
 
+      {/* Buttons Section */}
       <div className="mt-12 p-6 bg-gray-50 rounded-lg shadow-md flex flex-wrap justify-around space-y-4 md:space-y-0">
+        <button
+          type="button"
+          className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
+        >
+          <Calculator className="h-6 w-6 text-gray-700" />
+          <span className="text-gray-800 font-medium">Calculadora de pesos</span>
+        </button>
+
+        <button
+          type="button"
+          className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
+        >
+          <PieChart className="h-6 w-6 text-gray-700" />
+          <span className="text-gray-800 font-medium">Calculadora de consumos</span>
+        </button>
+
+        <button
+          type="button"
+          className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
+        >
+          <FileText className="h-6 w-6 text-gray-700" />
+          <span className="text-gray-800 font-medium">Generador de informes SV</span>
+        </button>
+
         <button
           type="button"
           onClick={handleAnalysisButtonClick}
@@ -226,30 +250,42 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
         </button>
       </div>
 
+      {/* Analysis Modal */}
       {showAnalysisForm && (
-        <div className="mt-6 p-6 bg-white rounded-md shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Subir documentos PDF</h2>
-          <form onSubmit={handleAnalysisSubmit}>
-            <input
-              type="file"
-              accept="application/pdf"
-              multiple
-              onChange={handleFileChange}
-              className="mb-4"
-            />
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-            >
-              Enviar para análisis
-            </button>
-          </form>
-          {analysisResult && (
-            <div className="mt-4 p-4 bg-gray-100 rounded">
-              <h3 className="font-semibold mb-2">Resultado del Análisis:</h3>
-              <pre className="whitespace-pre-wrap">{analysisResult}</pre>
-            </div>
-          )}
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
+            <h2 className="text-2xl font-semibold mb-4">Subir documentos PDF</h2>
+            <form onSubmit={handleAnalysisSubmit} className="flex flex-col space-y-4">
+              <input
+                type="file"
+                accept="application/pdf"
+                multiple
+                onChange={handleFileChange}
+                className="border border-gray-300 p-2 rounded"
+              />
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAnalysisForm(false)}
+                  className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                >
+                  Enviar para análisis
+                </button>
+              </div>
+            </form>
+            {analysisResult && (
+              <div className="mt-4 p-4 bg-gray-100 rounded">
+                <h3 className="font-semibold mb-2">Resultado del Análisis:</h3>
+                <pre className="whitespace-pre-wrap">{analysisResult}</pre>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
