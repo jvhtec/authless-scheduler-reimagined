@@ -19,10 +19,16 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
-// Flex API constants
-const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
-const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
+const TASK_TYPES = ['Setup', 'Soundcheck', 'Show', 'Loadout'];
 
 interface JobDocument {
   id: string;
@@ -130,6 +136,11 @@ export const JobCardNew = ({
     queryClient.invalidateQueries({ queryKey: ['jobs'] });
   };
 
+  const createFlexFolders = async () => {
+    // Implementation for creating Flex folders
+    console.log('Creating Flex folders...');
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -171,6 +182,50 @@ export const JobCardNew = ({
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleTaskFileUpload = async (taskId: string, file: File) => {
+    // Implementation for task file upload
+    console.log('Uploading task file...', taskId, file);
+  };
+
+  const updatePersonnel = async (field: string, value: number) => {
+    // Implementation for updating personnel
+    console.log('Updating personnel...', field, value);
+  };
+
+  const updatePersonnelField = async (field: string, value: number) => {
+    // Implementation for updating personnel field
+    console.log('Updating personnel field...', field, value);
+  };
+
+  const calculateTotalProgress = () => {
+    if (!soundTasks?.length) return 0;
+    const total = soundTasks.reduce((acc, task) => acc + (task.progress || 0), 0);
+    return Math.round(total / soundTasks.length);
+  };
+
+  const updateTaskStatus = async (taskId: string, status: string) => {
+    // Implementation for updating task status
+    console.log('Updating task status...', taskId, status);
+  };
+
+  const getProgressColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-500';
+      case 'in_progress': return 'bg-blue-500';
+      default: return 'bg-gray-200';
+    }
+  };
+
+  const handleDownload = async (filePath: string, fileName: string) => {
+    // Implementation for file download
+    console.log('Downloading file...', filePath, fileName);
+  };
+
+  const handleDeleteFile = async (taskId: string, fileId: string, filePath: string) => {
+    // Implementation for file deletion
+    console.log('Deleting file...', taskId, fileId, filePath);
   };
 
   const toggleCollapse = (e: React.MouseEvent) => {
@@ -250,10 +305,10 @@ export const JobCardNew = ({
           </Button>
           {canEdit && (
             <>
-              <Button variant="ghost" size="icon" onClick={handleEditClick}>
+              <Button variant="ghost" size="icon" onClick={() => onEditClick(job)}>
                 <Edit className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={handleDeleteClick}>
+              <Button variant="ghost" size="icon" onClick={() => onDeleteClick(job.id)}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </>
@@ -367,20 +422,20 @@ export const JobCardNew = ({
             </div>
 
             <div className="overflow-x-auto">
-              <UITable>
+              <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[15%]">Task</TableHead>
-                    <TableHead className="w-[20%]">Assigned To</TableHead>
-                    <TableHead className="w-[15%]">Status</TableHead>
-                    <TableHead className="w-[15%]">Progress</TableHead>
-                    <TableHead className="w-[20%]">Documents</TableHead>
-                    <TableHead className="w-[15%]">Actions</TableHead>
+                    <TableHead>Task</TableHead>
+                    <TableHead>Assigned To</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Progress</TableHead>
+                    <TableHead>Documents</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {TASK_TYPES.map((taskType) => {
-                    const task = tasks?.find(t => t.task_type === taskType);
+                    const task = soundTasks?.find(t => t.task_type === taskType);
                     return (
                       <TableRow key={taskType}>
                         <TableCell className="font-medium truncate max-w-[100px]">
@@ -489,7 +544,7 @@ export const JobCardNew = ({
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
-                                  if (file) handleFileUpload(task.id, file);
+                                  if (file) handleTaskFileUpload(task.id, file);
                                 }}
                                 disabled={uploading}
                               />
@@ -509,7 +564,7 @@ export const JobCardNew = ({
                     );
                   })}
                 </TableBody>
-              </UITable>
+              </Table>
             </div>
           </div>
         </CardContent>
