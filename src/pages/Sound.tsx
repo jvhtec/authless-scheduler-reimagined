@@ -136,7 +136,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer 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`
+          "Authorization": `Bearer ${Deno.env.get('OPENAI_API_KEY')}`
         },
         body: JSON.stringify({
           model: "gpt-3.5-turbo",
@@ -144,6 +144,19 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
           max_tokens: 1000
         })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 429) {
+          toast({
+            title: "API Limit Reached",
+            description: "The AI service is currently unavailable due to high demand. Please try again later.",
+            variant: "destructive"
+          });
+          return;
+        }
+        throw new Error(errorData.error?.message || 'Error processing the analysis');
+      }
 
       const data = await response.json();
       const result = data.choices && data.choices[0].message.content;
@@ -157,7 +170,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
       console.error("Error during analysis:", error);
       toast({
         title: "Error",
-        description: "There was an error processing the analysis.",
+        description: error.message || "There was an error processing the analysis.",
         variant: "destructive",
       });
     }
