@@ -12,17 +12,19 @@ interface TourDateFormProps {
 }
 
 export const TourDateForm = ({
-  dates,
+  dates = [{ date: "", location: "" }], // Provide default value
   onDateChange,
   onAddDate,
   onRemoveDate,
   locations,
 }: TourDateFormProps) => {
+  console.log("TourDateForm dates:", dates); // Add logging to track dates value
+
   return (
     <div className="space-y-2">
       <Label>Tour Dates</Label>
       <div className="space-y-4">
-        {dates.map((date, index) => (
+        {(dates || []).map((date, index) => (
           <SimplifiedTourDateInput
             key={index}
             index={index}
