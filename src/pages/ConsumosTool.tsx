@@ -112,10 +112,18 @@ const ConsumosTool = () => {
     };
 
     setTables(prev => [...prev, newTable]);
+    resetCurrentTable();
+  };
+
+  const resetCurrentTable = () => {
     setCurrentTable({
       name: '',
       rows: [{ quantity: '', componentId: '', watts: '' }]
     });
+  };
+
+  const removeTable = (tableId: number) => {
+    setTables(prev => prev.filter(table => table.id !== tableId));
   };
 
   const handleExportPDF = async () => {
@@ -196,7 +204,7 @@ const ConsumosTool = () => {
   };
 
   const calculateTotalSystem = () => {
-    const totalSystemWatts = tables.reduce((sum, table) => sum + table.totalWatts, 0);
+    const totalSystemWatts = tables.reduce((sum, table) => sum + (table.totalWatts || 0), 0);
     const totalSystemAmps = calculatePhaseCurrents(totalSystemWatts);
     return { totalSystemWatts, totalSystemAmps };
   };
@@ -221,7 +229,7 @@ const ConsumosTool = () => {
                 <SelectContent>
                   {jobs?.map((job) => (
                     <SelectItem key={job.id} value={job.id}>
-                      {job.tour_date ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
+                      {job.tour_date?.tour?.name ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -292,7 +300,7 @@ const ConsumosTool = () => {
           <div className="flex gap-2">
             <Button onClick={addRow}>Add Row</Button>
             <Button onClick={generateTable} variant="secondary">Generate Table</Button>
-            <Button onClick={resetFields} variant="destructive">Reset</Button>
+            <Button onClick={resetCurrentTable} variant="destructive">Reset</Button>
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
                 <FileText className="w-4 h-4" />
