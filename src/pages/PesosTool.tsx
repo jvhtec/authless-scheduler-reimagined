@@ -12,9 +12,35 @@ import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
 const componentDatabase = [
-  { id: 1, name: 'K1', weight: 106 },
-  { id: 2, name: 'K2', weight: 56 },
-  // ... (remaining components)
+  { id: 1, name: ' K1 ', weight: 106 },
+  { id: 2, name: ' K2 ', weight: 56 },
+  { id: 3, name: ' K3 ', weight: 43 },
+  { id: 4, name: ' KARA II ', weight: 25 },
+  { id: 5, name: ' KIVA ', weight: 14 },
+  { id: 6, name: ' KS28 ', weight: 79 },
+  { id: 7, name: ' K1-SB ', weight: 83 },
+  { id: 8, name: ' BUMPER K1 ', weight: 108 },
+  { id: 9, name: ' BUMPER K2 ', weight: 60 },
+  { id: 10, name: ' BUMPER K3 ', weight: 50 },
+  { id: 11, name: ' BUMPER KARA ', weight: 20 },
+  { id: 12, name: ' BUMPER KIVA ', weight: 13 },
+  { id: 13, name: ' BUMPER KS28 ', weight: 15 },
+  { id: 14, name: ' KARADOWNK1 ', weight: 15 },
+  { id: 15, name: ' KARADOWNK2 ', weight: 15 },
+  { id: 16, name: ' MOTOR 2T ', weight: 90 },
+  { id: 17, name: ' MOTOR 1T ', weight: 70 },
+  { id: 18, name: ' MOTOR 750Kg ', weight: 60 },
+  { id: 19, name: ' MOTOR 500Kg ', weight: 50 },
+  { id: 20, name: ' POLIPASTO 1T ', weight: 10.4 },
+  { id: 21, name: ' TFS900H ', weight: 102 },
+  { id: 22, name: ' TFA600 ', weight: 41 },
+  { id: 23, name: ' TFS550H ', weight: 13.4 },
+  { id: 24, name: ' TFS550L ', weight: 27 },
+  { id: 25, name: ' BUMPER TFS900 ', weight: 20 },
+  { id: 26, name: ' TFS900>TFA600 ', weight: 14 },
+  { id: 27, name: ' TFS900>TFS550 ', weight: 14 },
+  { id: 28, name: ' CABLEADO L ', weight: 100 },
+  { id: 29, name: ' CABLEADO H ', weight: 250 },
 ];
 
 interface TableRow {
@@ -136,11 +162,11 @@ const PesosTool = () => {
     try {
       const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
 
-      // Using job name for file name and PDF title
-      const jobName = selectedJob.tour_date?.tour?.name || 'Unnamed Job';
-      const pdfBlob = await exportToPDF(jobName, tables, 'weight', { totalSystemWeight });
+      // Fix: Use job title for file name and project name
+      const jobTitle = selectedJob.title || 'Unnamed Job';
+      const pdfBlob = await exportToPDF(jobTitle, tables, 'weight', { totalSystemWeight });
 
-      const fileName = `Pesos Sonido ${jobName}.pdf`;
+      const fileName = `Pesos Sonido ${jobTitle}.pdf`;
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
 
@@ -166,7 +192,62 @@ const PesosTool = () => {
 
   return (
     <Card className="w-full max-w-4xl mx-auto my-6">
-      {/* UI structure unchanged, as requested */}
+      <CardHeader className="space-y-1">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/sound')}
+              title="Back to Sound"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <CardTitle className="text-2xl font-bold">Weight Calculator</CardTitle>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => navigate('/consumos-tool')}
+            className="gap-2"
+          >
+            <Calculator className="h-4 w-4" />
+            Power Calculator
+          </Button>
+        </div>
+      </CardHeader>
+
+      <div className="space-y-6">
+        {/* Updated table formatting */}
+        {tables.map((table) => (
+          <div key={table.id} className="border rounded-lg p-4 mt-4">
+            <h3 className="font-semibold text-lg">{table.name}</h3>
+            <table className="w-full mt-2 border">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="px-4 py-2 text-left">Quantity</th>
+                  <th className="px-4 py-2 text-left">Component</th>
+                  <th className="px-4 py-2 text-left">Weight (per unit)</th>
+                  <th className="px-4 py-2 text-left">Total Weight</th>
+                </tr>
+              </thead>
+              <tbody>
+                {table.rows.map((row, index) => (
+                  <tr key={index} className="border-b">
+                    <td className="px-4 py-2">{row.quantity}</td>
+                    <td className="px-4 py-2">{row.componentName}</td>
+                    <td className="px-4 py-2">{row.weight}</td>
+                    <td className="px-4 py-2">{row.totalWeight?.toFixed(2)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-gray-100 font-semibold">
+                  <td colSpan={3} className="text-right px-4 py-2">Total:</td>
+                  <td className="px-4 py-2">{table.totalWeight?.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </div>
     </Card>
   );
 };
