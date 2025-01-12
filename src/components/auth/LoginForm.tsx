@@ -28,9 +28,8 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
     setError(null);
 
     try {
-      console.log("Starting login process for email:", formData.email);
+      console.log("Attempting login with email:", formData.email);
       
-      // First attempt to sign in
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email.toLowerCase(),
         password: formData.password,
@@ -49,36 +48,24 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
       }
 
       if (!signInData.user) {
-        console.error("No user data returned after login");
         setError("No user found with these credentials.");
         return;
       }
 
-      console.log("Login successful, fetching user profile");
-
-      // Fetch user profile data
+      // Fetch user role immediately after successful login
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('role, department')
+        .select('role')
         .eq('id', signInData.user.id)
         .single();
 
       if (profileError) {
-        console.error("Error fetching user profile:", profileError);
-        setError("Error fetching user profile. Please try logging in again.");
-        // Sign out the user since we couldn't get their profile
-        await supabase.auth.signOut();
+        console.error("Error fetching user role:", profileError);
+        setError("Error fetching user role. Please try logging in again.");
         return;
       }
 
-      if (!profileData) {
-        console.error("No profile data found");
-        setError("User profile not found. Please contact support.");
-        await supabase.auth.signOut();
-        return;
-      }
-
-      console.log("Login successful for user:", signInData.user.email, "with role:", profileData.role);
+      console.log("Login successful for user:", signInData.user.email, "with role:", profileData?.role);
       
       toast({
         title: "Welcome back!",
@@ -86,7 +73,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
       });
 
       // Redirect based on role
-      if (profileData.role === 'technician') {
+      if (profileData?.role === 'technician') {
         navigate("/technician-dashboard");
       } else {
         navigate("/dashboard");
@@ -115,7 +102,6 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           required
-          className="w-full"
         />
       </div>
 
@@ -127,7 +113,6 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
           value={formData.password}
           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           required
-          className="w-full"
         />
       </div>
 
