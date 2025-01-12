@@ -166,7 +166,7 @@ const PesosTool = () => {
       const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
       const pdfBlob = await exportToPDF(tableName, tables, 'weight', { totalSystemWeight });
       const timestamp = new Date().getTime();
-      const file = new File([pdfBlob], `${tableName}-weight-report-${timestamp}.pdf`, { type: 'application/pdf' });
+      const file = new File([pdfBlob], `Pesos-Sonido-${selectedJobId}.pdf`, { type: 'application/pdf' });
 
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
       const { error: uploadError } = await supabase.storage
