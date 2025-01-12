@@ -35,7 +35,8 @@ const PesosTool = () => {
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
   const [selectedJobId, setSelectedJobId] = useState<string>('');
-  const [projectName, setProjectName] = useState('');
+  const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
+  const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
@@ -71,12 +72,56 @@ const PesosTool = () => {
     }));
   };
 
-  const calculateTotalWeight = (rows: TableRow[]) => {
-    return rows.reduce((sum, row) => {
-      const weight = parseFloat(row.weight) || 0;
-      const quantity = parseFloat(row.quantity) || 0;
-      return sum + (weight * quantity);
-    }, 0);
+  const handleJobSelect = (jobId: string) => {
+    setSelectedJobId(jobId);
+    const job = jobs?.find(j => j.id === jobId) || null;
+    setSelectedJob(job);
+  };
+
+  const generateTable = () => {
+    if (!tableName) {
+      toast({
+        title: "Missing table name",
+        description: "Please enter a name for the table",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const calculatedRows = currentTable.rows.map(row => {
+      const component = componentDatabase.find(c => c.id.toString() === row.componentId);
+      const totalWeight = parseFloat(row.quantity) && parseFloat(row.weight) ? 
+        parseFloat(row.quantity) * parseFloat(row.weight) : 0;
+      return {
+        ...row,
+        componentName: component?.name || '',
+        totalWeight
+      };
+    });
+
+    const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
+
+    const newTable = {
+      name: tableName,
+      rows: calculatedRows,
+      totalWeight,
+      id: Date.now()
+    };
+
+    setTables(prev => [...prev, newTable]);
+    resetCurrentTable();
+  };
+
+  const resetCurrentTable = () => {
+    setCurrentTable({
+      name: '',
+      rows: [{ quantity: '', componentId: '', weight: '' }]
+    });
+    setTableName('');
+  };
+
+  const removeTable = (tableId: number) => {
+    setTables(prev => prev.filter(table => table.id !== tableId));
   };
 
   const handleExportPDF = async () => {
@@ -91,9 +136,9 @@ const PesosTool = () => {
 
     try {
       const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
-      const pdfBlob = await exportToPDF(projectName, tables, 'weight', { totalSystemWeight });
+      const pdfBlob = await exportToPDF(tableName, tables, 'weight', { totalSystemWeight });
 
-      const file = new File([pdfBlob], `${projectName}-weight-report.pdf`, { type: 'application/pdf' });
+      const file = new File([pdfBlob], `${tableName}-weight-report.pdf`, { type: 'application/pdf' });
 
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
       const { error: uploadError } = await supabase.storage
@@ -114,7 +159,7 @@ const PesosTool = () => {
       const { error: docError } = await supabase
         .from('task_documents')
         .insert({
-          file_name: `${projectName}-weight-report.pdf`,
+          file_name: `${tableName}-weight-report.pdf`,
           file_path: filePath,
           sound_task_id: tasks.id
         });
@@ -135,7 +180,7 @@ const PesosTool = () => {
       const url = window.URL.createObjectURL(fileData);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${projectName}-weight-report.pdf`;
+      a.download = `${tableName}-weight-report.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -151,50 +196,6 @@ const PesosTool = () => {
     }
   };
 
-  const generateTable = () => {
-    if (!currentTable.name) {
-      alert('Please enter a table name.');
-      return;
-    }
-
-    const calculatedRows = currentTable.rows.map(row => {
-      const component = componentDatabase.find(c => c.id.toString() === row.componentId);
-      const totalWeight = parseFloat(row.quantity) && parseFloat(row.weight) ? 
-        parseFloat(row.quantity) * parseFloat(row.weight) : 0;
-      return {
-        ...row,
-        componentName: component?.name || '',
-        totalWeight
-      };
-    });
-
-    const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
-
-    const newTable = {
-      ...currentTable,
-      rows: calculatedRows,
-      totalWeight,
-      id: Date.now()
-    };
-
-    setTables(prev => [...prev, newTable]);
-    setCurrentTable({
-      name: '',
-      rows: [{ quantity: '', componentId: '', weight: '' }]
-    });
-  };
-
-  const resetFields = () => {
-    setCurrentTable({
-      name: '',
-      rows: [{ quantity: '', componentId: '', weight: '' }]
-    });
-  };
-
-  const removeTable = (tableId: number) => {
-    setTables(prev => prev.filter(table => table.id !== tableId));
-  };
-
   return (
     <Card className="w-full max-w-4xl mx-auto my-6">
       <CardHeader className="space-y-1">
@@ -202,40 +203,91 @@ const PesosTool = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="jobSelect">Select Job</Label>
-              <Select
-                value={selectedJobId}
-                onValueChange={setSelectedJobId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a job" />
-                </SelectTrigger>
-                <SelectContent>
-                  {jobs?.map((job: JobSelection) => (
-                    <SelectItem key={job.id} value={job.id}>
-                      {job.tour_date?.tour?.name ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="projectName">Project Name</Label>
-              <Input
-                id="projectName"
-                value={projectName}
-                onChange={e => setProjectName(e.target.value)}
-                className="w-full"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="jobSelect">Select Job</Label>
+            <Select
+              value={selectedJobId}
+              onValueChange={handleJobSelect}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a job" />
+              </SelectTrigger>
+              <SelectContent>
+                {jobs?.map((job: JobSelection) => (
+                  <SelectItem key={job.id} value={job.id}>
+                    {job.tour_date?.tour?.name ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tableName">Table Name</Label>
+            <Input
+              id="tableName"
+              value={tableName}
+              onChange={e => setTableName(e.target.value)}
+              placeholder="Enter table name"
+              className="w-full"
+            />
+          </div>
+
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-muted">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                  <th className="px-4 py-3 text-left font-medium">Component</th>
+                  <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentTable.rows.map((row, index) => (
+                  <tr key={index} className="border-t">
+                    <td className="p-4">
+                      <Input
+                        type="number"
+                        value={row.quantity}
+                        onChange={e => updateInput(index, 'quantity', e.target.value)}
+                        className="w-full"
+                      />
+                    </td>
+                    <td className="p-4">
+                      <Select
+                        value={row.componentId}
+                        onValueChange={value => updateInput(index, 'componentId', value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select component" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {componentDatabase.map(component => (
+                            <SelectItem key={component.id} value={component.id.toString()}>
+                              {component.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-4">
+                      <Input
+                        type="number"
+                        value={row.weight}
+                        readOnly
+                        className="w-full bg-muted"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           <div className="flex gap-2">
             <Button onClick={addRow}>Add Row</Button>
             <Button onClick={generateTable} variant="secondary">Generate Table</Button>
-            <Button onClick={resetFields} variant="destructive">Reset</Button>
+            <Button onClick={resetCurrentTable} variant="destructive">Reset</Button>
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
                 <FileText className="w-4 h-4" />
