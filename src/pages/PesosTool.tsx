@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,63 +68,62 @@ const PesosTool = () => {
   const [tables, setTables] = useState<Table[]>([]);
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
-    rows: [{ quantity: '', componentId: '', weight: '' }],
+    rows: [{ quantity: '', componentId: '', weight: '' }]
   });
 
   const addRow = () => {
-    setCurrentTable((prev) => ({
+    setCurrentTable(prev => ({
       ...prev,
-      rows: [...prev.rows, { quantity: '', componentId: '', weight: '' }],
+      rows: [...prev.rows, { quantity: '', componentId: '', weight: '' }]
     }));
   };
 
   const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
     if (field === 'componentId') {
-      const component = componentDatabase.find((c) => c.id.toString() === value);
+      const component = componentDatabase.find(c => c.id.toString() === value);
       newRows[index] = {
         ...newRows[index],
         [field]: value,
-        weight: component ? component.weight.toString() : '',
+        weight: component ? component.weight.toString() : ''
       };
     } else {
       newRows[index] = {
         ...newRows[index],
-        [field]: value,
+        [field]: value
       };
     }
-    setCurrentTable((prev) => ({
+    setCurrentTable(prev => ({
       ...prev,
-      rows: newRows,
+      rows: newRows
     }));
   };
 
   const handleJobSelect = (jobId: string) => {
+    const job = jobs?.find(j => j.id === jobId);
     setSelectedJobId(jobId);
-    const job = jobs?.find((j) => j.id === jobId) || null;
-    setSelectedJob(job);
+    setSelectedJob(job || null);
   };
 
   const generateTable = () => {
     if (!tableName) {
       toast({
-        title: 'Missing table name',
-        description: 'Please enter a name for the table',
-        variant: 'destructive',
+        title: "Missing table name",
+        description: "Please enter a name for the table",
+        variant: "destructive"
       });
       return;
     }
 
-    const calculatedRows = currentTable.rows.map((row) => {
-      const component = componentDatabase.find((c) => c.id.toString() === row.componentId);
-      const totalWeight =
-        parseFloat(row.quantity) && parseFloat(row.weight)
-          ? parseFloat(row.quantity) * parseFloat(row.weight)
-          : 0;
+    const calculatedRows = currentTable.rows.map(row => {
+      const component = componentDatabase.find(c => c.id.toString() === row.componentId);
+      const totalWeight = parseFloat(row.quantity) && parseFloat(row.weight) 
+        ? parseFloat(row.quantity) * parseFloat(row.weight) 
+        : 0;
       return {
         ...row,
         componentName: component?.name || '',
-        totalWeight,
+        totalWeight
       };
     });
 
@@ -134,39 +133,38 @@ const PesosTool = () => {
       name: tableName,
       rows: calculatedRows,
       totalWeight,
-      id: Date.now(),
+      id: Date.now()
     };
 
-    setTables((prev) => [...prev, newTable]);
+    setTables(prev => [...prev, newTable]);
     resetCurrentTable();
   };
 
   const resetCurrentTable = () => {
     setCurrentTable({
       name: '',
-      rows: [{ quantity: '', componentId: '', weight: '' }],
+      rows: [{ quantity: '', componentId: '', weight: '' }]
     });
     setTableName('');
   };
 
   const handleExportPDF = async () => {
-    if (!selectedJobId || !selectedJob) {
+    if (!selectedJob) {
       toast({
-        title: 'No job selected',
-        description: 'Please select a job before exporting',
-        variant: 'destructive',
+        title: "No job selected",
+        description: "Please select a job before exporting",
+        variant: "destructive"
       });
       return;
     }
 
     try {
       const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
+      const pdfBlob = await exportToPDF(tableName, tables, 'weight', { totalSystemWeight });
 
-      // Fix: Use job title for file name and project name
-      const jobTitle = selectedJob.title || 'Unnamed Job';
-      const pdfBlob = await exportToPDF(jobTitle, tables, 'weight', { totalSystemWeight });
+      const jobName = selectedJob.tour_date?.tour?.name || selectedJob.title;
+      const fileName = `Pesos Sonido ${jobName}.pdf`;
 
-      const fileName = `Pesos Sonido ${jobTitle}.pdf`;
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
 
@@ -177,15 +175,15 @@ const PesosTool = () => {
       if (uploadError) throw uploadError;
 
       toast({
-        title: 'Success',
-        description: 'PDF has been generated and uploaded successfully.',
+        title: "Success",
+        description: "PDF has been generated and uploaded successfully.",
       });
     } catch (error: any) {
-      console.error('Error generating PDF:', error);
+      console.error(error);
       toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
+        title: "Error",
+        description: "There was an error exporting the PDF.",
+        variant: "destructive"
       });
     }
   };
@@ -194,59 +192,35 @@ const PesosTool = () => {
     <Card className="w-full max-w-4xl mx-auto my-6">
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/sound')}
-              title="Back to Sound"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <CardTitle className="text-2xl font-bold">Weight Calculator</CardTitle>
-          </div>
-          <Button
-            variant="outline"
-            onClick={() => navigate('/consumos-tool')}
-            className="gap-2"
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => navigate('/sound')}
+            title="Back to Sound"
           >
-            <Calculator className="h-4 w-4" />
-            Power Calculator
+            <ArrowLeft className="h-4 w-4" />
           </Button>
+          <CardTitle className="text-2xl font-bold">Weight Calculator</CardTitle>
         </div>
       </CardHeader>
-
       <div className="space-y-6">
-        {/* Updated table formatting */}
-        {tables.map((table) => (
-          <div key={table.id} className="border rounded-lg p-4 mt-4">
-            <h3 className="font-semibold text-lg">{table.name}</h3>
-            <table className="w-full mt-2 border">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="px-4 py-2 text-left">Quantity</th>
-                  <th className="px-4 py-2 text-left">Component</th>
-                  <th className="px-4 py-2 text-left">Weight (per unit)</th>
-                  <th className="px-4 py-2 text-left">Total Weight</th>
-                </tr>
-              </thead>
-              <tbody>
-                {table.rows.map((row, index) => (
-                  <tr key={index} className="border-b">
-                    <td className="px-4 py-2">{row.quantity}</td>
-                    <td className="px-4 py-2">{row.componentName}</td>
-                    <td className="px-4 py-2">{row.weight}</td>
-                    <td className="px-4 py-2">{row.totalWeight?.toFixed(2)}</td>
-                  </tr>
-                ))}
-                <tr className="bg-gray-100 font-semibold">
-                  <td colSpan={3} className="text-right px-4 py-2">Total:</td>
-                  <td className="px-4 py-2">{table.totalWeight?.toFixed(2)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        ))}
+        <Label>Select Job</Label>
+        <Select value={selectedJobId} onValueChange={handleJobSelect}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select a job" />
+          </SelectTrigger>
+          <SelectContent>
+            {jobs?.map(job => (
+              <SelectItem key={job.id} value={job.id}>
+                {job.tour_date?.tour?.name || job.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button onClick={handleExportPDF} variant="outline" className="ml-auto">
+          <FileText className="h-4 w-4" />
+          Export PDF
+        </Button>
       </div>
     </Card>
   );
