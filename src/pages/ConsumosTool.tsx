@@ -12,7 +12,6 @@ const componentDatabase = [
   { id: 3, name: 'LED Light Panel', watts: 45 },
   { id: 4, name: 'Server Rack', watts: 4200 },
   { id: 5, name: 'Desktop Computer', watts: 350 },
-  // Add more components as needed
 ];
 
 // Constants for electrical calculations
@@ -20,10 +19,26 @@ const VOLTAGE_3PHASE = 400; // 400V for 3-phase
 const POWER_FACTOR = 0.85; // Standard power factor
 const SQRT3 = Math.sqrt(3);
 
+interface TableRow {
+  quantity: string;
+  componentId: string;
+  watts: string;
+  componentName?: string;
+  totalWatts?: number;
+}
+
+interface Table {
+  name: string;
+  rows: TableRow[];
+  totalWatts?: number;
+  currentPerPhase?: number;
+  id?: number;
+}
+
 const ConsumosTool = () => {
   const [projectName, setProjectName] = useState('');
-  const [tables, setTables] = useState([]);
-  const [currentTable, setCurrentTable] = useState({
+  const [tables, setTables] = useState<Table[]>([]);
+  const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
     rows: [{ quantity: '', componentId: '', watts: '' }]
   });
@@ -35,14 +50,14 @@ const ConsumosTool = () => {
     }));
   };
 
-  const updateInput = (index, field, value) => {
+  const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
     newRows[index][field] = value;
     
     if (field === 'componentId') {
       const component = componentDatabase.find(c => c.id.toString() === value);
       if (component) {
-        newRows[index].watts = component.watts;
+        newRows[index].watts = component.watts.toString();
       }
     }
     
@@ -75,7 +90,7 @@ const ConsumosTool = () => {
       };
     });
 
-    const totalWatts = calculatedRows.reduce((sum, row) => sum + row.totalWatts, 0);
+    const totalWatts = calculatedRows.reduce((sum, row) => sum + (row.totalWatts || 0), 0);
     const currentPerPhase = calculatePhaseCurrents(totalWatts);
 
     const newTable = {

@@ -5,18 +5,32 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Sample component database - replace this with your actual data
+// Sample component database
 const componentDatabase = [
   { id: 1, name: 'Steel Beam Type A', weight: 25.5 },
   { id: 2, name: 'Concrete Block B', weight: 15.2 },
   { id: 3, name: 'Aluminum Panel', weight: 5.8 },
-  // Add more components as needed
 ];
+
+interface TableRow {
+  quantity: string;
+  componentId: string;
+  weight: string;
+  componentName?: string;
+  totalWeight?: number;
+}
+
+interface Table {
+  name: string;
+  rows: TableRow[];
+  totalWeight?: number;
+  id?: number;
+}
 
 const PesosTool = () => {
   const [projectName, setProjectName] = useState('');
-  const [tables, setTables] = useState([]);
-  const [currentTable, setCurrentTable] = useState({
+  const [tables, setTables] = useState<Table[]>([]);
+  const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
     rows: [{ quantity: '', componentId: '', weight: '' }]
   });
@@ -28,14 +42,14 @@ const PesosTool = () => {
     }));
   };
 
-  const updateInput = (index, field, value) => {
+  const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
     newRows[index][field] = value;
     
     if (field === 'componentId') {
       const component = componentDatabase.find(c => c.id.toString() === value);
       if (component) {
-        newRows[index].weight = component.weight;
+        newRows[index].weight = component.weight.toString();
       }
     }
     
@@ -45,7 +59,7 @@ const PesosTool = () => {
     }));
   };
 
-  const calculateTotalWeight = (rows) => {
+  const calculateTotalWeight = (rows: TableRow[]) => {
     return rows.reduce((sum, row) => {
       const weight = parseFloat(row.weight) || 0;
       const quantity = parseFloat(row.quantity) || 0;
@@ -91,7 +105,7 @@ const PesosTool = () => {
     });
   };
 
-  const removeTable = (tableId) => {
+  const removeTable = (tableId: number) => {
     setTables(prev => prev.filter(table => table.id !== tableId));
   };
 
@@ -214,12 +228,12 @@ const PesosTool = () => {
                       <td className="p-2">{row.quantity}</td>
                       <td className="p-2">{row.componentName}</td>
                       <td className="p-2">{row.weight}</td>
-                      <td className="p-2">{row.totalWeight.toFixed(2)}</td>
+                      <td className="p-2">{row.totalWeight?.toFixed(2)}</td>
                     </tr>
                   ))}
                   <tr className="border-t bg-gray-50 font-semibold">
                     <td colSpan="3" className="p-2 text-right">Total Weight:</td>
-                    <td className="p-2">{table.totalWeight.toFixed(2)}</td>
+                    <td className="p-2">{table.totalWeight?.toFixed(2)}</td>
                   </tr>
                 </tbody>
               </table>
