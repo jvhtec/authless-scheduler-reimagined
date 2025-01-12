@@ -29,6 +29,11 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
     handleSubmit,
   } = useTourCreation(currentDepartment, () => onOpenChange(false));
 
+  const handleCreateFlexFolder = () => {
+    // Implement flex folder creation logic here
+    console.log("Flex folder created");
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -53,6 +58,10 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
             currentDepartment={currentDepartment}
             onDepartmentChange={handleDepartmentChange}
           />
+          
+          <Button type="button" onClick={handleCreateFlexFolder} className="w-full">
+            Create Flex Folder
+          </Button>
 
           <Button type="submit" className="w-full">
             Create Tour
