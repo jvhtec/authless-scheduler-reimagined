@@ -27,9 +27,9 @@ export const useJobSelection = () => {
           id,
           title,
           tour_date_id,
-          tour_date:tour_dates(
+          tour_date:tour_dates!tour_date_id (
             id,
-            tour:tours(
+            tour:tours (
               id,
               name
             )
@@ -42,7 +42,18 @@ export const useJobSelection = () => {
         throw error;
       }
 
-      return jobs as JobSelection[];
+      // Transform the data to match our expected types
+      const transformedJobs = jobs?.map(job => ({
+        id: job.id,
+        title: job.title,
+        tour_date_id: job.tour_date_id,
+        tour_date: job.tour_date ? {
+          id: job.tour_date.id,
+          tour: job.tour_date.tour
+        } : null
+      })) as JobSelection[];
+
+      return transformedJobs;
     },
   });
 };
