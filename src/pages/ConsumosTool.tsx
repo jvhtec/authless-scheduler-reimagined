@@ -20,9 +20,9 @@ const POWER_FACTOR = 0.85; // Standard power factor
 const SQRT3 = Math.sqrt(3);
 
 interface TableRow {
-  quantity: string;
-  componentId: string;
-  watts: string;
+  quantity: number;
+  componentId: number;
+  watts: number;
   componentName?: string;
   totalWatts?: number;
 }
@@ -40,25 +40,31 @@ const ConsumosTool = () => {
   const [tables, setTables] = useState<Table[]>([]);
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
-    rows: [{ quantity: '', componentId: '', watts: '' }]
+    rows: [{ quantity: 0, componentId: 0, watts: 0 }]
   });
 
   const addRow = () => {
     setCurrentTable(prev => ({
       ...prev,
-      rows: [...prev.rows, { quantity: '', componentId: '', watts: '' }]
+      rows: [...prev.rows, { quantity: 0, componentId: 0, watts: 0 }]
     }));
   };
 
   const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
-    newRows[index][field] = value;
-    
     if (field === 'componentId') {
-      const component = componentDatabase.find(c => c.id.toString() === value);
-      if (component) {
-        newRows[index].watts = component.watts.toString();
-      }
+      const numValue = parseInt(value, 10);
+      const component = componentDatabase.find(c => c.id === numValue);
+      newRows[index] = {
+        ...newRows[index],
+        [field]: numValue,
+        watts: component?.watts || 0
+      };
+    } else if (field === 'quantity') {
+      newRows[index] = {
+        ...newRows[index],
+        [field]: parseFloat(value) || 0
+      };
     }
     
     setCurrentTable(prev => ({
@@ -80,9 +86,9 @@ const ConsumosTool = () => {
     }
 
     const calculatedRows = currentTable.rows.map(row => {
-      const component = componentDatabase.find(c => c.id.toString() === row.componentId);
+      const component = componentDatabase.find(c => c.id === row.componentId);
       const totalWatts = row.quantity && row.watts ? 
-        parseFloat(row.quantity) * parseFloat(row.watts) : 0;
+        parseFloat(row.quantity.toString()) * parseFloat(row.watts.toString()) : 0;
       return {
         ...row,
         componentName: component?.name || '',
@@ -104,14 +110,14 @@ const ConsumosTool = () => {
     setTables(prev => [...prev, newTable]);
     setCurrentTable({
       name: '',
-      rows: [{ quantity: '', componentId: '', watts: '' }]
+      rows: [{ quantity: 0, componentId: 0, watts: 0 }]
     });
   };
 
   const resetFields = () => {
     setCurrentTable({
       name: '',
-      rows: [{ quantity: '', componentId: '', watts: '' }]
+      rows: [{ quantity: 0, componentId: 0, watts: 0 }]
     });
   };
 
@@ -126,7 +132,7 @@ const ConsumosTool = () => {
   };
 
   return (
-    <Card className="w-full max-w-4xl">
+    <Card className="w-full max-w-4xl mx-auto my-6">
       <CardHeader>
         <CardTitle>Power Consumption Calculator</CardTitle>
       </CardHeader>
@@ -173,7 +179,7 @@ const ConsumosTool = () => {
                     </td>
                     <td className="p-2">
                       <Select
-                        value={row.componentId}
+                        value={row.componentId.toString()}
                         onValueChange={(value) => updateInput(index, 'componentId', value)}
                       >
                         <SelectTrigger>
@@ -236,16 +242,16 @@ const ConsumosTool = () => {
                       <td className="p-2">{row.quantity}</td>
                       <td className="p-2">{row.componentName}</td>
                       <td className="p-2">{row.watts}</td>
-                      <td className="p-2">{row.totalWatts.toFixed(2)}</td>
+                      <td className="p-2">{row.totalWatts?.toFixed(2)}</td>
                     </tr>
                   ))}
                   <tr className="border-t bg-gray-50 font-semibold">
                     <td colSpan="3" className="p-2 text-right">Total Power:</td>
-                    <td className="p-2">{table.totalWatts.toFixed(2)} W</td>
+                    <td className="p-2">{table.totalWatts?.toFixed(2)} W</td>
                   </tr>
                   <tr className="border-t bg-gray-50 font-semibold">
                     <td colSpan="3" className="p-2 text-right">Current per Phase:</td>
-                    <td className="p-2">{table.currentPerPhase.toFixed(2)} A</td>
+                    <td className="p-2">{table.currentPerPhase?.toFixed(2)} A</td>
                   </tr>
                 </tbody>
               </table>
@@ -259,11 +265,11 @@ const ConsumosTool = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="font-medium">Total System Power:</span>
-                  <span className="ml-2">{calculateTotalSystem().totalSystemWatts.toFixed(2)} W</span>
+                  <span className="ml-2">{calculateTotalSystem().totalSystemWatts?.toFixed(2)} W</span>
                 </div>
                 <div>
                   <span className="font-medium">Total Current per Phase:</span>
-                  <span className="ml-2">{calculateTotalSystem().totalSystemAmps.toFixed(2)} A</span>
+                  <span className="ml-2">{calculateTotalSystem().totalSystemAmps?.toFixed(2)} A</span>
                 </div>
               </div>
             </div>

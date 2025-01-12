@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Sample component database
+// Component database with predefined values
 const componentDatabase = [
   { id: 1, name: 'Steel Beam Type A', weight: 25.5 },
   { id: 2, name: 'Concrete Block B', weight: 15.2 },
@@ -13,9 +13,9 @@ const componentDatabase = [
 ];
 
 interface TableRow {
-  quantity: string;
-  componentId: string;
-  weight: string;
+  quantity: number;
+  componentId: number;
+  weight: number;
   componentName?: string;
   totalWeight?: number;
 }
@@ -32,25 +32,31 @@ const PesosTool = () => {
   const [tables, setTables] = useState<Table[]>([]);
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
-    rows: [{ quantity: '', componentId: '', weight: '' }]
+    rows: [{ quantity: 0, componentId: 0, weight: 0 }]
   });
 
   const addRow = () => {
     setCurrentTable(prev => ({
       ...prev,
-      rows: [...prev.rows, { quantity: '', componentId: '', weight: '' }]
+      rows: [...prev.rows, { quantity: 0, componentId: 0, weight: 0 }]
     }));
   };
 
   const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
-    newRows[index][field] = value;
-    
     if (field === 'componentId') {
-      const component = componentDatabase.find(c => c.id.toString() === value);
-      if (component) {
-        newRows[index].weight = component.weight.toString();
-      }
+      const numValue = parseInt(value, 10);
+      const component = componentDatabase.find(c => c.id === numValue);
+      newRows[index] = {
+        ...newRows[index],
+        [field]: numValue,
+        weight: component?.weight || 0
+      };
+    } else if (field === 'quantity') {
+      newRows[index] = {
+        ...newRows[index],
+        [field]: parseFloat(value) || 0
+      };
     }
     
     setCurrentTable(prev => ({
@@ -116,7 +122,7 @@ const PesosTool = () => {
   };
 
   return (
-    <Card className="w-full max-w-4xl">
+    <Card className="w-full max-w-4xl mx-auto my-6">
       <CardHeader>
         <CardTitle>Pesos Tool</CardTitle>
       </CardHeader>

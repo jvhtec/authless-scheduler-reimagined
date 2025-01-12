@@ -223,11 +223,11 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
         />
       )}
 
-      {/* Buttons Section */}
+      {/* Tools Section */}
       <div className="mt-12 p-6 bg-gray-50 rounded-lg shadow-md flex flex-wrap justify-around space-y-4 md:space-y-0">
         <button
           type="button"
-          onClick={() => navigate('/excel-tool')}
+          onClick={() => navigate('/pesos-tool')}
           className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
         >
           <Calculator className="h-6 w-6 text-gray-700" />
@@ -236,6 +236,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
 
         <button
           type="button"
+          onClick={() => navigate('/consumos-tool')}
           className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
         >
           <PieChart className="h-6 w-6 text-gray-700" />
@@ -260,7 +261,6 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
         </button>
       </div>
 
-      {/* Analysis Modal */}
       {showAnalysisForm && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
