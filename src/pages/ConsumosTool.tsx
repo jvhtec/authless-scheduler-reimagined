@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FileText } from 'lucide-react';
+import { exportToPDF } from '@/utils/pdfExport';
 
 const componentDatabase = [
   { id: 1, name: 'Motor 5HP', watts: 3730 },
@@ -110,6 +112,11 @@ const ConsumosTool = () => {
     });
   };
 
+  const handleExportPDF = () => {
+    const totalSystem = calculateTotalSystem();
+    exportToPDF(projectName, tables, 'power', totalSystem);
+  };
+
   const resetFields = () => {
     setCurrentTable({
       name: '',
@@ -129,8 +136,8 @@ const ConsumosTool = () => {
 
   return (
     <Card className="w-full max-w-4xl mx-auto my-6">
-      <CardHeader>
-        <CardTitle>Power Consumption Calculator</CardTitle>
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl font-bold">Power Consumption Calculator</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
@@ -141,6 +148,7 @@ const ConsumosTool = () => {
                 id="projectName"
                 value={projectName}
                 onChange={e => setProjectName(e.target.value)}
+                className="w-full"
               />
             </div>
             <div className="space-y-2">
@@ -149,23 +157,24 @@ const ConsumosTool = () => {
                 id="tableName"
                 value={currentTable.name}
                 onChange={e => setCurrentTable(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full"
               />
             </div>
           </div>
 
           <div className="border rounded-lg overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-100">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="p-2 text-left">Quantity</th>
-                  <th className="p-2 text-left">Component</th>
-                  <th className="p-2 text-left">Watts (per unit)</th>
+                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                  <th className="px-4 py-3 text-left font-medium">Component</th>
+                  <th className="px-4 py-3 text-left font-medium">Watts (per unit)</th>
                 </tr>
               </thead>
               <tbody>
                 {currentTable.rows.map((row, index) => (
                   <tr key={index} className="border-t">
-                    <td className="p-2">
+                    <td className="p-4">
                       <Input
                         type="number"
                         value={row.quantity}
@@ -173,12 +182,12 @@ const ConsumosTool = () => {
                         className="w-full"
                       />
                     </td>
-                    <td className="p-2">
+                    <td className="p-4">
                       <Select
                         value={row.componentId}
-                        onValueChange={(value) => updateInput(index, 'componentId', value)}
+                        onValueChange={value => updateInput(index, 'componentId', value)}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select component" />
                         </SelectTrigger>
                         <SelectContent>
@@ -190,12 +199,12 @@ const ConsumosTool = () => {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="p-2">
+                    <td className="p-4">
                       <Input
                         type="number"
                         value={row.watts}
                         readOnly
-                        className="w-full bg-gray-50"
+                        className="w-full bg-muted"
                       />
                     </td>
                   </tr>
@@ -204,68 +213,76 @@ const ConsumosTool = () => {
             </table>
           </div>
 
-          <div className="space-x-2">
+          <div className="flex gap-2">
             <Button onClick={addRow}>Add Row</Button>
             <Button onClick={generateTable} variant="secondary">Generate Table</Button>
             <Button onClick={resetFields} variant="destructive">Reset</Button>
+            {tables.length > 0 && (
+              <Button onClick={handleExportPDF} variant="outline" className="ml-auto">
+                <FileText className="w-4 h-4 mr-2" />
+                Export PDF
+              </Button>
+            )}
           </div>
 
-          {/* Generated Tables */}
           {tables.map(table => (
             <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
-              <div className="bg-gray-100 p-2 flex justify-between items-center">
+              <div className="bg-muted px-4 py-3 flex justify-between items-center">
                 <h3 className="font-semibold">{table.name}</h3>
                 <Button 
                   variant="destructive" 
                   size="sm"
-                  onClick={() => removeTable(table.id)}
+                  onClick={() => table.id && removeTable(table.id)}
                 >
                   Remove Table
                 </Button>
               </div>
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="p-2 text-left">Quantity</th>
-                    <th className="p-2 text-left">Component</th>
-                    <th className="p-2 text-left">Watts (per unit)</th>
-                    <th className="p-2 text-left">Total Watts</th>
+                    <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                    <th className="px-4 py-3 text-left font-medium">Component</th>
+                    <th className="px-4 py-3 text-left font-medium">Watts (per unit)</th>
+                    <th className="px-4 py-3 text-left font-medium">Total Watts</th>
                   </tr>
                 </thead>
                 <tbody>
                   {table.rows.map((row, index) => (
                     <tr key={index} className="border-t">
-                      <td className="p-2">{row.quantity}</td>
-                      <td className="p-2">{row.componentName}</td>
-                      <td className="p-2">{row.watts}</td>
-                      <td className="p-2">{row.totalWatts?.toFixed(2)}</td>
+                      <td className="px-4 py-3">{row.quantity}</td>
+                      <td className="px-4 py-3">{row.componentName}</td>
+                      <td className="px-4 py-3">{row.watts}</td>
+                      <td className="px-4 py-3">{row.totalWatts?.toFixed(2)}</td>
                     </tr>
                   ))}
-                  <tr className="border-t bg-gray-50 font-semibold">
-                    <td colSpan="3" className="p-2 text-right">Total Power:</td>
-                    <td className="p-2">{table.totalWatts?.toFixed(2)} W</td>
+                  <tr className="border-t bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-right">Total Power:</td>
+                    <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
                   </tr>
-                  <tr className="border-t bg-gray-50 font-semibold">
-                    <td colSpan="3" className="p-2 text-right">Current per Phase:</td>
-                    <td className="p-2">{table.currentPerPhase?.toFixed(2)} A</td>
+                  <tr className="bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-right">Current per Phase:</td>
+                    <td className="px-4 py-3">{table.currentPerPhase?.toFixed(2)} A</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           ))}
 
-          {/* Total System Summary */}
           {tables.length > 0 && (
-            <div className="mt-6 bg-gray-100 p-4 rounded-lg">
+            <div className="mt-6 bg-muted p-4 rounded-lg">
               <h3 className="font-semibold mb-2">Total System Summary</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="font-medium">Total System Power:</span>
-                  <span className="ml-2">{calculateTotalSystem().totalSystemWatts?.toFixed(2)} W</span>
+                  <span className="ml-2">
+                    {calculateTotalSystem().totalSystemWatts?.toFixed(2)} W
+                  </span>
                 </div>
                 <div>
                   <span className="font-medium">Total Current per Phase:</span>
-                  <span className="ml-2">{calculateTotalSystem().totalSystemAmps?.toFixed(2)} A</span>
+                  <span className="ml-2">
+                    {calculateTotalSystem().totalSystemAmps?.toFixed(2)} A
+                  </span>
                 </div>
               </div>
             </div>

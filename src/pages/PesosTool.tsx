@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FileText } from 'lucide-react';
+import { exportToPDF } from '@/utils/pdfExport';
 
-// Component database with predefined values
 const componentDatabase = [
   { id: 1, name: 'Steel Beam Type A', weight: 25.5 },
   { id: 2, name: 'Concrete Block B', weight: 15.2 },
@@ -89,10 +90,12 @@ const PesosTool = () => {
       };
     });
 
+    const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
+
     const newTable = {
       ...currentTable,
       rows: calculatedRows,
-      totalWeight: calculateTotalWeight(calculatedRows),
+      totalWeight,
       id: Date.now()
     };
 
@@ -101,6 +104,11 @@ const PesosTool = () => {
       name: '',
       rows: [{ quantity: '', componentId: '', weight: '' }]
     });
+  };
+
+  const handleExportPDF = () => {
+    const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
+    exportToPDF(projectName, tables, 'weight', { totalSystemWeight });
   };
 
   const resetFields = () => {
@@ -114,14 +122,10 @@ const PesosTool = () => {
     setTables(prev => prev.filter(table => table.id !== tableId));
   };
 
-  const preparePDFData = () => {
-    alert('PDF export would go here - data is ready for export');
-  };
-
   return (
     <Card className="w-full max-w-4xl mx-auto my-6">
-      <CardHeader>
-        <CardTitle>Pesos Tool</CardTitle>
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl font-bold">Weight Calculator</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
@@ -132,6 +136,7 @@ const PesosTool = () => {
                 id="projectName"
                 value={projectName}
                 onChange={e => setProjectName(e.target.value)}
+                className="w-full"
               />
             </div>
             <div className="space-y-2">
@@ -140,23 +145,24 @@ const PesosTool = () => {
                 id="tableName"
                 value={currentTable.name}
                 onChange={e => setCurrentTable(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full"
               />
             </div>
           </div>
 
           <div className="border rounded-lg overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-100">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="p-2 text-left">Quantity</th>
-                  <th className="p-2 text-left">Component</th>
-                  <th className="p-2 text-left">Weight (per unit)</th>
+                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                  <th className="px-4 py-3 text-left font-medium">Component</th>
+                  <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
                 </tr>
               </thead>
               <tbody>
                 {currentTable.rows.map((row, index) => (
                   <tr key={index} className="border-t">
-                    <td className="p-2">
+                    <td className="p-4">
                       <Input
                         type="number"
                         value={row.quantity}
@@ -164,12 +170,12 @@ const PesosTool = () => {
                         className="w-full"
                       />
                     </td>
-                    <td className="p-2">
+                    <td className="p-4">
                       <Select
                         value={row.componentId}
-                        onValueChange={(value) => updateInput(index, 'componentId', value)}
+                        onValueChange={value => updateInput(index, 'componentId', value)}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select component" />
                         </SelectTrigger>
                         <SelectContent>
@@ -181,12 +187,12 @@ const PesosTool = () => {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="p-2">
+                    <td className="p-4">
                       <Input
                         type="number"
                         value={row.weight}
                         readOnly
-                        className="w-full bg-gray-50"
+                        className="w-full bg-muted"
                       />
                     </td>
                   </tr>
@@ -195,17 +201,21 @@ const PesosTool = () => {
             </table>
           </div>
 
-          <div className="space-x-2">
+          <div className="flex gap-2">
             <Button onClick={addRow}>Add Row</Button>
             <Button onClick={generateTable} variant="secondary">Generate Table</Button>
             <Button onClick={resetFields} variant="destructive">Reset</Button>
-            <Button onClick={preparePDFData} variant="outline">Export All to PDF</Button>
+            {tables.length > 0 && (
+              <Button onClick={handleExportPDF} variant="outline" className="ml-auto">
+                <FileText className="w-4 h-4 mr-2" />
+                Export PDF
+              </Button>
+            )}
           </div>
 
-          {/* Generated Tables */}
           {tables.map(table => (
             <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
-              <div className="bg-gray-100 p-2 flex justify-between items-center">
+              <div className="bg-muted px-4 py-3 flex justify-between items-center">
                 <h3 className="font-semibold">{table.name}</h3>
                 <Button 
                   variant="destructive" 
@@ -216,31 +226,43 @@ const PesosTool = () => {
                 </Button>
               </div>
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="p-2 text-left">Quantity</th>
-                    <th className="p-2 text-left">Component</th>
-                    <th className="p-2 text-left">Weight (per unit)</th>
-                    <th className="p-2 text-left">Total Weight</th>
+                    <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                    <th className="px-4 py-3 text-left font-medium">Component</th>
+                    <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
+                    <th className="px-4 py-3 text-left font-medium">Total Weight</th>
                   </tr>
                 </thead>
                 <tbody>
                   {table.rows.map((row, index) => (
                     <tr key={index} className="border-t">
-                      <td className="p-2">{row.quantity}</td>
-                      <td className="p-2">{row.componentName}</td>
-                      <td className="p-2">{row.weight}</td>
-                      <td className="p-2">{row.totalWeight?.toFixed(2)}</td>
+                      <td className="px-4 py-3">{row.quantity}</td>
+                      <td className="px-4 py-3">{row.componentName}</td>
+                      <td className="px-4 py-3">{row.weight}</td>
+                      <td className="px-4 py-3">{row.totalWeight?.toFixed(2)}</td>
                     </tr>
                   ))}
-                  <tr className="border-t bg-gray-50 font-semibold">
-                    <td colSpan={3} className="p-2 text-right">Total Weight:</td>
-                    <td className="p-2">{table.totalWeight?.toFixed(2)}</td>
+                  <tr className="border-t bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-right">Total Weight:</td>
+                    <td className="px-4 py-3">{table.totalWeight?.toFixed(2)}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           ))}
+
+          {tables.length > 0 && (
+            <div className="mt-6 bg-muted p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Total System Weight</h3>
+              <div>
+                <span className="font-medium">Total:</span>
+                <span className="ml-2">
+                  {tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
