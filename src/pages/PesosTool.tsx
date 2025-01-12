@@ -187,7 +187,7 @@ const PesosTool = () => {
       const { error: docError } = await supabase
         .from('task_documents')
         .insert({
-          file_name: `${tableName}-weight-report-${timestamp}.pdf`,
+          file_name: `Pesos-Sonido-${selectedJobId}.pdf`,
           file_path: filePath,
           sound_task_id: tasks.id,
           uploaded_by: (await supabase.auth.getUser()).data.user?.id
