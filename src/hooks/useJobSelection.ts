@@ -49,7 +49,7 @@ export const useJobSelection = () => {
         tour_date_id: job.tour_date_id,
         tour_date: job.tour_date ? {
           id: job.tour_date.id,
-          tour: job.tour_date.tour
+          tour: job.tour_date.tour[0] // Access first tour since it's returned as an array
         } : null
       })) as JobSelection[];
 
