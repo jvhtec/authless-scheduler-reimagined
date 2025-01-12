@@ -12,6 +12,7 @@ import { TourFormFields } from "./TourFormFields";
 import { useTourCreation } from "./useTourCreation";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 // Flex API constants
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
@@ -52,7 +53,7 @@ interface CreateTourDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentDepartment: Department;
-  job: any;  // Assuming job object is passed in with necessary details
+  job?: any;  // Made job optional
 }
 
 export const CreateTourDialog = ({
@@ -70,13 +71,13 @@ export const CreateTourDialog = ({
     setTitle,
     description,
     setDescription,
-    startDate,
-    setStartDate,
-    endDate,
-    setEndDate,
+    dates,
     color,
     setColor,
     departments,
+    handleAddDate,
+    handleRemoveDate,
+    handleDateChange,
     handleDepartmentChange,
     handleSubmit,
   } = useTourCreation(currentDepartment, () => onOpenChange(false));
@@ -85,6 +86,15 @@ export const CreateTourDialog = ({
 
   const createFlexFolders = async (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    if (!job) {
+      toast({
+        title: "Error",
+        description: "No job data available",
+        variant: "destructive"
+      });
+      return;
+    }
 
     if (job.flex_folders_created) {
       toast({
@@ -175,10 +185,19 @@ export const CreateTourDialog = ({
         }
       }
 
-      // Update job status locally after folder creation
-      // You might call an API or update state here to mark folders as created.
-      job.flex_folders_created = true;
-      updateFolderStatus.mutate();  // Assuming a mutation to update folder status in the backend
+      // Update job status in Supabase
+      const { error: updateError } = await supabase
+        .from('jobs')
+        .update({ flex_folders_created: true })
+        .eq('id', job.id);
+
+      if (updateError) {
+        console.error('Error updating job status:', updateError);
+        throw new Error('Failed to update job status');
+      }
+
+      // Invalidate queries to refresh the data
+      await queryClient.invalidateQueries({ queryKey: ['jobs'] });
 
       toast({
         title: "Success",
@@ -208,10 +227,10 @@ export const CreateTourDialog = ({
             setTitle={setTitle}
             description={description}
             setDescription={setDescription}
-            startDate={startDate}
-            setStartDate={setStartDate}
-            endDate={endDate}
-            setEndDate={setEndDate}
+            dates={dates}
+            onDateChange={handleDateChange}
+            onAddDate={handleAddDate}
+            onRemoveDate={handleRemoveDate}
             color={color}
             setColor={setColor}
             departments={departments}
@@ -220,9 +239,11 @@ export const CreateTourDialog = ({
             onDepartmentChange={handleDepartmentChange}
           />
 
-          <Button type="button" onClick={createFlexFolders} className="w-full">
-            Create Flex Folder
-          </Button>
+          {job && (
+            <Button type="button" onClick={createFlexFolders} className="w-full">
+              Create Flex Folder
+            </Button>
+          )}
 
           <Button type="submit" className="w-full">
             Create Tour
