@@ -166,7 +166,7 @@ const PesosTool = () => {
       const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
       const pdfBlob = await exportToPDF(tableName, tables, 'weight', { totalSystemWeight });
       const timestamp = new Date().getTime();
-      const file = new File([pdfBlob], `Pesos-Sonido-${selectedJobId}.pdf`, { type: 'application/pdf' });
+      const file = new File([pdfBlob], `Pesos-Sonido-${job.tour_date.tour.name}.pdf`, { type: 'application/pdf' });
 
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
       const { error: uploadError } = await supabase.storage
@@ -187,7 +187,7 @@ const PesosTool = () => {
       const { error: docError } = await supabase
         .from('task_documents')
         .insert({
-          file_name: `Pesos-Sonido-${selectedJobId}.pdf`,
+          file_name: `Pesos-Sonido-${job.tour_date.tour.name}.pdf,
           file_path: filePath,
           sound_task_id: tasks.id,
           uploaded_by: (await supabase.auth.getUser()).data.user?.id
@@ -209,7 +209,7 @@ const PesosTool = () => {
       const url = window.URL.createObjectURL(fileData);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${tableName}-weight-report-${timestamp}.pdf`;
+      a.download = `Pesos-Sonido-${selectedJobId}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
