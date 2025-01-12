@@ -11,7 +11,7 @@ import Video from "@/pages/Video";
 import TechnicianDashboard from "@/pages/TechnicianDashboard";
 import Profile from "@/pages/Profile";
 import ProjectManagement from "@/pages/ProjectManagement";
-import ExcelTool from '@/ExcelTool';
+import ExcelTool from '@/pages/ExcelTool';
 import { useSessionManager } from "@/hooks/useSessionManager";
 import "./App.css";
 
