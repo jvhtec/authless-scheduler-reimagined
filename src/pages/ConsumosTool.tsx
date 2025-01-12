@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Component database with predefined values
 const componentDatabase = [
   { id: 1, name: 'Motor 5HP', watts: 3730 },
   { id: 2, name: 'Air Conditioner 2-ton', watts: 2000 },
@@ -14,15 +13,14 @@ const componentDatabase = [
   { id: 5, name: 'Desktop Computer', watts: 350 },
 ];
 
-// Constants for electrical calculations
-const VOLTAGE_3PHASE = 400; // 400V for 3-phase
-const POWER_FACTOR = 0.85; // Standard power factor
+const VOLTAGE_3PHASE = 400;
+const POWER_FACTOR = 0.85;
 const SQRT3 = Math.sqrt(3);
 
 interface TableRow {
-  quantity: number;
-  componentId: number;
-  watts: number;
+  quantity: string;
+  componentId: string;
+  watts: string;
   componentName?: string;
   totalWatts?: number;
 }
@@ -40,30 +38,29 @@ const ConsumosTool = () => {
   const [tables, setTables] = useState<Table[]>([]);
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
-    rows: [{ quantity: 0, componentId: 0, watts: 0 }]
+    rows: [{ quantity: '', componentId: '', watts: '' }]
   });
 
   const addRow = () => {
     setCurrentTable(prev => ({
       ...prev,
-      rows: [...prev.rows, { quantity: 0, componentId: 0, watts: 0 }]
+      rows: [...prev.rows, { quantity: '', componentId: '', watts: '' }]
     }));
   };
 
   const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
     if (field === 'componentId') {
-      const numValue = parseInt(value, 10);
-      const component = componentDatabase.find(c => c.id === numValue);
+      const component = componentDatabase.find(c => c.id.toString() === value);
       newRows[index] = {
         ...newRows[index],
-        [field]: numValue,
-        watts: component?.watts || 0
+        [field]: value,
+        watts: component ? component.watts.toString() : ''
       };
-    } else if (field === 'quantity') {
+    } else {
       newRows[index] = {
         ...newRows[index],
-        [field]: parseFloat(value) || 0
+        [field]: value
       };
     }
     
@@ -73,8 +70,7 @@ const ConsumosTool = () => {
     }));
   };
 
-  const calculatePhaseCurrents = (totalWatts) => {
-    // I = P / (√3 × V × PF)
+  const calculatePhaseCurrents = (totalWatts: number) => {
     const currentPerPhase = totalWatts / (SQRT3 * VOLTAGE_3PHASE * POWER_FACTOR);
     return currentPerPhase;
   };
@@ -86,9 +82,9 @@ const ConsumosTool = () => {
     }
 
     const calculatedRows = currentTable.rows.map(row => {
-      const component = componentDatabase.find(c => c.id === row.componentId);
-      const totalWatts = row.quantity && row.watts ? 
-        parseFloat(row.quantity.toString()) * parseFloat(row.watts.toString()) : 0;
+      const component = componentDatabase.find(c => c.id.toString() === row.componentId);
+      const totalWatts = parseFloat(row.quantity) && parseFloat(row.watts) ? 
+        parseFloat(row.quantity) * parseFloat(row.watts) : 0;
       return {
         ...row,
         componentName: component?.name || '',
@@ -110,14 +106,14 @@ const ConsumosTool = () => {
     setTables(prev => [...prev, newTable]);
     setCurrentTable({
       name: '',
-      rows: [{ quantity: 0, componentId: 0, watts: 0 }]
+      rows: [{ quantity: '', componentId: '', watts: '' }]
     });
   };
 
   const resetFields = () => {
     setCurrentTable({
       name: '',
-      rows: [{ quantity: 0, componentId: 0, watts: 0 }]
+      rows: [{ quantity: '', componentId: '', watts: '' }]
     });
   };
 
@@ -179,7 +175,7 @@ const ConsumosTool = () => {
                     </td>
                     <td className="p-2">
                       <Select
-                        value={row.componentId.toString()}
+                        value={row.componentId}
                         onValueChange={(value) => updateInput(index, 'componentId', value)}
                       >
                         <SelectTrigger>
