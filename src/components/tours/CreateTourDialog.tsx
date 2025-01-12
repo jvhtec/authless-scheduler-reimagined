@@ -128,7 +128,10 @@ export const CreateTourDialog = ({
         personResponsibleId: FLEX_FOLDER_IDS.mainResponsible
       };
 
-      const mainResponse = await fetch(BASE_URL, {
+      // Ensure the URL is properly formatted without any trailing colons
+      const apiUrl = BASE_URL.replace(/:\/?$/, '');
+      
+      const mainResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -162,7 +165,7 @@ export const CreateTourDialog = ({
         };
 
         try {
-          const subResponse = await fetch(BASE_URL, {
+          const subResponse = await fetch(apiUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
