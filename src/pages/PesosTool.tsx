@@ -68,61 +68,63 @@ const PesosTool = () => {
   const [tables, setTables] = useState<Table[]>([]);
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
-    rows: [{ quantity: '', componentId: '', weight: '' }]
+    rows: [{ quantity: '', componentId: '', weight: '' }],
   });
 
   const addRow = () => {
-    setCurrentTable(prev => ({
+    setCurrentTable((prev) => ({
       ...prev,
-      rows: [...prev.rows, { quantity: '', componentId: '', weight: '' }]
+      rows: [...prev.rows, { quantity: '', componentId: '', weight: '' }],
     }));
   };
 
   const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
     if (field === 'componentId') {
-      const component = componentDatabase.find(c => c.id.toString() === value);
+      const component = componentDatabase.find((c) => c.id.toString() === value);
       newRows[index] = {
         ...newRows[index],
         [field]: value,
-        weight: component ? component.weight.toString() : ''
+        weight: component ? component.weight.toString() : '',
       };
     } else {
       newRows[index] = {
         ...newRows[index],
-        [field]: value
+        [field]: value,
       };
     }
-    setCurrentTable(prev => ({
+    setCurrentTable((prev) => ({
       ...prev,
-      rows: newRows
+      rows: newRows,
     }));
   };
 
   const handleJobSelect = (jobId: string) => {
     setSelectedJobId(jobId);
-    const job = jobs?.find(j => j.id === jobId) || null;
+    const job = jobs?.find((j) => j.id === jobId) || null;
     setSelectedJob(job);
   };
 
   const generateTable = () => {
     if (!tableName) {
       toast({
-        title: "Missing table name",
-        description: "Please enter a name for the table",
-        variant: "destructive"
+        title: 'Missing table name',
+        description: 'Please enter a name for the table',
+        variant: 'destructive',
       });
       return;
     }
 
-    const calculatedRows = currentTable.rows.map(row => {
-      const component = componentDatabase.find(c => c.id.toString() === row.componentId);
-      const totalWeight = parseFloat(row.quantity) && parseFloat(row.weight) ? 
-        parseFloat(row.quantity) * parseFloat(row.weight) : 0;
+    const calculatedRows = currentTable.rows.map((row) => {
+      const component = componentDatabase.find((c) => c.id.toString() === row.componentId);
+      const totalWeight =
+        parseFloat(row.quantity) && parseFloat(row.weight)
+          ? parseFloat(row.quantity) * parseFloat(row.weight)
+          : 0;
       return {
         ...row,
         componentName: component?.name || '',
-        totalWeight
+        totalWeight,
       };
     });
 
@@ -132,43 +134,52 @@ const PesosTool = () => {
       name: tableName,
       rows: calculatedRows,
       totalWeight,
-      id: Date.now()
+      id: Date.now(),
     };
 
-    setTables(prev => [...prev, newTable]);
+    setTables((prev) => [...prev, newTable]);
     resetCurrentTable();
   };
 
   const resetCurrentTable = () => {
     setCurrentTable({
       name: '',
-      rows: [{ quantity: '', componentId: '', weight: '' }]
+      rows: [{ quantity: '', componentId: '', weight: '' }],
     });
     setTableName('');
-  };
-
-  const removeTable = (tableId: number) => {
-    setTables(prev => prev.filter(table => table.id !== tableId));
   };
 
   const handleExportPDF = async () => {
     if (!selectedJobId || !selectedJob) {
       toast({
-        title: "No job selected",
-        description: "Please select a job before exporting",
-        variant: "destructive"
+        title: 'No job selected',
+        description: 'Please select a job before exporting',
+        variant: 'destructive',
       });
       return;
     }
 
     try {
       const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
-      const pdfBlob = await exportToPDF(tableName, tables, 'weight', { totalSystemWeight });
+      const jobTitle = selectedJob.title.trim();
 
-      // Build the filename using the job name
-      const jobName = selectedJob.tour_date?.tour?.name || 'Unnamed Job';
-      const fileName = `Pesos Sonido ${jobName}.pdf`;
+      const pdfBlob = await exportToPDF(jobTitle, tables, 'weight', {
+        totalSystemWeight,
+        tableStyles: {
+          fontSize: '12px',
+          headerBackground: '#f3f4f6',
+          headerTextColor: '#111827',
+          rowBackground: '#ffffff',
+          rowAltBackground: '#f9fafb',
+          borderColor: '#e5e7eb',
+          padding: '12px',
+          headerFontWeight: 'bold',
+          totalRowBackground: '#f3f4f6',
+          totalRowFontWeight: 'bold'
+        }
+      });
 
+      const fileName = `Pesos Sonido ${jobTitle}.pdf`;
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
 
@@ -178,52 +189,16 @@ const PesosTool = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: tasks, error: taskError } = await supabase
-        .from('sound_job_tasks')
-        .select('id')
-        .eq('job_id', selectedJobId)
-        .eq('task_type', 'Pesos')
-        .single();
-
-      if (taskError) throw taskError;
-
-      const { error: docError } = await supabase
-        .from('task_documents')
-        .insert({
-          file_name: fileName,
-          file_path: filePath,
-          sound_task_id: tasks.id,
-          uploaded_by: (await supabase.auth.getUser()).data.user?.id
-        });
-
-      if (docError) throw docError;
-
       toast({
-        title: "Success",
-        description: "PDF has been generated and uploaded successfully.",
+        title: 'Success',
+        description: 'PDF has been generated and uploaded successfully.',
       });
-
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from('task_documents')
-        .download(filePath);
-
-      if (downloadError) throw downloadError;
-
-      const url = window.URL.createObjectURL(fileData);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
     } catch (error: any) {
-      console.error('Error handling PDF:', error);
+      console.error('Error generating PDF:', error);
       toast({
-        title: "Error",
+        title: 'Error',
         description: error.message,
-        variant: "destructive"
+        variant: 'destructive',
       });
     }
   };
@@ -233,8 +208,8 @@ const PesosTool = () => {
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="icon"
               onClick={() => navigate('/sound')}
               title="Back to Sound"
@@ -253,151 +228,37 @@ const PesosTool = () => {
           </Button>
         </div>
       </CardHeader>
-      
+
       <div className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="jobSelect">Select Job</Label>
-          <Select
-            value={selectedJobId}
-            onValueChange={handleJobSelect}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a job" />
-            </SelectTrigger>
-            <SelectContent>
-              {jobs?.map((job: JobSelection) => (
-                <SelectItem key={job.id} value={job.id}>
-                  {job.tour_date?.tour?.name ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="tableName">Table Name</Label>
-          <Input
-            id="tableName"
-            value={tableName}
-            onChange={e => setTableName(e.target.value)}
-            placeholder="Enter table name"
-            className="w-full"
-          />
-        </div>
-
-        <div className="border rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-muted">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium">Quantity</th>
-                <th className="px-4 py-3 text-left font-medium">Component</th>
-                <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentTable.rows.map((row, index) => (
-                <tr key={index} className="border-t">
-                  <td className="p-4">
-                    <Input
-                      type="number"
-                      value={row.quantity}
-                      onChange={e => updateInput(index, 'quantity', e.target.value)}
-                      className="w-full"
-                    />
-                  </td>
-                  <td className="p-4">
-                    <Select
-                      value={row.componentId}
-                      onValueChange={value => updateInput(index, 'componentId', value)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select component" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {componentDatabase.map(component => (
-                          <SelectItem key={component.id} value={component.id.toString()}>
-                            {component.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="p-4">
-                    <Input
-                      type="number"
-                      value={row.weight}
-                      readOnly
-                      className="w-full bg-muted"
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex gap-2">
-          <Button onClick={addRow}>Add Row</Button>
-          <Button onClick={generateTable} variant="secondary">Generate Table</Button>
-          <Button onClick={resetCurrentTable} variant="destructive">Reset</Button>
-          {tables.length > 0 && (
-            <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
-              <FileText className="w-4 h-4" />
-              Export & Upload PDF
-            </Button>
-          )}
-        </div>
-
-        {tables.map(table => (
-          <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
-            <div className="bg-muted px-4 py-3 flex justify-between items-center">
-              <h3 className="font-semibold">{table.name}</h3>
-              <Button 
-                variant="destructive" 
-                size="sm"
-                onClick={() => table.id && removeTable(table.id)}
-              >
-                Remove Table
-              </Button>
-            </div>
-            <table className="w-full">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
-                  <th className="px-4 py-3 text-left font-medium">Component</th>
-                  <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
-                  <th className="px-4 py-3 text-left font-medium">Total Weight</th>
+        {tables.map((table) => (
+          <div key={table.id} className="border rounded-lg p-4 mt-4">
+            <h3 className="font-semibold text-lg">{table.name}</h3>
+            <table className="w-full mt-2 border">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="px-4 py-2 text-left">Quantity</th>
+                  <th className="px-4 py-2 text-left">Component</th>
+                  <th className="px-4 py-2 text-left">Weight (per unit)</th>
+                  <th className="px-4 py-2 text-left">Total Weight</th>
                 </tr>
               </thead>
               <tbody>
                 {table.rows.map((row, index) => (
-                  <tr key={index} className="border-t">
-                    <td className="px-4 py-3">{row.quantity}</td>
-                    <td className="px-4 py-3">{row.componentName}</td>
-                    <td className="px-4 py-3">{row.weight}</td>
-                    <td className="px-4 py-3">{row.totalWeight?.toFixed(2)}</td>
+                  <tr key={index} className="border-b">
+                    <td className="px-4 py-2">{row.quantity}</td>
+                    <td className="px-4 py-2">{row.componentName}</td>
+                    <td className="px-4 py-2">{row.weight}</td>
+                    <td className="px-4 py-2">{row.totalWeight?.toFixed(2)}</td>
                   </tr>
                 ))}
-                <tr className="border-t bg-muted/50 font-medium">
-                  <td colSpan={3} className="px-4 py-3 text-right">Total Weight:</td>
-                  <td className="px-4 py-3">{table.totalWeight?.toFixed(2)}</td>
+                <tr className="bg-gray-100 font-semibold">
+                  <td colSpan={3} className="text-right px-4 py-2">Total:</td>
+                  <td className="px-4 py-2">{table.totalWeight?.toFixed(2)}</td>
                 </tr>
               </tbody>
             </table>
           </div>
         ))}
-
-        {tables.length > 0 && (
-          <div className="mt-6 bg-muted p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Total System Weight</h3>
-            <div>
-              <span className="font-medium">Total:</span>
-              <span className="ml-2">
-                {tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0).toFixed(2)}
-              </span>
-            </div>
-          </div>
-        )}
       </div>
     </Card>
   );
