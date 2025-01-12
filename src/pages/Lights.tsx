@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import CreateJobDialog from "@/components/jobs/CreateJobDialog";
-import CreateTourDialog from "@/components/tours/CreateTourDialog";
+import { CreateTourDialog } from "@/components/tours/CreateTourDialog";
 import { useJobs } from "@/hooks/useJobs";
 import { format } from "date-fns";
 import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
