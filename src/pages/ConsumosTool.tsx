@@ -4,6 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FileText } from 'lucide-react';
+import { exportToPDF } from '@/utils/pdfExport';
+import { useJobSelection } from '@/hooks/useJobSelection';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 // Component database with predefined values
 const componentDatabase = [
@@ -21,15 +26,47 @@ const componentDatabase = [
   // Add more components as needed
 ];
 
-// Constants for electrical calculations
-const VOLTAGE_3PHASE = 400; // 400V for 3-phase
-const POWER_FACTOR = 0.85; // Standard power factor
+const VOLTAGE_3PHASE = 400;
+const POWER_FACTOR = 0.85;
 const SQRT3 = Math.sqrt(3);
 
+interface TableRow {
+  quantity: string;
+  componentId: string;
+  watts: string;
+  componentName?: string;
+  totalWatts?: number;
+}
+
+interface Table {
+  name: string;
+  rows: TableRow[];
+  totalWatts?: number;
+  currentPerPhase?: number;
+  id?: number;
+}
+
+interface TourDate {
+  id: string;
+  tour: {
+    id: string;
+    name: string;
+  };
+}
+
+interface Job {
+  id: string;
+  title: string;
+  tour_date?: TourDate | null;
+}
+
 const ConsumosTool = () => {
+  const { toast } = useToast();
+  const { data: jobs } = useJobSelection();
+  const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [projectName, setProjectName] = useState('');
-  const [tables, setTables] = useState([]);
-  const [currentTable, setCurrentTable] = useState({
+  const [tables, setTables] = useState<Table[]>([]);
+  const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
     rows: [{ quantity: '', componentId: '', watts: '' }]
   });
@@ -41,15 +78,20 @@ const ConsumosTool = () => {
     }));
   };
 
-  const updateInput = (index, field, value) => {
+  const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
-    newRows[index][field] = value;
-    
     if (field === 'componentId') {
       const component = componentDatabase.find(c => c.id.toString() === value);
-      if (component) {
-        newRows[index].watts = component.watts;
-      }
+      newRows[index] = {
+        ...newRows[index],
+        [field]: value,
+        watts: component ? component.watts.toString() : ''
+      };
+    } else {
+      newRows[index] = {
+        ...newRows[index],
+        [field]: value
+      };
     }
     
     setCurrentTable(prev => ({
@@ -58,8 +100,7 @@ const ConsumosTool = () => {
     }));
   };
 
-  const calculatePhaseCurrents = (totalWatts) => {
-    // I = P / (√3 × V × PF)
+  const calculatePhaseCurrents = (totalWatts: number) => {
     const currentPerPhase = totalWatts / (SQRT3 * VOLTAGE_3PHASE * POWER_FACTOR);
     return currentPerPhase;
   };
@@ -72,7 +113,7 @@ const ConsumosTool = () => {
 
     const calculatedRows = currentTable.rows.map(row => {
       const component = componentDatabase.find(c => c.id.toString() === row.componentId);
-      const totalWatts = row.quantity && row.watts ? 
+      const totalWatts = parseFloat(row.quantity) && parseFloat(row.watts) ? 
         parseFloat(row.quantity) * parseFloat(row.watts) : 0;
       return {
         ...row,
@@ -81,7 +122,7 @@ const ConsumosTool = () => {
       };
     });
 
-    const totalWatts = calculatedRows.reduce((sum, row) => sum + row.totalWatts, 0);
+    const totalWatts = calculatedRows.reduce((sum, row) => sum + (row.totalWatts || 0), 0);
     const currentPerPhase = calculatePhaseCurrents(totalWatts);
 
     const newTable = {
@@ -93,68 +134,153 @@ const ConsumosTool = () => {
     };
 
     setTables(prev => [...prev, newTable]);
+    resetCurrentTable();
+  };
+
+  const resetCurrentTable = () => {
     setCurrentTable({
       name: '',
       rows: [{ quantity: '', componentId: '', watts: '' }]
     });
   };
 
-  const resetFields = () => {
-    setCurrentTable({
-      name: '',
-      rows: [{ quantity: '', componentId: '', watts: '' }]
-    });
-  };
-
-  const removeTable = (tableId) => {
+  const removeTable = (tableId: number) => {
     setTables(prev => prev.filter(table => table.id !== tableId));
   };
 
+  const handleExportPDF = async () => {
+    if (!selectedJobId) {
+      toast({
+        title: "No job selected",
+        description: "Please select a job before exporting",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const totalSystem = calculateTotalSystem();
+      const pdfBlob = await exportToPDF(projectName, tables, 'power', totalSystem);
+
+      // Create file object
+      const file = new File([pdfBlob], `${projectName}-power-report.pdf`, { type: 'application/pdf' });
+
+      // Upload to Supabase Storage
+      const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from('task_documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get the task ID
+      const { data: tasks, error: taskError } = await supabase
+        .from('sound_job_tasks')
+        .select('id')
+        .eq('job_id', selectedJobId)
+        .eq('task_type', 'Consumos')
+        .single();
+
+      if (taskError) throw taskError;
+
+      // Create task document record
+      const { error: docError } = await supabase
+        .from('task_documents')
+        .insert({
+          file_name: `${projectName}-power-report.pdf`,
+          file_path: filePath,
+          sound_task_id: tasks.id
+        });
+
+      if (docError) throw docError;
+
+      toast({
+        title: "Success",
+        description: "PDF has been generated and uploaded successfully.",
+      });
+
+      // Trigger download
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('task_documents')
+        .download(filePath);
+
+      if (downloadError) throw downloadError;
+
+      const url = window.URL.createObjectURL(fileData);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${projectName}-power-report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+    } catch (error: any) {
+      console.error('Error handling PDF:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   const calculateTotalSystem = () => {
-    const totalSystemWatts = tables.reduce((sum, table) => sum + table.totalWatts, 0);
+    const totalSystemWatts = tables.reduce((sum, table) => sum + (table.totalWatts || 0), 0);
     const totalSystemAmps = calculatePhaseCurrents(totalSystemWatts);
     return { totalSystemWatts, totalSystemAmps };
   };
 
   return (
-    <Card className="w-full max-w-4xl">
-      <CardHeader>
-        <CardTitle>Power Consumption Calculator</CardTitle>
+    <Card className="w-full max-w-4xl mx-auto my-6">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl font-bold">Power Consumption Calculator</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="jobSelect">Select Job</Label>
+              <Select
+                value={selectedJobId}
+                onValueChange={setSelectedJobId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a job" />
+                </SelectTrigger>
+                <SelectContent>
+                  {jobs?.map((job: Job) => (
+                    <SelectItem key={job.id} value={job.id}>
+                      {job.tour_date?.tour?.name ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="projectName">Project Name</Label>
               <Input
                 id="projectName"
                 value={projectName}
                 onChange={e => setProjectName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tableName">Table Name</Label>
-              <Input
-                id="tableName"
-                value={currentTable.name}
-                onChange={e => setCurrentTable(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full"
               />
             </div>
           </div>
 
           <div className="border rounded-lg overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-100">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="p-2 text-left">Quantity</th>
-                  <th className="p-2 text-left">Component</th>
-                  <th className="p-2 text-left">Watts (per unit)</th>
+                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                  <th className="px-4 py-3 text-left font-medium">Component</th>
+                  <th className="px-4 py-3 text-left font-medium">Watts (per unit)</th>
                 </tr>
               </thead>
               <tbody>
                 {currentTable.rows.map((row, index) => (
                   <tr key={index} className="border-t">
-                    <td className="p-2">
+                    <td className="p-4">
                       <Input
                         type="number"
                         value={row.quantity}
@@ -162,12 +288,12 @@ const ConsumosTool = () => {
                         className="w-full"
                       />
                     </td>
-                    <td className="p-2">
+                    <td className="p-4">
                       <Select
                         value={row.componentId}
-                        onValueChange={(value) => updateInput(index, 'componentId', value)}
+                        onValueChange={value => updateInput(index, 'componentId', value)}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select component" />
                         </SelectTrigger>
                         <SelectContent>
@@ -179,12 +305,12 @@ const ConsumosTool = () => {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="p-2">
+                    <td className="p-4">
                       <Input
                         type="number"
                         value={row.watts}
                         readOnly
-                        className="w-full bg-gray-50"
+                        className="w-full bg-muted"
                       />
                     </td>
                   </tr>
@@ -193,68 +319,76 @@ const ConsumosTool = () => {
             </table>
           </div>
 
-          <div className="space-x-2">
+          <div className="flex gap-2">
             <Button onClick={addRow}>Add Row</Button>
             <Button onClick={generateTable} variant="secondary">Generate Table</Button>
-            <Button onClick={resetFields} variant="destructive">Reset</Button>
+            <Button onClick={resetCurrentTable} variant="destructive">Reset</Button>
+            {tables.length > 0 && (
+              <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
+                <FileText className="w-4 h-4" />
+                Export & Upload PDF
+              </Button>
+            )}
           </div>
 
-          {/* Generated Tables */}
           {tables.map(table => (
             <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
-              <div className="bg-gray-100 p-2 flex justify-between items-center">
+              <div className="bg-muted px-4 py-3 flex justify-between items-center">
                 <h3 className="font-semibold">{table.name}</h3>
                 <Button 
                   variant="destructive" 
                   size="sm"
-                  onClick={() => removeTable(table.id)}
+                  onClick={() => table.id && removeTable(table.id)}
                 >
                   Remove Table
                 </Button>
               </div>
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="p-2 text-left">Quantity</th>
-                    <th className="p-2 text-left">Component</th>
-                    <th className="p-2 text-left">Watts (per unit)</th>
-                    <th className="p-2 text-left">Total Watts</th>
+                    <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                    <th className="px-4 py-3 text-left font-medium">Component</th>
+                    <th className="px-4 py-3 text-left font-medium">Watts (per unit)</th>
+                    <th className="px-4 py-3 text-left font-medium">Total Watts</th>
                   </tr>
                 </thead>
                 <tbody>
                   {table.rows.map((row, index) => (
                     <tr key={index} className="border-t">
-                      <td className="p-2">{row.quantity}</td>
-                      <td className="p-2">{row.componentName}</td>
-                      <td className="p-2">{row.watts}</td>
-                      <td className="p-2">{row.totalWatts.toFixed(2)}</td>
+                      <td className="px-4 py-3">{row.quantity}</td>
+                      <td className="px-4 py-3">{row.componentName}</td>
+                      <td className="px-4 py-3">{row.watts}</td>
+                      <td className="px-4 py-3">{row.totalWatts?.toFixed(2)}</td>
                     </tr>
                   ))}
-                  <tr className="border-t bg-gray-50 font-semibold">
-                    <td colSpan="3" className="p-2 text-right">Total Power:</td>
-                    <td className="p-2">{table.totalWatts.toFixed(2)} W</td>
+                  <tr className="border-t bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-right">Total Power:</td>
+                    <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
                   </tr>
-                  <tr className="border-t bg-gray-50 font-semibold">
-                    <td colSpan="3" className="p-2 text-right">Current per Phase:</td>
-                    <td className="p-2">{table.currentPerPhase.toFixed(2)} A</td>
+                  <tr className="bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-right">Current per Phase:</td>
+                    <td className="px-4 py-3">{table.currentPerPhase?.toFixed(2)} A</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           ))}
 
-          {/* Total System Summary */}
           {tables.length > 0 && (
-            <div className="mt-6 bg-gray-100 p-4 rounded-lg">
+            <div className="mt-6 bg-muted p-4 rounded-lg">
               <h3 className="font-semibold mb-2">Total System Summary</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="font-medium">Total System Power:</span>
-                  <span className="ml-2">{calculateTotalSystem().totalSystemWatts.toFixed(2)} W</span>
+                  <span className="ml-2">
+                    {calculateTotalSystem().totalSystemWatts?.toFixed(2)} W
+                  </span>
                 </div>
                 <div>
                   <span className="font-medium">Total Current per Phase:</span>
-                  <span className="ml-2">{calculateTotalSystem().totalSystemAmps.toFixed(2)} A</span>
+                  <span className="ml-2">
+                    {calculateTotalSystem().totalSystemAmps?.toFixed(2)} A
+                  </span>
                 </div>
               </div>
             </div>
