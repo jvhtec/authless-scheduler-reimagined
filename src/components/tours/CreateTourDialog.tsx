@@ -1,7 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Department } from "@/types/department";
-import { useLocations } from "@/hooks/useLocations";
 import { TourFormFields } from "./TourFormFields";
 import { useTourCreation } from "./useTourCreation";
 
@@ -12,7 +11,6 @@ interface CreateTourDialogProps {
 }
 
 const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourDialogProps) => {
-  const { data: locations } = useLocations();
   const availableDepartments: Department[] = ["sound", "lights", "video"];
 
   const {
@@ -20,13 +18,13 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
     setTitle,
     description,
     setDescription,
-    dates,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
     color,
     setColor,
     departments,
-    handleAddDate,
-    handleRemoveDate,
-    handleDateChange,
     handleDepartmentChange,
     handleSubmit,
   } = useTourCreation(currentDepartment, () => onOpenChange(false));
@@ -36,7 +34,7 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Tour</DialogTitle>
-          <DialogDescription>Add a new tour with multiple dates and locations.</DialogDescription>
+          <DialogDescription>Add a new tour with a start and end date.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <TourFormFields
@@ -44,17 +42,16 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
             setTitle={setTitle}
             description={description}
             setDescription={setDescription}
-            dates={dates}
-            onDateChange={handleDateChange}
-            onAddDate={handleAddDate}
-            onRemoveDate={handleRemoveDate}
+            startDate={startDate}
+            setStartDate={setStartDate}
+            endDate={endDate}
+            setEndDate={setEndDate}
             color={color}
             setColor={setColor}
             departments={departments}
             availableDepartments={availableDepartments}
             currentDepartment={currentDepartment}
             onDepartmentChange={handleDepartmentChange}
-            locations={locations}
           />
 
           <Button type="submit" className="w-full">
