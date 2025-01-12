@@ -13,9 +13,9 @@ const componentDatabase = [
 ];
 
 interface TableRow {
-  quantity: number;
-  componentId: number;
-  weight: number;
+  quantity: string;
+  componentId: string;
+  weight: string;
   componentName?: string;
   totalWeight?: number;
 }
@@ -32,30 +32,29 @@ const PesosTool = () => {
   const [tables, setTables] = useState<Table[]>([]);
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
-    rows: [{ quantity: 0, componentId: 0, weight: 0 }]
+    rows: [{ quantity: '', componentId: '', weight: '' }]
   });
 
   const addRow = () => {
     setCurrentTable(prev => ({
       ...prev,
-      rows: [...prev.rows, { quantity: 0, componentId: 0, weight: 0 }]
+      rows: [...prev.rows, { quantity: '', componentId: '', weight: '' }]
     }));
   };
 
   const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
     if (field === 'componentId') {
-      const numValue = parseInt(value, 10);
-      const component = componentDatabase.find(c => c.id === numValue);
+      const component = componentDatabase.find(c => c.id.toString() === value);
       newRows[index] = {
         ...newRows[index],
-        [field]: numValue,
-        weight: component?.weight || 0
+        [field]: value,
+        weight: component ? component.weight.toString() : ''
       };
-    } else if (field === 'quantity') {
+    } else {
       newRows[index] = {
         ...newRows[index],
-        [field]: parseFloat(value) || 0
+        [field]: value
       };
     }
     
@@ -81,7 +80,7 @@ const PesosTool = () => {
 
     const calculatedRows = currentTable.rows.map(row => {
       const component = componentDatabase.find(c => c.id.toString() === row.componentId);
-      const totalWeight = row.quantity && row.weight ? 
+      const totalWeight = parseFloat(row.quantity) && parseFloat(row.weight) ? 
         parseFloat(row.quantity) * parseFloat(row.weight) : 0;
       return {
         ...row,
@@ -116,8 +115,6 @@ const PesosTool = () => {
   };
 
   const preparePDFData = () => {
-    // This function would prepare the data for PDF export
-    // You would implement the actual PDF generation here
     alert('PDF export would go here - data is ready for export');
   };
 
@@ -147,7 +144,6 @@ const PesosTool = () => {
             </div>
           </div>
 
-          {/* Input Table */}
           <div className="border rounded-lg overflow-hidden">
             <table className="w-full">
               <thead className="bg-gray-100">
@@ -214,7 +210,7 @@ const PesosTool = () => {
                 <Button 
                   variant="destructive" 
                   size="sm"
-                  onClick={() => removeTable(table.id)}
+                  onClick={() => table.id && removeTable(table.id)}
                 >
                   Remove Table
                 </Button>
@@ -238,7 +234,7 @@ const PesosTool = () => {
                     </tr>
                   ))}
                   <tr className="border-t bg-gray-50 font-semibold">
-                    <td colSpan="3" className="p-2 text-right">Total Weight:</td>
+                    <td colSpan={3} className="p-2 text-right">Total Weight:</td>
                     <td className="p-2">{table.totalWeight?.toFixed(2)}</td>
                   </tr>
                 </tbody>
