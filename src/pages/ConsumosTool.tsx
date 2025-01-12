@@ -38,9 +38,23 @@ interface Table {
   id?: number;
 }
 
+interface TourDate {
+  id: string;
+  tour: {
+    id: string;
+    name: string;
+  };
+}
+
+interface Job {
+  id: string;
+  title: string;
+  tour_date?: TourDate | null;
+}
+
 const ConsumosTool = () => {
   const { toast } = useToast();
-  const { data: jobs, isLoading: jobsLoading } = useJobSelection();
+  const { data: jobs } = useJobSelection();
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [projectName, setProjectName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
@@ -227,7 +241,7 @@ const ConsumosTool = () => {
                   <SelectValue placeholder="Select a job" />
                 </SelectTrigger>
                 <SelectContent>
-                  {jobs?.map((job) => (
+                  {jobs?.map((job: Job) => (
                     <SelectItem key={job.id} value={job.id}>
                       {job.tour_date?.tour?.name ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
                     </SelectItem>
