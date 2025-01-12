@@ -58,9 +58,9 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
             currentDepartment={currentDepartment}
             onDepartmentChange={handleDepartmentChange}
           />
-          
+
           <Button type="button" onClick={handleCreateFlexFolder} className="w-full">
-            Create Flex Folder
+            Create Flex Folders
           </Button>
 
           <Button type="submit" className="w-full">
