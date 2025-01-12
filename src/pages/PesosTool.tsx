@@ -93,7 +93,6 @@ const PesosTool = () => {
         [field]: value
       };
     }
-    
     setCurrentTable(prev => ({
       ...prev,
       rows: newRows
@@ -103,7 +102,7 @@ const PesosTool = () => {
   const handleJobSelect = (jobId: string) => {
     setSelectedJobId(jobId);
     const job = jobs?.find(j => j.id === jobId) || null;
-    setSelectedJob(job);
+    setSelectedJob(job); // Ensure selectedJob is updated
   };
 
   const generateTable = () => {
@@ -165,8 +164,9 @@ const PesosTool = () => {
     try {
       const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
       const pdfBlob = await exportToPDF(tableName, tables, 'weight', { totalSystemWeight });
-      const timestamp = new Date().getTime();
-      const file = new File([pdfBlob], `Pesos-Sonido-${job.tour_date.tour.name}.pdf`, { type: 'application/pdf' });
+
+      const jobName = selectedJob?.tour_date?.tour?.name || 'Unnamed Job';
+      const file = new File([pdfBlob], `Pesos-Sonido-${jobName}.pdf`, { type: 'application/pdf' });
 
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
       const { error: uploadError } = await supabase.storage
@@ -187,7 +187,7 @@ const PesosTool = () => {
       const { error: docError } = await supabase
         .from('task_documents')
         .insert({
-          file_name: `Pesos-Sonido-${job.tour_date.tour.name}.pdf,
+          file_name: `Pesos-Sonido-${jobName}.pdf`,
           file_path: filePath,
           sound_task_id: tasks.id,
           uploaded_by: (await supabase.auth.getUser()).data.user?.id
@@ -209,7 +209,7 @@ const PesosTool = () => {
       const url = window.URL.createObjectURL(fileData);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Pesos-Sonido-${selectedJobId}.pdf`;
+      a.download = `Pesos-Sonido-${jobName}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
