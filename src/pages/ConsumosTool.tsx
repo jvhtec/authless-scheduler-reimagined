@@ -11,11 +11,17 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 
 const componentDatabase = [
-  { id: 1, name: 'Motor 5HP', watts: 3730 },
-  { id: 2, name: 'Air Conditioner 2-ton', watts: 2000 },
-  { id: 3, name: 'LED Light Panel', watts: 45 },
-  { id: 4, name: 'Server Rack', watts: 4200 },
-  { id: 5, name: 'Desktop Computer', watts: 350 },
+  { id: 1, name: 'LA12X', watts: 2900 },
+  { id: 2, name: 'LA8', watts: 2500 },
+  { id: 3, name: 'LA4X', watts: 2000 },
+  { id: 4, name: 'PLM20000D', watts: 2900 },
+  { id: 5, name: 'Control FoH (L)', watts: 3500 },
+  { id: 1, name: 'Control FoH (S)', watts: 1500 },
+  { id: 6, name: 'Control Mon (L)', watts: 3500 },
+  { id: 7, name: 'Control Mon (S)', watts: 1500 },
+  { id: 8, name: 'RF Rack', watts: 2500 },
+  { id: 9, name: 'Backline', watts: 2500 },
+  { id: 10, name: 'Varios', watts: 1500 },
 ];
 
 const VOLTAGE_3PHASE = 400;
