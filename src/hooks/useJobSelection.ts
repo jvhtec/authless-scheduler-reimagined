@@ -42,17 +42,23 @@ export const useJobSelection = () => {
         throw error;
       }
 
+      console.log("Raw jobs data:", jobs);
+
       // Transform the data to match our expected types
       const transformedJobs = jobs?.map(job => ({
         id: job.id,
         title: job.title,
         tour_date_id: job.tour_date_id,
         tour_date: job.tour_date ? {
-          id: job.tour_date.id,
-          tour: job.tour_date.tour[0] // Access first tour since it's returned as an array
+          id: job.tour_date[0]?.id, // Access first element of tour_date array
+          tour: {
+            id: job.tour_date[0]?.tour[0]?.id, // Access first tour from the first tour_date
+            name: job.tour_date[0]?.tour[0]?.name
+          }
         } : null
       })) as JobSelection[];
 
+      console.log("Transformed jobs:", transformedJobs);
       return transformedJobs;
     },
   });
