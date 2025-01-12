@@ -102,7 +102,7 @@ const PesosTool = () => {
   const handleJobSelect = (jobId: string) => {
     setSelectedJobId(jobId);
     const job = jobs?.find(j => j.id === jobId) || null;
-    setSelectedJob(job); // Ensure selectedJob is updated
+    setSelectedJob(job);
   };
 
   const generateTable = () => {
@@ -164,16 +164,14 @@ const PesosTool = () => {
     try {
       const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
       const pdfBlob = await exportToPDF(tableName, tables, 'weight', { totalSystemWeight });
-      const timestamp = new Date().getTime();
-      
-      // Create a safe filename
-      const jobName = selectedJob.tour_date?.tour?.name || 'Unnamed_Job';
-      const safeJobName = jobName.replace(/[^a-zA-Z0-9-_]/g, '_');
-      const fileName = `Pesos_Sonido_${safeJobName}_${timestamp}.pdf`;
-      
+
+      // Build the filename using the job name
+      const jobName = selectedJob.tour_date?.tour?.name || 'Unnamed Job';
+      const fileName = `Pesos Sonido ${jobName}.pdf`;
+
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
-      
+
       const { error: uploadError } = await supabase.storage
         .from('task_documents')
         .upload(filePath, file);
