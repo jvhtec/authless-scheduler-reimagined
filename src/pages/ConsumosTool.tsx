@@ -6,24 +6,16 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
-import { useJobSelection } from '@/hooks/useJobSelection';
+import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 
-// Component database with predefined values
 const componentDatabase = [
-  { id: 1, name: 'LA12X', watts: 2900 },
-  { id: 2, name: 'LA8', watts: 2500 },
-  { id: 3, name: 'LA4X', watts: 2000 },
-  { id: 4, name: 'PLM20000D', watts: 2900 },
-  { id: 5, name: 'Control FoH (L)', watts: 3500 },
-  { id: 1, name: 'Control FoH (S)', watts: 1500 },
-  { id: 6, name: 'Control Mon (L)', watts: 3500 },
-  { id: 7, name: 'Control Mon (S)', watts: 1500 },
-  { id: 8, name: 'RF Rack', watts: 2500 },
-  { id: 9, name: 'Backline', watts: 2500 },
-  { id: 10, name: 'Varios', watts: 1500 },
-  // Add more components as needed
+  { id: 1, name: 'Motor 5HP', watts: 3730 },
+  { id: 2, name: 'Air Conditioner 2-ton', watts: 2000 },
+  { id: 3, name: 'LED Light Panel', watts: 45 },
+  { id: 4, name: 'Server Rack', watts: 4200 },
+  { id: 5, name: 'Desktop Computer', watts: 350 },
 ];
 
 const VOLTAGE_3PHASE = 400;
@@ -46,25 +38,12 @@ interface Table {
   id?: number;
 }
 
-interface TourDate {
-  id: string;
-  tour: {
-    id: string;
-    name: string;
-  };
-}
-
-interface Job {
-  id: string;
-  title: string;
-  tour_date?: TourDate | null;
-}
-
 const ConsumosTool = () => {
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
   const [selectedJobId, setSelectedJobId] = useState<string>('');
-  const [projectName, setProjectName] = useState('');
+  const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
+  const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
@@ -105,9 +84,19 @@ const ConsumosTool = () => {
     return currentPerPhase;
   };
 
+  const handleJobSelect = (jobId: string) => {
+    setSelectedJobId(jobId);
+    const job = jobs?.find(j => j.id === jobId) || null;
+    setSelectedJob(job);
+  };
+
   const generateTable = () => {
-    if (!currentTable.name) {
-      alert('Please enter a table name.');
+    if (!tableName) {
+      toast({
+        title: "Missing table name",
+        description: "Please enter a name for the table",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -126,7 +115,7 @@ const ConsumosTool = () => {
     const currentPerPhase = calculatePhaseCurrents(totalWatts);
 
     const newTable = {
-      ...currentTable,
+      name: tableName,
       rows: calculatedRows,
       totalWatts,
       currentPerPhase,
@@ -142,6 +131,7 @@ const ConsumosTool = () => {
       name: '',
       rows: [{ quantity: '', componentId: '', watts: '' }]
     });
+    setTableName('');
   };
 
   const removeTable = (tableId: number) => {
@@ -160,12 +150,10 @@ const ConsumosTool = () => {
 
     try {
       const totalSystem = calculateTotalSystem();
-      const pdfBlob = await exportToPDF(projectName, tables, 'power', totalSystem);
+      const pdfBlob = await exportToPDF(tableName, tables, 'power', totalSystem);
 
-      // Create file object
-      const file = new File([pdfBlob], `${projectName}-power-report.pdf`, { type: 'application/pdf' });
+      const file = new File([pdfBlob], `${tableName}-power-report.pdf`, { type: 'application/pdf' });
 
-      // Upload to Supabase Storage
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
       const { error: uploadError } = await supabase.storage
         .from('task_documents')
@@ -173,7 +161,6 @@ const ConsumosTool = () => {
 
       if (uploadError) throw uploadError;
 
-      // Get the task ID
       const { data: tasks, error: taskError } = await supabase
         .from('sound_job_tasks')
         .select('id')
@@ -183,11 +170,10 @@ const ConsumosTool = () => {
 
       if (taskError) throw taskError;
 
-      // Create task document record
       const { error: docError } = await supabase
         .from('task_documents')
         .insert({
-          file_name: `${projectName}-power-report.pdf`,
+          file_name: `${tableName}-power-report.pdf`,
           file_path: filePath,
           sound_task_id: tasks.id
         });
@@ -199,7 +185,6 @@ const ConsumosTool = () => {
         description: "PDF has been generated and uploaded successfully.",
       });
 
-      // Trigger download
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('task_documents')
         .download(filePath);
@@ -209,7 +194,7 @@ const ConsumosTool = () => {
       const url = window.URL.createObjectURL(fileData);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${projectName}-power-report.pdf`;
+      a.download = `${tableName}-power-report.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -238,85 +223,34 @@ const ConsumosTool = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="jobSelect">Select Job</Label>
-              <Select
-                value={selectedJobId}
-                onValueChange={setSelectedJobId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a job" />
-                </SelectTrigger>
-                <SelectContent>
-                  {jobs?.map((job: Job) => (
-                    <SelectItem key={job.id} value={job.id}>
-                      {job.tour_date?.tour?.name ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="projectName">Project Name</Label>
-              <Input
-                id="projectName"
-                value={projectName}
-                onChange={e => setProjectName(e.target.value)}
-                className="w-full"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="jobSelect">Select Job</Label>
+            <Select
+              value={selectedJobId}
+              onValueChange={handleJobSelect}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a job" />
+              </SelectTrigger>
+              <SelectContent>
+                {jobs?.map((job: JobSelection) => (
+                  <SelectItem key={job.id} value={job.id}>
+                    {job.tour_date?.tour?.name ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
-                  <th className="px-4 py-3 text-left font-medium">Component</th>
-                  <th className="px-4 py-3 text-left font-medium">Watts (per unit)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentTable.rows.map((row, index) => (
-                  <tr key={index} className="border-t">
-                    <td className="p-4">
-                      <Input
-                        type="number"
-                        value={row.quantity}
-                        onChange={e => updateInput(index, 'quantity', e.target.value)}
-                        className="w-full"
-                      />
-                    </td>
-                    <td className="p-4">
-                      <Select
-                        value={row.componentId}
-                        onValueChange={value => updateInput(index, 'componentId', value)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select component" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {componentDatabase.map(component => (
-                            <SelectItem key={component.id} value={component.id.toString()}>
-                              {component.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="p-4">
-                      <Input
-                        type="number"
-                        value={row.watts}
-                        readOnly
-                        className="w-full bg-muted"
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-2">
+            <Label htmlFor="tableName">Table Name</Label>
+            <Input
+              id="tableName"
+              value={tableName}
+              onChange={e => setTableName(e.target.value)}
+              placeholder="Enter table name"
+              className="w-full"
+            />
           </div>
 
           <div className="flex gap-2">
