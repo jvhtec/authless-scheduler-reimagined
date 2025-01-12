@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
-import { useJobSelection } from '@/hooks/useJobSelection';
+import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 
@@ -36,20 +36,6 @@ interface Table {
   totalWatts?: number;
   currentPerPhase?: number;
   id?: number;
-}
-
-interface TourDate {
-  id: string;
-  tour: {
-    id: string;
-    name: string;
-  };
-}
-
-interface Job {
-  id: string;
-  title: string;
-  tour_date?: TourDate | null;
 }
 
 const ConsumosTool = () => {
@@ -154,10 +140,8 @@ const ConsumosTool = () => {
       const totalSystem = calculateTotalSystem();
       const pdfBlob = await exportToPDF(projectName, tables, 'power', totalSystem);
 
-      // Create file object
       const file = new File([pdfBlob], `${projectName}-power-report.pdf`, { type: 'application/pdf' });
 
-      // Upload to Supabase Storage
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
       const { error: uploadError } = await supabase.storage
         .from('task_documents')
@@ -165,7 +149,6 @@ const ConsumosTool = () => {
 
       if (uploadError) throw uploadError;
 
-      // Get the task ID
       const { data: tasks, error: taskError } = await supabase
         .from('sound_job_tasks')
         .select('id')
@@ -175,7 +158,6 @@ const ConsumosTool = () => {
 
       if (taskError) throw taskError;
 
-      // Create task document record
       const { error: docError } = await supabase
         .from('task_documents')
         .insert({
@@ -191,7 +173,6 @@ const ConsumosTool = () => {
         description: "PDF has been generated and uploaded successfully.",
       });
 
-      // Trigger download
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('task_documents')
         .download(filePath);
@@ -241,7 +222,7 @@ const ConsumosTool = () => {
                   <SelectValue placeholder="Select a job" />
                 </SelectTrigger>
                 <SelectContent>
-                  {jobs?.map((job: Job) => (
+                  {jobs?.map((job: JobSelection) => (
                     <SelectItem key={job.id} value={job.id}>
                       {job.tour_date?.tour?.name ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
                     </SelectItem>

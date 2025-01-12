@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Upload } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
-import { useJobSelection } from '@/hooks/useJobSelection';
+import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 
@@ -31,23 +31,9 @@ interface Table {
   id?: number;
 }
 
-interface TourDate {
-  id: string;
-  tour: {
-    id: string;
-    name: string;
-  };
-}
-
-interface Job {
-  id: string;
-  title: string;
-  tour_date?: TourDate | null;
-}
-
 const PesosTool = () => {
   const { toast } = useToast();
-  const { data: jobs, isLoading: jobsLoading } = useJobSelection();
+  const { data: jobs } = useJobSelection();
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [projectName, setProjectName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
@@ -227,7 +213,7 @@ const PesosTool = () => {
                   <SelectValue placeholder="Select a job" />
                 </SelectTrigger>
                 <SelectContent>
-                  {jobs?.map((job: Job) => (
+                  {jobs?.map((job: JobSelection) => (
                     <SelectItem key={job.id} value={job.id}>
                       {job.tour_date?.tour?.name ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
                     </SelectItem>

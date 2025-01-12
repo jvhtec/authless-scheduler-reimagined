@@ -1,6 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
+export interface TourDate {
+  id: string;
+  tour: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface JobSelection {
+  id: string;
+  title: string;
+  tour_date_id: string | null;
+  tour_date: TourDate | null;
+}
+
 export const useJobSelection = () => {
   return useQuery({
     queryKey: ["jobs-for-selection"],
@@ -27,7 +42,7 @@ export const useJobSelection = () => {
         throw error;
       }
 
-      return jobs;
+      return jobs as JobSelection[];
     },
   });
 };
