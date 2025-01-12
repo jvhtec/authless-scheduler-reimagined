@@ -1,4 +1,5 @@
 import { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import CreateJobDialog from "@/components/jobs/CreateJobDialog";
 import CreateTourDialog from "@/components/tours/CreateTourDialog";
 import { useJobs } from "@/hooks/useJobs";
@@ -14,6 +15,7 @@ import { LightsSchedule } from "@/components/lights/LightsSchedule";
 import { Calculator, PieChart, FileText, Sparkles } from 'lucide-react';
 
 const Sound = () => {
+  const navigate = useNavigate();
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
   const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
@@ -225,7 +227,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
       <div className="mt-12 p-6 bg-gray-50 rounded-lg shadow-md flex flex-wrap justify-around space-y-4 md:space-y-0">
         <button
           type="button"
-          onClick={() => navigator('/excel-tool')}>Open Excel Tool</span>
+          onClick={() => navigate('/excel-tool')}
           className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
         >
           <Calculator className="h-6 w-6 text-gray-700" />
