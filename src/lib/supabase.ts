@@ -11,5 +11,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     flowType: 'pkce',
     storage: localStorage,
     storageKey: 'supabase.auth.token',
+    redirectTo: window.location.origin
   }
 });
