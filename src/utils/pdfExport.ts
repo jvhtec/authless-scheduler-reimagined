@@ -23,10 +23,11 @@ export const exportToPDF = (
   tables: ExportTable[], 
   type: 'weight' | 'power',
   totalSystem?: { totalSystemWatts?: number; totalSystemAmps?: number; totalSystemWeight?: number }
-) => {
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.width;
-  
+): Promise<Blob> => {
+  return new Promise((resolve) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    
   // Add title
   doc.setFontSize(20);
   doc.text(projectName || 'Project Report', pageWidth / 2, 20, { align: 'center' });
@@ -118,7 +119,9 @@ export const exportToPDF = (
       doc.text(`Total System Weight: ${totalSystem.totalSystemWeight.toFixed(2)}`, 14, yPosition);
     }
   }
-  
-  // Save the PDF
-  doc.save(`${projectName || 'project'}-${type}-report.pdf`);
+    
+    // Instead of saving, return blob
+    const blob = doc.output('blob');
+    resolve(blob);
+  });
 };

@@ -6,6 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
+import { useJobSelection } from '@/hooks/useJobSelection';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 const componentDatabase = [
   { id: 1, name: 'Motor 5HP', watts: 3730 },
@@ -36,6 +39,9 @@ interface Table {
 }
 
 const ConsumosTool = () => {
+  const { toast } = useToast();
+  const { data: jobs, isLoading: jobsLoading } = useJobSelection();
+  const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [projectName, setProjectName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [currentTable, setCurrentTable] = useState<Table>({
@@ -112,20 +118,81 @@ const ConsumosTool = () => {
     });
   };
 
-  const handleExportPDF = () => {
-    const totalSystem = calculateTotalSystem();
-    exportToPDF(projectName, tables, 'power', totalSystem);
-  };
+  const handleExportPDF = async () => {
+    if (!selectedJobId) {
+      toast({
+        title: "No job selected",
+        description: "Please select a job before exporting",
+        variant: "destructive"
+      });
+      return;
+    }
 
-  const resetFields = () => {
-    setCurrentTable({
-      name: '',
-      rows: [{ quantity: '', componentId: '', watts: '' }]
-    });
-  };
+    try {
+      const totalSystem = calculateTotalSystem();
+      const pdfBlob = await exportToPDF(projectName, tables, 'power', totalSystem);
 
-  const removeTable = (tableId) => {
-    setTables(prev => prev.filter(table => table.id !== tableId));
+      // Create file object
+      const file = new File([pdfBlob], `${projectName}-power-report.pdf`, { type: 'application/pdf' });
+
+      // Upload to Supabase Storage
+      const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from('task_documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get the task ID
+      const { data: tasks, error: taskError } = await supabase
+        .from('sound_job_tasks')
+        .select('id')
+        .eq('job_id', selectedJobId)
+        .eq('task_type', 'Consumos')
+        .single();
+
+      if (taskError) throw taskError;
+
+      // Create task document record
+      const { error: docError } = await supabase
+        .from('task_documents')
+        .insert({
+          file_name: `${projectName}-power-report.pdf`,
+          file_path: filePath,
+          sound_task_id: tasks.id
+        });
+
+      if (docError) throw docError;
+
+      toast({
+        title: "Success",
+        description: "PDF has been generated and uploaded successfully.",
+      });
+
+      // Trigger download
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('task_documents')
+        .download(filePath);
+
+      if (downloadError) throw downloadError;
+
+      const url = window.URL.createObjectURL(fileData);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${projectName}-power-report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+    } catch (error: any) {
+      console.error('Error handling PDF:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const calculateTotalSystem = () => {
@@ -143,20 +210,29 @@ const ConsumosTool = () => {
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label htmlFor="jobSelect">Select Job</Label>
+              <Select
+                value={selectedJobId}
+                onValueChange={setSelectedJobId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a job" />
+                </SelectTrigger>
+                <SelectContent>
+                  {jobs?.map((job) => (
+                    <SelectItem key={job.id} value={job.id}>
+                      {job.tour_date ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="projectName">Project Name</Label>
               <Input
                 id="projectName"
                 value={projectName}
                 onChange={e => setProjectName(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tableName">Table Name</Label>
-              <Input
-                id="tableName"
-                value={currentTable.name}
-                onChange={e => setCurrentTable(prev => ({ ...prev, name: e.target.value }))}
                 className="w-full"
               />
             </div>
@@ -218,9 +294,9 @@ const ConsumosTool = () => {
             <Button onClick={generateTable} variant="secondary">Generate Table</Button>
             <Button onClick={resetFields} variant="destructive">Reset</Button>
             {tables.length > 0 && (
-              <Button onClick={handleExportPDF} variant="outline" className="ml-auto">
-                <FileText className="w-4 h-4 mr-2" />
-                Export PDF
+              <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
+                <FileText className="w-4 h-4" />
+                Export & Upload PDF
               </Button>
             )}
           </div>

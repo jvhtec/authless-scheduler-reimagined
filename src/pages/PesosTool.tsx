@@ -4,8 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText } from 'lucide-react';
+import { FileText, Upload } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
+import { useJobSelection } from '@/hooks/useJobSelection';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 const componentDatabase = [
   { id: 1, name: 'Steel Beam Type A', weight: 25.5 },
@@ -29,6 +32,9 @@ interface Table {
 }
 
 const PesosTool = () => {
+  const { toast } = useToast();
+  const { data: jobs, isLoading: jobsLoading } = useJobSelection();
+  const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [projectName, setProjectName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [currentTable, setCurrentTable] = useState<Table>({
@@ -73,6 +79,78 @@ const PesosTool = () => {
     }, 0);
   };
 
+  const handleExportPDF = async () => {
+    if (!selectedJobId) {
+      toast({
+        title: "No job selected",
+        description: "Please select a job before exporting",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
+      const pdfBlob = await exportToPDF(projectName, tables, 'weight', { totalSystemWeight });
+
+      const file = new File([pdfBlob], `${projectName}-weight-report.pdf`, { type: 'application/pdf' });
+
+      const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from('task_documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: tasks, error: taskError } = await supabase
+        .from('sound_job_tasks')
+        .select('id')
+        .eq('job_id', selectedJobId)
+        .eq('task_type', 'Pesos')
+        .single();
+
+      if (taskError) throw taskError;
+
+      const { error: docError } = await supabase
+        .from('task_documents')
+        .insert({
+          file_name: `${projectName}-weight-report.pdf`,
+          file_path: filePath,
+          sound_task_id: tasks.id
+        });
+
+      if (docError) throw docError;
+
+      toast({
+        title: "Success",
+        description: "PDF has been generated and uploaded successfully.",
+      });
+
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('task_documents')
+        .download(filePath);
+
+      if (downloadError) throw downloadError;
+
+      const url = window.URL.createObjectURL(fileData);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${projectName}-weight-report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+    } catch (error: any) {
+      console.error('Error handling PDF:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   const generateTable = () => {
     if (!currentTable.name) {
       alert('Please enter a table name.');
@@ -106,11 +184,6 @@ const PesosTool = () => {
     });
   };
 
-  const handleExportPDF = () => {
-    const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
-    exportToPDF(projectName, tables, 'weight', { totalSystemWeight });
-  };
-
   const resetFields = () => {
     setCurrentTable({
       name: '',
@@ -131,6 +204,24 @@ const PesosTool = () => {
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label htmlFor="jobSelect">Select Job</Label>
+              <Select
+                value={selectedJobId}
+                onValueChange={setSelectedJobId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a job" />
+                </SelectTrigger>
+                <SelectContent>
+                  {jobs?.map((job) => (
+                    <SelectItem key={job.id} value={job.id}>
+                      {job.tour_date ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="projectName">Project Name</Label>
               <Input
                 id="projectName"
@@ -139,66 +230,6 @@ const PesosTool = () => {
                 className="w-full"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="tableName">Table Name</Label>
-              <Input
-                id="tableName"
-                value={currentTable.name}
-                onChange={e => setCurrentTable(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full"
-              />
-            </div>
-          </div>
-
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
-                  <th className="px-4 py-3 text-left font-medium">Component</th>
-                  <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentTable.rows.map((row, index) => (
-                  <tr key={index} className="border-t">
-                    <td className="p-4">
-                      <Input
-                        type="number"
-                        value={row.quantity}
-                        onChange={e => updateInput(index, 'quantity', e.target.value)}
-                        className="w-full"
-                      />
-                    </td>
-                    <td className="p-4">
-                      <Select
-                        value={row.componentId}
-                        onValueChange={value => updateInput(index, 'componentId', value)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select component" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {componentDatabase.map(component => (
-                            <SelectItem key={component.id} value={component.id.toString()}>
-                              {component.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="p-4">
-                      <Input
-                        type="number"
-                        value={row.weight}
-                        readOnly
-                        className="w-full bg-muted"
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
 
           <div className="flex gap-2">
@@ -206,9 +237,9 @@ const PesosTool = () => {
             <Button onClick={generateTable} variant="secondary">Generate Table</Button>
             <Button onClick={resetFields} variant="destructive">Reset</Button>
             {tables.length > 0 && (
-              <Button onClick={handleExportPDF} variant="outline" className="ml-auto">
-                <FileText className="w-4 h-4 mr-2" />
-                Export PDF
+              <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
+                <FileText className="w-4 h-4" />
+                Export & Upload PDF
               </Button>
             )}
           </div>
