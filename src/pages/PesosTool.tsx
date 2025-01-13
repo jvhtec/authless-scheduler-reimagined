@@ -178,21 +178,43 @@ const PesosTool = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: tasks, error: taskError } = await supabase
+      // First try to get existing task
+      const { data: existingTask, error: taskError } = await supabase
         .from('sound_job_tasks')
         .select('id')
         .eq('job_id', selectedJobId)
         .eq('task_type', 'Pesos')
-        .single();
+        .maybeSingle();
 
       if (taskError) throw taskError;
+
+      let taskId;
+
+      if (!existingTask) {
+        // Create new task if none exists
+        const { data: newTask, error: createError } = await supabase
+          .from('sound_job_tasks')
+          .insert({
+            job_id: selectedJobId,
+            task_type: 'Pesos',
+            status: 'in_progress',
+            progress: 50
+          })
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        taskId = newTask.id;
+      } else {
+        taskId = existingTask.id;
+      }
 
       const { error: docError } = await supabase
         .from('task_documents')
         .insert({
           file_name: fileName,
           file_path: filePath,
-          sound_task_id: tasks.id,
+          sound_task_id: taskId,
           uploaded_by: (await supabase.auth.getUser()).data.user?.id
         });
 
