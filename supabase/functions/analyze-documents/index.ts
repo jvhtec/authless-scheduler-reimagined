@@ -28,7 +28,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: 'You are a helpful assistant that analyzes documents.' },
           { role: 'user', content: prompt }
@@ -43,6 +43,13 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    console.log("OpenAI API response:", data);
+
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error("Unexpected OpenAI API response format:", data);
+      throw new Error('Invalid response format from OpenAI API');
+    }
+
     const result = data.choices[0].message.content;
 
     console.log("Analysis completed successfully");
