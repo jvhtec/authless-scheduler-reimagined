@@ -23,8 +23,7 @@ export const exportToPDF = (
   projectName: string, 
   tables: ExportTable[], 
   type: 'weight' | 'power',
-  totalSystem?: { totalSystemWatts?: number; totalSystemAmps?: number; totalSystemWeight?: number },
-  jobName?: string // Add jobName parameter
+  jobName?: string
 ): Promise<Blob> => {
   return new Promise((resolve) => {
     const doc = new jsPDF();
@@ -53,11 +52,11 @@ export const exportToPDF = (
     
     tables.forEach((table, index) => {
       // Table header with elegant styling
-      doc.setFillColor(245, 245, 250); // Light blue-gray background
+      doc.setFillColor(245, 245, 250);
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
       
       doc.setFontSize(14);
-      doc.setTextColor(51, 51, 153); // Dark blue text
+      doc.setTextColor(51, 51, 153);
       doc.text(table.name, 14, yPosition);
       yPosition += 10;
       
@@ -81,7 +80,7 @@ export const exportToPDF = (
           lineWidth: 0.1,
         },
         headStyles: {
-          fillColor: [51, 51, 153], // Dark blue headers
+          fillColor: [51, 51, 153],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
         },
@@ -89,7 +88,7 @@ export const exportToPDF = (
           textColor: [51, 51, 51],
         },
         alternateRowStyles: {
-          fillColor: [250, 250, 255], // Very light blue alternating rows
+          fillColor: [250, 250, 255],
         },
       });
       
@@ -109,7 +108,7 @@ export const exportToPDF = (
       if (table.dualMotors) {
         yPosition += 7;
         doc.setFontSize(9);
-        doc.setTextColor(102, 102, 153); // Softer blue for disclaimer
+        doc.setTextColor(102, 102, 153);
         doc.text(
           '*This configuration uses dual motors. Load is distributed between two motors for safety and redundancy.',
           14,
@@ -125,24 +124,6 @@ export const exportToPDF = (
         yPosition = 20;
       }
     });
-    
-    // System summary with improved styling
-    if (totalSystem) {
-      doc.setFillColor(51, 51, 153);
-      doc.rect(0, yPosition - 6, pageWidth, 20, 'F');
-      
-      doc.setFontSize(14);
-      doc.setTextColor(255, 255, 255);
-      doc.text('Total System Summary', pageWidth / 2, yPosition + 4, { align: 'center' });
-      
-      yPosition += 25;
-      
-      doc.setFontSize(12);
-      doc.setTextColor(51, 51, 153);
-      if (totalSystem.totalSystemWeight) {
-        doc.text(`Total System Weight: ${totalSystem.totalSystemWeight.toFixed(2)} kg`, 14, yPosition);
-      }
-    }
     
     const blob = doc.output('blob');
     resolve(blob);
