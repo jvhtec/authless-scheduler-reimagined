@@ -9,11 +9,16 @@ import CreateTourDialog from "@/components/tours/CreateTourDialog";
 const Dashboard = () => {
   const [showCreateJobDialog, setShowCreateJobDialog] = useState(false);
   const [showCreateTourDialog, setShowCreateTourDialog] = useState(false);
+  const [timeSpan, setTimeSpan] = useState("1week");
+  const [selectedDate, setSelectedDate] = useState<Date>();
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
       <div className="flex justify-between items-center">
-        <DashboardHeader />
+        <DashboardHeader 
+          timeSpan={timeSpan} 
+          onTimeSpanChange={setTimeSpan} 
+        />
         <div className="flex gap-2">
           <Button onClick={() => setShowCreateJobDialog(true)}>
             <Plus className="w-4 h-4 mr-2" />
@@ -26,7 +31,10 @@ const Dashboard = () => {
         </div>
       </div>
       
-      <CalendarSection />
+      <CalendarSection 
+        date={selectedDate}
+        onDateSelect={setSelectedDate}
+      />
 
       <CreateJobDialog
         open={showCreateJobDialog}
@@ -37,6 +45,7 @@ const Dashboard = () => {
       <CreateTourDialog
         open={showCreateTourDialog}
         onOpenChange={setShowCreateTourDialog}
+        currentDepartment="sound"
       />
     </div>
   );

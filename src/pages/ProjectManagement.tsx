@@ -140,6 +140,7 @@ const ProjectManagement = () => {
       <CreateTourDialog
         open={showCreateTourDialog}
         onOpenChange={setShowCreateTourDialog}
+        currentDepartment={selectedDepartment}
       />
     </div>
   );
