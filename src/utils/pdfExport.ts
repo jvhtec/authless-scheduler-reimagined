@@ -36,7 +36,7 @@ export const exportToPDF = (
     const pageWidth = doc.internal.pageSize.width;
     
     // Add header
-    doc.setFillColor(51, 51, 153);
+    doc.setFillColor(59, 59, 13);
     doc.rect(0, 0, pageWidth, 40, 'F');
     
     // Add title
@@ -63,7 +63,7 @@ export const exportToPDF = (
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
       
       doc.setFontSize(14);
-      doc.setTextColor(51, 51, 153);
+      doc.setTextColor(59, 59, 13);
       doc.text(table.name, 14, yPosition);
       yPosition += 10;
       
@@ -91,7 +91,7 @@ export const exportToPDF = (
           lineWidth: 0.1,
         },
         headStyles: {
-          fillColor: [51, 51, 153],
+          fillColor: [59, 59, 13],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
         },
@@ -110,7 +110,7 @@ export const exportToPDF = (
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
       
       doc.setFontSize(11);
-      doc.setTextColor(51, 51, 153);
+      doc.setTextColor(59, 59, 13);
       if (type === 'weight' && table.totalWeight) {
         doc.text(`Total Weight: ${table.totalWeight.toFixed(2)} kg`, 14, yPosition);
       } else if (type === 'power' && table.totalWatts) {
@@ -146,7 +146,7 @@ export const exportToPDF = (
       doc.rect(14, yPosition - 6, pageWidth - 28, 30, 'F');
       
       doc.setFontSize(14);
-      doc.setTextColor(51, 51, 153);
+      doc.setTextColor(59, 59, 13);
       doc.text("System Summary", 14, yPosition);
       
       yPosition += 10;
