@@ -56,6 +56,7 @@ interface Table {
   rows: TableRow[];
   totalWeight?: number;
   id?: number;
+  dualMotors?: boolean;  // Add this line
 }
 
 const PesosTool = () => {
@@ -132,11 +133,13 @@ const PesosTool = () => {
       name: tableName,
       rows: calculatedRows,
       totalWeight,
-      id: Date.now()
+      id: Date.now(),
+      dualMotors: useDualMotors
     };
 
     setTables(prev => [...prev, newTable]);
     resetCurrentTable();
+    setUseDualMotors(false);
   };
 
   const resetCurrentTable = () => {
@@ -297,15 +300,25 @@ const PesosTool = () => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="tableName">Table Name</Label>
-          <Input
-            id="tableName"
-            value={tableName}
-            onChange={e => setTableName(e.target.value)}
-            placeholder="Enter table name"
-            className="w-full"
-          />
-        </div>
+  <Label htmlFor="tableName">Table Name</Label>
+  <Input
+    id="tableName"
+    value={tableName}
+    onChange={e => setTableName(e.target.value)}
+    placeholder="Enter table name"
+    className="w-full"
+  />
+  <div className="flex items-center space-x-2 mt-2">
+    <Checkbox 
+      id="dualMotors"
+      checked={useDualMotors}
+      onCheckedChange={(checked) => setUseDualMotors(checked as boolean)}
+    />
+    <Label htmlFor="dualMotors" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+      Dual Motors Configuration
+    </Label>
+  </div>
+</div>
 
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full">
@@ -321,11 +334,12 @@ const PesosTool = () => {
                 <tr key={index} className="border-t">
                   <td className="p-4">
                     <Input
-                      type="number"
-                      value={row.quantity}
-                      onChange={e => updateInput(index, 'quantity', e.target.value)}
-                      className="w-full"
-                    />
+                        type="number"
+                        value={row.quantity}
+                        onChange={e => updateInput(index, 'quantity', e.target.value)}
+                        min="0"  // Add this line
+                        className="w-full"
+                      />
                   </td>
                   <td className="p-4">
                     <Select
