@@ -16,12 +16,12 @@ const componentDatabase = [
   { id: 3, name: 'LA4X', watts: 2000 },
   { id: 4, name: 'PLM20000D', watts: 2900 },
   { id: 5, name: 'Control FoH (L)', watts: 3500 },
-  { id: 1, name: 'Control FoH (S)', watts: 1500 },
-  { id: 6, name: 'Control Mon (L)', watts: 3500 },
-  { id: 7, name: 'Control Mon (S)', watts: 1500 },
-  { id: 8, name: 'RF Rack', watts: 2500 },
-  { id: 9, name: 'Backline', watts: 2500 },
-  { id: 10, name: 'Varios', watts: 1500 },
+  { id: 6, name: 'Control FoH (S)', watts: 1500 },
+  { id: 7, name: 'Control Mon (L)', watts: 3500 },
+  { id: 8, name: 'Control Mon (S)', watts: 1500 },
+  { id: 9, name: 'RF Rack', watts: 2500 },
+  { id: 10, name: 'Backline', watts: 2500 },
+  { id: 11, name: 'Varios', watts: 1500 },
 ];
 
 const VOLTAGE_3PHASE = 400;
@@ -145,7 +145,7 @@ const ConsumosTool = () => {
   };
 
   const handleExportPDF = async () => {
-    if (!selectedJobId) {
+    if (!selectedJobId || !selectedJob) {
       toast({
         title: "No job selected",
         description: "Please select a job before exporting",
@@ -156,9 +156,9 @@ const ConsumosTool = () => {
 
     try {
       const totalSystem = calculateTotalSystem();
-      const pdfBlob = await exportToPDF(tableName, tables, 'power', totalSystem);
+      const pdfBlob = await exportToPDF(selectedJob.title, tables, 'power', totalSystem);
 
-      const file = new File([pdfBlob], `${tableName}-power-report.pdf`, { type: 'application/pdf' });
+      const file = new File([pdfBlob], `Consumos Sonido - ${selectedJob.title}.pdf`, { type: 'application/pdf' });
 
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
       const { error: uploadError } = await supabase.storage
@@ -179,7 +179,7 @@ const ConsumosTool = () => {
       const { error: docError } = await supabase
         .from('task_documents')
         .insert({
-          file_name: `${tableName}-power-report.pdf`,
+          file_name: `Consumos Sonido - ${selectedJob.title}.pdf`,
           file_path: filePath,
           sound_task_id: tasks.id
         });
@@ -200,7 +200,7 @@ const ConsumosTool = () => {
       const url = window.URL.createObjectURL(fileData);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${tableName}-power-report.pdf`;
+      a.download = `Consumos Sonido - ${selectedJob.title}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -258,6 +258,45 @@ const ConsumosTool = () => {
               className="w-full"
             />
           </div>
+
+          {currentTable.rows.map((row, index) => (
+            <div key={index} className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  value={row.quantity}
+                  onChange={e => updateInput(index, 'quantity', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Component</Label>
+                <Select
+                  value={row.componentId}
+                  onValueChange={value => updateInput(index, 'componentId', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select component" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {componentDatabase.map(component => (
+                      <SelectItem key={component.id} value={component.id.toString()}>
+                        {component.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Watts</Label>
+                <Input
+                  type="number"
+                  value={row.watts}
+                  readOnly
+                />
+              </div>
+            </div>
+          ))}
 
           <div className="flex gap-2">
             <Button onClick={addRow}>Add Row</Button>

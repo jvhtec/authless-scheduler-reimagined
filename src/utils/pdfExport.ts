@@ -28,21 +28,31 @@ export const exportToPDF = (
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
     
-    // Add title
+    // Add title with project name
     doc.setFontSize(24);
     doc.setTextColor(51, 51, 51);
     doc.text(projectName, pageWidth / 2, 20, { align: 'center' });
     
+    // Add subtitle based on type
+    doc.setFontSize(16);
+    doc.setTextColor(102, 102, 102);
+    doc.text(
+      type === 'power' ? 'Power Consumption Report' : 'Weight Distribution Report',
+      pageWidth / 2,
+      30,
+      { align: 'center' }
+    );
+    
     // Add date
     doc.setFontSize(12);
     doc.setTextColor(115, 115, 115);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, 30, { align: 'center' });
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, 40, { align: 'center' });
     
-    let yPosition = 40;
+    let yPosition = 50;
     
     tables.forEach((table, index) => {
       // Table header
-      doc.setFontSize(16);
+      doc.setFontSize(14);
       doc.setTextColor(51, 51, 51);
       doc.text(table.name, 14, yPosition);
       yPosition += 10;
@@ -74,15 +84,15 @@ export const exportToPDF = (
         head: headers,
         body: tableRows,
         startY: yPosition,
-        theme: 'striped',
+        theme: 'grid',
         styles: {
           fontSize: 10,
           cellPadding: 5,
-          lineColor: [230, 230, 230],
+          lineColor: [200, 200, 200],
           lineWidth: 0.1,
         },
         headStyles: {
-          fillColor: [115, 115, 115],
+          fillColor: [69, 78, 86],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
         },
@@ -90,14 +100,14 @@ export const exportToPDF = (
           textColor: [68, 68, 68],
         },
         alternateRowStyles: {
-          fillColor: [247, 247, 247],
+          fillColor: [245, 245, 245],
         },
       });
       
       yPosition = (doc as any).lastAutoTable.finalY + 10;
       
-      // Add table totals with improved styling
-      doc.setFontSize(12);
+      // Add table totals
+      doc.setFontSize(11);
       doc.setTextColor(51, 51, 51);
       if (type === 'weight' && table.totalWeight) {
         doc.text(`Total Weight: ${table.totalWeight.toFixed(2)} kg`, 14, yPosition);
@@ -120,15 +130,14 @@ export const exportToPDF = (
       }
     });
     
-    // Add system summary with improved styling
+    // Add system summary
     if (totalSystem) {
-      doc.setFontSize(16);
+      doc.setFontSize(14);
       doc.setTextColor(51, 51, 51);
       doc.text('Total System Summary', 14, yPosition);
       yPosition += 10;
       
-      doc.setFontSize(12);
-      doc.setTextColor(68, 68, 68);
+      doc.setFontSize(11);
       if (type === 'power') {
         if (totalSystem.totalSystemWatts) {
           doc.text(`Total System Power: ${totalSystem.totalSystemWatts.toFixed(2)} W`, 14, yPosition);
@@ -142,7 +151,6 @@ export const exportToPDF = (
       }
     }
     
-    // Instead of saving, return blob
     const blob = doc.output('blob');
     resolve(blob);
   });
