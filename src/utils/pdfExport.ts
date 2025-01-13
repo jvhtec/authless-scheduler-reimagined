@@ -14,6 +14,7 @@ interface ExportTable {
   name: string;
   rows: ExportTableRow[];
   totalWeight?: number;
+  dualMotors?: boolean;  // Add this line
   totalWatts?: number;
   currentPerPhase?: number;
 }
@@ -119,7 +120,18 @@ export const exportToPDF = (
           doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition + 7);
           yPosition += 7;
         }
+        if (table.dualMotors) {
+          yPosition += 7;
+          doc.setFontSize(9);
+          doc.setTextColor(128, 128, 128);  // Gray color for the disclaimer
+          doc.text(
+            '*This configuration uses dual motors. Load is distributed between two motors for safety and redundancy.',
+            14,
+            yPosition
+          );
+        }
       }
+      
       
       yPosition += 20;
       
