@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { CreateJobDialog } from "@/components/jobs/CreateJobDialog";
-import { CreateTourDialog } from "@/components/tours/CreateTourDialog";
+import CreateJobDialog from "@/components/jobs/CreateJobDialog";
+import CreateTourDialog from "@/components/tours/CreateTourDialog";
 import { useJobs } from "@/hooks/useJobs";
 import { format } from "date-fns";
 import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
@@ -107,7 +107,7 @@ const Sound = () => {
         title: "Job deleted",
         description: "The job has been successfully deleted.",
       });
-      queryClient.invalidateQueries('jobs');
+      await queryClient.invalidateQueries({ queryKey: ['jobs'] });
     } catch (error: any) {
       toast({
         title: "Error deleting job",
@@ -290,7 +290,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
       {showAnalysisForm && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
-            <h2 className="text-2xl font-semibold mb-4">Subir documentos PDF</h2>
+            <h2 className="text-2xl font-semibold mb-4">Upload PDF Documents</h2>
             <form onSubmit={handleAnalysisSubmit} className="flex flex-col space-y-4">
               <input
                 type="file"
@@ -305,19 +305,19 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
                   onClick={() => setShowAnalysisForm(false)}
                   className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
                 >
-                  Enviar para análisis
+                  Submit for Analysis
                 </button>
               </div>
             </form>
             {analysisResult && (
               <div className="mt-4 p-4 bg-gray-100 rounded">
-                <h3 className="font-semibold mb-2">Resultado del Análisis:</h3>
+                <h3 className="font-semibold mb-2">Analysis Result:</h3>
                 <pre className="whitespace-pre-wrap">{analysisResult}</pre>
               </div>
             )}
