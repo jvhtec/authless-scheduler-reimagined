@@ -10,6 +10,7 @@ import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { Checkbox } from "@/components/ui/checkbox";
 
 const componentDatabase = [
   { id: 1, name: ' K1 ', weight: 106 },
@@ -385,43 +386,48 @@ const PesosTool = () => {
         </div>
 
         {tables.map(table => (
-          <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
-            <div className="bg-muted px-4 py-3 flex justify-between items-center">
-              <h3 className="font-semibold">{table.name}</h3>
-              <Button 
-                variant="destructive" 
-                size="sm"
-                onClick={() => table.id && removeTable(table.id)}
-              >
-                Remove Table
-              </Button>
-            </div>
-            <table className="w-full">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
-                  <th className="px-4 py-3 text-left font-medium">Component</th>
-                  <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
-                  <th className="px-4 py-3 text-left font-medium">Total Weight</th>
-                </tr>
-              </thead>
-              <tbody>
-                {table.rows.map((row, index) => (
-                  <tr key={index} className="border-t">
-                    <td className="px-4 py-3">{row.quantity}</td>
-                    <td className="px-4 py-3">{row.componentName}</td>
-                    <td className="px-4 py-3">{row.weight}</td>
-                    <td className="px-4 py-3">{row.totalWeight?.toFixed(2)}</td>
-                  </tr>
-                ))}
-                <tr className="border-t bg-muted/50 font-medium">
-                  <td colSpan={3} className="px-4 py-3 text-right">Total Weight:</td>
-                  <td className="px-4 py-3">{table.totalWeight?.toFixed(2)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+  <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
+    <div className="bg-muted px-4 py-3 flex justify-between items-center">
+      <h3 className="font-semibold">{table.name}</h3>
+      <Button 
+        variant="destructive" 
+        size="sm"
+        onClick={() => table.id && removeTable(table.id)}
+      >
+        Remove Table
+      </Button>
+    </div>
+    <table className="w-full">
+      <thead className="bg-muted/50">
+        <tr>
+          <th className="px-4 py-3 text-left font-medium">Quantity</th>
+          <th className="px-4 py-3 text-left font-medium">Component</th>
+          <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
+          <th className="px-4 py-3 text-left font-medium">Total Weight</th>
+        </tr>
+      </thead>
+      <tbody>
+        {table.rows.map((row, index) => (
+          <tr key={index} className="border-t">
+            <td className="px-4 py-3">{row.quantity}</td>
+            <td className="px-4 py-3">{row.componentName}</td>
+            <td className="px-4 py-3">{row.weight}</td>
+            <td className="px-4 py-3">{row.totalWeight?.toFixed(2)}</td>
+          </tr>
         ))}
+        <tr className="border-t bg-muted/50 font-medium">
+          <td colSpan={3} className="px-4 py-3 text-right">Total Weight:</td>
+          <td className="px-4 py-3">{table.totalWeight?.toFixed(2)}</td>
+        </tr>
+      </tbody>
+    </table>
+    {table.dualMotors && (
+      <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
+        *This configuration uses dual motors. Load is distributed between two motors for safety and redundancy.
+      </div>
+    )}
+  </div>
+))}
 
         {tables.length > 0 && (
           <div className="mt-6 bg-muted p-4 rounded-lg">
