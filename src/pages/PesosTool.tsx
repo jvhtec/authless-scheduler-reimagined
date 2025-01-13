@@ -68,6 +68,7 @@ const PesosTool = () => {
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
+  const [useDualMotors, setUseDualMotors] = useState(false);
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
     rows: [{ quantity: '', componentId: '', weight: '' }]
