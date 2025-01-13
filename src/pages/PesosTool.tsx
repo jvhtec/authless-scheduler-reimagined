@@ -163,11 +163,11 @@ const PesosTool = () => {
 
     try {
       const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
-      const pdfBlob = await exportToPDF(tableName, tables, 'weight', { totalSystemWeight });
+      const pdfBlob = await exportToPDF(selectedJob.title, tables, 'weight', { totalSystemWeight });
 
       // Build the filename using the job name
-      const jobName = selectedJob.tour_date?.tour?.name || 'Unnamed Job';
-      const fileName = `Pesos Sonido ${jobName}.pdf`;
+      const jobName = selectedJob.tour_date?.tour?.name || selectedJob.title;
+      const fileName = `Pesos Sonido - ${jobName}.pdf`;
 
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
@@ -203,6 +203,7 @@ const PesosTool = () => {
         description: "PDF has been generated and uploaded successfully.",
       });
 
+      // Download the file
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('task_documents')
         .download(filePath);
