@@ -12,7 +12,7 @@ export const exportToPDF = (
       const pageHeight = doc.internal.pageSize.height;
 
       // Load the logo from the assets folder
-      const logoUrl = 'public/assets/logo.png'; // Replace with your actual path
+      const logoUrl = 'public/sector pro logo.png'; // Replace with your actual path
       const logoImg = await loadImage(logoUrl);
 
       // Add Header
