@@ -163,7 +163,7 @@ const ConsumosTool = () => {
         )
       };
 
-      const jobName = selectedJob.tour_date?.tour?.name || 'Unnamed Job';
+      const jobName = selectedJob.title || 'Unnamed Job';
       const fileName = `Consumos Sonido - ${jobName}.pdf`;
       const pdfBlob = await exportToPDF(selectedJob.title, tables, 'power', totalSystem);
 
