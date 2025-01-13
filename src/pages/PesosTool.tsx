@@ -176,6 +176,8 @@ const PesosTool = () => {
     );
 
     const fileName = `Pesos Sonido ${jobName}.pdf`;
+    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+    // ... rest of the function remains the same
 
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
