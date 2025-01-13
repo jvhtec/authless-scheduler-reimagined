@@ -1,3 +1,29 @@
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+interface ExportTableRow {
+  quantity: string;
+  componentName?: string;
+  weight?: string;
+  watts?: string;
+  totalWeight?: number;
+  totalWatts?: number;
+}
+
+interface ExportTable {
+  name: string;
+  rows: ExportTableRow[];
+  totalWeight?: number;
+  dualMotors?: boolean;
+  totalWatts?: number;
+  currentPerPhase?: number;
+}
+
+interface PowerSystemSummary {
+  totalSystemWatts: number;
+  totalSystemAmps: number;
+}
+
 export const exportToPDF = (
   projectName: string,
   tables: ExportTable[],
@@ -12,7 +38,7 @@ export const exportToPDF = (
       const pageHeight = doc.internal.pageSize.height;
 
       // Load the logo from the assets folder
-      const logoUrl = 'public/sector pro logo.png'; // Replace with your actual path
+      const logoUrl = '/public/sector pro logo.png'; // Replace with the actual path to the logo
       const logoImg = await loadImage(logoUrl);
 
       // Add Header
@@ -31,6 +57,7 @@ export const exportToPDF = (
       let yPosition = 60;
 
       tables.forEach((table, index) => {
+        // Check available space on the current page
         const tableHeight = calculateTableHeight(doc, table.rows.length);
         if (yPosition + tableHeight > pageHeight - 30) {
           addLogoToBottom(doc, logoImg, pageWidth, pageHeight);
@@ -38,6 +65,7 @@ export const exportToPDF = (
           yPosition = 20;
         }
 
+        // Add Table Header
         doc.setFillColor(245, 245, 250);
         doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
         doc.setFontSize(14);
@@ -45,6 +73,7 @@ export const exportToPDF = (
         doc.text(table.name, 14, yPosition);
         yPosition += 10;
 
+        // Prepare table content
         const tableRows = table.rows.map(row => [
           row.quantity,
           row.componentName || '',
@@ -61,9 +90,43 @@ export const exportToPDF = (
           body: tableRows,
           startY: yPosition,
           theme: 'grid',
+          styles: {
+            fontSize: 10,
+            cellPadding: 5,
+            lineColor: [220, 220, 230],
+            lineWidth: 0.1,
+          },
+          headStyles: {
+            fillColor: [59, 59, 13],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+          },
+          bodyStyles: {
+            textColor: [51, 51, 51],
+          },
+          alternateRowStyles: {
+            fillColor: [250, 250, 255],
+          },
         });
 
         yPosition = (doc as any).lastAutoTable.finalY + 10;
+
+        // Add Table Totals
+        doc.setFillColor(245, 245, 250);
+        doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
+        doc.setFontSize(11);
+        doc.setTextColor(59, 59, 13);
+        if (type === 'weight' && table.totalWeight) {
+          doc.text(`Total Weight: ${table.totalWeight.toFixed(2)} kg`, 14, yPosition);
+        } else if (type === 'power' && table.totalWatts) {
+          doc.text(`Total Power: ${table.totalWatts.toFixed(2)} W`, 14, yPosition);
+          if (table.currentPerPhase) {
+            yPosition += 7;
+            doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition);
+          }
+        }
+
+        yPosition += 20;
       });
 
       // Add Logo to the last page
@@ -87,7 +150,7 @@ const loadImage = (url: string): Promise<HTMLImageElement> => {
   });
 };
 
-// Utility: Add Logo to the bottom
+// Utility: Add Logo to the bottom of the page
 const addLogoToBottom = (
   doc: jsPDF,
   img: HTMLImageElement,
@@ -103,7 +166,7 @@ const addLogoToBottom = (
 
 // Utility: Calculate table height
 const calculateTableHeight = (doc: jsPDF, rowCount: number): number => {
-  const rowHeight = 10;
-  const headerHeight = 10;
+  const rowHeight = 10; // Approximate height per row
+  const headerHeight = 10; // Height for the table header
   return headerHeight + rowCount * rowHeight;
 };
