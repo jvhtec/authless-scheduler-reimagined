@@ -166,7 +166,7 @@ const PesosTool = () => {
       const pdfBlob = await exportToPDF(tableName, tables, 'weight', { totalSystemWeight });
 
       // Build the filename using the job name
-      const jobName = selectedJob.tour_date?.tour?.name || 'Unnamed Job';
+      const jobName = selectedJob.title || 'Unnamed Job';
       const fileName = `Pesos Sonido ${jobName}.pdf`;
 
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
