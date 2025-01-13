@@ -1,29 +1,25 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Department } from "@/types/department";
 import { startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { MonthNavigation } from "@/components/project-management/MonthNavigation";
 import { DepartmentTabs } from "@/components/project-management/DepartmentTabs";
 import { useJobManagement } from "@/hooks/useJobManagement";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
-import CreateJobDialog from "@/components/jobs/CreateJobDialog";
-import CreateTourDialog from "@/components/tours/CreateTourDialog";
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [showCreateJobDialog, setShowCreateJobDialog] = useState(false);
-  const [showCreateTourDialog, setShowCreateTourDialog] = useState(false);
 
   const startDate = startOfMonth(currentDate);
   const endDate = endOfMonth(currentDate);
 
+  // Set up tab visibility handling for jobs query
   useTabVisibility(['jobs']);
 
   const { jobs, jobsLoading, handleDeleteDocument } = useJobManagement(
@@ -91,6 +87,7 @@ const ProjectManagement = () => {
     setCurrentDate(prev => addMonths(prev, 1));
   };
 
+  // Show loading state when either initial auth check or jobs are loading
   if (loading || jobsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -102,18 +99,8 @@ const ProjectManagement = () => {
   return (
     <div className="container mx-auto px-4 space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader>
           <CardTitle>Project Management</CardTitle>
-          <div className="flex gap-2">
-            <Button onClick={() => setShowCreateJobDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Job
-            </Button>
-            <Button onClick={() => setShowCreateTourDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Tour
-            </Button>
-          </div>
         </CardHeader>
         <CardContent>
           <MonthNavigation
@@ -130,18 +117,6 @@ const ProjectManagement = () => {
           />
         </CardContent>
       </Card>
-
-      <CreateJobDialog
-        open={showCreateJobDialog}
-        onOpenChange={setShowCreateJobDialog}
-        currentDepartment={selectedDepartment}
-      />
-      
-      <CreateTourDialog
-        open={showCreateTourDialog}
-        onOpenChange={setShowCreateTourDialog}
-        currentDepartment={selectedDepartment}
-      />
     </div>
   );
 };
