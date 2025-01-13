@@ -156,23 +156,29 @@ const PesosTool = () => {
     setTables(prev => prev.filter(table => table.id !== tableId));
   };
 
-  const handleExportPDF = async () => {
-    if (!selectedJobId || !selectedJob) {
-      toast({
-        title: "No job selected",
-        description: "Please select a job before exporting",
-        variant: "destructive"
-      });
-      return;
-    }
+ const handleExportPDF = async () => {
+  if (!selectedJobId || !selectedJob) {
+    toast({
+      title: "No job selected",
+      description: "Please select a job before exporting",
+      variant: "destructive"
+    });
+    return;
+  }
 
-    try {
-      const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
-      const pdfBlob = await exportToPDF(tableName, tables, 'weight', { totalSystemWeight });
+  try {
+    const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
+    const jobName = selectedJob.title;
+    const pdfBlob = await exportToPDF(
+      tableName, 
+      tables, 
+      'weight', 
+      { totalSystemWeight },
+      jobName
+    );
 
-      // Build the filename using the job name
-      const jobName = selectedJob.title || 'Unnamed Job';
-      const fileName = `Pesos Sonido ${jobName}.pdf`;
+    const fileName = `Pesos Sonido ${jobName}.pdf`;
+    // ... rest of the function remains the same
 
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
