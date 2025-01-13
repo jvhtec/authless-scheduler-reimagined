@@ -23,115 +23,99 @@ export const exportToPDF = (
   projectName: string, 
   tables: ExportTable[], 
   type: 'weight' | 'power',
-  totalSystem?: { totalSystemWatts?: number; totalSystemAmps?: number; totalSystemWeight?: number }
+  totalSystem?: { totalSystemWatts?: number; totalSystemAmps?: number; totalSystemWeight?: number },
+  jobName?: string // Add jobName parameter
 ): Promise<Blob> => {
   return new Promise((resolve) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
     
-    // Add title with project name
+    // Add company logo or header
+    doc.setFillColor(51, 51, 153); // Dark blue header
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    
+    // Add title with job name
     doc.setFontSize(24);
-    doc.setTextColor(51, 51, 51);
-    doc.text(projectName, pageWidth / 2, 20, { align: 'center' });
+    doc.setTextColor(255, 255, 255);
+    doc.text("Weight Distribution Report", pageWidth / 2, 20, { align: 'center' });
     
-    // Add subtitle based on type
+    // Add job name as subtitle
     doc.setFontSize(16);
-    doc.setTextColor(102, 102, 102);
-    doc.text(
-      type === 'power' ? 'Power Consumption Report' : 'Weight Distribution Report',
-      pageWidth / 2,
-      30,
-      { align: 'center' }
-    );
+    doc.setTextColor(255, 255, 255);
+    doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
     
-    // Add date
-    doc.setFontSize(12);
-    doc.setTextColor(115, 115, 115);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, 40, { align: 'center' });
+    // Add date with more elegant styling
+    doc.setFontSize(10);
+    doc.setTextColor(51, 51, 51);
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 50);
     
-    let yPosition = 50;
+    let yPosition = 60;
     
     tables.forEach((table, index) => {
-      // Table header
+      // Table header with elegant styling
+      doc.setFillColor(245, 245, 250); // Light blue-gray background
+      doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
+      
       doc.setFontSize(14);
-      doc.setTextColor(51, 51, 51);
+      doc.setTextColor(51, 51, 153); // Dark blue text
       doc.text(table.name, 14, yPosition);
       yPosition += 10;
       
-      // Table content
-      const tableRows = table.rows.map(row => {
-        if (type === 'weight') {
-          return [
-            row.quantity,
-            row.componentName || '',
-            row.weight || '',
-            row.totalWeight?.toFixed(2) || ''
-          ];
-        } else {
-          return [
-            row.quantity,
-            row.componentName || '',
-            row.watts || '',
-            row.totalWatts?.toFixed(2) || ''
-          ];
-        }
-      });
-      
-      const headers = type === 'weight' 
-        ? [['Quantity', 'Component', 'Weight (per unit)', 'Total Weight']]
-        : [['Quantity', 'Component', 'Watts (per unit)', 'Total Watts']];
+      // Table content with improved styling
+      const tableRows = table.rows.map(row => [
+        row.quantity,
+        row.componentName || '',
+        row.weight || '',
+        row.totalWeight?.toFixed(2) || ''
+      ]);
       
       autoTable(doc, {
-        head: headers,
+        head: [['Quantity', 'Component', 'Weight (per unit)', 'Total Weight']],
         body: tableRows,
         startY: yPosition,
         theme: 'grid',
         styles: {
           fontSize: 10,
           cellPadding: 5,
-          lineColor: [200, 200, 200],
+          lineColor: [220, 220, 230],
           lineWidth: 0.1,
         },
         headStyles: {
-          fillColor: [69, 78, 86],
+          fillColor: [51, 51, 153], // Dark blue headers
           textColor: [255, 255, 255],
           fontStyle: 'bold',
         },
         bodyStyles: {
-          textColor: [68, 68, 68],
+          textColor: [51, 51, 51],
         },
         alternateRowStyles: {
-          fillColor: [245, 245, 245],
+          fillColor: [250, 250, 255], // Very light blue alternating rows
         },
       });
       
       yPosition = (doc as any).lastAutoTable.finalY + 10;
       
-      // Add table totals
+      // Table totals with improved styling
+      doc.setFillColor(245, 245, 250);
+      doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
+      
       doc.setFontSize(11);
-      doc.setTextColor(51, 51, 51);
-      if (type === 'weight' && table.totalWeight) {
+      doc.setTextColor(51, 51, 153);
+      if (table.totalWeight) {
         doc.text(`Total Weight: ${table.totalWeight.toFixed(2)} kg`, 14, yPosition);
-      } else if (type === 'power') {
-        if (table.totalWatts) {
-          doc.text(`Total Power: ${table.totalWatts.toFixed(2)} W`, 14, yPosition);
-        }
-        if (table.currentPerPhase) {
-          doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition + 7);
-          yPosition += 7;
-        }
-        if (table.dualMotors) {
-          yPosition += 7;
-          doc.setFontSize(9);
-          doc.setTextColor(128, 128, 128);  // Gray color for the disclaimer
-          doc.text(
-            '*This configuration uses dual motors. Load is distributed between two motors for safety and redundancy.',
-            14,
-            yPosition
-          );
-        }
       }
       
+      // Add dual motors disclaimer if applicable
+      if (table.dualMotors) {
+        yPosition += 7;
+        doc.setFontSize(9);
+        doc.setTextColor(102, 102, 153); // Softer blue for disclaimer
+        doc.text(
+          '*This configuration uses dual motors. Load is distributed between two motors for safety and redundancy.',
+          14,
+          yPosition,
+        );
+      }
       
       yPosition += 20;
       
@@ -142,23 +126,20 @@ export const exportToPDF = (
       }
     });
     
-    // Add system summary
+    // System summary with improved styling
     if (totalSystem) {
-      doc.setFontSize(14);
-      doc.setTextColor(51, 51, 51);
-      doc.text('Total System Summary', 14, yPosition);
-      yPosition += 10;
+      doc.setFillColor(51, 51, 153);
+      doc.rect(0, yPosition - 6, pageWidth, 20, 'F');
       
-      doc.setFontSize(11);
-      if (type === 'power') {
-        if (totalSystem.totalSystemWatts) {
-          doc.text(`Total System Power: ${totalSystem.totalSystemWatts.toFixed(2)} W`, 14, yPosition);
-          yPosition += 7;
-        }
-        if (totalSystem.totalSystemAmps) {
-          doc.text(`Total System Current per Phase: ${totalSystem.totalSystemAmps.toFixed(2)} A`, 14, yPosition);
-        }
-      } else if (totalSystem.totalSystemWeight) {
+      doc.setFontSize(14);
+      doc.setTextColor(255, 255, 255);
+      doc.text('Total System Summary', pageWidth / 2, yPosition + 4, { align: 'center' });
+      
+      yPosition += 25;
+      
+      doc.setFontSize(12);
+      doc.setTextColor(51, 51, 153);
+      if (totalSystem.totalSystemWeight) {
         doc.text(`Total System Weight: ${totalSystem.totalSystemWeight.toFixed(2)} kg`, 14, yPosition);
       }
     }
