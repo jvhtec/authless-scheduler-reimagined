@@ -16,6 +16,11 @@ serve(async (req) => {
     const { prompt } = await req.json();
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    console.log("Calling OpenAI API with prompt...");
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -23,7 +28,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           { role: 'system', content: 'You are a helpful assistant that analyzes documents.' },
           { role: 'user', content: prompt }
@@ -31,9 +36,16 @@ serve(async (req) => {
       }),
     });
 
+    if (!response.ok) {
+      const error = await response.json();
+      console.error("OpenAI API error:", error);
+      throw new Error(error.error?.message || 'Error calling OpenAI API');
+    }
+
     const data = await response.json();
     const result = data.choices[0].message.content;
 
+    console.log("Analysis completed successfully");
     return new Response(JSON.stringify({ result }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

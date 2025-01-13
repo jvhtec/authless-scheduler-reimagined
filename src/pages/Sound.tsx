@@ -151,28 +151,17 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
     `;
 
     try {
-      const response = await fetch("/api/analyze-documents", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ prompt })
+      console.log("Calling analyze-documents function...");
+      const { data, error } = await supabase.functions.invoke('analyze-documents', {
+        body: { prompt }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (response.status === 429) {
-          toast({
-            title: "API Limit Reached",
-            description: "The AI service is currently unavailable due to high demand. Please try again later.",
-            variant: "destructive"
-          });
-          return;
-        }
-        throw new Error(errorData.error?.message || 'Error processing the analysis');
+      if (error) {
+        console.error("Function error:", error);
+        throw error;
       }
 
-      const data = await response.json();
+      console.log("Analysis result:", data);
       setAnalysisResult(data.result);
       toast({
         title: "Analysis complete",
