@@ -57,7 +57,7 @@ interface Table {
   rows: TableRow[];
   totalWeight?: number;
   id?: number;
-  dualMotors?: boolean;  // Add this line
+  dualMotors?: boolean;
 }
 
 const PesosTool = () => {
@@ -304,25 +304,25 @@ const PesosTool = () => {
         </div>
 
         <div className="space-y-2">
-  <Label htmlFor="tableName">Table Name</Label>
-  <Input
-    id="tableName"
-    value={tableName}
-    onChange={e => setTableName(e.target.value)}
-    placeholder="Enter table name"
-    className="w-full"
-  />
-  <div className="flex items-center space-x-2 mt-2">
-    <Checkbox 
-      id="dualMotors"
-      checked={useDualMotors}
-      onCheckedChange={(checked) => setUseDualMotors(checked as boolean)}
-    />
-    <Label htmlFor="dualMotors" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-      Dual Motors Configuration
-    </Label>
-  </div>
-</div>
+          <Label htmlFor="tableName">Table Name</Label>
+          <Input
+            id="tableName"
+            value={tableName}
+            onChange={e => setTableName(e.target.value)}
+            placeholder="Enter table name"
+            className="w-full"
+          />
+          <div className="flex items-center space-x-2 mt-2">
+            <Checkbox 
+              id="dualMotors"
+              checked={useDualMotors}
+              onCheckedChange={(checked) => setUseDualMotors(checked as boolean)}
+            />
+            <Label htmlFor="dualMotors" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Dual Motors Configuration
+            </Label>
+          </div>
+        </div>
 
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full">
@@ -338,12 +338,12 @@ const PesosTool = () => {
                 <tr key={index} className="border-t">
                   <td className="p-4">
                     <Input
-                        type="number"
-                        value={row.quantity}
-                        onChange={e => updateInput(index, 'quantity', e.target.value)}
-                        min="0"  // Add this line
-                        className="w-full"
-                      />
+                      type="number"
+                      value={row.quantity}
+                      onChange={e => updateInput(index, 'quantity', e.target.value)}
+                      min="0"
+                      className="w-full"
+                    />
                   </td>
                   <td className="p-4">
                     <Select
@@ -389,48 +389,48 @@ const PesosTool = () => {
         </div>
 
         {tables.map(table => (
-  <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
-    <div className="bg-muted px-4 py-3 flex justify-between items-center">
-      <h3 className="font-semibold">{table.name}</h3>
-      <Button 
-        variant="destructive" 
-        size="sm"
-        onClick={() => table.id && removeTable(table.id)}
-      >
-        Remove Table
-      </Button>
-    </div>
-    <table className="w-full">
-      <thead className="bg-muted/50">
-        <tr>
-          <th className="px-4 py-3 text-left font-medium">Quantity</th>
-          <th className="px-4 py-3 text-left font-medium">Component</th>
-          <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
-          <th className="px-4 py-3 text-left font-medium">Total Weight</th>
-        </tr>
-      </thead>
-      <tbody>
-        {table.rows.map((row, index) => (
-          <tr key={index} className="border-t">
-            <td className="px-4 py-3">{row.quantity}</td>
-            <td className="px-4 py-3">{row.componentName}</td>
-            <td className="px-4 py-3">{row.weight}</td>
-            <td className="px-4 py-3">{row.totalWeight?.toFixed(2)}</td>
-          </tr>
+          <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
+            <div className="bg-muted px-4 py-3 flex justify-between items-center">
+              <h3 className="font-semibold">{table.name}</h3>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={() => table.id && removeTable(table.id)}
+              >
+                Remove Table
+              </Button>
+            </div>
+            <table className="w-full">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                  <th className="px-4 py-3 text-left font-medium">Component</th>
+                  <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
+                  <th className="px-4 py-3 text-left font-medium">Total Weight</th>
+                </tr>
+              </thead>
+              <tbody>
+                {table.rows.map((row, index) => (
+                  <tr key={index} className="border-t">
+                    <td className="px-4 py-3">{row.quantity}</td>
+                    <td className="px-4 py-3">{row.componentName}</td>
+                    <td className="px-4 py-3">{row.weight}</td>
+                    <td className="px-4 py-3">{row.totalWeight?.toFixed(2)}</td>
+                  </tr>
+                ))}
+                <tr className="border-t bg-muted/50 font-medium">
+                  <td colSpan={3} className="px-4 py-3 text-right">Total Weight:</td>
+                  <td className="px-4 py-3">{table.totalWeight?.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+            {table.dualMotors && (
+              <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
+                *This configuration uses dual motors. Load is distributed between two motors for safety and redundancy.
+              </div>
+            )}
+          </div>
         ))}
-        <tr className="border-t bg-muted/50 font-medium">
-          <td colSpan={3} className="px-4 py-3 text-right">Total Weight:</td>
-          <td className="px-4 py-3">{table.totalWeight?.toFixed(2)}</td>
-        </tr>
-      </tbody>
-    </table>
-    {table.dualMotors && (
-      <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
-        *This configuration uses dual motors. Load is distributed between two motors for safety and redundancy.
-      </div>
-    )}
-  </div>
-))}
 
         {tables.length > 0 && (
           <div className="mt-6 bg-muted p-4 rounded-lg">
