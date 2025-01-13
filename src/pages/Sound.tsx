@@ -1,7 +1,7 @@
-import { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import CreateJobDialog from "@/components/jobs/CreateJobDialog";
-import CreateTourDialog from "@/components/tours/CreateTourDialog";
+import { CreateJobDialog } from "@/components/jobs/CreateJobDialog";
+import { CreateTourDialog } from "@/components/tours/CreateTourDialog";
 import { useJobs } from "@/hooks/useJobs";
 import { format } from "date-fns";
 import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
@@ -13,6 +13,9 @@ import { LightsHeader } from "@/components/lights/LightsHeader";
 import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { LightsSchedule } from "@/components/lights/LightsSchedule";
 import { Calculator, PieChart, FileText, Sparkles } from 'lucide-react';
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 const Sound = () => {
   const navigate = useNavigate();
@@ -93,9 +96,24 @@ const Sound = () => {
     if (!window.confirm("Are you sure you want to delete this job?")) return;
 
     try {
-      // ... deletion logic (omitted for brevity)
+      const { error } = await supabase
+        .from('jobs')
+        .delete()
+        .eq('id', jobId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Job deleted",
+        description: "The job has been successfully deleted.",
+      });
+      queryClient.invalidateQueries('jobs');
     } catch (error: any) {
-      // ... error handling
+      toast({
+        title: "Error deleting job",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -111,7 +129,6 @@ const Sound = () => {
   const handleAnalysisSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    // For each selected file, read its content.
     const fileContents: string[] = await Promise.all(
       selectedFiles.map(file => {
         return new Promise<string>((resolve, reject) => {
@@ -194,6 +211,53 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
         />
       </div>
 
+      <Card className="mt-8">
+        <div className="p-6">
+          <h2 className="text-2xl font-semibold mb-4">Tools</h2>
+          <Separator className="mb-6" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full h-auto py-4 flex flex-col items-center gap-2"
+              onClick={() => navigate('/pesos-tool')}
+            >
+              <Calculator className="h-6 w-6" />
+              <span>Weight Calculator</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full h-auto py-4 flex flex-col items-center gap-2"
+              onClick={() => navigate('/consumos-tool')}
+            >
+              <PieChart className="h-6 w-6" />
+              <span>Power Calculator</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full h-auto py-4 flex flex-col items-center gap-2"
+            >
+              <FileText className="h-6 w-6" />
+              <span>SV Report Generator</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full h-auto py-4 flex flex-col items-center gap-2"
+              onClick={handleAnalysisButtonClick}
+            >
+              <Sparkles className="h-6 w-6" />
+              <span>AI Rider Analysis</span>
+            </Button>
+          </div>
+        </div>
+      </Card>
+
       <CreateJobDialog
         open={isJobDialogOpen}
         onOpenChange={setIsJobDialogOpen}
@@ -222,44 +286,6 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
           job={selectedJob}
         />
       )}
-
-      {/* Tools Section */}
-      <div className="mt-12 p-6 bg-gray-50 rounded-lg shadow-md flex flex-wrap justify-around space-y-4 md:space-y-0">
-        <button
-          type="button"
-          onClick={() => navigate('/pesos-tool')}
-          className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
-        >
-          <Calculator className="h-6 w-6 text-gray-700" />
-          <span className="text-gray-800 font-medium">Calculadora de pesos</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => navigate('/consumos-tool')}
-          className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
-        >
-          <PieChart className="h-6 w-6 text-gray-700" />
-          <span className="text-gray-800 font-medium">Calculadora de consumos</span>
-        </button>
-
-        <button
-          type="button"
-          className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
-        >
-          <FileText className="h-6 w-6 text-gray-700" />
-          <span className="text-gray-800 font-medium">Generador de informes SV</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={handleAnalysisButtonClick}
-          className="flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-100 rounded-md shadow-sm transition"
-        >
-          <Sparkles className="h-6 w-6 text-gray-700" />
-          <span className="text-gray-800 font-medium">Análisis de riders IA</span>
-        </button>
-      </div>
 
       {showAnalysisForm && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">

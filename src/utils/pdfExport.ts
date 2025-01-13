@@ -28,97 +28,119 @@ export const exportToPDF = (
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
     
-  // Add title
-  doc.setFontSize(20);
-  doc.text(projectName || 'Project Report', pageWidth / 2, 20, { align: 'center' });
-  
-  // Add date
-  doc.setFontSize(12);
-  doc.text(`Generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, 30, { align: 'center' });
-  
-  let yPosition = 40;
-  
-  tables.forEach((table, index) => {
-    // Table header
-    doc.setFontSize(14);
-    doc.text(table.name, 14, yPosition);
-    yPosition += 10;
+    // Add title
+    doc.setFontSize(24);
+    doc.setTextColor(51, 51, 51);
+    doc.text(projectName, pageWidth / 2, 20, { align: 'center' });
     
-    // Table content
-    const tableRows = table.rows.map(row => {
-      if (type === 'weight') {
-        return [
-          row.quantity,
-          row.componentName || '',
-          row.weight || '',
-          row.totalWeight?.toFixed(2) || ''
-        ];
-      } else {
-        return [
-          row.quantity,
-          row.componentName || '',
-          row.watts || '',
-          row.totalWatts?.toFixed(2) || ''
-        ];
-      }
-    });
-    
-    const headers = type === 'weight' 
-      ? [['Quantity', 'Component', 'Weight (per unit)', 'Total Weight']]
-      : [['Quantity', 'Component', 'Watts (per unit)', 'Total Watts']];
-    
-    autoTable(doc, {
-      head: headers,
-      body: tableRows,
-      startY: yPosition,
-      theme: 'grid',
-      styles: { fontSize: 10 },
-      headStyles: { fillColor: [100, 100, 100] }
-    });
-    
-    yPosition = (doc as any).lastAutoTable.finalY + 10;
-    
-    // Add table totals
-    if (type === 'weight' && table.totalWeight) {
-      doc.text(`Total Weight: ${table.totalWeight.toFixed(2)}`, 14, yPosition);
-    } else if (type === 'power') {
-      if (table.totalWatts) {
-        doc.text(`Total Power: ${table.totalWatts.toFixed(2)} W`, 14, yPosition);
-      }
-      if (table.currentPerPhase) {
-        doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition + 7);
-        yPosition += 7;
-      }
-    }
-    
-    yPosition += 20;
-    
-    // Add page if needed
-    if (yPosition > doc.internal.pageSize.height - 40 && index < tables.length - 1) {
-      doc.addPage();
-      yPosition = 20;
-    }
-  });
-  
-  // Add system summary if provided
-  if (totalSystem) {
-    doc.setFontSize(14);
-    doc.text('Total System Summary', 14, yPosition);
-    yPosition += 10;
-    
+    // Add date
     doc.setFontSize(12);
-    if (type === 'power') {
-      if (totalSystem.totalSystemWatts) {
-        doc.text(`Total System Power: ${totalSystem.totalSystemWatts.toFixed(2)} W`, 14, yPosition);
-        yPosition += 7;
+    doc.setTextColor(115, 115, 115);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, 30, { align: 'center' });
+    
+    let yPosition = 40;
+    
+    tables.forEach((table, index) => {
+      // Table header
+      doc.setFontSize(16);
+      doc.setTextColor(51, 51, 51);
+      doc.text(table.name, 14, yPosition);
+      yPosition += 10;
+      
+      // Table content
+      const tableRows = table.rows.map(row => {
+        if (type === 'weight') {
+          return [
+            row.quantity,
+            row.componentName || '',
+            row.weight || '',
+            row.totalWeight?.toFixed(2) || ''
+          ];
+        } else {
+          return [
+            row.quantity,
+            row.componentName || '',
+            row.watts || '',
+            row.totalWatts?.toFixed(2) || ''
+          ];
+        }
+      });
+      
+      const headers = type === 'weight' 
+        ? [['Quantity', 'Component', 'Weight (per unit)', 'Total Weight']]
+        : [['Quantity', 'Component', 'Watts (per unit)', 'Total Watts']];
+      
+      autoTable(doc, {
+        head: headers,
+        body: tableRows,
+        startY: yPosition,
+        theme: 'striped',
+        styles: {
+          fontSize: 10,
+          cellPadding: 5,
+          lineColor: [230, 230, 230],
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: [115, 115, 115],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+        bodyStyles: {
+          textColor: [68, 68, 68],
+        },
+        alternateRowStyles: {
+          fillColor: [247, 247, 247],
+        },
+      });
+      
+      yPosition = (doc as any).lastAutoTable.finalY + 10;
+      
+      // Add table totals with improved styling
+      doc.setFontSize(12);
+      doc.setTextColor(51, 51, 51);
+      if (type === 'weight' && table.totalWeight) {
+        doc.text(`Total Weight: ${table.totalWeight.toFixed(2)} kg`, 14, yPosition);
+      } else if (type === 'power') {
+        if (table.totalWatts) {
+          doc.text(`Total Power: ${table.totalWatts.toFixed(2)} W`, 14, yPosition);
+        }
+        if (table.currentPerPhase) {
+          doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition + 7);
+          yPosition += 7;
+        }
       }
-      if (totalSystem.totalSystemAmps) {
-        doc.text(`Total System Current per Phase: ${totalSystem.totalSystemAmps.toFixed(2)} A`, 14, yPosition);
+      
+      yPosition += 20;
+      
+      // Add page if needed
+      if (yPosition > doc.internal.pageSize.height - 40 && index < tables.length - 1) {
+        doc.addPage();
+        yPosition = 20;
       }
-    } else if (totalSystem.totalSystemWeight) {
-      doc.text(`Total System Weight: ${totalSystem.totalSystemWeight.toFixed(2)}`, 14, yPosition);
+    });
+    
+    // Add system summary with improved styling
+    if (totalSystem) {
+      doc.setFontSize(16);
+      doc.setTextColor(51, 51, 51);
+      doc.text('Total System Summary', 14, yPosition);
+      yPosition += 10;
+      
+      doc.setFontSize(12);
+      doc.setTextColor(68, 68, 68);
+      if (type === 'power') {
+        if (totalSystem.totalSystemWatts) {
+          doc.text(`Total System Power: ${totalSystem.totalSystemWatts.toFixed(2)} W`, 14, yPosition);
+          yPosition += 7;
+        }
+        if (totalSystem.totalSystemAmps) {
+          doc.text(`Total System Current per Phase: ${totalSystem.totalSystemAmps.toFixed(2)} A`, 14, yPosition);
+        }
+      } else if (totalSystem.totalSystemWeight) {
+        doc.text(`Total System Weight: ${totalSystem.totalSystemWeight.toFixed(2)} kg`, 14, yPosition);
+      }
     }
-  }
     
     // Instead of saving, return blob
     const blob = doc.output('blob');
