@@ -167,17 +167,16 @@ const PesosTool = () => {
   }
 
   try {
-    const totalSystemWeight = tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0);
     const jobName = selectedJob.title;
     const pdfBlob = await exportToPDF(
       tableName, 
       tables, 
-      'weight', 
-      { totalSystemWeight },
+      'weight',
       jobName
     );
 
     const fileName = `Pesos Sonido ${jobName}.pdf`;
+    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
     // ... rest of the function remains the same
 
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
