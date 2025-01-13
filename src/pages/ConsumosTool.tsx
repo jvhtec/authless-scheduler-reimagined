@@ -165,7 +165,7 @@ const ConsumosTool = () => {
 
       const jobName = selectedJob.title || 'Unnamed Job';
       const fileName = `Consumos Sonido - ${jobName}.pdf`;
-      const pdfBlob = await exportToPDF(selectedJob.title, tables, 'power', totalSystem);
+      const pdfBlob = await exportToPDF(selectedJob.title, tables, 'power', jobName, totalSystem);
 
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
