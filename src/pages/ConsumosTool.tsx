@@ -9,26 +9,29 @@ import { exportToPDF } from '@/utils/pdfExport';
 import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-const componentDatabase = [
-  { id: 1, name: 'LA12X', watts: 2900 },
-  { id: 2, name: 'LA8', watts: 2500 },
-  { id: 3, name: 'LA4X', watts: 2000 },
-  { id: 4, name: 'PLM20000D', watts: 2900 },
-  { id: 5, name: 'Control FoH (L)', watts: 3500 },
-  { id: 6, name: 'Control FoH (S)', watts: 1500 },
-  { id: 7, name: 'Control Mon (L)', watts: 3500 },
-  { id: 8, name: 'Control Mon (S)', watts: 1500 },
-  { id: 9, name: 'RF Rack', watts: 2500 },
-  { id: 10, name: 'Backline', watts: 2500 },
-  { id: 11, name: 'Varios', watts: 1500 },
-];
+const componentDatabase = {
+  sound: [
+    { id: 1, name: 'LA12X', watts: 2900 },
+    { id: 2, name: 'LA8', watts: 2500 },
+    { id: 3, name: 'LA4X', watts: 2000 },
+    { id: 4, name: 'PLM20000D', watts: 2900 },
+    { id: 5, name: 'Control FoH (L)', watts: 3500 },
+    { id: 6, name: 'Control FoH (S)', watts: 1500 },
+    { id: 7, name: 'Control Mon (L)', watts: 3500 },
+    { id: 8, name: 'Control Mon (S)', watts: 1500 },
+    { id: 9, name: 'RF Rack', watts: 2500 },
+    { id: 10, name: 'Backline', watts: 2500 },
+    { id: 11, name: 'Varios', watts: 1500 },
+  ],
+  lights: [], // Placeholder for lights components
+  video: [], // Placeholder for video components
+};
 
 const VOLTAGE_3PHASE = 400;
 const POWER_FACTOR = 0.85;
 const PHASES = 3;
-
 const PDU_TYPES = ['CEE32A 3P+N+G', 'CEE63A 3P+N+G', 'CEE125A 3P+N+G'];
 
 interface TableRow {
@@ -50,8 +53,13 @@ interface Table {
 
 const ConsumosTool: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
+
+  const params = new URLSearchParams(location.search);
+  const department = params.get('department') || 'sound';
+  const components = componentDatabase[department];
 
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
@@ -61,40 +69,40 @@ const ConsumosTool: React.FC = () => {
 
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
-    rows: [{ quantity: '', componentId: '', watts: '' }]
+    rows: [{ quantity: '', componentId: '', watts: '' }],
   });
 
   const addRow = () => {
-    setCurrentTable(prev => ({
+    setCurrentTable((prev) => ({
       ...prev,
-      rows: [...prev.rows, { quantity: '', componentId: '', watts: '' }]
+      rows: [...prev.rows, { quantity: '', componentId: '', watts: '' }],
     }));
   };
 
   const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
     if (field === 'componentId') {
-      const component = componentDatabase.find(c => c.id.toString() === value);
+      const component = components.find((c) => c.id.toString() === value);
       newRows[index] = {
         ...newRows[index],
         [field]: value,
-        watts: component ? component.watts.toString() : ''
+        watts: component ? component.watts.toString() : '',
       };
     } else {
       newRows[index] = {
         ...newRows[index],
-        [field]: value
+        [field]: value,
       };
     }
-    setCurrentTable(prev => ({
+    setCurrentTable((prev) => ({
       ...prev,
-      rows: newRows
+      rows: newRows,
     }));
   };
 
   const handleJobSelect = (jobId: string) => {
     setSelectedJobId(jobId);
-    const job = jobs?.find(j => j.id === jobId) || null;
+    const job = jobs?.find((j) => j.id === jobId) || null;
     setSelectedJob(job);
   };
 
@@ -114,22 +122,23 @@ const ConsumosTool: React.FC = () => {
   const generateTable = () => {
     if (!tableName) {
       toast({
-        title: "Missing table name",
-        description: "Please enter a name for the table",
-        variant: "destructive"
+        title: 'Missing table name',
+        description: 'Please enter a name for the table',
+        variant: 'destructive',
       });
       return;
     }
 
-    const calculatedRows = currentTable.rows.map(row => {
-      const component = componentDatabase.find(c => c.id.toString() === row.componentId);
-      const totalWatts = parseFloat(row.quantity) && parseFloat(row.watts)
-        ? parseFloat(row.quantity) * parseFloat(row.watts)
-        : 0;
+    const calculatedRows = currentTable.rows.map((row) => {
+      const component = components.find((c) => c.id.toString() === row.componentId);
+      const totalWatts =
+        parseFloat(row.quantity) && parseFloat(row.watts)
+          ? parseFloat(row.quantity) * parseFloat(row.watts)
+          : 0;
       return {
         ...row,
         componentName: component?.name || '',
-        totalWatts
+        totalWatts,
       };
     });
 
@@ -146,28 +155,28 @@ const ConsumosTool: React.FC = () => {
       id: Date.now(),
     };
 
-    setTables(prev => [...prev, newTable]);
+    setTables((prev) => [...prev, newTable]);
     resetCurrentTable();
   };
 
   const resetCurrentTable = () => {
     setCurrentTable({
       name: '',
-      rows: [{ quantity: '', componentId: '', watts: '' }]
+      rows: [{ quantity: '', componentId: '', watts: '' }],
     });
     setTableName('');
   };
 
   const removeTable = (tableId: number) => {
-    setTables(prev => prev.filter(table => table.id !== tableId));
+    setTables((prev) => prev.filter((table) => table.id !== tableId));
   };
 
   const handleExportPDF = async () => {
     if (!selectedJobId || !selectedJob) {
       toast({
-        title: "No job selected",
-        description: "Please select a job before exporting",
-        variant: "destructive"
+        title: 'No job selected',
+        description: 'Please select a job before exporting',
+        variant: 'destructive',
       });
       return;
     }
@@ -184,13 +193,12 @@ const ConsumosTool: React.FC = () => {
         {
           totalSystemWatts,
           totalSystemAmps: totalSystemCurrent,
-        },
-        safetyMargin // Pass safety margin to the PDF
+        }
       );
 
       const fileName = `Power Report - ${selectedJob.title}.pdf`;
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-      const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+      const filePath = `${department}/${selectedJobId}/${crypto.randomUUID()}.pdf`;
 
       const { error: uploadError } = await supabase.storage
         .from('task_documents')
@@ -199,29 +207,14 @@ const ConsumosTool: React.FC = () => {
       if (uploadError) throw uploadError;
 
       toast({
-        title: "Success",
-        description: "PDF has been generated and uploaded successfully.",
+        title: 'Success',
+        description: 'PDF has been generated and uploaded successfully.',
       });
-
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from('task_documents')
-        .download(filePath);
-
-      if (downloadError) throw downloadError;
-
-      const url = window.URL.createObjectURL(fileData);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: "Error",
-        description: "Failed to generate or upload the PDF.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to generate or upload the PDF.',
+        variant: 'destructive',
       });
     }
   };
@@ -230,7 +223,7 @@ const ConsumosTool: React.FC = () => {
     <Card className="w-full max-w-4xl mx-auto my-6">
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sound')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(`/${department}`)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <CardTitle className="text-2xl font-bold">Power Calculator</CardTitle>
@@ -238,18 +231,17 @@ const ConsumosTool: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Safety Margin Selector */}
           <div className="space-y-2">
             <Label htmlFor="safetyMargin">Safety Margin</Label>
             <Select
               value={safetyMargin.toString()}
-              onValueChange={value => setSafetyMargin(Number(value))}
+              onValueChange={(value) => setSafetyMargin(Number(value))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select Safety Margin" />
               </SelectTrigger>
               <SelectContent>
-                {[0, 10, 20, 30, 40, 50].map(percentage => (
+                {[0, 10, 20, 30, 40, 50].map((percentage) => (
                   <SelectItem key={percentage} value={percentage.toString()}>
                     {percentage}%
                   </SelectItem>
@@ -258,7 +250,6 @@ const ConsumosTool: React.FC = () => {
             </Select>
           </div>
 
-          {/* Job Selector */}
           <div className="space-y-2">
             <Label htmlFor="jobSelect">Select Job</Label>
             <Select value={selectedJobId} onValueChange={handleJobSelect}>
@@ -266,7 +257,7 @@ const ConsumosTool: React.FC = () => {
                 <SelectValue placeholder="Select a job" />
               </SelectTrigger>
               <SelectContent>
-                {jobs?.map(job => (
+                {jobs?.map((job) => (
                   <SelectItem key={job.id} value={job.id}>
                     {job.title}
                   </SelectItem>
@@ -275,13 +266,12 @@ const ConsumosTool: React.FC = () => {
             </Select>
           </div>
 
-          {/* Table Input */}
           <div className="space-y-2">
             <Label htmlFor="tableName">Table Name</Label>
             <Input
               id="tableName"
               value={tableName}
-              onChange={e => setTableName(e.target.value)}
+              onChange={(e) => setTableName(e.target.value)}
               placeholder="Enter table name"
             />
           </div>
@@ -302,21 +292,19 @@ const ConsumosTool: React.FC = () => {
                       <Input
                         type="number"
                         value={row.quantity}
-                        onChange={e => updateInput(index, 'quantity', e.target.value)}
-                        min="0"
-                        className="w-full"
+                        onChange={(e) => updateInput(index, 'quantity', e.target.value)}
                       />
                     </td>
                     <td className="p-4">
                       <Select
                         value={row.componentId}
-                        onValueChange={value => updateInput(index, 'componentId', value)}
+                        onValueChange={(value) => updateInput(index, 'componentId', value)}
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger>
                           <SelectValue placeholder="Select component" />
                         </SelectTrigger>
                         <SelectContent>
-                          {componentDatabase.map(component => (
+                          {components.map((component) => (
                             <SelectItem key={component.id} value={component.id.toString()}>
                               {component.name}
                             </SelectItem>
@@ -354,7 +342,7 @@ const ConsumosTool: React.FC = () => {
             )}
           </div>
 
-          {tables.map(table => (
+          {tables.map((table) => (
             <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
               <div className="bg-muted px-4 py-3 flex justify-between items-center">
                 <h3 className="font-semibold">{table.name}</h3>
@@ -385,11 +373,15 @@ const ConsumosTool: React.FC = () => {
                     </tr>
                   ))}
                   <tr className="border-t bg-muted/50 font-medium">
-                    <td colSpan={3} className="px-4 py-3 text-right">Total Watts:</td>
+                    <td colSpan={3} className="px-4 py-3 text-right">
+                      Total Watts:
+                    </td>
                     <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
                   </tr>
                   <tr className="bg-muted/50 font-medium">
-                    <td colSpan={3} className="px-4 py-3 text-right">Current per Phase:</td>
+                    <td colSpan={3} className="px-4 py-3 text-right">
+                      Current per Phase:
+                    </td>
                     <td className="px-4 py-3">{table.currentPerPhase?.toFixed(2)} A</td>
                   </tr>
                 </tbody>
