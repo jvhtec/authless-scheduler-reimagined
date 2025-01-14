@@ -120,17 +120,25 @@ export const exportToPDF = (
     });
 
     // Add Logo to the bottom of the last page
-    const logoURL = '/public/sector pro logo.png';
+    const logoURL = '/public/lovable-uploads/sector pro logo.png';
     const logoWidth = 50;
     const logoHeight = 7;
 
-    // Fetch the logo and embed it in the PDF
+    // Fix for the logo printing issue
     const img = new Image();
+    img.crossOrigin = 'anonymous'; // <-- Important to allow the logo to be embedded
     img.src = logoURL;
     img.onload = () => {
       const totalPages = doc.getNumberOfPages();
       doc.setPage(totalPages);
-      doc.addImage(img, 'PNG', (pageWidth - logoWidth) / 2, pageHeight - logoHeight - 10, logoWidth, logoHeight);
+      doc.addImage(
+        img,
+        'PNG',
+        (pageWidth - logoWidth) / 2,
+        pageHeight - logoHeight - 10,
+        logoWidth,
+        logoHeight
+      );
 
       // Output as Blob
       const blob = doc.output('blob');
