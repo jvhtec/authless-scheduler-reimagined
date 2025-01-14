@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText, ArrowLeft } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
-import { useJobSelection, JobSelection, TourDate } from '@/hooks/useJobSelection';
+import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -113,17 +113,14 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
       
       // Transform the data to match our expected types
       const transformedJobs = jobs?.map(job => {
-        const tourDateData = job.tour_date as any;
+        const tourDate = job.tour_date as TourDate | null;
         return {
           id: job.id,
           title: job.title,
           tour_date_id: job.tour_date_id,
-          tour_date: tourDateData ? {
-            id: tourDateData.id,
-            tour: tourDateData.tour ? {
-              id: tourDateData.tour.id,
-              name: tourDateData.tour.name
-            } : null
+          tour_date: tourDate ? {
+            id: tourDate.id,
+            tour: tourDate.tour
           } : null,
           job_departments: job.job_departments
         };
