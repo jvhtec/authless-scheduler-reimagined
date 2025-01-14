@@ -24,6 +24,37 @@ interface PowerSystemSummary {
   totalSystemAmps: number;
 }
 
+// Utility: Load the image dynamically
+const loadImage = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = url;
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+  });
+};
+
+// Utility: Add Logo to the bottom of the page
+const addLogoToBottom = (
+  doc: jsPDF,
+  img: HTMLImageElement,
+  pageWidth: number,
+  pageHeight: number
+) => {
+  const logoWidth = 50;
+  const logoHeight = 5;
+  const x = (pageWidth - logoWidth) / 2;
+  const y = pageHeight - 20;
+  doc.addImage(img, 'PNG', x, y, logoWidth, logoHeight);
+};
+
+// Utility: Calculate table height
+const calculateTableHeight = (doc: jsPDF, rowCount: number): number => {
+  const rowHeight = 10; // Approximate height per row
+  const headerHeight = 10; // Height for the table header
+  return headerHeight + rowCount * rowHeight;
+};
+
 export const exportToPDF = (
   projectName: string,
   tables: ExportTable[],
@@ -38,33 +69,32 @@ export const exportToPDF = (
       const pageHeight = doc.internal.pageSize.height;
 
       // Load the logo from the assets folder
-      const logoUrl = '/public/sector pro logo.png'; // Replace with the actual path to the logo
+      const logoUrl = '/sector pro logo.png';
       const logoImg = await loadImage(logoUrl);
     
-    // Add header
-    doc.setFillColor(120, 11, 1);
-    doc.rect(0, 0, pageWidth, 40, 'F');
-    
-    // Add title
-    doc.setFontSize(24);
-    doc.setTextColor(255, 255, 255);
-    const title = type === 'weight' ? "Weight Distribution Report" : "Power Distribution Report";
-    doc.text(title, pageWidth / 2, 20, { align: 'center' });
-    
-    // Add job name as subtitle
-    doc.setFontSize(16);
-    doc.setTextColor(255, 255, 255);
-    doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
-    
-    // Add date
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 50);
-    
-    let yPosition = 60;
-    
-    tables.forEach((table, index) => {
-      // Table header
+      // Add header
+      doc.setFillColor(120, 11, 1);
+      doc.rect(0, 0, pageWidth, 40, 'F');
+      
+      // Add title
+      doc.setFontSize(24);
+      doc.setTextColor(255, 255, 255);
+      const title = type === 'weight' ? "Weight Distribution Report" : "Power Distribution Report";
+      doc.text(title, pageWidth / 2, 20, { align: 'center' });
+      
+      // Add job name as subtitle
+      doc.setFontSize(16);
+      doc.setTextColor(255, 255, 255);
+      doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
+      
+      // Add date
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 50);
+      
+      let yPosition = 60;
+      
+      tables.forEach((table, index) => {
       doc.setFillColor(245, 245, 250);
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
       
@@ -144,51 +174,15 @@ export const exportToPDF = (
         doc.addPage();
         yPosition = 20;
       }
-    });
+      });
 
-     // Add Logo to the last page
-     addLogoToBottom(doc, logoImg, pageWidth, pageHeight);
+      // Add Logo to the last page
+      addLogoToBottom(doc, logoImg, pageWidth, pageHeight);
 
-     const blob = doc.output('blob');
-     resolve(blob);
-   } catch (error) {
-     reject(error);
-   }
- });
-};
-
-    // Utility: Load the image dynamically
-const loadImage = (url: string): Promise<HTMLImageElement> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.src = url;
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-  });
-};
-
-// Utility: Add Logo to the bottom of the page
-const addLogoToBottom = (
-  doc: jsPDF,
-  img: HTMLImageElement,
-  pageWidth: number,
-  pageHeight: number
-) => {
-  const logoWidth = 50;
-  const logoHeight = 5;
-  const x = (pageWidth - logoWidth) / 2;
-  const y = pageHeight - 20;
-  doc.addImage(img, 'PNG', x, y, logoWidth, logoHeight);
-};
-
-// Utility: Calculate table height
-const calculateTableHeight = (doc: jsPDF, rowCount: number): number => {
-  const rowHeight = 10; // Approximate height per row
-  const headerHeight = 10; // Height for the table header
-  return headerHeight + rowCount * rowHeight;
-};
- 
-    const blob = doc.output('blob');
-    resolve(blob);
+      const blob = doc.output('blob');
+      resolve(blob);
+    } catch (error) {
+      reject(error);
+    }
   });
 };
