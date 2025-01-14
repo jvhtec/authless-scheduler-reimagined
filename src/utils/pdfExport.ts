@@ -158,7 +158,7 @@ const addLogoToBottom = (
   pageHeight: number
 ) => {
   const logoWidth = 50;
-  const logoHeight = 15;
+  const logoHeight = 10;
   const x = (pageWidth - logoWidth) / 2;
   const y = pageHeight - 20;
   doc.addImage(img, 'PNG', x, y, logoWidth, logoHeight);
