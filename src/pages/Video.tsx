@@ -34,7 +34,6 @@ const Video = () => {
   // Use the tab visibility hook to handle tab switching
   useTabVisibility(['jobs']);
 
-  // Remove the options object since useJobs no longer accepts parameters
   const { data: jobs, isLoading } = useJobs();
 
   useEffect(() => {
