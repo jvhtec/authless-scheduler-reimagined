@@ -14,6 +14,7 @@ export interface JobSelection {
   title: string;
   tour_date_id: string | null;
   tour_date: TourDate | null;
+  job_departments?: { department: string }[];
 }
 
 export const useJobSelection = () => {
@@ -50,10 +51,10 @@ export const useJobSelection = () => {
         title: job.title,
         tour_date_id: job.tour_date_id,
         tour_date: job.tour_date ? {
-          id: job.tour_date[0]?.id, // Access first element of tour_date array
+          id: job.tour_date.id,
           tour: {
-            id: job.tour_date[0]?.tour[0]?.id, // Access first tour from the first tour_date
-            name: job.tour_date[0]?.tour[0]?.name
+            id: job.tour_date.tour?.id,
+            name: job.tour_date.tour?.name
           }
         } : null
       })) as JobSelection[];

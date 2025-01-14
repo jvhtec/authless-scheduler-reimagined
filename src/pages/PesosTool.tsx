@@ -74,7 +74,7 @@ const PesosTool: React.FC<{ department?: 'sound' | 'lights' | 'video' }> = ({ de
           id,
           title,
           tour_date_id,
-          tour_date:tour_dates!tour_date_id (
+          tour_date:tour_dates (
             id,
             tour:tours (
               id,
@@ -93,8 +93,25 @@ const PesosTool: React.FC<{ department?: 'sound' | 'lights' | 'video' }> = ({ de
         throw error;
       }
 
-      console.log("Filtered jobs data:", jobs);
-      return jobs;
+      console.log("Raw jobs data:", jobs);
+      
+      // Transform the data to match our expected types
+      const transformedJobs = jobs?.map(job => ({
+        id: job.id,
+        title: job.title,
+        tour_date_id: job.tour_date_id,
+        tour_date: job.tour_date ? {
+          id: job.tour_date.id,
+          tour: {
+            id: job.tour_date.tour?.id,
+            name: job.tour_date.tour?.name
+          }
+        } : null,
+        job_departments: job.job_departments
+      })) as JobSelection[];
+
+      console.log("Transformed jobs:", transformedJobs);
+      return transformedJobs;
     },
   });
   
