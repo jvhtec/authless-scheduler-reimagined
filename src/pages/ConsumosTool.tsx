@@ -45,7 +45,11 @@ interface Table {
   id?: number;
 }
 
-const ConsumosTool = () => {
+interface ConsumosToolProps {
+  department?: 'sound' | 'lights' | 'video';
+}
+
+const ConsumosTool: React.FC<ConsumosToolProps> = ({ department = 'sound' }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
@@ -164,11 +168,11 @@ const ConsumosTool = () => {
       };
 
       const jobName = selectedJob.title || 'Unnamed Job';
-      const fileName = `Consumos Sonido - ${jobName}.pdf`;
+      const fileName = `Consumos ${department} - ${jobName}.pdf`;
       const pdfBlob = await exportToPDF(selectedJob.title, tables, 'power', jobName, totalSystem);
 
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-      const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+      const filePath = `${department}/${selectedJobId}/${crypto.randomUUID()}.pdf`;
 
       const { error: uploadError } = await supabase.storage
         .from('task_documents')
@@ -177,7 +181,7 @@ const ConsumosTool = () => {
       if (uploadError) throw uploadError;
 
       const { data: tasks, error: taskError } = await supabase
-        .from('sound_job_tasks')
+        .from(`${department}_job_tasks`)
         .select('id')
         .eq('job_id', selectedJobId)
         .eq('task_type', 'Consumos')
@@ -190,7 +194,7 @@ const ConsumosTool = () => {
         .insert({
           file_name: fileName,
           file_path: filePath,
-          sound_task_id: tasks.id,
+          [`${department}_task_id`]: tasks.id,
           uploaded_by: (await supabase.auth.getUser()).data.user?.id
         });
 

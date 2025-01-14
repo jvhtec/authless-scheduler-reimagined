@@ -60,7 +60,7 @@ interface Table {
   dualMotors?: boolean;
 }
 
-const PesosTool = () => {
+const PesosTool: React.FC<{ department?: 'sound' | 'lights' | 'video' }> = ({ department = 'sound' }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
@@ -156,106 +156,104 @@ const PesosTool = () => {
     setTables(prev => prev.filter(table => table.id !== tableId));
   };
 
- const handleExportPDF = async () => {
-  if (!selectedJobId || !selectedJob) {
-    toast({
-      title: "No job selected",
-      description: "Please select a job before exporting",
-      variant: "destructive"
-    });
-    return;
-  }
-
-  try {
-    const jobName = selectedJob.title;
-    const pdfBlob = await exportToPDF(
-      tableName, 
-      tables, 
-      'weight',
-      jobName
-    );
-
-    const fileName = `Pesos Sonido ${jobName}.pdf`;
-    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-    const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('task_documents')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    // First try to get existing task
-    const { data: existingTask, error: taskError } = await supabase
-      .from('sound_job_tasks')
-      .select('id')
-      .eq('job_id', selectedJobId)
-      .eq('task_type', 'Pesos')
-      .maybeSingle();
-
-    if (taskError) throw taskError;
-
-    let taskId;
-
-    if (!existingTask) {
-      // Create new task if none exists
-      const { data: newTask, error: createError } = await supabase
-        .from('sound_job_tasks')
-        .insert({
-          job_id: selectedJobId,
-          task_type: 'Pesos',
-          status: 'in_progress',
-          progress: 50
-        })
-        .select('id')
-        .single();
-
-      if (createError) throw createError;
-      taskId = newTask.id;
-    } else {
-      taskId = existingTask.id;
+  const handleExportPDF = async () => {
+    if (!selectedJobId || !selectedJob) {
+      toast({
+        title: "No job selected",
+        description: "Please select a job before exporting",
+        variant: "destructive"
+      });
+      return;
     }
 
-    const { error: docError } = await supabase
-      .from('task_documents')
-      .insert({
-        file_name: fileName,
-        file_path: filePath,
-        sound_task_id: taskId,
-        uploaded_by: (await supabase.auth.getUser()).data.user?.id
+    try {
+      const jobName = selectedJob.title;
+      const pdfBlob = await exportToPDF(
+        tableName, 
+        tables, 
+        'weight',
+        jobName
+      );
+
+      const fileName = `Pesos ${department} ${jobName}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      const filePath = `${department}/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('task_documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: existingTask, error: taskError } = await supabase
+        .from(`${department}_job_tasks`)
+        .select('id')
+        .eq('job_id', selectedJobId)
+        .eq('task_type', 'Pesos')
+        .maybeSingle();
+
+      if (taskError) throw taskError;
+
+      let taskId;
+
+      if (!existingTask) {
+        const { data: newTask, error: createError } = await supabase
+          .from(`${department}_job_tasks`)
+          .insert({
+            job_id: selectedJobId,
+            task_type: 'Pesos',
+            status: 'in_progress',
+            progress: 50
+          })
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        taskId = newTask.id;
+      } else {
+        taskId = existingTask.id;
+      }
+
+      const { error: docError } = await supabase
+        .from('task_documents')
+        .insert({
+          file_name: fileName,
+          file_path: filePath,
+          [`${department}_task_id`]: taskId,
+          uploaded_by: (await supabase.auth.getUser()).data.user?.id
+        });
+
+      if (docError) throw docError;
+
+      toast({
+        title: "Success",
+        description: "PDF has been generated and uploaded successfully.",
       });
 
-    if (docError) throw docError;
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('task_documents')
+        .download(filePath);
 
-    toast({
-      title: "Success",
-      description: "PDF has been generated and uploaded successfully.",
-    });
+      if (downloadError) throw downloadError;
 
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from('task_documents')
-      .download(filePath);
+      const url = window.URL.createObjectURL(fileData);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
-    if (downloadError) throw downloadError;
-
-    const url = window.URL.createObjectURL(fileData);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-
-  } catch (error: any) {
-    console.error('Error handling PDF:', error);
-    toast({
-      title: "Error",
-      description: error.message,
-      variant: "destructive"
-    });
-  }
-};
+    } catch (error: any) {
+      console.error('Error handling PDF:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <Card className="w-full max-w-4xl mx-auto my-6">

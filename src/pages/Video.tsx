@@ -14,6 +14,7 @@ import { LightsSchedule } from "@/components/lights/LightsSchedule";
 import { Button } from "@/components/ui/button";
 import { Scale, Calculator } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTabVisibility } from "@/hooks/useTabVisibility";
 
 const Video = () => {
   const navigate = useNavigate();
