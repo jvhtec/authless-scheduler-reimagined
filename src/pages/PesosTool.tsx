@@ -9,40 +9,44 @@ import { exportToPDF } from '@/utils/pdfExport';
 import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Checkbox } from "@/components/ui/checkbox";
 
-const componentDatabase = [
-  { id: 1, name: ' K1 ', weight: 106 },
-  { id: 2, name: ' K2 ', weight: 56 },
-  { id: 3, name: ' K3 ', weight: 43 },
-  { id: 4, name: ' KARA II ', weight: 25 },
-  { id: 5, name: ' KIVA ', weight: 14 },
-  { id: 6, name: ' KS28 ', weight: 79 },
-  { id: 7, name: ' K1-SB ', weight: 83 },
-  { id: 8, name: ' BUMPER K1 ', weight: 108 },
-  { id: 9, name: ' BUMPER K2 ', weight: 60 },
-  { id: 10, name: ' BUMPER K3 ', weight: 50 },
-  { id: 11, name: ' BUMPER KARA ', weight: 20 },
-  { id: 12, name: ' BUMPER KIVA ', weight: 13 },
-  { id: 13, name: ' BUMPER KS28 ', weight: 15 },
-  { id: 14, name: ' KARADOWNK1 ', weight: 15 },
-  { id: 15, name: ' KARADOWNK2 ', weight: 15 },
-  { id: 16, name: ' MOTOR 2T ', weight: 90 },
-  { id: 17, name: ' MOTOR 1T ', weight: 70 },
-  { id: 18, name: ' MOTOR 750Kg ', weight: 60 },
-  { id: 19, name: ' MOTOR 500Kg ', weight: 50 },
-  { id: 20, name: ' POLIPASTO 1T ', weight: 10.4 },
-  { id: 21, name: ' TFS900H ', weight: 102 },
-  { id: 22, name: ' TFA600 ', weight: 41 },
-  { id: 23, name: ' TFS550H ', weight: 13.4 },
-  { id: 24, name: ' TFS550L ', weight: 27 },
-  { id: 25, name: ' BUMPER TFS900 ', weight: 20 },
-  { id: 26, name: ' TFS900>TFA600 ', weight: 14 },
-  { id: 27, name: ' TFS900>TFS550 ', weight: 14 },
-  { id: 28, name: ' CABLEADO L ', weight: 100 },
-  { id: 29, name: ' CABLEADO H ', weight: 250 },
-];
+const componentDatabase = {
+  sound: [
+    { id: 1, name: 'K1', weight: 106 },
+    { id: 2, name: 'K2', weight: 56 },
+    { id: 3, name: 'K3', weight: 43 },
+    { id: 4, name: 'KARA II', weight: 25 },
+    { id: 5, name: 'KIVA', weight: 14 },
+    { id: 6, name: 'KS28', weight: 79 },
+    { id: 7, name: 'K1-SB', weight: 83 },
+    { id: 8, name: 'BUMPER K1', weight: 108 },
+    { id: 9, name: 'BUMPER K2', weight: 60 },
+    { id: 10, name: 'BUMPER K3', weight: 50 },
+    { id: 11, name: 'BUMPER KARA', weight: 20 },
+    { id: 12, name: 'BUMPER KIVA', weight: 13 },
+    { id: 13, name: 'BUMPER KS28', weight: 15 },
+    { id: 14, name: 'KARADOWNK1', weight: 15 },
+    { id: 15, name: 'KARADOWNK2', weight: 15 },
+    { id: 16, name: 'MOTOR 2T', weight: 90 },
+    { id: 17, name: 'MOTOR 1T', weight: 70 },
+    { id: 18, name: 'MOTOR 750Kg', weight: 60 },
+    { id: 19, name: 'MOTOR 500Kg', weight: 50 },
+    { id: 20, name: 'POLIPASTO 1T', weight: 10.4 },
+    { id: 21, name: 'TFS900H', weight: 102 },
+    { id: 22, name: 'TFA600', weight: 41 },
+    { id: 23, name: 'TFS550H', weight: 13.4 },
+    { id: 24, name: 'TFS550L', weight: 27 },
+    { id: 25, name: 'BUMPER TFS900', weight: 20 },
+    { id: 26, name: 'TFS900>TFA600', weight: 14 },
+    { id: 27, name: 'TFS900>TFS550', weight: 14 },
+    { id: 28, name: 'CABLEADO L', weight: 100 },
+    { id: 29, name: 'CABLEADO H', weight: 250 },
+  ],
+  lights: [], // Placeholder for lights component list
+  video: [], // Placeholder for video component list
+};
 
 interface TableRow {
   quantity: string;
@@ -60,10 +64,16 @@ interface Table {
   dualMotors?: boolean;
 }
 
-const PesosTool = () => {
+const PesosTool: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
+
+  const params = new URLSearchParams(location.search);
+  const department = params.get('department') || 'sound';
+  const components = componentDatabase[department];
+
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState('');
@@ -84,7 +94,7 @@ const PesosTool = () => {
   const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
     if (field === 'componentId') {
-      const component = componentDatabase.find(c => c.id.toString() === value);
+      const component = components.find(c => c.id.toString() === value);
       newRows[index] = {
         ...newRows[index],
         [field]: value,
@@ -119,9 +129,10 @@ const PesosTool = () => {
     }
 
     const calculatedRows = currentTable.rows.map(row => {
-      const component = componentDatabase.find(c => c.id.toString() === row.componentId);
-      const totalWeight = parseFloat(row.quantity) && parseFloat(row.weight) ? 
-        parseFloat(row.quantity) * parseFloat(row.weight) : 0;
+      const component = components.find(c => c.id.toString() === row.componentId);
+      const totalWeight = parseFloat(row.quantity) && parseFloat(row.weight)
+        ? parseFloat(row.quantity) * parseFloat(row.weight)
+        : 0;
       return {
         ...row,
         componentName: component?.name || '',
@@ -156,117 +167,115 @@ const PesosTool = () => {
     setTables(prev => prev.filter(table => table.id !== tableId));
   };
 
- const handleExportPDF = async () => {
-  if (!selectedJobId || !selectedJob) {
-    toast({
-      title: "No job selected",
-      description: "Please select a job before exporting",
-      variant: "destructive"
-    });
-    return;
-  }
-
-  try {
-    const jobName = selectedJob.title;
-    const pdfBlob = await exportToPDF(
-      tableName, 
-      tables, 
-      'weight',
-      jobName
-    );
-
-    const fileName = `Pesos Sonido ${jobName}.pdf`;
-    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-    const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('task_documents')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    // First try to get existing task
-    const { data: existingTask, error: taskError } = await supabase
-      .from('sound_job_tasks')
-      .select('id')
-      .eq('job_id', selectedJobId)
-      .eq('task_type', 'Pesos')
-      .maybeSingle();
-
-    if (taskError) throw taskError;
-
-    let taskId;
-
-    if (!existingTask) {
-      // Create new task if none exists
-      const { data: newTask, error: createError } = await supabase
-        .from('sound_job_tasks')
-        .insert({
-          job_id: selectedJobId,
-          task_type: 'Pesos',
-          status: 'in_progress',
-          progress: 50
-        })
-        .select('id')
-        .single();
-
-      if (createError) throw createError;
-      taskId = newTask.id;
-    } else {
-      taskId = existingTask.id;
+  const handleExportPDF = async () => {
+    if (!selectedJobId || !selectedJob) {
+      toast({
+        title: "No job selected",
+        description: "Please select a job before exporting",
+        variant: "destructive"
+      });
+      return;
     }
 
-    const { error: docError } = await supabase
-      .from('task_documents')
-      .insert({
-        file_name: fileName,
-        file_path: filePath,
-        sound_task_id: taskId,
-        uploaded_by: (await supabase.auth.getUser()).data.user?.id
+    try {
+      const jobName = selectedJob.title;
+      const pdfBlob = await exportToPDF(
+        tableName,
+        tables,
+        'weight',
+        jobName
+      );
+
+      const fileName = `Pesos ${department} ${jobName}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      const filePath = `${department}/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('task_documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: existingTask, error: taskError } = await supabase
+        .from(`${department}_job_tasks`)
+        .select('id')
+        .eq('job_id', selectedJobId)
+        .eq('task_type', 'Pesos')
+        .maybeSingle();
+
+      if (taskError) throw taskError;
+
+      let taskId;
+
+      if (!existingTask) {
+        const { data: newTask, error: createError } = await supabase
+          .from(`${department}_job_tasks`)
+          .insert({
+            job_id: selectedJobId,
+            task_type: 'Pesos',
+            status: 'in_progress',
+            progress: 50
+          })
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        taskId = newTask.id;
+      } else {
+        taskId = existingTask.id;
+      }
+
+      const { error: docError } = await supabase
+        .from('task_documents')
+        .insert({
+          file_name: fileName,
+          file_path: filePath,
+          [`${department}_task_id`]: taskId,
+          uploaded_by: (await supabase.auth.getUser()).data.user?.id
+        });
+
+      if (docError) throw docError;
+
+      toast({
+        title: "Success",
+        description: "PDF has been generated and uploaded successfully.",
       });
 
-    if (docError) throw docError;
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('task_documents')
+        .download(filePath);
 
-    toast({
-      title: "Success",
-      description: "PDF has been generated and uploaded successfully.",
-    });
+      if (downloadError) throw downloadError;
 
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from('task_documents')
-      .download(filePath);
+      const url = window.URL.createObjectURL(fileData);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
-    if (downloadError) throw downloadError;
-
-    const url = window.URL.createObjectURL(fileData);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-
-  } catch (error: any) {
-    console.error('Error handling PDF:', error);
-    toast({
-      title: "Error",
-      description: error.message,
-      variant: "destructive"
-    });
-  }
-};
+    } catch (error: any) {
+      console.error('Error handling PDF:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <Card className="w-full max-w-4xl mx-auto my-6">
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="icon"
-              onClick={() => navigate('/sound')}
-              title="Back to Sound"
+              onClick={() => navigate(`/${department}`)}
+              title={`Back to ${department.charAt(0).toUpperCase() + department.slice(1)}`}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -282,7 +291,7 @@ const PesosTool = () => {
           </Button>
         </div>
       </CardHeader>
-      
+
       <div className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="jobSelect">Select Job</Label>
@@ -313,7 +322,7 @@ const PesosTool = () => {
             className="w-full"
           />
           <div className="flex items-center space-x-2 mt-2">
-            <Checkbox 
+            <Checkbox
               id="dualMotors"
               checked={useDualMotors}
               onCheckedChange={(checked) => setUseDualMotors(checked as boolean)}
@@ -354,7 +363,7 @@ const PesosTool = () => {
                         <SelectValue placeholder="Select component" />
                       </SelectTrigger>
                       <SelectContent>
-                        {componentDatabase.map(component => (
+                        {components.map(component => (
                           <SelectItem key={component.id} value={component.id.toString()}>
                             {component.name}
                           </SelectItem>
@@ -392,8 +401,8 @@ const PesosTool = () => {
           <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
             <div className="bg-muted px-4 py-3 flex justify-between items-center">
               <h3 className="font-semibold">{table.name}</h3>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 size="sm"
                 onClick={() => table.id && removeTable(table.id)}
               >
