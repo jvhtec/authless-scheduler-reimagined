@@ -25,18 +25,24 @@ interface PowerSystemSummary {
 }
 
 export const exportToPDF = (
-  projectName: string, 
-  tables: ExportTable[], 
+  projectName: string,
+  tables: ExportTable[],
   type: 'weight' | 'power',
   jobName: string,
   powerSummary?: PowerSystemSummary
 ): Promise<Blob> => {
-  return new Promise((resolve) => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
+  return new Promise(async (resolve, reject) => {
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      const pageHeight = doc.internal.pageSize.height;
+
+      // Load the logo from the assets folder
+      const logoUrl = '/public/sector pro logo.png'; // Replace with the actual path to the logo
+      const logoImg = await loadImage(logoUrl);
     
     // Add header
-    doc.setFillColor(51, 51, 153);
+    doc.setFillColor(120, 11, 1);
     doc.rect(0, 0, pageWidth, 40, 'F');
     
     // Add title
@@ -52,7 +58,7 @@ export const exportToPDF = (
     
     // Add date
     doc.setFontSize(10);
-    doc.setTextColor(51, 51, 51);
+    doc.setTextColor(0, 0, 0);
     doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 50);
     
     let yPosition = 60;
@@ -63,7 +69,7 @@ export const exportToPDF = (
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
       
       doc.setFontSize(14);
-      doc.setTextColor(51, 51, 153);
+      doc.setTextColor(120, 1, 1);
       doc.text(table.name, 14, yPosition);
       yPosition += 10;
       
@@ -91,7 +97,7 @@ export const exportToPDF = (
           lineWidth: 0.1,
         },
         headStyles: {
-          fillColor: [51, 51, 153],
+          fillColor: [120, 1, 1],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
         },
@@ -110,7 +116,7 @@ export const exportToPDF = (
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
       
       doc.setFontSize(11);
-      doc.setTextColor(51, 51, 153);
+      doc.setTextColor(120, 1, 1);
       if (type === 'weight' && table.totalWeight) {
         doc.text(`Total Weight: ${table.totalWeight.toFixed(2)} kg`, 14, yPosition);
       } else if (type === 'power' && table.totalWatts) {
@@ -140,23 +146,48 @@ export const exportToPDF = (
       }
     });
 
-    // Add system summary if provided
-    if (powerSummary && type === 'power') {
-      doc.setFillColor(245, 245, 250);
-      doc.rect(14, yPosition - 6, pageWidth - 28, 30, 'F');
-      
-      doc.setFontSize(14);
-      doc.setTextColor(51, 51, 153);
-      doc.text("System Summary", 14, yPosition);
-      
-      yPosition += 10;
-      doc.setFontSize(11);
-      doc.text(`Total System Power: ${powerSummary.totalSystemWatts.toFixed(2)} W`, 14, yPosition);
-      
-      yPosition += 7;
-      doc.text(`Total System Current per Phase: ${powerSummary.totalSystemAmps.toFixed(2)} A`, 14, yPosition);
-    }
-    
+     // Add Logo to the last page
+     addLogoToBottom(doc, logoImg, pageWidth, pageHeight);
+
+     const blob = doc.output('blob');
+     resolve(blob);
+   } catch (error) {
+     reject(error);
+   }
+ });
+};
+
+    // Utility: Load the image dynamically
+const loadImage = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = url;
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+  });
+};
+
+// Utility: Add Logo to the bottom of the page
+const addLogoToBottom = (
+  doc: jsPDF,
+  img: HTMLImageElement,
+  pageWidth: number,
+  pageHeight: number
+) => {
+  const logoWidth = 50;
+  const logoHeight = 5;
+  const x = (pageWidth - logoWidth) / 2;
+  const y = pageHeight - 20;
+  doc.addImage(img, 'PNG', x, y, logoWidth, logoHeight);
+};
+
+// Utility: Calculate table height
+const calculateTableHeight = (doc: jsPDF, rowCount: number): number => {
+  const rowHeight = 10; // Approximate height per row
+  const headerHeight = 10; // Height for the table header
+  return headerHeight + rowCount * rowHeight;
+};
+ 
     const blob = doc.output('blob');
     resolve(blob);
   });
