@@ -142,7 +142,7 @@ const PesosTool: React.FC = () => {
       });
       return;
     }
-
+  
     const calculatedRows = currentTable.rows.map((row) => {
       const component = componentDatabase.find((c) => c.id.toString() === row.componentId);
       const totalWeight =
@@ -155,9 +155,10 @@ const PesosTool: React.FC = () => {
         totalWeight,
       };
     });
-
+  
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
-
+  
+    // Suffix logic: Only for sound department
     const suffix =
       department === 'sound'
         ? (() => {
@@ -170,19 +171,23 @@ const PesosTool: React.FC = () => {
             return `(SX${suffixNumber})`;
           })()
         : '';
-
+  
+    // Avoid re-appending suffixes
+    const tableNameWithSuffix = `${tableName} ${suffix}`.trim();
+  
     const newTable = {
-      name: `${tableName} ${suffix}`,
+      name: tableNameWithSuffix,
       rows: calculatedRows,
       totalWeight,
       dualMotors: useDualMotors,
       id: Date.now(),
     };
-
+  
     setTables((prev) => [...prev, newTable]);
     resetCurrentTable();
     setUseDualMotors(false);
   };
+  
 
   const resetCurrentTable = () => {
     setCurrentTable({
