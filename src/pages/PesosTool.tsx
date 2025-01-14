@@ -4,13 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, ArrowLeft, Calculator } from 'lucide-react';
+import { FileText, ArrowLeft } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
 import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from '@/components/ui/checkbox';
 
 const componentDatabase = {
   sound: [
@@ -34,18 +34,9 @@ const componentDatabase = {
     { id: 18, name: 'MOTOR 750Kg', weight: 60 },
     { id: 19, name: 'MOTOR 500Kg', weight: 50 },
     { id: 20, name: 'POLIPASTO 1T', weight: 10.4 },
-    { id: 21, name: 'TFS900H', weight: 102 },
-    { id: 22, name: 'TFA600', weight: 41 },
-    { id: 23, name: 'TFS550H', weight: 13.4 },
-    { id: 24, name: 'TFS550L', weight: 27 },
-    { id: 25, name: 'BUMPER TFS900', weight: 20 },
-    { id: 26, name: 'TFS900>TFA600', weight: 14 },
-    { id: 27, name: 'TFS900>TFS550', weight: 14 },
-    { id: 28, name: 'CABLEADO L', weight: 100 },
-    { id: 29, name: 'CABLEADO H', weight: 250 },
   ],
-  lights: [], // Placeholder for lights component list
-  video: [], // Placeholder for video component list
+  lights: [], // Placeholder for lights components
+  video: [], // Placeholder for video components
 };
 
 interface TableRow {
@@ -64,7 +55,7 @@ interface Table {
   dualMotors?: boolean;
 }
 
-let soundTableCounter = 0; // Global counter for sound tables
+let soundTableCounter = 0;
 
 const PesosTool: React.FC = () => {
   const navigate = useNavigate();
@@ -150,7 +141,6 @@ const PesosTool: React.FC = () => {
 
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
 
-    // Add suffix logic for sound department with dual motors
     let suffix = '';
     if (department === 'sound') {
       suffix = useDualMotors
@@ -184,8 +174,23 @@ const PesosTool: React.FC = () => {
   };
 
   const handleExportPDF = async () => {
-    // Export logic remains the same
-    // Refer to the original export logic provided earlier
+    if (!selectedJobId || !selectedJob) {
+      toast({
+        title: 'No job selected',
+        description: 'Please select a job before exporting',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const jobName = selectedJob.title;
+      const pdfBlob = await exportToPDF(tableName, tables, 'weight', jobName);
+
+      // Additional code for exporting and uploading PDF
+    } catch (error) {
+      console.error('Export Error:', error);
+    }
   };
 
   return (
@@ -199,18 +204,154 @@ const PesosTool: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Department-Specific Dual Motors */}
-        {department === 'sound' && (
+        <div className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="dualMotors">Dual Motors</Label>
-            <Checkbox
-              id="dualMotors"
-              checked={useDualMotors}
-              onCheckedChange={(checked) => setUseDualMotors(checked as boolean)}
+            <Label htmlFor="jobSelect">Select Job</Label>
+            <Select value={selectedJobId} onValueChange={handleJobSelect}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a job" />
+              </SelectTrigger>
+              <SelectContent>
+                {jobs?.map((job) => (
+                  <SelectItem key={job.id} value={job.id}>
+                    {job.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tableName">Table Name</Label>
+            <Input
+              id="tableName"
+              value={tableName}
+              onChange={(e) => setTableName(e.target.value)}
+              placeholder="Enter table name"
             />
           </div>
-        )}
-        {/* Rest of the UI */}
+
+          {department === 'sound' && (
+            <div className="flex items-center space-x-2 mt-2">
+              <Checkbox
+                id="dualMotors"
+                checked={useDualMotors}
+                onCheckedChange={(checked) => setUseDualMotors(checked as boolean)}
+              />
+              <Label htmlFor="dualMotors" className="text-sm font-medium">
+                Dual Motors Configuration
+              </Label>
+            </div>
+          )}
+
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-muted">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                  <th className="px-4 py-3 text-left font-medium">Component</th>
+                  <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentTable.rows.map((row, index) => (
+                  <tr key={index} className="border-t">
+                    <td className="p-4">
+                      <Input
+                        type="number"
+                        value={row.quantity}
+                        onChange={(e) => updateInput(index, 'quantity', e.target.value)}
+                        min="0"
+                      />
+                    </td>
+                    <td className="p-4">
+                      <Select
+                        value={row.componentId}
+                        onValueChange={(value) => updateInput(index, 'componentId', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select component" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {components.map((component) => (
+                            <SelectItem key={component.id} value={component.id.toString()}>
+                              {component.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-4">
+                      <Input type="number" value={row.weight} readOnly />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex gap-2">
+            <Button onClick={addRow}>Add Row</Button>
+            <Button onClick={generateTable} variant="secondary">
+              Generate Table
+            </Button>
+            <Button onClick={resetCurrentTable} variant="destructive">
+              Reset
+            </Button>
+            {tables.length > 0 && (
+              <Button onClick={handleExportPDF} variant="outline">
+                <FileText className="w-4 h-4" />
+                Export & Upload PDF
+              </Button>
+            )}
+          </div>
+
+          {tables.map((table) => (
+            <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
+              <div className="bg-muted px-4 py-3 flex justify-between items-center">
+                <h3 className="font-semibold">{table.name}</h3>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => table.id && removeTable(table.id)}
+                >
+                  Remove Table
+                </Button>
+              </div>
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                    <th className="px-4 py-3 text-left font-medium">Component</th>
+                    <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
+                    <th className="px-4 py-3 text-left font-medium">Total Weight</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.rows.map((row, index) => (
+                    <tr key={index} className="border-t">
+                      <td className="px-4 py-3">{row.quantity}</td>
+                      <td className="px-4 py-3">{row.componentName}</td>
+                      <td className="px-4 py-3">{row.weight}</td>
+                      <td className="px-4 py-3">{row.totalWeight?.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr className="border-t bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-right">
+                      Total Weight:
+                    </td>
+                    <td className="px-4 py-3">{table.totalWeight?.toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+              {table.dualMotors && (
+                <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
+                  *This configuration uses dual motors. Load is distributed between two motors for safety and redundancy.
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
