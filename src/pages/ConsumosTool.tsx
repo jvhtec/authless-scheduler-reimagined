@@ -198,21 +198,43 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
 
       if (uploadError) throw uploadError;
 
-      const { data: tasks, error: taskError } = await supabase
+      // First try to get existing task
+      const { data: existingTask, error: fetchError } = await supabase
         .from(`${department}_job_tasks`)
         .select('id')
         .eq('job_id', selectedJobId)
         .eq('task_type', 'Consumos')
-        .single();
+        .maybeSingle();
 
-      if (taskError) throw taskError;
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+
+      let taskId;
+
+      if (!existingTask) {
+        // Create new task if none exists
+        const { data: newTask, error: createError } = await supabase
+          .from(`${department}_job_tasks`)
+          .insert({
+            job_id: selectedJobId,
+            task_type: 'Consumos',
+            status: 'completed',
+            progress: 100
+          })
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        taskId = newTask.id;
+      } else {
+        taskId = existingTask.id;
+      }
 
       const { error: docError } = await supabase
         .from('task_documents')
         .insert({
           file_name: fileName,
           file_path: filePath,
-          [`${department}_task_id`]: tasks.id,
+          [`${department}_task_id`]: taskId,
           uploaded_by: (await supabase.auth.getUser()).data.user?.id
         });
 
