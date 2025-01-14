@@ -200,13 +200,13 @@ const Lights = () => {
       <CreateJobDialog
         open={isJobDialogOpen}
         onOpenChange={setIsJobDialogOpen}
-        currentDepartment="lights"
+        currentDepartment={currentDepartment}
       />
       
       <CreateTourDialog
         open={isTourDialogOpen}
         onOpenChange={setIsTourDialogOpen}
-        currentDepartment="lights"
+        currentDepartment={currentDepartment}
       />
 
       {selectedJobId && (
@@ -214,7 +214,7 @@ const Lights = () => {
           open={isAssignmentDialogOpen}
           onOpenChange={setIsAssignmentDialogOpen}
           jobId={selectedJobId}
-          department="lights"
+          department={currentDepartment}
         />
       )}
 
