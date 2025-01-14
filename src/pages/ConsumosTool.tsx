@@ -11,24 +11,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
-const componentDatabase = [
-  { id: 1, name: 'LA12X', watts: 2900 },
-  { id: 2, name: 'LA8', watts: 2500 },
-  { id: 3, name: 'LA4X', watts: 2000 },
-  { id: 4, name: 'PLM20000D', watts: 2900 },
-  { id: 5, name: 'Control FoH (L)', watts: 3500 },
-  { id: 6, name: 'Control FoH (S)', watts: 1500 },
-  { id: 7, name: 'Control Mon (L)', watts: 3500 },
-  { id: 8, name: 'Control Mon (S)', watts: 1500 },
-  { id: 9, name: 'RF Rack', watts: 2500 },
-  { id: 10, name: 'Backline', watts: 2500 },
-  { id: 11, name: 'Varios', watts: 1500 },
-];
-
-const VOLTAGE_3PHASE = 400;
-const POWER_FACTOR = 0.85;
-const SQRT3 = Math.sqrt(3);
-
 interface TableRow {
   quantity: string;
   componentId: string;
@@ -46,10 +28,41 @@ interface Table {
 }
 
 interface ConsumosToolProps {
-  department?: 'sound' | 'lights' | 'video';
+  department: 'sound' | 'lights' | 'video';
 }
 
-const ConsumosTool: React.FC<ConsumosToolProps> = ({ department = 'sound' }) => {
+const getComponentDatabase = (department: 'sound' | 'lights' | 'video') => {
+  switch (department) {
+    case 'sound':
+      return [
+        { id: 1, name: 'LA12X', watts: 2900 },
+        { id: 2, name: 'LA8', watts: 2500 },
+        { id: 3, name: 'LA4X', watts: 2000 },
+        { id: 4, name: 'PLM20000D', watts: 2900 },
+        { id: 5, name: 'Control FoH (L)', watts: 3500 },
+        { id: 6, name: 'Control FoH (S)', watts: 1500 },
+        { id: 7, name: 'Control Mon (L)', watts: 3500 },
+        { id: 8, name: 'Control Mon (S)', watts: 1500 },
+        { id: 9, name: 'RF Rack', watts: 2500 },
+        { id: 10, name: 'Backline', watts: 2500 },
+        { id: 11, name: 'Varios', watts: 1500 },
+      ];
+    case 'lights':
+      return [
+        { id: 1, name: 'Lights Component 1', watts: 1000 }, // Placeholder
+        { id: 2, name: 'Lights Component 2', watts: 2000 }, // Placeholder
+        // Add more lights components here
+      ];
+    case 'video':
+      return [
+        { id: 1, name: 'Video Component 1', watts: 1500 }, // Placeholder
+        { id: 2, name: 'Video Component 2', watts: 2500 }, // Placeholder
+        // Add more video components here
+      ];
+  }
+};
+
+const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
@@ -245,14 +258,6 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department = 'sound' }) => 
             </Button>
             <CardTitle className="text-2xl font-bold">Power Calculator</CardTitle>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => navigate('/pesos-tool')}
-            className="gap-2"
-          >
-            <Scale className="h-4 w-4" />
-            Weight Calculator
-          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -344,7 +349,7 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department = 'sound' }) => 
             <Button onClick={resetCurrentTable} variant="destructive">Reset</Button>
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
-                <FileText className="w-4 w-4" />
+                <FileText className="w-4 h-4" />
                 Export & Upload PDF
               </Button>
             )}
@@ -384,10 +389,6 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department = 'sound' }) => 
                     <td colSpan={3} className="px-4 py-3 text-right">Total Power:</td>
                     <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
                   </tr>
-                  <tr className="bg-muted/50 font-medium">
-                    <td colSpan={3} className="px-4 py-3 text-right">Current per Phase:</td>
-                    <td className="px-4 py-3">{table.currentPerPhase?.toFixed(2)} A</td>
-                  </tr>
                 </tbody>
               </table>
             </div>
@@ -402,20 +403,8 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department = 'sound' }) => 
                   {tables.reduce((sum, table) => sum + (table.totalWatts || 0), 0).toFixed(2)} W
                 </span>
               </div>
-              <div>
-                <span className="font-medium">Total Current per Phase:</span>
-                <span className="ml-2">
-                  {calculatePhaseCurrents(
-                    tables.reduce((sum, table) => sum + (table.totalWatts || 0), 0)
-                  ).toFixed(2)} A
-                </span>
-              </div>
             </div>
           )}
         </div>
       </CardContent>
     </Card>
-  );
-};
-
-export default ConsumosTool;
