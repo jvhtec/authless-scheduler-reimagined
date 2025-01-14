@@ -33,8 +33,7 @@ export const exportToPDF = (
   type: 'weight' | 'power',
   jobName: string,
   powerSummary?: PowerSystemSummary,
-  safetyMargin?: number, // Optionally include safety margin in the PDF
-  department?: string // New parameter for the department
+  safetyMargin?: number // Optionally include safety margin in the PDF
 ): Promise<Blob> => {
   return new Promise((resolve) => {
     const doc = new jsPDF();
@@ -49,19 +48,12 @@ export const exportToPDF = (
     doc.setFontSize(24);
     doc.setTextColor(255, 255, 255);
     const title = type === 'weight' ? "Weight Distribution Report" : "Power Distribution Report";
-    doc.text(title, pageWidth / 2, 15, { align: 'center' });
-
-    // Department
-    if (department) {
-      doc.setFontSize(16);
-      doc.setTextColor(255, 255, 255);
-      doc.text(`Department: ${department}`, pageWidth / 2, 25, { align: 'center' });
-    }
+    doc.text(title, pageWidth / 2, 20, { align: 'center' });
 
     // Subtitle (Job Name)
     doc.setFontSize(16);
     doc.setTextColor(255, 255, 255);
-    doc.text(jobName || 'Untitled Job', pageWidth / 2, 35, { align: 'center' });
+    doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
 
     // Safety Margin (if applicable)
     if (safetyMargin !== undefined) {

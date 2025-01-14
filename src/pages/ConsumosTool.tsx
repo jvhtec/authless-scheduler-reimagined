@@ -209,8 +209,7 @@ const ConsumosTool: React.FC = () => {
         'power',
         selectedJob.title,
         undefined,
-        safetyMargin,
-        department // Include department in the PDF header
+        safetyMargin
       );
 
       const fileName = `Power Report - ${selectedJob.title}.pdf`;

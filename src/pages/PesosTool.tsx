@@ -33,10 +33,8 @@ const soundComponentDatabase = [
   { id: 18, name: 'TFS900H', weight: 102 },
   { id: 19, name: 'TFA600', weight: 41 },
   { id: 20, name: 'TFS550H', weight: 13.4 },
-  { id: 21, name: 'TFS550L', weight: 27 },
-  { id: 22, name: 'BUMPER TFS900', weight: 20 },
-  { id: 23, name: 'CABLEADO L', weight: 100 },
-  { id: 24, name: 'CABLEADO H', weight: 250 },
+  { id: 21, name: 'CABLEADO L', weight: 100 },
+  { id: 22, name: 'CABLEADO H', weight: 250 },
 ];
 
 const lightComponentDatabase = [
@@ -142,7 +140,7 @@ const PesosTool: React.FC = () => {
       });
       return;
     }
-  
+
     const calculatedRows = currentTable.rows.map((row) => {
       const component = componentDatabase.find((c) => c.id.toString() === row.componentId);
       const totalWeight =
@@ -155,39 +153,31 @@ const PesosTool: React.FC = () => {
         totalWeight,
       };
     });
-  
+
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
-  
-    // Suffix logic: Only for sound department
-    const suffix =
-      department === 'sound'
-        ? (() => {
-            soundTableCounter++;
-            const suffixNumber = soundTableCounter.toString().padStart(2, '0');
-            if (useDualMotors) {
-              soundTableCounter++;
-              return `(SX${suffixNumber}, SX${soundTableCounter.toString().padStart(2, '0')})`;
-            }
-            return `(SX${suffixNumber})`;
-          })()
-        : '';
-  
-    // Avoid re-appending suffixes
-    const tableNameWithSuffix = `${tableName} ${suffix}`.trim();
-  
+
+    const suffix = department === 'sound' ? (() => {
+      soundTableCounter++;
+      const suffixNumber = soundTableCounter.toString().padStart(2, '0');
+      if (useDualMotors) {
+        soundTableCounter++;
+        return `(SX${suffixNumber}, SX${soundTableCounter.toString().padStart(2, '0')})`;
+      }
+      return `(SX${suffixNumber})`;
+    })() : '';
+
     const newTable = {
-      name: tableNameWithSuffix,
+      name: `${tableName} ${suffix}`,
       rows: calculatedRows,
       totalWeight,
       dualMotors: useDualMotors,
       id: Date.now(),
     };
-  
+
     setTables((prev) => [...prev, newTable]);
     resetCurrentTable();
     setUseDualMotors(false);
   };
-  
 
   const resetCurrentTable = () => {
     setCurrentTable({
@@ -216,10 +206,7 @@ const PesosTool: React.FC = () => {
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'pesos' })),
         'weight',
-        selectedJob.title,
-        undefined,
-        undefined,
-        department
+        selectedJob.title
       );
 
       const fileName = `Weight Report - ${selectedJob.title}.pdf`;
