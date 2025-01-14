@@ -60,11 +60,21 @@ export const exportToPDF = (
         // Check available space on the current page
         const tableHeight = calculateTableHeight(doc, table.rows.length);
         if (yPosition + tableHeight > pageHeight - 30) {
-          addLogoToBottom(doc, logoImg, pageWidth, pageHeight);
+          // Add logo to the bottom of the current page before adding a new page
+          addLogoToBottom(doc, pageWidth, pageHeight, logoBase64);
           doc.addPage();
-          yPosition = 20;
+          yPosition = 20; // Reset yPosition for the new page
         }
-
+        
+        tables.forEach((table, index) => {
+          // Check available space on the current page
+          const tableHeight = calculateTableHeight(doc, table.rows.length);
+          if (yPosition + tableHeight > pageHeight - 30) {
+            // Add logo to the bottom of the current page before adding a new page
+            addLogoToBottom(doc, pageWidth, pageHeight, logoBase64);
+            doc.addPage();
+            yPosition = 20; // Reset yPosition for the new page
+          }
         // Add Table Header
         doc.setFillColor(245, 245, 250);
         doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
