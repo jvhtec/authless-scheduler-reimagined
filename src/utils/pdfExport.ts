@@ -169,7 +169,7 @@ export const exportToPDF = (
     // Finally, load and add the logo to the bottom of the last page
     const logo = new Image();
     logo.crossOrigin = 'anonymous'; // Important for embedding the image
-    logo.src = '/public/sector pro logo.png';
+    logo.src = '/public/sector%20pro%20logo.png';
     logo.onload = () => {
       doc.setPage(doc.getNumberOfPages());
       doc.addImage(
