@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { Checkbox } from "@/components/ui/checkbox";
+import { useQuery } from '@tanstack/react-query';
 
 const componentDatabase = [
   { id: 1, name: ' K1 ', weight: 106 },
