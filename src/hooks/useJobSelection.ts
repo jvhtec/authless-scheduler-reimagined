@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
+export interface Tour {
+  id: string;
+  name: string;
+}
+
 export interface TourDate {
   id: string;
-  tour: {
-    id: string;
-    name: string;
-  };
+  tour: Tour | null;
 }
 
 export interface JobSelection {
@@ -46,15 +48,18 @@ export const useJobSelection = () => {
       console.log("Raw jobs data:", jobs);
 
       // Transform the data to match our expected types
-      const transformedJobs = jobs?.map(job => ({
-        id: job.id,
-        title: job.title,
-        tour_date_id: job.tour_date_id,
-        tour_date: job.tour_date ? {
-          id: job.tour_date.id,
-          tour: job.tour_date.tour || null
-        } : null
-      })) as JobSelection[];
+      const transformedJobs = jobs?.map(job => {
+        const tourDate = job.tour_date as TourDate | null;
+        return {
+          id: job.id,
+          title: job.title,
+          tour_date_id: job.tour_date_id,
+          tour_date: tourDate ? {
+            id: tourDate.id,
+            tour: tourDate.tour
+          } : null
+        };
+      }) as JobSelection[];
 
       console.log("Transformed jobs:", transformedJobs);
       return transformedJobs;

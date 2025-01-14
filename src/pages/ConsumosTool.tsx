@@ -112,16 +112,19 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
       console.log("Raw jobs data:", jobs);
       
       // Transform the data to match our expected types
-      const transformedJobs = jobs?.map(job => ({
-        id: job.id,
-        title: job.title,
-        tour_date_id: job.tour_date_id,
-        tour_date: job.tour_date ? {
-          id: job.tour_date.id,
-          tour: job.tour_date.tour || null
-        } : null,
-        job_departments: job.job_departments
-      })) as JobSelection[];
+      const transformedJobs = jobs?.map(job => {
+        const tourDate = job.tour_date as TourDate | null;
+        return {
+          id: job.id,
+          title: job.title,
+          tour_date_id: job.tour_date_id,
+          tour_date: tourDate ? {
+            id: tourDate.id,
+            tour: tourDate.tour
+          } : null,
+          job_departments: job.job_departments
+        };
+      }) as JobSelection[];
 
       console.log("Transformed jobs:", transformedJobs);
       return transformedJobs;
