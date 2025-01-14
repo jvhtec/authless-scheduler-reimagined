@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, ArrowLeft, Scale } from 'lucide-react';
+import { FileText, ArrowLeft } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
 import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
@@ -25,9 +25,9 @@ const componentDatabase = [
   { id: 11, name: 'Varios', watts: 1500 },
 ];
 
-const VOLTAGE_3PHASE = 400; // Voltage between phases in a 3-phase system
-const POWER_FACTOR = 0.85;  // Assumed power factor
-const PHASES = 3;          // Number of phases in a 3-phase system
+const VOLTAGE_3PHASE = 400;
+const POWER_FACTOR = 0.85;
+const PHASES = 3;
 
 const PDU_TYPES = ['CEE32A 3P+N+G', 'CEE63A 3P+N+G', 'CEE125A 3P+N+G'];
 
@@ -44,9 +44,8 @@ interface Table {
   rows: TableRow[];
   totalWatts?: number;
   currentPerPhase?: number;
-  id?: number;
-  dualMotors?: boolean;
   pduType?: string;
+  id?: number;
 }
 
 const ConsumosTool: React.FC = () => {
@@ -58,7 +57,8 @@ const ConsumosTool: React.FC = () => {
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
-  const [useDualMotors, setUseDualMotors] = useState(false);
+  const [safetyMargin, setSafetyMargin] = useState(0); // Safety margin in %
+
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
     rows: [{ quantity: '', componentId: '', watts: '' }]
@@ -99,15 +99,16 @@ const ConsumosTool: React.FC = () => {
   };
 
   const calculatePhaseCurrents = (totalWatts: number) => {
-    const wattsPerPhase = totalWatts / PHASES; // Split wattage evenly across 3 phases
+    const adjustedWatts = totalWatts * (1 + safetyMargin / 100); // Add safety margin
+    const wattsPerPhase = adjustedWatts / PHASES; // Split wattage across 3 phases
     const currentPerPhase = wattsPerPhase / (VOLTAGE_3PHASE * POWER_FACTOR); // Calculate current
     return { wattsPerPhase, currentPerPhase };
   };
 
   const recommendPDU = (current: number) => {
-    if (current < 32) return PDU_TYPES[0]; // CEE32A
-    if (current < 63) return PDU_TYPES[1]; // CEE63A
-    return PDU_TYPES[2]; // CEE125A
+    if (current < 32) return PDU_TYPES[0];
+    if (current < 63) return PDU_TYPES[1];
+    return PDU_TYPES[2];
   };
 
   const generateTable = () => {
@@ -122,8 +123,9 @@ const ConsumosTool: React.FC = () => {
 
     const calculatedRows = currentTable.rows.map(row => {
       const component = componentDatabase.find(c => c.id.toString() === row.componentId);
-      const totalWatts = parseFloat(row.quantity) && parseFloat(row.watts) ? 
-        parseFloat(row.quantity) * parseFloat(row.watts) : 0;
+      const totalWatts = parseFloat(row.quantity) && parseFloat(row.watts)
+        ? parseFloat(row.quantity) * parseFloat(row.watts)
+        : 0;
       return {
         ...row,
         componentName: component?.name || '',
@@ -136,18 +138,16 @@ const ConsumosTool: React.FC = () => {
     const pduSuggestion = recommendPDU(currentPerPhase);
 
     const newTable = {
-      name: `${tableName} (${pduSuggestion})`, // Append PDU type to table name
+      name: `${tableName} (${pduSuggestion})`,
       rows: calculatedRows,
       totalWatts,
       currentPerPhase,
-      id: Date.now(),
-      dualMotors: useDualMotors,
       pduType: pduSuggestion,
+      id: Date.now(),
     };
 
     setTables(prev => [...prev, newTable]);
     resetCurrentTable();
-    setUseDualMotors(false);
   };
 
   const resetCurrentTable = () => {
@@ -162,6 +162,70 @@ const ConsumosTool: React.FC = () => {
     setTables(prev => prev.filter(table => table.id !== tableId));
   };
 
+  const handleExportPDF = async () => {
+    if (!selectedJobId || !selectedJob) {
+      toast({
+        title: "No job selected",
+        description: "Please select a job before exporting",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const totalSystemWatts = tables.reduce((sum, table) => sum + (table.totalWatts || 0), 0);
+      const totalSystemCurrent = tables.reduce((sum, table) => sum + (table.currentPerPhase || 0), 0);
+
+      const pdfBlob = await exportToPDF(
+        selectedJob.title,
+        tables,
+        'power',
+        selectedJob.title,
+        {
+          totalSystemWatts,
+          totalSystemAmps: totalSystemCurrent,
+        },
+        safetyMargin // Pass safety margin to the PDF
+      );
+
+      const fileName = `Power Report - ${selectedJob.title}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('task_documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      toast({
+        title: "Success",
+        description: "PDF has been generated and uploaded successfully.",
+      });
+
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('task_documents')
+        .download(filePath);
+
+      if (downloadError) throw downloadError;
+
+      const url = window.URL.createObjectURL(fileData);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate or upload the PDF.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Card className="w-full max-w-4xl mx-auto my-6">
       <CardHeader className="space-y-1">
@@ -174,6 +238,27 @@ const ConsumosTool: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
+          {/* Safety Margin Selector */}
+          <div className="space-y-2">
+            <Label htmlFor="safetyMargin">Safety Margin</Label>
+            <Select
+              value={safetyMargin.toString()}
+              onValueChange={value => setSafetyMargin(Number(value))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Safety Margin" />
+              </SelectTrigger>
+              <SelectContent>
+                {[0, 10, 20, 30, 40, 50].map(percentage => (
+                  <SelectItem key={percentage} value={percentage.toString()}>
+                    {percentage}%
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Job Selector */}
           <div className="space-y-2">
             <Label htmlFor="jobSelect">Select Job</Label>
             <Select value={selectedJobId} onValueChange={handleJobSelect}>
@@ -190,6 +275,7 @@ const ConsumosTool: React.FC = () => {
             </Select>
           </div>
 
+          {/* Table Input */}
           <div className="space-y-2">
             <Label htmlFor="tableName">Table Name</Label>
             <Input
@@ -260,6 +346,12 @@ const ConsumosTool: React.FC = () => {
             <Button onClick={resetCurrentTable} variant="destructive">
               Reset
             </Button>
+            {tables.length > 0 && (
+              <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
+                <FileText className="w-4 h-4" />
+                Export & Upload PDF
+              </Button>
+            )}
           </div>
 
           {tables.map(table => (
