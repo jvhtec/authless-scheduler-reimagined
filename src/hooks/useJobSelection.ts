@@ -28,7 +28,7 @@ export const useJobSelection = () => {
           id,
           title,
           tour_date_id,
-          tour_date:tour_dates!tour_date_id (
+          tour_date:tour_dates (
             id,
             tour:tours (
               id,
@@ -52,10 +52,7 @@ export const useJobSelection = () => {
         tour_date_id: job.tour_date_id,
         tour_date: job.tour_date ? {
           id: job.tour_date.id,
-          tour: {
-            id: job.tour_date.tour?.id,
-            name: job.tour_date.tour?.name
-          }
+          tour: job.tour_date.tour || null
         } : null
       })) as JobSelection[];
 

@@ -118,10 +118,7 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
         tour_date_id: job.tour_date_id,
         tour_date: job.tour_date ? {
           id: job.tour_date.id,
-          tour: {
-            id: job.tour_date.tour?.id,
-            name: job.tour_date.tour?.name
-          }
+          tour: job.tour_date.tour || null
         } : null,
         job_departments: job.job_departments
       })) as JobSelection[];

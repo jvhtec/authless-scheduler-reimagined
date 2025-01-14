@@ -64,6 +64,7 @@ interface Table {
 const PesosTool: React.FC<{ department?: 'sound' | 'lights' | 'video' }> = ({ department = 'sound' }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+
   const { data: jobs } = useQuery({
     queryKey: ['jobs-for-calculator', department],
     queryFn: async () => {
@@ -102,10 +103,7 @@ const PesosTool: React.FC<{ department?: 'sound' | 'lights' | 'video' }> = ({ de
         tour_date_id: job.tour_date_id,
         tour_date: job.tour_date ? {
           id: job.tour_date.id,
-          tour: {
-            id: job.tour_date.tour?.id,
-            name: job.tour_date.tour?.name
-          }
+          tour: job.tour_date.tour || null
         } : null,
         job_departments: job.job_departments
       })) as JobSelection[];
@@ -114,7 +112,7 @@ const PesosTool: React.FC<{ department?: 'sound' | 'lights' | 'video' }> = ({ de
       return transformedJobs;
     },
   });
-  
+
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState('');
@@ -498,3 +496,4 @@ const PesosTool: React.FC<{ department?: 'sound' | 'lights' | 'video' }> = ({ de
 };
 
 export default PesosTool;
+
