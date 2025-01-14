@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, ArrowLeft } from 'lucide-react';
+import { FileText, ArrowLeft, Scale } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
 import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
@@ -25,9 +25,9 @@ const componentDatabase = [
   { id: 11, name: 'Varios', watts: 1500 },
 ];
 
-const VOLTAGE_3PHASE = 380;
-const POWER_FACTOR = 0.85;
-const PHASES = 3;
+const VOLTAGE_3PHASE = 400; // Voltage between phases in a 3-phase system
+const POWER_FACTOR = 0.85;  // Assumed power factor
+const PHASES = 3;          // Number of phases in a 3-phase system
 
 const PDU_TYPES = ['CEE32A 3P+N+G', 'CEE63A 3P+N+G', 'CEE125A 3P+N+G'];
 
@@ -43,13 +43,13 @@ interface Table {
   name: string;
   rows: TableRow[];
   totalWatts?: number;
-  wattsPerPhase?: number;
   currentPerPhase?: number;
-  pduType?: string;
   id?: number;
+  dualMotors?: boolean;
+  pduType?: string;
 }
 
-const ConsumosTool = () => {
+const ConsumosTool: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
@@ -58,30 +58,11 @@ const ConsumosTool = () => {
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
-  const [safetyMargin, setSafetyMargin] = useState(0);
+  const [useDualMotors, setUseDualMotors] = useState(false);
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
     rows: [{ quantity: '', componentId: '', watts: '' }]
   });
-
-  const handleJobSelect = (value: string) => {
-    setSelectedJobId(value);
-    const job = jobs?.find(j => j.id === value);
-    setSelectedJob(job || null);
-  };
-
-  const calculatePhaseCurrents = (totalWatts: number) => {
-    const adjustedWatts = totalWatts * (1 + safetyMargin / 100);
-    const wattsPerPhase = adjustedWatts / PHASES;
-    const currentPerPhase = wattsPerPhase / (VOLTAGE_3PHASE * POWER_FACTOR);
-    return { wattsPerPhase, currentPerPhase };
-  };
-
-  const recommendPDU = (current: number) => {
-    if (current < 32) return PDU_TYPES[0];
-    if (current < 63) return PDU_TYPES[1];
-    return PDU_TYPES[2];
-  };
 
   const addRow = () => {
     setCurrentTable(prev => ({
@@ -111,6 +92,24 @@ const ConsumosTool = () => {
     }));
   };
 
+  const handleJobSelect = (jobId: string) => {
+    setSelectedJobId(jobId);
+    const job = jobs?.find(j => j.id === jobId) || null;
+    setSelectedJob(job);
+  };
+
+  const calculatePhaseCurrents = (totalWatts: number) => {
+    const wattsPerPhase = totalWatts / PHASES; // Split wattage evenly across 3 phases
+    const currentPerPhase = wattsPerPhase / (VOLTAGE_3PHASE * POWER_FACTOR); // Calculate current
+    return { wattsPerPhase, currentPerPhase };
+  };
+
+  const recommendPDU = (current: number) => {
+    if (current < 32) return PDU_TYPES[0]; // CEE32A
+    if (current < 63) return PDU_TYPES[1]; // CEE63A
+    return PDU_TYPES[2]; // CEE125A
+  };
+
   const generateTable = () => {
     if (!tableName) {
       toast({
@@ -123,9 +122,8 @@ const ConsumosTool = () => {
 
     const calculatedRows = currentTable.rows.map(row => {
       const component = componentDatabase.find(c => c.id.toString() === row.componentId);
-      const totalWatts = parseFloat(row.quantity) && parseFloat(row.watts)
-        ? parseFloat(row.quantity) * parseFloat(row.watts)
-        : 0;
+      const totalWatts = parseFloat(row.quantity) && parseFloat(row.watts) ? 
+        parseFloat(row.quantity) * parseFloat(row.watts) : 0;
       return {
         ...row,
         componentName: component?.name || '',
@@ -138,76 +136,30 @@ const ConsumosTool = () => {
     const pduSuggestion = recommendPDU(currentPerPhase);
 
     const newTable = {
-      name: tableName,
+      name: `${tableName} (${pduSuggestion})`, // Append PDU type to table name
       rows: calculatedRows,
       totalWatts,
-      wattsPerPhase,
       currentPerPhase,
+      id: Date.now(),
+      dualMotors: useDualMotors,
       pduType: pduSuggestion,
-      id: Date.now()
     };
 
     setTables(prev => [...prev, newTable]);
-    setCurrentTable({ name: '', rows: [{ quantity: '', componentId: '', watts: '' }] });
-    setTableName('');
+    resetCurrentTable();
+    setUseDualMotors(false);
   };
 
   const resetCurrentTable = () => {
-    setCurrentTable({ name: '', rows: [{ quantity: '', componentId: '', watts: '' }] });
+    setCurrentTable({
+      name: '',
+      rows: [{ quantity: '', componentId: '', watts: '' }]
+    });
     setTableName('');
   };
 
   const removeTable = (tableId: number) => {
     setTables(prev => prev.filter(table => table.id !== tableId));
-  };
-
-  const handleExportPDF = async () => {
-    if (!selectedJobId || !selectedJob) {
-      toast({
-        title: "No job selected",
-        description: "Please select a job before exporting",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const totalSystem = {
-      totalSystemWatts: tables.reduce((sum, table) => sum + (table.totalWatts || 0), 0),
-      totalSystemAmps: tables.reduce((sum, table) => sum + (table.currentPerPhase || 0), 0)
-    };
-
-    const pdfBlob = await exportToPDF(selectedJob.title, tables, 'power', selectedJob.title, totalSystem, safetyMargin);
-
-    const fileName = `Power Report - ${selectedJob.title}.pdf`;
-    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-    const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('task_documents')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    toast({
-      title: "Success",
-      description: "PDF has been generated and uploaded successfully.",
-    });
-
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from('task_documents')
-      .download(filePath);
-
-    if (downloadError) throw downloadError;
-
-    const url = window.URL.createObjectURL(fileData);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
   };
 
   return (
@@ -223,30 +175,8 @@ const ConsumosTool = () => {
       <CardContent>
         <div className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="safetyMargin">Safety Margin</Label>
-            <Select
-              value={safetyMargin.toString()}
-              onValueChange={value => setSafetyMargin(Number(value))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Safety Margin" />
-              </SelectTrigger>
-              <SelectContent>
-                {[0, 10, 20, 30, 40, 50].map(percentage => (
-                  <SelectItem key={percentage} value={percentage.toString()}>
-                    {percentage}%
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="jobSelect">Select Job</Label>
-            <Select
-              value={selectedJobId}
-              onValueChange={handleJobSelect}
-            >
+            <Select value={selectedJobId} onValueChange={handleJobSelect}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a job" />
               </SelectTrigger>
@@ -260,100 +190,125 @@ const ConsumosTool = () => {
             </Select>
           </div>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="tableName">Table Name</Label>
-              <Input
-                id="tableName"
-                value={tableName}
-                onChange={(e) => setTableName(e.target.value)}
-                placeholder="Enter table name"
-              />
-            </div>
-
-            {currentTable.rows.map((row, index) => (
-              <div key={index} className="grid grid-cols-3 gap-2">
-                <div>
-                  <Input
-                    type="number"
-                    value={row.quantity}
-                    onChange={(e) => updateInput(index, 'quantity', e.target.value)}
-                    placeholder="Quantity"
-                  />
-                </div>
-                <div>
-                  <Select
-                    value={row.componentId}
-                    onValueChange={(value) => updateInput(index, 'componentId', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select component" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {componentDatabase.map(component => (
-                        <SelectItem key={component.id} value={component.id.toString()}>
-                          {component.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Input
-                    type="number"
-                    value={row.watts}
-                    readOnly
-                    placeholder="Watts"
-                  />
-                </div>
-              </div>
-            ))}
-
-            <div className="flex gap-2">
-              <Button onClick={addRow}>Add Row</Button>
-              <Button onClick={generateTable}>Generate Table</Button>
-              <Button variant="outline" onClick={resetCurrentTable}>Reset</Button>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="tableName">Table Name</Label>
+            <Input
+              id="tableName"
+              value={tableName}
+              onChange={e => setTableName(e.target.value)}
+              placeholder="Enter table name"
+            />
           </div>
 
-          {tables.length > 0 && (
-            <div className="space-y-4">
-              {tables.map((table) => (
-                <Card key={table.id} className="p-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">{table.name}</h3>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => table.id && removeTable(table.id)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {table.rows.map((row, index) => (
-                      <div key={index} className="grid grid-cols-4 gap-2">
-                        <div>{row.quantity}x</div>
-                        <div>{row.componentName}</div>
-                        <div>{row.watts}W</div>
-                        <div>{row.totalWatts}W</div>
-                      </div>
-                    ))}
-                    <div className="border-t pt-2 mt-2">
-                      <div>Total Watts: {table.totalWatts}W</div>
-                      <div>Watts per Phase: {table.wattsPerPhase?.toFixed(2)}W</div>
-                      <div>Current per Phase: {table.currentPerPhase?.toFixed(2)}A</div>
-                      <div>Recommended PDU: {table.pduType}</div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-              <Button onClick={handleExportPDF} className="w-full">
-                <FileText className="w-4 h-4 mr-2" />
-                Export PDF
-              </Button>
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-muted">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                  <th className="px-4 py-3 text-left font-medium">Component</th>
+                  <th className="px-4 py-3 text-left font-medium">Watts (per unit)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentTable.rows.map((row, index) => (
+                  <tr key={index} className="border-t">
+                    <td className="p-4">
+                      <Input
+                        type="number"
+                        value={row.quantity}
+                        onChange={e => updateInput(index, 'quantity', e.target.value)}
+                        min="0"
+                        className="w-full"
+                      />
+                    </td>
+                    <td className="p-4">
+                      <Select
+                        value={row.componentId}
+                        onValueChange={value => updateInput(index, 'componentId', value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select component" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {componentDatabase.map(component => (
+                            <SelectItem key={component.id} value={component.id.toString()}>
+                              {component.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-4">
+                      <Input
+                        type="number"
+                        value={row.watts}
+                        readOnly
+                        className="w-full bg-muted"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex gap-2">
+            <Button onClick={addRow}>Add Row</Button>
+            <Button onClick={generateTable} variant="secondary">
+              Generate Table
+            </Button>
+            <Button onClick={resetCurrentTable} variant="destructive">
+              Reset
+            </Button>
+          </div>
+
+          {tables.map(table => (
+            <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
+              <div className="bg-muted px-4 py-3 flex justify-between items-center">
+                <h3 className="font-semibold">{table.name}</h3>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => table.id && removeTable(table.id)}
+                >
+                  Remove Table
+                </Button>
+              </div>
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                    <th className="px-4 py-3 text-left font-medium">Component</th>
+                    <th className="px-4 py-3 text-left font-medium">Watts (per unit)</th>
+                    <th className="px-4 py-3 text-left font-medium">Total Watts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.rows.map((row, index) => (
+                    <tr key={index} className="border-t">
+                      <td className="px-4 py-3">{row.quantity}</td>
+                      <td className="px-4 py-3">{row.componentName}</td>
+                      <td className="px-4 py-3">{row.watts}</td>
+                      <td className="px-4 py-3">{row.totalWatts?.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr className="border-t bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-right">Total Watts:</td>
+                    <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
+                  </tr>
+                  <tr className="bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-right">Current per Phase:</td>
+                    <td className="px-4 py-3">{table.currentPerPhase?.toFixed(2)} A</td>
+                  </tr>
+                </tbody>
+              </table>
+              {table.pduType && (
+                <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
+                  Recommended PDU: {table.pduType}
+                </div>
+              )}
             </div>
-          )}
+          ))}
         </div>
       </CardContent>
     </Card>
