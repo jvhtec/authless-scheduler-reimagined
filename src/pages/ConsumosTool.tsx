@@ -64,6 +64,12 @@ const ConsumosTool = () => {
     rows: [{ quantity: '', componentId: '', watts: '' }]
   });
 
+  const handleJobSelect = (value: string) => {
+    setSelectedJobId(value);
+    const job = jobs?.find(j => j.id === value);
+    setSelectedJob(job || null);
+  };
+
   const calculatePhaseCurrents = (totalWatts: number) => {
     const adjustedWatts = totalWatts * (1 + safetyMargin / 100);
     const wattsPerPhase = adjustedWatts / PHASES;
@@ -216,7 +222,6 @@ const ConsumosTool = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Safety Margin */}
           <div className="space-y-2">
             <Label htmlFor="safetyMargin">Safety Margin</Label>
             <Select
@@ -236,7 +241,6 @@ const ConsumosTool = () => {
             </Select>
           </div>
 
-          {/* Job Selector */}
           <div className="space-y-2">
             <Label htmlFor="jobSelect">Select Job</Label>
             <Select
@@ -256,8 +260,100 @@ const ConsumosTool = () => {
             </Select>
           </div>
 
-          {/* Table Input */}
-          {/* Same as before with full table inputs */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="tableName">Table Name</Label>
+              <Input
+                id="tableName"
+                value={tableName}
+                onChange={(e) => setTableName(e.target.value)}
+                placeholder="Enter table name"
+              />
+            </div>
+
+            {currentTable.rows.map((row, index) => (
+              <div key={index} className="grid grid-cols-3 gap-2">
+                <div>
+                  <Input
+                    type="number"
+                    value={row.quantity}
+                    onChange={(e) => updateInput(index, 'quantity', e.target.value)}
+                    placeholder="Quantity"
+                  />
+                </div>
+                <div>
+                  <Select
+                    value={row.componentId}
+                    onValueChange={(value) => updateInput(index, 'componentId', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select component" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {componentDatabase.map(component => (
+                        <SelectItem key={component.id} value={component.id.toString()}>
+                          {component.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Input
+                    type="number"
+                    value={row.watts}
+                    readOnly
+                    placeholder="Watts"
+                  />
+                </div>
+              </div>
+            ))}
+
+            <div className="flex gap-2">
+              <Button onClick={addRow}>Add Row</Button>
+              <Button onClick={generateTable}>Generate Table</Button>
+              <Button variant="outline" onClick={resetCurrentTable}>Reset</Button>
+            </div>
+          </div>
+
+          {tables.length > 0 && (
+            <div className="space-y-4">
+              {tables.map((table) => (
+                <Card key={table.id} className="p-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">{table.name}</h3>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => table.id && removeTable(table.id)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {table.rows.map((row, index) => (
+                      <div key={index} className="grid grid-cols-4 gap-2">
+                        <div>{row.quantity}x</div>
+                        <div>{row.componentName}</div>
+                        <div>{row.watts}W</div>
+                        <div>{row.totalWatts}W</div>
+                      </div>
+                    ))}
+                    <div className="border-t pt-2 mt-2">
+                      <div>Total Watts: {table.totalWatts}W</div>
+                      <div>Watts per Phase: {table.wattsPerPhase?.toFixed(2)}W</div>
+                      <div>Current per Phase: {table.currentPerPhase?.toFixed(2)}A</div>
+                      <div>Recommended PDU: {table.pduType}</div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+              <Button onClick={handleExportPDF} className="w-full">
+                <FileText className="w-4 h-4 mr-2" />
+                Export PDF
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
