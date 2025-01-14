@@ -240,7 +240,6 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
               variant="outline"
               size="lg"
               className="w-full h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => navigate('/report-generator')}
             >
               <FileText className="h-6 w-6" />
               <span>SV Report Generator</span>
