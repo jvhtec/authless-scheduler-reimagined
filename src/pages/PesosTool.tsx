@@ -5,18 +5,53 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText, ArrowLeft } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { exportToPDF } from '@/utils/pdfExport';
 import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useNavigate } from 'react-router-dom';
 
 const soundComponentDatabase = [
   { id: 1, name: 'K1', weight: 106 },
   { id: 2, name: 'K2', weight: 56 },
-  // Full sound component list here...
+  { id: 3, name: 'K3', weight: 43 },
+  { id: 4, name: 'KARA II', weight: 25 },
+  { id: 5, name: 'KIVA', weight: 14 },
+  { id: 6, name: 'KS28', weight: 79 },
+  { id: 7, name: 'K1-SB', weight: 83 },
+  { id: 8, name: 'BUMPER K1', weight: 108 },
+  { id: 9, name: 'BUMPER K2', weight: 60 },
+  { id: 10, name: 'BUMPER K3', weight: 50 },
+  { id: 11, name: 'BUMPER KARA', weight: 20 },
+  { id: 12, name: 'BUMPER KIVA', weight: 13 },
+  { id: 13, name: 'BUMPER KS28', weight: 15 },
+  { id: 14, name: 'MOTOR 2T', weight: 90 },
+  { id: 15, name: 'MOTOR 1T', weight: 70 },
+  { id: 16, name: 'MOTOR 750Kg', weight: 60 },
+  { id: 17, name: 'MOTOR 500Kg', weight: 50 },
+  { id: 18, name: 'TFS900H', weight: 102 },
+  { id: 19, name: 'TFA600', weight: 41 },
+  { id: 20, name: 'TFS550H', weight: 13.4 },
+  { id: 21, name: 'CABLEADO L', weight: 100 },
+  { id: 22, name: 'CABLEADO H', weight: 250 },
 ];
+
+const lightComponentDatabase = [
+  { id: 1, name: 'Truss 12m', weight: 350 },
+  { id: 2, name: 'Truss 8m', weight: 240 },
+  { id: 3, name: 'Moving Head Fixture', weight: 25 },
+  { id: 4, name: 'Lighting Console', weight: 18 },
+];
+
+const videoComponentDatabase = [
+  { id: 1, name: 'LED Wall Panel', weight: 28 },
+  { id: 2, name: 'Projector 5000 Lumens', weight: 12 },
+  { id: 3, name: 'Media Server', weight: 50 },
+  { id: 4, name: 'Video Processor', weight: 8 },
+];
+
+let soundTableCounter = 0; // Counter for suffix enumeration (sound-specific)
 
 interface TableRow {
   quantity: string;
@@ -30,8 +65,8 @@ interface Table {
   name: string;
   rows: TableRow[];
   totalWeight?: number;
-  id?: number;
   dualMotors?: boolean;
+  id?: number;
 }
 
 const PesosTool: React.FC = () => {
@@ -44,11 +79,23 @@ const PesosTool: React.FC = () => {
   const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [useDualMotors, setUseDualMotors] = useState(false);
-
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
     rows: [{ quantity: '', componentId: '', weight: '' }],
   });
+
+  const department = window.location.pathname.includes('/lights')
+    ? 'lights'
+    : window.location.pathname.includes('/video')
+    ? 'video'
+    : 'sound';
+
+  const componentDatabase =
+    department === 'sound'
+      ? soundComponentDatabase
+      : department === 'lights'
+      ? lightComponentDatabase
+      : videoComponentDatabase;
 
   const addRow = () => {
     setCurrentTable((prev) => ({
@@ -60,7 +107,7 @@ const PesosTool: React.FC = () => {
   const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
     if (field === 'componentId') {
-      const component = soundComponentDatabase.find((c) => c.id.toString() === value);
+      const component = componentDatabase.find((c) => c.id.toString() === value);
       newRows[index] = {
         ...newRows[index],
         [field]: value,
@@ -95,7 +142,7 @@ const PesosTool: React.FC = () => {
     }
 
     const calculatedRows = currentTable.rows.map((row) => {
-      const component = soundComponentDatabase.find((c) => c.id.toString() === row.componentId);
+      const component = componentDatabase.find((c) => c.id.toString() === row.componentId);
       const totalWeight =
         parseFloat(row.quantity) && parseFloat(row.weight)
           ? parseFloat(row.quantity) * parseFloat(row.weight)
@@ -109,12 +156,22 @@ const PesosTool: React.FC = () => {
 
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
 
-    const newTable: Table = {
-      name: tableName,
+    const suffix = department === 'sound' ? (() => {
+      soundTableCounter++;
+      const suffixNumber = soundTableCounter.toString().padStart(2, '0');
+      if (useDualMotors) {
+        soundTableCounter++;
+        return `(SX${suffixNumber}, SX${soundTableCounter.toString().padStart(2, '0')})`;
+      }
+      return `(SX${suffixNumber})`;
+    })() : '';
+
+    const newTable = {
+      name: `${tableName} ${suffix}`,
       rows: calculatedRows,
       totalWeight,
-      id: Date.now(),
       dualMotors: useDualMotors,
+      id: Date.now(),
     };
 
     setTables((prev) => [...prev, newTable]);
@@ -152,9 +209,9 @@ const PesosTool: React.FC = () => {
         selectedJob.title
       );
 
-      const fileName = `Pesos Report - ${selectedJob.title}.pdf`;
+      const fileName = `Weight Report - ${selectedJob.title}.pdf`;
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-      const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+      const filePath = `${department}/${selectedJobId}/${crypto.randomUUID()}.pdf`;
 
       const { error: uploadError } = await supabase.storage.from('task_documents').upload(filePath, file);
       if (uploadError) throw uploadError;
@@ -218,16 +275,18 @@ const PesosTool: React.FC = () => {
               onChange={(e) => setTableName(e.target.value)}
               placeholder="Enter table name"
             />
-            <div className="flex items-center space-x-2 mt-2">
-              <Checkbox
-                id="dualMotors"
-                checked={useDualMotors}
-                onCheckedChange={(checked) => setUseDualMotors(checked as boolean)}
-              />
-              <Label htmlFor="dualMotors" className="text-sm font-medium">
-                Dual Motors Configuration
-              </Label>
-            </div>
+            {department === 'sound' && (
+              <div className="flex items-center space-x-2 mt-2">
+                <Checkbox
+                  id="dualMotors"
+                  checked={useDualMotors}
+                  onCheckedChange={(checked) => setUseDualMotors(checked as boolean)}
+                />
+                <Label htmlFor="dualMotors" className="text-sm font-medium">
+                  Dual Motors Configuration
+                </Label>
+              </div>
+            )}
           </div>
 
           <div className="border rounded-lg overflow-hidden">
@@ -247,6 +306,7 @@ const PesosTool: React.FC = () => {
                         type="number"
                         value={row.quantity}
                         onChange={(e) => updateInput(index, 'quantity', e.target.value)}
+                        min="0"
                         className="w-full"
                       />
                     </td>
@@ -259,7 +319,7 @@ const PesosTool: React.FC = () => {
                           <SelectValue placeholder="Select component" />
                         </SelectTrigger>
                         <SelectContent>
-                          {soundComponentDatabase.map((component) => (
+                          {componentDatabase.map((component) => (
                             <SelectItem key={component.id} value={component.id.toString()}>
                               {component.name}
                             </SelectItem>
@@ -268,7 +328,12 @@ const PesosTool: React.FC = () => {
                       </Select>
                     </td>
                     <td className="p-4">
-                      <Input type="number" value={row.weight} readOnly className="w-full bg-muted" />
+                      <Input
+                        type="number"
+                        value={row.weight}
+                        readOnly
+                        className="w-full bg-muted"
+                      />
                     </td>
                   </tr>
                 ))}
@@ -332,8 +397,7 @@ const PesosTool: React.FC = () => {
               </table>
               {table.dualMotors && (
                 <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
-                  *This configuration uses dual motors. Load is distributed between two motors for
-                  safety and redundancy.
+                  *This configuration uses dual motors. Load is distributed between two motors for safety and redundancy.
                 </div>
               )}
             </div>
