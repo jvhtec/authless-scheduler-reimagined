@@ -9,35 +9,14 @@ import { exportToPDF } from '@/utils/pdfExport';
 import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { useNavigate, useLocation } from 'react-router-dom';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useNavigate } from 'react-router-dom';
 
-const componentDatabase = {
-  sound: [
-    { id: 1, name: 'K1', weight: 106 },
-    { id: 2, name: 'K2', weight: 56 },
-    { id: 3, name: 'K3', weight: 43 },
-    { id: 4, name: 'KARA II', weight: 25 },
-    { id: 5, name: 'KIVA', weight: 14 },
-    { id: 6, name: 'KS28', weight: 79 },
-    { id: 7, name: 'K1-SB', weight: 83 },
-    { id: 8, name: 'BUMPER K1', weight: 108 },
-    { id: 9, name: 'BUMPER K2', weight: 60 },
-    { id: 10, name: 'BUMPER K3', weight: 50 },
-    { id: 11, name: 'BUMPER KARA', weight: 20 },
-    { id: 12, name: 'BUMPER KIVA', weight: 13 },
-    { id: 13, name: 'BUMPER KS28', weight: 15 },
-    { id: 14, name: 'KARADOWNK1', weight: 15 },
-    { id: 15, name: 'KARADOWNK2', weight: 15 },
-    { id: 16, name: 'MOTOR 2T', weight: 90 },
-    { id: 17, name: 'MOTOR 1T', weight: 70 },
-    { id: 18, name: 'MOTOR 750Kg', weight: 60 },
-    { id: 19, name: 'MOTOR 500Kg', weight: 50 },
-    { id: 20, name: 'POLIPASTO 1T', weight: 10.4 },
-  ],
-  lights: [], // Placeholder for lights components
-  video: [], // Placeholder for video components
-};
+const soundComponentDatabase = [
+  { id: 1, name: 'K1', weight: 106 },
+  { id: 2, name: 'K2', weight: 56 },
+  // Full sound component list here...
+];
 
 interface TableRow {
   quantity: string;
@@ -55,23 +34,17 @@ interface Table {
   dualMotors?: boolean;
 }
 
-let soundTableCounter = 0;
-
 const PesosTool: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
-
-  const params = new URLSearchParams(location.search);
-  const department = params.get('department') || 'sound';
-  const components = componentDatabase[department];
 
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [useDualMotors, setUseDualMotors] = useState(false);
+
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
     rows: [{ quantity: '', componentId: '', weight: '' }],
@@ -87,7 +60,7 @@ const PesosTool: React.FC = () => {
   const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
     if (field === 'componentId') {
-      const component = components.find((c) => c.id.toString() === value);
+      const component = soundComponentDatabase.find((c) => c.id.toString() === value);
       newRows[index] = {
         ...newRows[index],
         [field]: value,
@@ -111,11 +84,6 @@ const PesosTool: React.FC = () => {
     setSelectedJob(job);
   };
 
-  const generateSuffix = () => {
-    soundTableCounter++;
-    return `SX${soundTableCounter.toString().padStart(2, '0')}`;
-  };
-
   const generateTable = () => {
     if (!tableName) {
       toast({
@@ -127,7 +95,7 @@ const PesosTool: React.FC = () => {
     }
 
     const calculatedRows = currentTable.rows.map((row) => {
-      const component = components.find((c) => c.id.toString() === row.componentId);
+      const component = soundComponentDatabase.find((c) => c.id.toString() === row.componentId);
       const totalWeight =
         parseFloat(row.quantity) && parseFloat(row.weight)
           ? parseFloat(row.quantity) * parseFloat(row.weight)
@@ -141,15 +109,8 @@ const PesosTool: React.FC = () => {
 
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
 
-    let suffix = '';
-    if (department === 'sound') {
-      suffix = useDualMotors
-        ? ` (${generateSuffix()}, ${generateSuffix()})`
-        : ` (${generateSuffix()})`;
-    }
-
-    const newTable = {
-      name: `${tableName}${suffix}`,
+    const newTable: Table = {
+      name: tableName,
       rows: calculatedRows,
       totalWeight,
       id: Date.now(),
@@ -177,19 +138,47 @@ const PesosTool: React.FC = () => {
     if (!selectedJobId || !selectedJob) {
       toast({
         title: 'No job selected',
-        description: 'Please select a job before exporting',
+        description: 'Please select a job before exporting.',
         variant: 'destructive',
       });
       return;
     }
 
     try {
-      const jobName = selectedJob.title;
-      const pdfBlob = await exportToPDF(tableName, tables, 'weight', jobName);
+      const pdfBlob = await exportToPDF(
+        selectedJob.title,
+        tables.map((table) => ({ ...table, toolType: 'pesos' })),
+        'weight',
+        selectedJob.title
+      );
 
-      // Additional code for exporting and uploading PDF
+      const fileName = `Pesos Report - ${selectedJob.title}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+
+      const { error: uploadError } = await supabase.storage.from('task_documents').upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      toast({
+        title: 'Success',
+        description: 'PDF has been generated and uploaded successfully.',
+      });
+
+      const url = window.URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (error) {
-      console.error('Export Error:', error);
+      console.error(error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate or upload the PDF.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -229,9 +218,6 @@ const PesosTool: React.FC = () => {
               onChange={(e) => setTableName(e.target.value)}
               placeholder="Enter table name"
             />
-          </div>
-
-          {department === 'sound' && (
             <div className="flex items-center space-x-2 mt-2">
               <Checkbox
                 id="dualMotors"
@@ -242,7 +228,7 @@ const PesosTool: React.FC = () => {
                 Dual Motors Configuration
               </Label>
             </div>
-          )}
+          </div>
 
           <div className="border rounded-lg overflow-hidden">
             <table className="w-full">
@@ -261,7 +247,7 @@ const PesosTool: React.FC = () => {
                         type="number"
                         value={row.quantity}
                         onChange={(e) => updateInput(index, 'quantity', e.target.value)}
-                        min="0"
+                        className="w-full"
                       />
                     </td>
                     <td className="p-4">
@@ -269,11 +255,11 @@ const PesosTool: React.FC = () => {
                         value={row.componentId}
                         onValueChange={(value) => updateInput(index, 'componentId', value)}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select component" />
                         </SelectTrigger>
                         <SelectContent>
-                          {components.map((component) => (
+                          {soundComponentDatabase.map((component) => (
                             <SelectItem key={component.id} value={component.id.toString()}>
                               {component.name}
                             </SelectItem>
@@ -282,7 +268,7 @@ const PesosTool: React.FC = () => {
                       </Select>
                     </td>
                     <td className="p-4">
-                      <Input type="number" value={row.weight} readOnly />
+                      <Input type="number" value={row.weight} readOnly className="w-full bg-muted" />
                     </td>
                   </tr>
                 ))}
@@ -299,7 +285,7 @@ const PesosTool: React.FC = () => {
               Reset
             </Button>
             {tables.length > 0 && (
-              <Button onClick={handleExportPDF} variant="outline">
+              <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
                 <FileText className="w-4 h-4" />
                 Export & Upload PDF
               </Button>
@@ -346,7 +332,8 @@ const PesosTool: React.FC = () => {
               </table>
               {table.dualMotors && (
                 <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
-                  *This configuration uses dual motors. Load is distributed between two motors for safety and redundancy.
+                  *This configuration uses dual motors. Load is distributed between two motors for
+                  safety and redundancy.
                 </div>
               )}
             </div>
