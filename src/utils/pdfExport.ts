@@ -37,7 +37,7 @@ export const exportToPDF = (
     const pageHeight = doc.internal.pageSize.height;
 
     // Header background
-    doc.setFillColor(51, 51, 153);
+    doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, 'F');
 
     // Title
@@ -65,7 +65,7 @@ export const exportToPDF = (
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
 
       doc.setFontSize(14);
-      doc.setTextColor(51, 51, 153);
+      doc.setTextColor(125, 1, 1);
       doc.text(table.name, 14, yPosition);
       yPosition += 10;
 
@@ -96,7 +96,7 @@ export const exportToPDF = (
           lineWidth: 0.1,
         },
         headStyles: {
-          fillColor: [51, 51, 153],
+          fillColor: [125, 1, 1],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
         },
@@ -116,7 +116,7 @@ export const exportToPDF = (
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
 
       doc.setFontSize(11);
-      doc.setTextColor(51, 51, 153);
+      doc.setTextColor(125, 1, 1);
       if (type === 'weight' && table.totalWeight) {
         doc.text(`Total Weight: ${table.totalWeight.toFixed(2)} kg`, 14, yPosition);
       } else if (type === 'power' && table.totalWatts) {
