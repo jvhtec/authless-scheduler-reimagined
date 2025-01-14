@@ -31,7 +31,7 @@ export const exportToPDF = (
   jobName: string,
   powerSummary?: PowerSystemSummary
 ): Promise<Blob> => {
-  return new Promise(async (resolve) => {
+  return new Promise((resolve) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
@@ -142,52 +142,51 @@ export const exportToPDF = (
       yPosition += 20;
 
       // Add a new page if space is insufficient and not at the last table
-      if (yPosition > doc.internal.pageSize.height - 40 && index < tables.length - 1) {
+      if (yPosition > pageHeight - 40 && index < tables.length - 1) {
         doc.addPage();
         yPosition = 20;
       }
     });
 
-    // System summary (if power report and summary provided)
-    if (powerSummary && type === 'power') {
-      doc.setFillColor(245, 245, 250);
-      doc.rect(14, yPosition - 6, pageWidth - 28, 30, 'F');
-
-      doc.setFontSize(14);
-      doc.setTextColor(51, 51, 153);
-      doc.text("System Summary", 14, yPosition);
-
-      yPosition += 10;
-      doc.setFontSize(11);
-      doc.text(`Total System Power: ${powerSummary.totalSystemWatts.toFixed(2)} W`, 14, yPosition);
-
-      yPosition += 7;
-      doc.text(`Total System Current per Phase: ${powerSummary.totalSystemAmps.toFixed(2)} A`, 14, yPosition);
-      yPosition += 20;
-    }
-
-    // Finally, load and add the logo to the bottom of the last page
+    // Add logo to the bottom of the last page
     const logo = new Image();
     logo.crossOrigin = 'anonymous'; // Important for embedding the image
-    logo.src = '/public/sector%20pro%20logo.png';
+    logo.src = '/sector pro logo.png';
     logo.onload = () => {
+      // Set the page to the last page before adding the logo
       doc.setPage(doc.getNumberOfPages());
-      doc.addImage(
-        logo,
-        'PNG',
-        (pageWidth - 50) / 2,     // Center horizontally
-        doc.internal.pageSize.height - 15, // Position near bottom
-        50,                       // Logo width
-                                  // Logo height
-      );
-
-      // Output as Blob
-      const blob = doc.output('blob');
-      resolve(blob);
+      
+      // Calculate dimensions to maintain aspect ratio
+      const logoWidth = 50; // Fixed width in mm
+      const aspectRatio = logo.height / logo.width;
+      const logoHeight = logoWidth * aspectRatio;
+      
+      // Calculate position to center horizontally and place near bottom
+      const xPosition = (pageWidth - logoWidth) / 2;
+      const yPosition = pageHeight - 20; // 20mm from bottom
+      
+      try {
+        doc.addImage(
+          logo,
+          'PNG',
+          xPosition,
+          yPosition,
+          logoWidth,
+          logoHeight
+        );
+        const blob = doc.output('blob');
+        resolve(blob);
+      } catch (error) {
+        console.error('Error adding logo:', error);
+        // If logo fails, still generate PDF without it
+        const blob = doc.output('blob');
+        resolve(blob);
+      }
     };
 
-    // If the image fails to load, still resolve with whatever we have
+    // If the image fails to load, still resolve with the PDF without the logo
     logo.onerror = () => {
+      console.error('Failed to load logo');
       const blob = doc.output('blob');
       resolve(blob);
     };
