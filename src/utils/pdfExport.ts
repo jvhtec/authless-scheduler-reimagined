@@ -56,14 +56,6 @@ export const exportToPDF = (
 
       let yPosition = 60;
 
-      tables.forEach((table, index) => {
-        // Check available space on the current page
-        const tableHeight = calculateTableHeight(doc, table.rows.length);
-        if (yPosition + tableHeight > pageHeight - 30) {
-          addLogoToBottom(doc, logoImg, pageWidth, pageHeight);
-          doc.addPage();
-          yPosition = 20;
-        }
         tables.forEach((table, index) => {
           // Check available space on the current page
           const tableHeight = calculateTableHeight(doc, table.rows.length);
