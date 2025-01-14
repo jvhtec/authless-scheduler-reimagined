@@ -60,12 +60,10 @@ export const exportToPDF = (
         // Check available space on the current page
         const tableHeight = calculateTableHeight(doc, table.rows.length);
         if (yPosition + tableHeight > pageHeight - 30) {
-          // Add logo to the bottom of the current page before adding a new page
-          addLogoToBottom(doc, pageWidth, pageHeight, logoBase64);
+          addLogoToBottom(doc, logoImg, pageWidth, pageHeight);
           doc.addPage();
-          yPosition = 20; // Reset yPosition for the new page
+          yPosition = 20;
         }
-        
         tables.forEach((table, index) => {
           // Check available space on the current page
           const tableHeight = calculateTableHeight(doc, table.rows.length);
