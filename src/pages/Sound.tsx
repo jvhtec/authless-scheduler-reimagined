@@ -30,7 +30,6 @@ const Sound = () => {
   const [showAnalysisForm, setShowAnalysisForm] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const currentDepartment = "sound";
 
   const { data: jobs, isLoading } = useJobs();
@@ -129,38 +128,29 @@ const Sound = () => {
 
   const handleAnalysisSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (selectedFiles.length === 0) {
-      toast({
-        title: "No files selected",
-        description: "Please select at least one file to analyze.",
-        variant: "destructive"
-      });
-      return;
-    }
 
-    setIsAnalyzing(true);
+    const fileContents: string[] = await Promise.all(
+      selectedFiles.map(file => {
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsText(file); 
+        });
+      })
+    );
 
-    try {
-      const fileContents: string[] = await Promise.all(
-        selectedFiles.map(file => {
-          return new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = () => reject(reader.error);
-            reader.readAsText(file);
-          });
-        })
-      );
-
-      const prompt = `Read carefully these documents and summarize in a table:
+    const prompt = `Read carefully these documents and summarize in a table:
 - Microphone models with quantities broken down by document name
 - Microphone stands type and quantities broken down by document name
 - Riser quantities, leg count (4 by riser) and height
 (Note: The word for riser in Spanish is "tarima")
 
 Here are the document contents:
-${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join("\n\n")}`;
+${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join("\n\n")}
+    `;
 
+    try {
       console.log("Calling analyze-documents function...");
       const { data, error } = await supabase.functions.invoke('analyze-documents', {
         body: { prompt }
@@ -177,6 +167,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
         title: "Analysis complete",
         description: "The documents have been summarized.",
       });
+      setShowAnalysisForm(false);
     } catch (error: any) {
       console.error("Error during analysis:", error);
       toast({
@@ -184,8 +175,6 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
         description: error.message || "There was an error processing the analysis.",
         variant: "destructive",
       });
-    } finally {
-      setIsAnalyzing(false);
     }
   };
 
@@ -289,7 +278,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
 
       {showAnalysisForm && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
             <h2 className="text-2xl font-semibold mb-4">Upload PDF Documents</h2>
             <form onSubmit={handleAnalysisSubmit} className="flex flex-col space-y-4">
               <input
@@ -297,28 +286,28 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
                 accept="application/pdf"
                 multiple
                 onChange={handleFileChange}
-                className="border border-gray-300 dark:border-gray-600 p-2 rounded"
+                className="border border-gray-300 p-2 rounded"
               />
               <div className="flex justify-end space-x-2">
-                <Button
+                <button
                   type="button"
-                  variant="outline"
                   onClick={() => setShowAnalysisForm(false)}
+                  className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
                 >
                   Cancel
-                </Button>
-                <Button
+                </button>
+                <button
                   type="submit"
-                  disabled={isAnalyzing}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
                 >
-                  {isAnalyzing ? "Analyzing..." : "Submit for Analysis"}
-                </Button>
+                  Submit for Analysis
+                </button>
               </div>
             </form>
             {analysisResult && (
-              <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded">
+              <div className="mt-4 p-4 bg-gray-100 rounded">
                 <h3 className="font-semibold mb-2">Analysis Result:</h3>
-                <pre className="whitespace-pre-wrap text-sm">{analysisResult}</pre>
+                <pre className="whitespace-pre-wrap">{analysisResult}</pre>
               </div>
             )}
           </div>
