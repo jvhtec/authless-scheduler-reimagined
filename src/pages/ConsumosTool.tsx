@@ -68,7 +68,6 @@ const getComponentDatabase = (department: 'sound' | 'lights' | 'video') => {
 const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: jobs } = useJobSelection();
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState('');
@@ -79,6 +78,40 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
   });
 
   const componentDatabase = getComponentDatabase(department);
+
+  const { data: jobs } = useQuery({
+    queryKey: ['jobs-for-calculator', department],
+    queryFn: async () => {
+      console.log(`Fetching jobs for ${department} calculator...`);
+      const { data: jobs, error } = await supabase
+        .from("jobs")
+        .select(`
+          id,
+          title,
+          tour_date_id,
+          tour_date:tour_dates!tour_date_id (
+            id,
+            tour:tours (
+              id,
+              name
+            )
+          ),
+          job_departments!inner (
+            department
+          )
+        `)
+        .eq('job_departments.department', department)
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        console.error("Error fetching jobs:", error);
+        throw error;
+      }
+
+      console.log("Filtered jobs data:", jobs);
+      return jobs;
+    },
+  });
 
   const addRow = () => {
     setCurrentTable(prev => ({
@@ -299,7 +332,7 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
                 <SelectValue placeholder="Select a job" />
               </SelectTrigger>
               <SelectContent>
-                {jobs?.map((job: JobSelection) => (
+                {jobs?.map((job) => (
                   <SelectItem key={job.id} value={job.id}>
                     {job.tour_date?.tour?.name ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
                   </SelectItem>

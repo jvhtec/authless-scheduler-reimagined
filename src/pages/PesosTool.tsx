@@ -63,7 +63,40 @@ interface Table {
 const PesosTool: React.FC<{ department?: 'sound' | 'lights' | 'video' }> = ({ department = 'sound' }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: jobs } = useJobSelection();
+  const { data: jobs } = useQuery({
+    queryKey: ['jobs-for-calculator', department],
+    queryFn: async () => {
+      console.log(`Fetching jobs for ${department} calculator...`);
+      const { data: jobs, error } = await supabase
+        .from("jobs")
+        .select(`
+          id,
+          title,
+          tour_date_id,
+          tour_date:tour_dates!tour_date_id (
+            id,
+            tour:tours (
+              id,
+              name
+            )
+          ),
+          job_departments!inner (
+            department
+          )
+        `)
+        .eq('job_departments.department', department)
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        console.error("Error fetching jobs:", error);
+        throw error;
+      }
+
+      console.log("Filtered jobs data:", jobs);
+      return jobs;
+    },
+  });
+  
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState('');
@@ -263,8 +296,8 @@ const PesosTool: React.FC<{ department?: 'sound' | 'lights' | 'video' }> = ({ de
             <Button 
               variant="ghost" 
               size="icon"
-              onClick={() => navigate('/sound')}
-              title="Back to Sound"
+              onClick={() => navigate(`/${department}`)}
+              title={`Back to ${department.charAt(0).toUpperCase() + department.slice(1)}`}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
