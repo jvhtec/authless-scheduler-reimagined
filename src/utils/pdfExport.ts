@@ -163,44 +163,40 @@ export const exportToPDF = (
       }
     });
 
-     // Add logo to the bottom of the last page
-     const logo = new Image();
-     logo.crossOrigin = 'anonymous'; // Important for embedding the image
-     logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
-     logo.onload = () => {
-       // Set the page to the last page before adding the logo
-       doc.setPage(doc.getNumberOfPages());
-       
-       // Calculate dimensions to maintain aspect ratio
-       const logoWidth = 50; // Fixed width in mm
-       const aspectRatio = logo.height / logo.width;
-       const logoHeight = logoWidth * aspectRatio;
-       
-       // Calculate position to center horizontally and place near bottom
-       const xPosition = (pageWidth - logoWidth) / 2;
-       const yPosition = pageHeight - 20; // 20mm from bottom
-       
-       try {
-         doc.addImage(
-           logo,
-           'PNG',
-           xPosition,
-           yPosition,
-           logoWidth,
-           logoHeight
-         );
-         const blob = doc.output('blob');
-         resolve(blob);
-       } catch (error) {
-         console.error('Error adding logo:', error);
-         // If logo fails, still generate PDF without it
-         const blob = doc.output('blob');
-         resolve(blob);
-       }
-     };
+    // Add logo to the bottom of the last page
+    const logo = new Image();
+    logo.crossOrigin = 'anonymous'; // Important for embedding the image
+    logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
+    logo.onload = () => {
+      // Set the page to the last page before adding the logo
+      doc.setPage(doc.getNumberOfPages());
 
-    // Generate PDF blob and resolve
-    const blob = doc.output('blob');
-    resolve(blob);
+      // Calculate dimensions to maintain aspect ratio
+      const logoWidth = 50; // Fixed width in mm
+      const aspectRatio = logo.height / logo.width;
+      const logoHeight = logoWidth * aspectRatio;
+
+      // Calculate position to center horizontally and place near bottom
+      const xPosition = (pageWidth - logoWidth) / 2;
+      const yPosition = pageHeight - 20; // 20mm from bottom
+
+      try {
+        doc.addImage(logo, 'PNG', xPosition, yPosition, logoWidth, logoHeight);
+        const blob = doc.output('blob');
+        resolve(blob);
+      } catch (error) {
+        console.error('Error adding logo:', error);
+        // If logo fails, still generate PDF without it
+        const blob = doc.output('blob');
+        resolve(blob);
+      }
+    };
+
+    // If the image fails to load, still resolve with the PDF without the logo
+    logo.onerror = () => {
+      console.error('Failed to load logo');
+      const blob = doc.output('blob');
+      resolve(blob);
+    };
   });
 };
