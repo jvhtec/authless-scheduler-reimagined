@@ -19,128 +19,154 @@ interface ExportTable {
   currentPerPhase?: number;
 }
 
-export const exportToPDF = async (
+interface PowerSystemSummary {
+  totalSystemWatts: number;
+  totalSystemAmps: number;
+}
+
+export const exportToPDF = (
   projectName: string,
   tables: ExportTable[],
   type: 'weight' | 'power',
-  jobName: string
+  jobName: string,
+  powerSummary?: PowerSystemSummary
 ): Promise<Blob> => {
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.width;
-  const pageHeight = doc.internal.pageSize.height;
+  return new Promise(async (resolve, reject) => {
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      const pageHeight = doc.internal.pageSize.height;
 
-  // Corporate Color (125, 1, 1)
-  const corporateColor = [125, 1, 1];
+      // Load the logo from the assets folder
+      const logoUrl = '/public/lovable-uploads/sector pro logo.png'; // Replace with the actual path to the logo
+      const logoImg = await loadImage(logoUrl);
 
-  // Add header
-  doc.setFillColor(...corporateColor);
-  doc.rect(0, 0, pageWidth, 40, 'F');
+      // Add Header
+      doc.setFillColor(59, 59, 13);
+      doc.rect(0, 0, pageWidth, 40, 'F');
+      doc.setFontSize(24);
+      doc.setTextColor(255, 255, 255);
+      const title = type === 'weight' ? "Weight Distribution Report" : "Power Distribution Report";
+      doc.text(title, pageWidth / 2, 20, { align: 'center' });
+      doc.setFontSize(16);
+      doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setTextColor(51, 51, 51);
+      doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 50);
 
-  // Add title
-  doc.setFontSize(24);
-  doc.setTextColor(255, 255, 255);
-  const title = type === 'weight' ? "Weight Distribution Report" : "Power Distribution Report";
-  doc.text(title, pageWidth / 2, 20, { align: 'center' });
+      let yPosition = 60;
 
-  // Add job name as subtitle
-  doc.setFontSize(16);
-  doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
+      tables.forEach((table, index) => {
+        // Check available space on the current page
+        const tableHeight = calculateTableHeight(doc, table.rows.length);
+        if (yPosition + tableHeight > pageHeight - 30) {
+          addLogoToBottom(doc, logoImg, pageWidth, pageHeight);
+          doc.addPage();
+          yPosition = 20;
+        }
 
-  // Add date
-  doc.setFontSize(10);
-  doc.setTextColor(51, 51, 51);
-  doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 50);
+        // Add Table Header
+        doc.setFillColor(245, 245, 250);
+        doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
+        doc.setFontSize(14);
+        doc.setTextColor(59, 59, 13);
+        doc.text(table.name, 14, yPosition);
+        yPosition += 10;
 
-  let yPosition = 60;
+        // Prepare table content
+        const tableRows = table.rows.map(row => [
+          row.quantity,
+          row.componentName || '',
+          type === 'weight' ? row.weight || '' : row.watts || '',
+          type === 'weight' ? row.totalWeight?.toFixed(2) || '' : row.totalWatts?.toFixed(2) || ''
+        ]);
 
-  tables.forEach((table, index) => {
-    // Table header
-    doc.setFillColor(245, 245, 250);
-    doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
+        const headers = type === 'weight'
+          ? [['Quantity', 'Component', 'Weight (per unit)', 'Total Weight']]
+          : [['Quantity', 'Component', 'Watts (per unit)', 'Total Watts']];
 
-    doc.setFontSize(14);
-    doc.setTextColor(...corporateColor);
-    doc.text(table.name, 14, yPosition);
-    yPosition += 10;
+        autoTable(doc, {
+          head: headers,
+          body: tableRows,
+          startY: yPosition,
+          theme: 'grid',
+          styles: {
+            fontSize: 10,
+            cellPadding: 5,
+            lineColor: [220, 220, 230],
+            lineWidth: 0.1,
+          },
+          headStyles: {
+            fillColor: [59, 59, 13],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+          },
+          bodyStyles: {
+            textColor: [51, 51, 51],
+          },
+          alternateRowStyles: {
+            fillColor: [250, 250, 255],
+          },
+        });
 
-    // Table content
-    const tableRows = table.rows.map((row) => [
-      row.quantity,
-      row.componentName || '',
-      type === 'weight' ? row.weight || '' : row.watts || '',
-      type === 'weight' ? row.totalWeight?.toFixed(2) || '' : row.totalWatts?.toFixed(2) || '',
-    ]);
+        yPosition = (doc as any).lastAutoTable.finalY + 10;
 
-    const headers =
-      type === 'weight'
-        ? [['Quantity', 'Component', 'Weight (per unit)', 'Total Weight']]
-        : [['Quantity', 'Component', 'Watts (per unit)', 'Total Watts']];
+        // Add Table Totals
+        doc.setFillColor(245, 245, 250);
+        doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
+        doc.setFontSize(11);
+        doc.setTextColor(59, 59, 13);
+        if (type === 'weight' && table.totalWeight) {
+          doc.text(`Total Weight: ${table.totalWeight.toFixed(2)} kg`, 14, yPosition);
+        } else if (type === 'power' && table.totalWatts) {
+          doc.text(`Total Power: ${table.totalWatts.toFixed(2)} W`, 14, yPosition);
+          if (table.currentPerPhase) {
+            yPosition += 7;
+            doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition);
+          }
+        }
 
-    autoTable(doc, {
-      head: headers,
-      body: tableRows,
-      startY: yPosition,
-      theme: 'grid',
-      pageBreak: 'avoid', // Avoid breaking tables across pages
-      styles: {
-        fontSize: 10,
-        cellPadding: 5,
-        lineColor: [220, 220, 230],
-        lineWidth: 0.1,
-      },
-      headStyles: {
-        fillColor: corporateColor,
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-      },
-      bodyStyles: {
-        textColor: [51, 51, 51],
-      },
-      alternateRowStyles: {
-        fillColor: [250, 250, 255],
-      },
-    });
+        yPosition += 20;
+      });
 
-    yPosition = (doc as any).lastAutoTable.finalY + 10;
+      // Add Logo to the last page
+      addLogoToBottom(doc, logoImg, pageWidth, pageHeight);
 
-    // Total weight or power
-    if (type === 'weight' && table.totalWeight) {
-      doc.text(`Total Weight: ${table.totalWeight.toFixed(2)} kg`, 14, yPosition);
-    } else if (type === 'power' && table.totalWatts) {
-      doc.text(`Total Power: ${table.totalWatts.toFixed(2)} W`, 14, yPosition);
-    }
-
-    yPosition += 20;
-
-    if (yPosition > doc.internal.pageSize.height - 40 && index < tables.length - 1) {
-      doc.addPage();
-      yPosition = 20;
+      const blob = doc.output('blob');
+      resolve(blob);
+    } catch (error) {
+      reject(error);
     }
   });
+};
 
-  // Add Logo to the bottom of the last page
-  const logoURL = '/public/lovable-uploads/sector pro logo.png';
+// Utility: Load the image dynamically
+const loadImage = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = url;
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+  });
+};
+
+// Utility: Add Logo to the bottom of the page
+const addLogoToBottom = (
+  doc: jsPDF,
+  img: HTMLImageElement,
+  pageWidth: number,
+  pageHeight: number
+) => {
   const logoWidth = 50;
   const logoHeight = 7;
+  const x = (pageWidth - logoWidth) / 2;
+  const y = pageHeight - 20;
+  doc.addImage(img, 'PNG', x, y, logoWidth, logoHeight);
+};
 
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.src = logoURL;
-    img.crossOrigin = 'Anonymous'; // Ensure proper loading for external images
-    img.onload = () => {
-      const totalPages = doc.getNumberOfPages();
-      doc.setPage(totalPages);
-      doc.addImage(img, 'PNG', (pageWidth - logoWidth) / 2, pageHeight - logoHeight - 10, logoWidth, logoHeight);
-
-      // Output as Blob
-      const blob = doc.output('blob');
-      resolve(blob);
-    };
-
-    img.onerror = () => {
-      console.error("Failed to load the logo image.");
-      const blob = doc.output('blob');
-      resolve(blob);
-    };
-  });
+// Utility: Calculate table height
+const calculateTableHeight = (doc: jsPDF, rowCount: number): number => {
+  const rowHeight = 10; // Approximate height per row
+  const headerHeight = 10; // Height for the table header
+  return headerHeight + rowCount * rowHeight;
 };
