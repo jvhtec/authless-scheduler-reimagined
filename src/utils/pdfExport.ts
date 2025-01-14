@@ -119,7 +119,7 @@ export const exportToPDF = async (
   });
 
   // Add Logo to the bottom of the last page
-  const logoURL = 'https://github.com/jvhtec/authless-scheduler-reimagined/blob/main/public/sector%20pro%20logo.png';
+  const logoURL = '/public/lovable-uploads/sector pro logo.png';
   const logoWidth = 50;
   const logoHeight = 7;
 
