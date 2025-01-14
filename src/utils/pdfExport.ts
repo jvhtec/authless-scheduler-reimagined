@@ -42,7 +42,7 @@ export const exportToPDF = (
       const logoImg = await loadImage(logoUrl);
 
       // Add Header
-      doc.setFillColor(59, 59, 13);
+      doc.setFillColor(120, 1, 1);
       doc.rect(0, 0, pageWidth, 40, 'F');
       doc.setFontSize(24);
       doc.setTextColor(255, 255, 255);
@@ -69,7 +69,7 @@ export const exportToPDF = (
         doc.setFillColor(245, 245, 250);
         doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
         doc.setFontSize(14);
-        doc.setTextColor(59, 59, 13);
+        doc.setTextColor(120, 1, 1);
         doc.text(table.name, 14, yPosition);
         yPosition += 10;
 
@@ -97,7 +97,7 @@ export const exportToPDF = (
             lineWidth: 0.1,
           },
           headStyles: {
-            fillColor: [59, 59, 13],
+            fillColor: [120, 1, 1],
             textColor: [255, 255, 255],
             fontStyle: 'bold',
           },
@@ -115,7 +115,7 @@ export const exportToPDF = (
         doc.setFillColor(245, 245, 250);
         doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
         doc.setFontSize(11);
-        doc.setTextColor(59, 59, 13);
+        doc.setTextColor(0, 0, 0);
         if (type === 'weight' && table.totalWeight) {
           doc.text(`Total Weight: ${table.totalWeight.toFixed(2)} kg`, 14, yPosition);
         } else if (type === 'power' && table.totalWatts) {
@@ -158,7 +158,7 @@ const addLogoToBottom = (
   pageHeight: number
 ) => {
   const logoWidth = 50;
-  const logoHeight = 15;
+  const logoHeight = 10;
   const x = (pageWidth - logoWidth) / 2;
   const y = pageHeight - 20;
   doc.addImage(img, 'PNG', x, y, logoWidth, logoHeight);
