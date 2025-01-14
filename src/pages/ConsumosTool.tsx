@@ -4,12 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, ArrowLeft, Scale } from 'lucide-react';
+import { FileText, ArrowLeft } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
 import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
+
+// Constants for power calculations
+const VOLTAGE_3PHASE = 400;
+const POWER_FACTOR = 0.85;
+const SQRT3 = Math.sqrt(3);
 
 interface TableRow {
   quantity: string;
@@ -51,13 +56,11 @@ const getComponentDatabase = (department: 'sound' | 'lights' | 'video') => {
       return [
         { id: 1, name: 'Lights Component 1', watts: 1000 }, // Placeholder
         { id: 2, name: 'Lights Component 2', watts: 2000 }, // Placeholder
-        // Add more lights components here
       ];
     case 'video':
       return [
         { id: 1, name: 'Video Component 1', watts: 1500 }, // Placeholder
         { id: 2, name: 'Video Component 2', watts: 2500 }, // Placeholder
-        // Add more video components here
       ];
   }
 };
@@ -74,6 +77,8 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
     name: '',
     rows: [{ quantity: '', componentId: '', watts: '' }]
   });
+
+  const componentDatabase = getComponentDatabase(department);
 
   const addRow = () => {
     setCurrentTable(prev => ({
@@ -251,8 +256,8 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
             <Button 
               variant="ghost" 
               size="icon"
-              onClick={() => navigate('/sound')}
-              title="Back to Sound"
+              onClick={() => navigate(`/${department}`)}
+              title={`Back to ${department.charAt(0).toUpperCase() + department.slice(1)}`}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -408,3 +413,7 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
         </div>
       </CardContent>
     </Card>
+  );
+};
+
+export default ConsumosTool;
