@@ -24,9 +24,11 @@ interface PowerSystemSummary {
   totalSystemAmps: number;
 }
 
+let soundTableCounter = 0; // Global counter for sound table suffixes
+
 export const exportToPDF = (
-  projectName: string, 
-  tables: ExportTable[], 
+  projectName: string,
+  tables: ExportTable[],
   type: 'weight' | 'power',
   jobName: string,
   powerSummary?: PowerSystemSummary
@@ -60,13 +62,26 @@ export const exportToPDF = (
 
     // Tables
     tables.forEach((table, index) => {
+      // Generate suffix for table name
+      const suffix = (() => {
+        soundTableCounter++;
+        const suffixNumber = soundTableCounter.toString().padStart(2, '0');
+        if (table.dualMotors) {
+          soundTableCounter++;
+          return `(SX${suffixNumber}, SX${soundTableCounter.toString().padStart(2, '0')})`;
+        }
+        return `(SX${suffixNumber})`;
+      })();
+
+      const tableNameWithSuffix = `${table.name} ${suffix}`;
+
       // Section header
       doc.setFillColor(245, 245, 250);
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
 
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text(table.name, 14, yPosition);
+      doc.text(tableNameWithSuffix, 14, yPosition);
       yPosition += 10;
 
       // Table data
@@ -148,47 +163,8 @@ export const exportToPDF = (
       }
     });
 
-    // Add logo to the bottom of the last page
-    const logo = new Image();
-    logo.crossOrigin = 'anonymous'; // Important for embedding the image
-    logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
-    logo.onload = () => {
-      // Set the page to the last page before adding the logo
-      doc.setPage(doc.getNumberOfPages());
-      
-      // Calculate dimensions to maintain aspect ratio
-      const logoWidth = 50; // Fixed width in mm
-      const aspectRatio = logo.height / logo.width;
-      const logoHeight = logoWidth * aspectRatio;
-      
-      // Calculate position to center horizontally and place near bottom
-      const xPosition = (pageWidth - logoWidth) / 2;
-      const yPosition = pageHeight - 20; // 20mm from bottom
-      
-      try {
-        doc.addImage(
-          logo,
-          'PNG',
-          xPosition,
-          yPosition,
-          logoWidth,
-          logoHeight
-        );
-        const blob = doc.output('blob');
-        resolve(blob);
-      } catch (error) {
-        console.error('Error adding logo:', error);
-        // If logo fails, still generate PDF without it
-        const blob = doc.output('blob');
-        resolve(blob);
-      }
-    };
-
-    // If the image fails to load, still resolve with the PDF without the logo
-    logo.onerror = () => {
-      console.error('Failed to load logo');
-      const blob = doc.output('blob');
-      resolve(blob);
-    };
+    // Generate PDF blob and resolve
+    const blob = doc.output('blob');
+    resolve(blob);
   });
 };
