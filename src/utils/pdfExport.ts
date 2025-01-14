@@ -25,21 +25,15 @@ interface PowerSystemSummary {
 }
 
 export const exportToPDF = (
-  projectName: string,
-  tables: ExportTable[],
+  projectName: string, 
+  tables: ExportTable[], 
   type: 'weight' | 'power',
   jobName: string,
   powerSummary?: PowerSystemSummary
 ): Promise<Blob> => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.width;
-      const pageHeight = doc.internal.pageSize.height;
-
-      // Load the logo from the assets folder
-      const logoUrl = '/public/sector pro logo.png'; // Replace with the actual path to the logo
-      const logoImg = await loadImage(logoUrl);
+  return new Promise((resolve) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
     
     // Add header
     doc.setFillColor(51, 51, 153);
@@ -64,22 +58,15 @@ export const exportToPDF = (
     let yPosition = 60;
     
     tables.forEach((table, index) => {
-      // Check available space on the current page
-      const tableHeight = calculateTableHeight(doc, table.rows.length);
-      if (yPosition + tableHeight > pageHeight - 30) {
-        addLogoToBottom(doc, logoImg, pageWidth, pageHeight);
-        doc.addPage();
-        yPosition = 20;
-      }
-      
-      // Add Table Header
+      // Table header
       doc.setFillColor(245, 245, 250);
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
+      
       doc.setFontSize(14);
-      doc.setTextColor(59, 59, 13);
+      doc.setTextColor(51, 51, 153);
       doc.text(table.name, 14, yPosition);
       yPosition += 10;
-
+      
       // Table content
       const tableRows = table.rows.map(row => [
         row.quantity,
@@ -153,44 +140,24 @@ export const exportToPDF = (
       }
     });
 
-   // Add Logo to the last page
-   addLogoToBottom(doc, logoImg, pageWidth, pageHeight);
-
-   const blob = doc.output('blob');
-   resolve(blob);
- } catch (error) {
-   reject(error);
- }
-});
-};
-
-// Utility: Load the image dynamically
-const loadImage = (url: string): Promise<HTMLImageElement> => {
-return new Promise((resolve, reject) => {
- const img = new Image();
- img.src = url;
- img.onload = () => resolve(img);
- img.onerror = reject;
-});
-};
-
-// Utility: Add Logo to the bottom of the page
-const addLogoToBottom = (
-doc: jsPDF,
-img: HTMLImageElement,
-pageWidth: number,
-pageHeight: number
-) => {
-const logoWidth = 50;
-const logoHeight = 15;
-const x = (pageWidth - logoWidth) / 2;
-const y = pageHeight - 20;
-doc.addImage(img, 'PNG', x, y, logoWidth, logoHeight);
-};
-
-// Utility: Calculate table height
-const calculateTableHeight = (doc: jsPDF, rowCount: number): number => {
-const rowHeight = 10; // Approximate height per row
-const headerHeight = 10; // Height for the table header
-return headerHeight + rowCount * rowHeight;
+    // Add system summary if provided
+    if (powerSummary && type === 'power') {
+      doc.setFillColor(245, 245, 250);
+      doc.rect(14, yPosition - 6, pageWidth - 28, 30, 'F');
+      
+      doc.setFontSize(14);
+      doc.setTextColor(51, 51, 153);
+      doc.text("System Summary", 14, yPosition);
+      
+      yPosition += 10;
+      doc.setFontSize(11);
+      doc.text(`Total System Power: ${powerSummary.totalSystemWatts.toFixed(2)} W`, 14, yPosition);
+      
+      yPosition += 7;
+      doc.text(`Total System Current per Phase: ${powerSummary.totalSystemAmps.toFixed(2)} A`, 14, yPosition);
+    }
+    
+    const blob = doc.output('blob');
+    resolve(blob);
+  });
 };
