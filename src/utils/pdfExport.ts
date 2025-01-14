@@ -17,6 +17,7 @@ interface ExportTable {
   dualMotors?: boolean;
   totalWatts?: number;
   currentPerPhase?: number;
+  toolType?: 'pesos' | 'consumos'; // New flag to identify the tool type
 }
 
 interface PowerSystemSummary {
@@ -24,14 +25,15 @@ interface PowerSystemSummary {
   totalSystemAmps: number;
 }
 
-let soundTableCounter = 0; // Global counter for sound table suffixes
+let soundTableCounter = 0; // Counter for sound table suffixes (PesosTool only)
 
 export const exportToPDF = (
   projectName: string,
   tables: ExportTable[],
   type: 'weight' | 'power',
   jobName: string,
-  powerSummary?: PowerSystemSummary
+  powerSummary?: PowerSystemSummary,
+  safetyMargin?: number // Optionally include safety margin in the PDF
 ): Promise<Blob> => {
   return new Promise((resolve) => {
     const doc = new jsPDF();
@@ -53,27 +55,37 @@ export const exportToPDF = (
     doc.setTextColor(255, 255, 255);
     doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
 
+    // Safety Margin (if applicable)
+    if (safetyMargin !== undefined) {
+      doc.setFontSize(10);
+      doc.setTextColor(51, 51, 51);
+      doc.text(`Safety Margin Applied: ${safetyMargin}%`, 14, 50);
+    }
+
     // Date
     doc.setFontSize(10);
     doc.setTextColor(51, 51, 51);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 50);
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 60);
 
-    let yPosition = 60;
+    let yPosition = 70;
 
     // Tables
     tables.forEach((table, index) => {
-      // Generate suffix for table name
-      const suffix = (() => {
-        soundTableCounter++;
-        const suffixNumber = soundTableCounter.toString().padStart(2, '0');
-        if (table.dualMotors) {
-          soundTableCounter++;
-          return `(SX${suffixNumber}, SX${soundTableCounter.toString().padStart(2, '0')})`;
-        }
-        return `(SX${suffixNumber})`;
-      })();
+      let tableNameWithSuffix = table.name;
 
-      const tableNameWithSuffix = `${table.name} ${suffix}`;
+      // Only apply the suffix logic for PesosTool tables
+      if (table.toolType === 'pesos') {
+        const suffix = (() => {
+          soundTableCounter++;
+          const suffixNumber = soundTableCounter.toString().padStart(2, '0');
+          if (table.dualMotors) {
+            soundTableCounter++;
+            return `(SX${suffixNumber}, SX${soundTableCounter.toString().padStart(2, '0')})`;
+          }
+          return `(SX${suffixNumber})`;
+        })();
+        tableNameWithSuffix = `${table.name} ${suffix}`;
+      }
 
       // Section header
       doc.setFillColor(245, 245, 250);
@@ -168,25 +180,17 @@ export const exportToPDF = (
     logo.crossOrigin = 'anonymous'; // Important for embedding the image
     logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
     logo.onload = () => {
-      // Set the page to the last page before adding the logo
       doc.setPage(doc.getNumberOfPages());
-
-      // Calculate dimensions to maintain aspect ratio
-      const logoWidth = 50; // Fixed width in mm
-      const aspectRatio = logo.height / logo.width;
-      const logoHeight = logoWidth * aspectRatio;
-
-      // Calculate position to center horizontally and place near bottom
+      const logoWidth = 50;
+      const logoHeight = logoWidth * (logo.height / logo.width);
       const xPosition = (pageWidth - logoWidth) / 2;
-      const yPosition = pageHeight - 20; // 20mm from bottom
-
+      const yPosition = pageHeight - 20;
       try {
         doc.addImage(logo, 'PNG', xPosition, yPosition, logoWidth, logoHeight);
         const blob = doc.output('blob');
         resolve(blob);
       } catch (error) {
         console.error('Error adding logo:', error);
-        // If logo fails, still generate PDF without it
         const blob = doc.output('blob');
         resolve(blob);
       }
