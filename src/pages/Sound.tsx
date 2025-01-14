@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import CreateJobDialog from "@/components/jobs/CreateJobDialog";
 import CreateTourDialog from "@/components/tours/CreateTourDialog";
@@ -28,6 +28,8 @@ const Sound = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [userRole, setUserRole] = useState<string | null>(null);
   const [showAnalysisForm, setShowAnalysisForm] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const currentDepartment = "sound";
 
   const { data: jobs, isLoading } = useJobs();
@@ -117,6 +119,63 @@ const Sound = () => {
 
   const handleAnalysisButtonClick = () => {
     setShowAnalysisForm(true);
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    setSelectedFiles(Array.from(e.target.files));
+  };
+
+  const handleAnalysisSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    const fileContents: string[] = await Promise.all(
+      selectedFiles.map(file => {
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsText(file);
+        });
+      })
+    );
+
+    const prompt = `Read carefully these documents and summarize in a table:
+- Microphone models with quantities broken down by document name
+- Microphone stands type and quantities broken down by document name
+- Riser quantities, leg count (4 by riser) and height
+(Note: The word for riser in Spanish is "tarima")
+
+Here are the document contents:
+${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join("\n\n")}
+    `;
+
+    try {
+      console.log("Calling analyze-documents function...");
+      const { data, error } = await supabase.functions.invoke('analyze-documents', {
+        body: { prompt }
+      });
+
+      if (error) {
+        console.error("Function error:", error);
+        throw error;
+      }
+
+      console.log("Analysis result:", data);
+      setAnalysisResult(data.result);
+      toast({
+        title: "Analysis complete",
+        description: "The documents have been summarized.",
+      });
+      setShowAnalysisForm(false);
+    } catch (error: any) {
+      console.error("Error during analysis:", error);
+      toast({
+        title: "Error",
+        description: error.message || "There was an error processing the analysis.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
