@@ -49,14 +49,17 @@ export const useJobSelection = () => {
 
       // Transform the data to match our expected types
       const transformedJobs = jobs?.map(job => {
-        const tourDate = job.tour_date as TourDate | null;
+        const tourDateData = job.tour_date as any;
         return {
           id: job.id,
           title: job.title,
           tour_date_id: job.tour_date_id,
-          tour_date: tourDate ? {
-            id: tourDate.id,
-            tour: tourDate.tour
+          tour_date: tourDateData ? {
+            id: tourDateData.id,
+            tour: tourDateData.tour ? {
+              id: tourDateData.tour.id,
+              name: tourDateData.tour.name
+            } : null
           } : null
         };
       }) as JobSelection[];
