@@ -6,12 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText, ArrowLeft, Calculator } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
-import { useJobSelection, JobSelection, TourDate } from '@/hooks/useJobSelection';
+import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { Checkbox } from "@/components/ui/checkbox";
-import { useQuery } from '@tanstack/react-query';
 
 const componentDatabase = [
   { id: 1, name: ' K1 ', weight: 106 },
@@ -61,64 +60,10 @@ interface Table {
   dualMotors?: boolean;
 }
 
-const PesosTool: React.FC<{ department?: 'sound' | 'lights' | 'video' }> = ({ department = 'sound' }) => {
+const PesosTool = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  const { data: jobs } = useQuery({
-    queryKey: ['jobs-for-calculator', department],
-    queryFn: async () => {
-      console.log(`Fetching jobs for ${department} calculator...`);
-      const { data: jobs, error } = await supabase
-        .from("jobs")
-        .select(`
-          id,
-          title,
-          tour_date_id,
-          tour_date:tour_dates (
-            id,
-            tour:tours (
-              id,
-              name
-            )
-          ),
-          job_departments!inner (
-            department
-          )
-        `)
-        .eq('job_departments.department', department)
-        .order('start_time', { ascending: true });
-
-      if (error) {
-        console.error("Error fetching jobs:", error);
-        throw error;
-      }
-
-      console.log("Raw jobs data:", jobs);
-      
-      // Transform the data to match our expected types
-      const transformedJobs = jobs?.map(job => {
-        const tourDateData = job.tour_date as any;
-        return {
-          id: job.id,
-          title: job.title,
-          tour_date_id: job.tour_date_id,
-          tour_date: tourDateData ? {
-            id: tourDateData.id,
-            tour: tourDateData.tour ? {
-              id: tourDateData.tour.id,
-              name: tourDateData.tour.name
-            } : null
-          } : null,
-          job_departments: job.job_departments
-        };
-      }) as JobSelection[];
-
-      console.log("Transformed jobs:", transformedJobs);
-      return transformedJobs;
-    },
-  });
-
+  const { data: jobs } = useJobSelection();
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState('');
@@ -211,104 +156,106 @@ const PesosTool: React.FC<{ department?: 'sound' | 'lights' | 'video' }> = ({ de
     setTables(prev => prev.filter(table => table.id !== tableId));
   };
 
-  const handleExportPDF = async () => {
-    if (!selectedJobId || !selectedJob) {
-      toast({
-        title: "No job selected",
-        description: "Please select a job before exporting",
-        variant: "destructive"
-      });
-      return;
-    }
+ const handleExportPDF = async () => {
+  if (!selectedJobId || !selectedJob) {
+    toast({
+      title: "No job selected",
+      description: "Please select a job before exporting",
+      variant: "destructive"
+    });
+    return;
+  }
 
-    try {
-      const jobName = selectedJob.title;
-      const pdfBlob = await exportToPDF(
-        tableName, 
-        tables, 
-        'weight',
-        jobName
-      );
+  try {
+    const jobName = selectedJob.title;
+    const pdfBlob = await exportToPDF(
+      tableName, 
+      tables, 
+      'weight',
+      jobName
+    );
 
-      const fileName = `Pesos ${department} ${jobName}.pdf`;
-      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-      const filePath = `${department}/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+    const fileName = `Pesos Sonido ${jobName}.pdf`;
+    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+    const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('task_documents')
-        .upload(filePath, file);
+    const { error: uploadError } = await supabase.storage
+      .from('task_documents')
+      .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+    if (uploadError) throw uploadError;
 
-      const { data: existingTask, error: taskError } = await supabase
-        .from(`${department}_job_tasks`)
-        .select('id')
-        .eq('job_id', selectedJobId)
-        .eq('task_type', 'Pesos')
-        .maybeSingle();
+    // First try to get existing task
+    const { data: existingTask, error: taskError } = await supabase
+      .from('sound_job_tasks')
+      .select('id')
+      .eq('job_id', selectedJobId)
+      .eq('task_type', 'Pesos')
+      .maybeSingle();
 
-      if (taskError) throw taskError;
+    if (taskError) throw taskError;
 
-      let taskId;
+    let taskId;
 
-      if (!existingTask) {
-        const { data: newTask, error: createError } = await supabase
-          .from(`${department}_job_tasks`)
-          .insert({
-            job_id: selectedJobId,
-            task_type: 'Pesos',
-            status: 'in_progress',
-            progress: 50
-          })
-          .select('id')
-          .single();
-
-        if (createError) throw createError;
-        taskId = newTask.id;
-      } else {
-        taskId = existingTask.id;
-      }
-
-      const { error: docError } = await supabase
-        .from('task_documents')
+    if (!existingTask) {
+      // Create new task if none exists
+      const { data: newTask, error: createError } = await supabase
+        .from('sound_job_tasks')
         .insert({
-          file_name: fileName,
-          file_path: filePath,
-          [`${department}_task_id`]: taskId,
-          uploaded_by: (await supabase.auth.getUser()).data.user?.id
-        });
+          job_id: selectedJobId,
+          task_type: 'Pesos',
+          status: 'in_progress',
+          progress: 50
+        })
+        .select('id')
+        .single();
 
-      if (docError) throw docError;
-
-      toast({
-        title: "Success",
-        description: "PDF has been generated and uploaded successfully.",
-      });
-
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from('task_documents')
-        .download(filePath);
-
-      if (downloadError) throw downloadError;
-
-      const url = window.URL.createObjectURL(fileData);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-    } catch (error: any) {
-      console.error('Error handling PDF:', error);
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
+      if (createError) throw createError;
+      taskId = newTask.id;
+    } else {
+      taskId = existingTask.id;
     }
-  };
+
+    const { error: docError } = await supabase
+      .from('task_documents')
+      .insert({
+        file_name: fileName,
+        file_path: filePath,
+        sound_task_id: taskId,
+        uploaded_by: (await supabase.auth.getUser()).data.user?.id
+      });
+
+    if (docError) throw docError;
+
+    toast({
+      title: "Success",
+      description: "PDF has been generated and uploaded successfully.",
+    });
+
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('task_documents')
+      .download(filePath);
+
+    if (downloadError) throw downloadError;
+
+    const url = window.URL.createObjectURL(fileData);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+  } catch (error: any) {
+    console.error('Error handling PDF:', error);
+    toast({
+      title: "Error",
+      description: error.message,
+      variant: "destructive"
+    });
+  }
+};
 
   return (
     <Card className="w-full max-w-4xl mx-auto my-6">
@@ -318,8 +265,8 @@ const PesosTool: React.FC<{ department?: 'sound' | 'lights' | 'video' }> = ({ de
             <Button 
               variant="ghost" 
               size="icon"
-              onClick={() => navigate(`/${department}`)}
-              title={`Back to ${department.charAt(0).toUpperCase() + department.slice(1)}`}
+              onClick={() => navigate('/sound')}
+              title="Back to Sound"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>

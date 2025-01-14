@@ -1,14 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
-export interface Tour {
-  id: string;
-  name: string;
-}
-
 export interface TourDate {
   id: string;
-  tour: Tour | null;
+  tour: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface JobSelection {
@@ -16,7 +14,6 @@ export interface JobSelection {
   title: string;
   tour_date_id: string | null;
   tour_date: TourDate | null;
-  job_departments?: { department: string }[];
 }
 
 export const useJobSelection = () => {
@@ -30,7 +27,7 @@ export const useJobSelection = () => {
           id,
           title,
           tour_date_id,
-          tour_date:tour_dates (
+          tour_date:tour_dates!tour_date_id (
             id,
             tour:tours (
               id,
@@ -48,21 +45,18 @@ export const useJobSelection = () => {
       console.log("Raw jobs data:", jobs);
 
       // Transform the data to match our expected types
-      const transformedJobs = jobs?.map(job => {
-        const tourDateData = job.tour_date as any;
-        return {
-          id: job.id,
-          title: job.title,
-          tour_date_id: job.tour_date_id,
-          tour_date: tourDateData ? {
-            id: tourDateData.id,
-            tour: tourDateData.tour ? {
-              id: tourDateData.tour.id,
-              name: tourDateData.tour.name
-            } : null
-          } : null
-        };
-      }) as JobSelection[];
+      const transformedJobs = jobs?.map(job => ({
+        id: job.id,
+        title: job.title,
+        tour_date_id: job.tour_date_id,
+        tour_date: job.tour_date ? {
+          id: job.tour_date[0]?.id, // Access first element of tour_date array
+          tour: {
+            id: job.tour_date[0]?.tour[0]?.id, // Access first tour from the first tour_date
+            name: job.tour_date[0]?.tour[0]?.name
+          }
+        } : null
+      })) as JobSelection[];
 
       console.log("Transformed jobs:", transformedJobs);
       return transformedJobs;

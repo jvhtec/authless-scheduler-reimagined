@@ -4,15 +4,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, ArrowLeft } from 'lucide-react';
+import { FileText, ArrowLeft, Scale } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
-import { useJobSelection, JobSelection, TourDate } from '@/hooks/useJobSelection';
+import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 
-// Constants for power calculations
+const componentDatabase = [
+  { id: 1, name: 'LA12X', watts: 2900 },
+  { id: 2, name: 'LA8', watts: 2500 },
+  { id: 3, name: 'LA4X', watts: 2000 },
+  { id: 4, name: 'PLM20000D', watts: 2900 },
+  { id: 5, name: 'Control FoH (L)', watts: 3500 },
+  { id: 6, name: 'Control FoH (S)', watts: 1500 },
+  { id: 7, name: 'Control Mon (L)', watts: 3500 },
+  { id: 8, name: 'Control Mon (S)', watts: 1500 },
+  { id: 9, name: 'RF Rack', watts: 2500 },
+  { id: 10, name: 'Backline', watts: 2500 },
+  { id: 11, name: 'Varios', watts: 1500 },
+];
+
 const VOLTAGE_3PHASE = 400;
 const POWER_FACTOR = 0.85;
 const SQRT3 = Math.sqrt(3);
@@ -33,42 +45,10 @@ interface Table {
   id?: number;
 }
 
-interface ConsumosToolProps {
-  department: 'sound' | 'lights' | 'video';
-}
-
-const getComponentDatabase = (department: 'sound' | 'lights' | 'video') => {
-  switch (department) {
-    case 'sound':
-      return [
-        { id: 1, name: 'LA12X', watts: 2900 },
-        { id: 2, name: 'LA8', watts: 2500 },
-        { id: 3, name: 'LA4X', watts: 2000 },
-        { id: 4, name: 'PLM20000D', watts: 2900 },
-        { id: 5, name: 'Control FoH (L)', watts: 3500 },
-        { id: 6, name: 'Control FoH (S)', watts: 1500 },
-        { id: 7, name: 'Control Mon (L)', watts: 3500 },
-        { id: 8, name: 'Control Mon (S)', watts: 1500 },
-        { id: 9, name: 'RF Rack', watts: 2500 },
-        { id: 10, name: 'Backline', watts: 2500 },
-        { id: 11, name: 'Varios', watts: 1500 },
-      ];
-    case 'lights':
-      return [
-        { id: 1, name: 'Lights Component 1', watts: 1000 }, // Placeholder
-        { id: 2, name: 'Lights Component 2', watts: 2000 }, // Placeholder
-      ];
-    case 'video':
-      return [
-        { id: 1, name: 'Video Component 1', watts: 1500 }, // Placeholder
-        { id: 2, name: 'Video Component 2', watts: 2500 }, // Placeholder
-      ];
-  }
-};
-
-const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
+const ConsumosTool = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { data: jobs } = useJobSelection();
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState('');
@@ -76,62 +56,6 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
     rows: [{ quantity: '', componentId: '', watts: '' }]
-  });
-
-  const componentDatabase = getComponentDatabase(department);
-
-  const { data: jobs } = useQuery({
-    queryKey: ['jobs-for-calculator', department],
-    queryFn: async () => {
-      console.log(`Fetching jobs for ${department} calculator...`);
-      const { data: jobs, error } = await supabase
-        .from("jobs")
-        .select(`
-          id,
-          title,
-          tour_date_id,
-          tour_date:tour_dates (
-            id,
-            tour:tours (
-              id,
-              name
-            )
-          ),
-          job_departments!inner (
-            department
-          )
-        `)
-        .eq('job_departments.department', department)
-        .order('start_time', { ascending: true });
-
-      if (error) {
-        console.error("Error fetching jobs:", error);
-        throw error;
-      }
-
-      console.log("Raw jobs data:", jobs);
-      
-      // Transform the data to match our expected types
-      const transformedJobs = jobs?.map(job => {
-        const tourDateData = job.tour_date as any;
-        return {
-          id: job.id,
-          title: job.title,
-          tour_date_id: job.tour_date_id,
-          tour_date: tourDateData ? {
-            id: tourDateData.id,
-            tour: tourDateData.tour ? {
-              id: tourDateData.tour.id,
-              name: tourDateData.tour.name
-            } : null
-          } : null,
-          job_departments: job.job_departments
-        };
-      }) as JobSelection[];
-
-      console.log("Transformed jobs:", transformedJobs);
-      return transformedJobs;
-    },
   });
 
   const addRow = () => {
@@ -240,11 +164,11 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
       };
 
       const jobName = selectedJob.title || 'Unnamed Job';
-      const fileName = `Consumos ${department} - ${jobName}.pdf`;
+      const fileName = `Consumos Sonido - ${jobName}.pdf`;
       const pdfBlob = await exportToPDF(selectedJob.title, tables, 'power', jobName, totalSystem);
 
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-      const filePath = `${department}/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+      const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
 
       const { error: uploadError } = await supabase.storage
         .from('task_documents')
@@ -252,43 +176,21 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
 
       if (uploadError) throw uploadError;
 
-      // First try to get existing task
-      const { data: existingTask, error: fetchError } = await supabase
-        .from(`${department}_job_tasks`)
+      const { data: tasks, error: taskError } = await supabase
+        .from('sound_job_tasks')
         .select('id')
         .eq('job_id', selectedJobId)
         .eq('task_type', 'Consumos')
-        .maybeSingle();
+        .single();
 
-      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
-
-      let taskId;
-
-      if (!existingTask) {
-        // Create new task if none exists
-        const { data: newTask, error: createError } = await supabase
-          .from(`${department}_job_tasks`)
-          .insert({
-            job_id: selectedJobId,
-            task_type: 'Consumos',
-            status: 'completed',
-            progress: 100
-          })
-          .select('id')
-          .single();
-
-        if (createError) throw createError;
-        taskId = newTask.id;
-      } else {
-        taskId = existingTask.id;
-      }
+      if (taskError) throw taskError;
 
       const { error: docError } = await supabase
         .from('task_documents')
         .insert({
           file_name: fileName,
           file_path: filePath,
-          [`${department}_task_id`]: taskId,
+          sound_task_id: tasks.id,
           uploaded_by: (await supabase.auth.getUser()).data.user?.id
         });
 
@@ -332,13 +234,21 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
             <Button 
               variant="ghost" 
               size="icon"
-              onClick={() => navigate(`/${department}`)}
-              title={`Back to ${department.charAt(0).toUpperCase() + department.slice(1)}`}
+              onClick={() => navigate('/sound')}
+              title="Back to Sound"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <CardTitle className="text-2xl font-bold">Power Calculator</CardTitle>
           </div>
+          <Button
+            variant="outline"
+            onClick={() => navigate('/pesos-tool')}
+            className="gap-2"
+          >
+            <Scale className="h-4 w-4" />
+            Weight Calculator
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -353,7 +263,7 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
                 <SelectValue placeholder="Select a job" />
               </SelectTrigger>
               <SelectContent>
-                {jobs?.map((job) => (
+                {jobs?.map((job: JobSelection) => (
                   <SelectItem key={job.id} value={job.id}>
                     {job.tour_date?.tour?.name ? `${job.tour_date.tour.name} - ${job.title}` : job.title}
                   </SelectItem>
@@ -430,7 +340,7 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
             <Button onClick={resetCurrentTable} variant="destructive">Reset</Button>
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
-                <FileText className="w-4 h-4" />
+                <FileText className="w-4 w-4" />
                 Export & Upload PDF
               </Button>
             )}
@@ -470,6 +380,10 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
                     <td colSpan={3} className="px-4 py-3 text-right">Total Power:</td>
                     <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
                   </tr>
+                  <tr className="bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-right">Current per Phase:</td>
+                    <td className="px-4 py-3">{table.currentPerPhase?.toFixed(2)} A</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -482,6 +396,14 @@ const ConsumosTool: React.FC<ConsumosToolProps> = ({ department }) => {
                 <span className="font-medium">Total Power:</span>
                 <span className="ml-2">
                   {tables.reduce((sum, table) => sum + (table.totalWatts || 0), 0).toFixed(2)} W
+                </span>
+              </div>
+              <div>
+                <span className="font-medium">Total Current per Phase:</span>
+                <span className="ml-2">
+                  {calculatePhaseCurrents(
+                    tables.reduce((sum, table) => sum + (table.totalWatts || 0), 0)
+                  ).toFixed(2)} A
                 </span>
               </div>
             </div>

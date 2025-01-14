@@ -13,11 +13,6 @@ import Profile from "@/pages/Profile";
 import ProjectManagement from "@/pages/ProjectManagement";
 import PesosTool from "@/pages/PesosTool";
 import ConsumosTool from "@/pages/ConsumosTool";
-import LightsPesosTool from "@/pages/LightsPesosTool";
-import LightsConsumosTool from "@/pages/LightsConsumosTool";
-import VideoPesosTool from "@/pages/VideoPesosTool";
-import VideoConsumosTool from "@/pages/VideoConsumosTool";
-import ReportGenerator from "@/pages/ReportGenerator";
 import { useSessionManager } from "@/hooks/useSessionManager";
 import "./App.css";
 
@@ -75,13 +70,8 @@ function App() {
             <Route path="/video" element={<Video />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/project-management" element={<ProjectManagement />} />
-            <Route path="/pesos-tool" element={<PesosTool department="sound" />} />
-            <Route path="/consumos-tool" element={<ConsumosTool department="sound" />} />
-            <Route path="/lights-pesos-tool" element={<LightsPesosTool />} />
-            <Route path="/lights-consumos-tool" element={<LightsConsumosTool />} />
-            <Route path="/video-pesos-tool" element={<VideoPesosTool />} />
-            <Route path="/video-consumos-tool" element={<VideoConsumosTool />} />
-            <Route path="/report-generator" element={<ReportGenerator />} />
+            <Route path="/pesos-tool" element={<PesosTool />} />
+            <Route path="/consumos-tool" element={<ConsumosTool />} />
             <Route path="*" element={<RoleBasedRedirect />} />
           </Route>
         </Routes>

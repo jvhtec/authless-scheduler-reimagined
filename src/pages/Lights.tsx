@@ -12,8 +12,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { LightsHeader } from "@/components/lights/LightsHeader";
 import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { LightsSchedule } from "@/components/lights/LightsSchedule";
-import { Button } from "@/components/ui/button";
-import { Scale, Calculator } from "lucide-react";
 
 const Lights = () => {
   const navigate = useNavigate();
@@ -163,25 +161,6 @@ const Lights = () => {
         onCreateTour={() => setIsTourDialogOpen(true)}
         department="Lights"
       />
-
-      <div className="flex gap-4 mb-4">
-        <Button
-          variant="outline"
-          onClick={() => navigate('/lights-pesos-tool')}
-          className="gap-2"
-        >
-          <Scale className="h-4 w-4" />
-          Weight Calculator
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => navigate('/lights-consumos-tool')}
-          className="gap-2"
-        >
-          <Calculator className="h-4 w-4" />
-          Power Calculator
-        </Button>
-      </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         <LightsCalendar date={date} onSelect={setDate} />
