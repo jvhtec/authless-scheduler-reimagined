@@ -290,6 +290,7 @@ const PesosTool: React.FC = () => {
                         type="number"
                         value={row.quantity}
                         onChange={(e) => updateInput(index, 'quantity', e.target.value)}
+                        min="0"
                         className="w-full"
                       />
                     </td>
