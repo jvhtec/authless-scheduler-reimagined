@@ -153,7 +153,6 @@ const PesosTool: React.FC = () => {
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
 
     const newTable: Table = {
-      name: tableName,
       name: `${tableName} ${suffix}`,
       rows: calculatedRows,
       totalWeight,
