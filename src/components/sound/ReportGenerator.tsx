@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { jsPDF } from "jspdf";
 import { useJobSelection, JobSelection } from "@/hooks/useJobSelection";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 
 const reportSections = [
   {
@@ -72,7 +73,6 @@ export const ReportGenerator = () => {
       format: "a4"
     });
 
-    // Set margins
     const margin = 20;
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
@@ -164,12 +164,12 @@ export const ReportGenerator = () => {
 
           <div>
             <Label htmlFor="equipamiento">Equipment List</Label>
-            <textarea
+            <Textarea
               id="equipamiento"
               value={equipamiento}
               onChange={(e) => setEquipamiento(e.target.value)}
               placeholder="24 L'ACOUSTICS K1 (MAIN ARRAYS)&#10;06 L'ACOUSTICS KARA (DOWNFILLS)"
-              className="w-full h-24 p-2 border rounded text-sm"
+              className="min-h-[96px] bg-background text-foreground"
             />
           </div>
 
