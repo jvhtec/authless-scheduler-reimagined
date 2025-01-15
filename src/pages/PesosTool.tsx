@@ -15,7 +15,24 @@ import { useNavigate } from 'react-router-dom';
 const soundComponentDatabase = [
   { id: 1, name: 'K1', weight: 106 },
   { id: 2, name: 'K2', weight: 56 },
-  // Full sound component list here...
+  { id: 3, name: 'KS28', weight: 79 },
+  { id: 4, name: 'SB28', weight: 93 },
+  { id: 5, name: 'LA12X', weight: 14.5 },
+  { id: 6, name: 'LA8', weight: 11.3 },
+  { id: 7, name: 'LA4X', weight: 11.3 },
+  { id: 8, name: 'PLM20000D', weight: 16.5 },
+  { id: 9, name: 'Control FoH (L)', weight: 250 },
+  { id: 10, name: 'Control FoH (S)', weight: 150 },
+  { id: 11, name: 'Control Mon (L)', weight: 250 },
+  { id: 12, name: 'Control Mon (S)', weight: 150 },
+  { id: 13, name: 'RF Rack', weight: 45 },
+  { id: 14, name: 'Backline', weight: 200 },
+  { id: 15, name: 'Varios', weight: 100 },
+  { id: 16, name: 'Shure ULXD', weight: 15 },
+  { id: 17, name: 'Yamaha CL5', weight: 36 },
+  { id: 18, name: 'Yamaha PM5D', weight: 98 },
+  { id: 19, name: 'Yamaha Rio3224', weight: 19 },
+  { id: 20, name: 'Yamaha Rio1608', weight: 13 }
 ];
 
 interface TableRow {
