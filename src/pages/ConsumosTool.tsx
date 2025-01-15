@@ -216,7 +216,10 @@ const ConsumosTool: React.FC = () => {
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
       const filePath = `${department}/${selectedJobId}/${crypto.randomUUID()}.pdf`;
 
-      const { error: uploadError } = await supabase.storage.from('task_documents').upload(filePath, file);
+      const { error: uploadError } = await supabase.storage
+        .from('task_documents')
+        .upload(filePath, file);
+
       if (uploadError) throw uploadError;
 
       toast({
@@ -224,6 +227,7 @@ const ConsumosTool: React.FC = () => {
         description: 'PDF has been generated and uploaded successfully.',
       });
 
+      // Download the file locally as well
       const url = window.URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -233,7 +237,7 @@ const ConsumosTool: React.FC = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
-      console.error(error);
+      console.error('PDF Export Error:', error);
       toast({
         title: 'Error',
         description: 'Failed to generate or upload the PDF.',

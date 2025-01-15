@@ -17,23 +17,16 @@ interface ExportTable {
   dualMotors?: boolean;
   totalWatts?: number;
   currentPerPhase?: number;
-  toolType?: 'pesos' | 'consumos'; // New flag to identify the tool type
+  toolType?: 'pesos' | 'consumos';
 }
-
-interface PowerSystemSummary {
-  totalSystemWatts: number;
-  totalSystemAmps: number;
-}
-
-let soundTableCounter = 0; // Counter for sound table suffixes (PesosTool only)
 
 export const exportToPDF = (
   projectName: string,
   tables: ExportTable[],
   type: 'weight' | 'power',
   jobName: string,
-  powerSummary?: PowerSystemSummary,
-  safetyMargin?: number // Optionally include safety margin in the PDF
+  powerSummary?: { totalSystemWatts: number; totalSystemAmps: number },
+  safetyMargin?: number
 ): Promise<Blob> => {
   return new Promise((resolve) => {
     const doc = new jsPDF();
@@ -69,31 +62,14 @@ export const exportToPDF = (
 
     let yPosition = 70;
 
-    // Tables
     tables.forEach((table, index) => {
-      let tableNameWithSuffix = table.name;
-
-      // Only apply the suffix logic for PesosTool tables
-      if (table.toolType === 'pesos') {
-        const suffix = (() => {
-          soundTableCounter++;
-          const suffixNumber = soundTableCounter.toString().padStart(2, '0');
-          if (table.dualMotors) {
-            soundTableCounter++;
-            return `(SX${suffixNumber}, SX${soundTableCounter.toString().padStart(2, '0')})`;
-          }
-          return `(SX${suffixNumber})`;
-        })();
-        tableNameWithSuffix = `${table.name} ${suffix}`;
-      }
-
       // Section header
       doc.setFillColor(245, 245, 250);
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
 
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text(tableNameWithSuffix, 14, yPosition);
+      doc.text(table.name, 14, yPosition);
       yPosition += 10;
 
       // Table data
@@ -135,49 +111,34 @@ export const exportToPDF = (
         },
       });
 
-      // Update yPosition after autoTable
       yPosition = (doc as any).lastAutoTable.finalY + 10;
 
-      // Table totals
-      doc.setFillColor(245, 245, 250);
-      doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
+      if (type === 'power' && table.totalWatts !== undefined) {
+        doc.setFillColor(245, 245, 250);
+        doc.rect(14, yPosition - 6, pageWidth - 28, 20, 'F');
 
-      doc.setFontSize(11);
-      doc.setTextColor(125, 1, 1);
-      if (type === 'weight' && table.totalWeight) {
-        doc.text(`Total Weight: ${table.totalWeight.toFixed(2)} kg`, 14, yPosition);
-      } else if (type === 'power' && table.totalWatts) {
+        doc.setFontSize(11);
+        doc.setTextColor(125, 1, 1);
         doc.text(`Total Power: ${table.totalWatts.toFixed(2)} W`, 14, yPosition);
-        if (table.currentPerPhase) {
+        
+        if (table.currentPerPhase !== undefined) {
           yPosition += 7;
           doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition);
         }
+        
+        yPosition += 10;
       }
 
-      // Dual motors note
-      if (table.dualMotors) {
-        yPosition += 7;
-        doc.setFontSize(9);
-        doc.setTextColor(102, 102, 153);
-        doc.text(
-          '*This configuration uses dual motors. Load is distributed between two motors for safety and redundancy.',
-          14,
-          yPosition
-        );
-      }
-
-      yPosition += 20;
-
-      // Add a new page if space is insufficient and not at the last table
+      // Add a new page if needed
       if (yPosition > pageHeight - 40 && index < tables.length - 1) {
         doc.addPage();
         yPosition = 20;
       }
     });
 
-    // Add logo to the bottom of the last page
+    // Add logo
     const logo = new Image();
-    logo.crossOrigin = 'anonymous'; // Important for embedding the image
+    logo.crossOrigin = 'anonymous';
     logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
     logo.onload = () => {
       doc.setPage(doc.getNumberOfPages());
