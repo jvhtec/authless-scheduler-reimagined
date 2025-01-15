@@ -66,6 +66,7 @@ function App() {
             <Route path="/technician-dashboard" element={<TechnicianDashboard />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/sound" element={<Sound />} />
+            <Route path="/report-generator" element={<ReportGenerator />} />
             <Route path="/lights" element={<Lights />} />
             <Route path="/video" element={<Video />} />
             <Route path="/profile" element={<Profile />} />
