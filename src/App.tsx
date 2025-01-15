@@ -13,6 +13,7 @@ import Profile from "@/pages/Profile";
 import ProjectManagement from "@/pages/ProjectManagement";
 import PesosTool from "@/pages/PesosTool";
 import ConsumosTool from "@/pages/ConsumosTool";
+import ReportGenerator from "@/components/ReportGenerator";
 import { useSessionManager } from "@/hooks/useSessionManager";
 import "./App.css";
 
