@@ -73,7 +73,7 @@ export const ReportGenerator = () => {
         const imgData = await toBase64(images[label]);
         pdf.text(label, margin, yOffset);
         yOffset += 10;
-        pdf.addImage(imgData, "JPEG", margin, yOffset, contentWidth, 50); // Resize as needed
+        pdf.addImage(imgData, "JPEG", margin, yOffset, contentWidth, 50);
         yOffset += 60;
 
         if (yOffset > pdf.internal.pageSize.getHeight() - 50) {
