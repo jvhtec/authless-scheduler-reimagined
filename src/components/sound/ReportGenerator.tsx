@@ -1,113 +1,165 @@
-import { useState } from "react";
+import React, { useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { jsPDF } from "jspdf";
+import { useJobSelection, JobSelection } from "@/hooks/useJobSelection";
 
-export const ReportGenerator = () => {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [formData, setFormData] = useState({
-    eventName: "",
-    date: "",
-    venue: "",
-    details: ""
-  });
+const labels = [
+  "Equipment View",
+  "SPL A Broadband Top View",
+  "SPL A Broadband ISO View",
+  "SPL(Z) 250-16k Top View",
+  "SPL(Z) 250-16k ISO View",
+  "SUBS SPL(Z) 32-80 Top View",
+];
+
+const ReportGenerator = () => {
   const { toast } = useToast();
+  const { data: jobs } = useJobSelection(); // Fetch available jobs
+  const [selectedJobId, setSelectedJobId] = useState<string>("");
+  const [equipamiento, setEquipamiento] = useState("");
+  const [images, setImages] = useState<{ [key: string]: File | null }>(
+    labels.reduce((acc, label) => ({ ...acc, [label]: null }), {})
+  );
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsGenerating(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-sv-report', {
-        body: formData
-      });
-
-      if (error) throw error;
-
-      // Handle successful report generation
-      toast({
-        title: "Report Generated",
-        description: "Your SV report has been generated successfully.",
-      });
-
-      // Reset form
-      setFormData({
-        eventName: "",
-        date: "",
-        venue: "",
-        details: ""
-      });
-
-    } catch (error: any) {
-      console.error('Error generating report:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate report. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsGenerating(false);
-    }
+  const handleImageChange = (label: string, file: File | null) => {
+    setImages({ ...images, [label]: file });
   };
 
-  return (
-    <Card className="p-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="eventName">Event Name</Label>
-            <Input
-              id="eventName"
-              value={formData.eventName}
-              onChange={(e) => setFormData(prev => ({ ...prev, eventName: e.target.value }))}
-              required
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="date">Date</Label>
-            <Input
-              id="date"
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-              required
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="venue">Venue</Label>
-            <Input
-              id="venue"
-              value={formData.venue}
-              onChange={(e) => setFormData(prev => ({ ...prev, venue: e.target.value }))}
-              required
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="details">Additional Details</Label>
-            <Textarea
-              id="details"
-              value={formData.details}
-              onChange={(e) => setFormData(prev => ({ ...prev, details: e.target.value }))}
-              className="min-h-[100px]"
-            />
-          </div>
-        </div>
+  const generatePDF = async () => {
+    if (!selectedJobId) {
+      toast({
+        title: "Job not selected",
+        description: "Please select a job before generating the report.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-        <Button 
-          type="submit" 
-          className="w-full"
-          disabled={isGenerating}
-        >
-          {isGenerating ? "Generating Report..." : "Generate SV Report"}
-        </Button>
-      </form>
+    const selectedJob = jobs?.find((job: JobSelection) => job.id === selectedJobId);
+    const jobTitle = selectedJob?.title || "Unnamed_Job";
+
+    const pdf = new jsPDF();
+    const margin = 10;
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const contentWidth = pageWidth - margin * 2;
+    let yOffset = 20;
+
+    // Title
+    pdf.setFontSize(18);
+    pdf.text("SOUNDVISION REPORT", pageWidth / 2, yOffset, { align: "center" });
+    yOffset += 10;
+
+    // Job Title
+    pdf.setFontSize(14);
+    pdf.text(`Job: ${jobTitle}`, margin, yOffset);
+    yOffset += 10;
+
+    // Equipamiento Section
+    pdf.setFontSize(12);
+    pdf.text("EQUIPAMIENTO:", margin, yOffset);
+    yOffset += 10;
+    const equipText = equipamiento || "No equipment provided.";
+    pdf.text(equipText, margin, yOffset);
+    yOffset += 20;
+
+    // Images with Labels
+    for (const label of labels) {
+      if (images[label]) {
+        const imgData = await toBase64(images[label]);
+        pdf.text(label, margin, yOffset);
+        yOffset += 10;
+        pdf.addImage(imgData, "JPEG", margin, yOffset, contentWidth, 50); // Resize as needed
+        yOffset += 60;
+
+        if (yOffset > pdf.internal.pageSize.getHeight() - 50) {
+          pdf.addPage();
+          yOffset = margin;
+        }
+      }
+    }
+
+    // Save PDF
+    const filename = `SoundVision_Report_${jobTitle.replace(/\s+/g, "_")}.pdf`;
+    pdf.save(filename);
+    toast({
+      title: "PDF Generated",
+      description: `The PDF has been generated and downloaded as "${filename}".`,
+    });
+  };
+
+  const toBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  return (
+    <Card className="w-full max-w-4xl mx-auto my-6">
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold">Generate Report</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {/* Job Selection */}
+          <div>
+            <Label htmlFor="jobSelect" className="block font-medium">Select Job</Label>
+            <Select
+              value={selectedJobId}
+              onValueChange={setSelectedJobId}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a job" />
+              </SelectTrigger>
+              <SelectContent>
+                {jobs?.map((job: JobSelection) => (
+                  <SelectItem key={job.id} value={job.id}>
+                    {job.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Equipamiento Section */}
+          <div>
+            <Label htmlFor="equipamiento" className="block font-medium">Equipamiento</Label>
+            <Input
+              id="equipamiento"
+              value={equipamiento}
+              onChange={(e) => setEquipamiento(e.target.value)}
+              placeholder="Enter equipment details..."
+              className="w-full"
+            />
+          </div>
+
+          {/* File Uploads */}
+          {labels.map((label) => (
+            <div key={label}>
+              <Label className="block font-medium">{label}</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleImageChange(label, e.target.files?.[0] || null)}
+                className="block w-full"
+              />
+            </div>
+          ))}
+
+          {/* Generate Button */}
+          <Button onClick={generatePDF} className="w-full bg-blue-500 text-white">
+            Generate PDF
+          </Button>
+        </div>
+      </CardContent>
     </Card>
   );
 };
+
+export default ReportGenerator;
