@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import CreateJobDialog from "@/components/jobs/CreateJobDialog";
 import CreateTourDialog from "@/components/tours/CreateTourDialog";
 import { useJobs } from "@/hooks/useJobs";
@@ -12,12 +11,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { LightsHeader } from "@/components/lights/LightsHeader";
 import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { LightsSchedule } from "@/components/lights/LightsSchedule";
-import { Button } from "@/components/ui/button";
-import { FileText, Scale, Zap } from "lucide-react";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
 
 const Video = () => {
-  const navigate = useNavigate();
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
   const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
@@ -171,36 +167,6 @@ const Video = () => {
         onCreateTour={() => setIsTourDialogOpen(true)}
         department="Video"
       />
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Button
-          variant="outline"
-          size="lg"
-          className="w-full h-auto py-4 flex flex-col items-center gap-2"
-          onClick={() => navigate('/pesos-tool?department=video')}
-        >
-          <Scale className="h-6 w-6" />
-          <span>Weight Calculator</span>
-        </Button>
-        <Button
-          variant="outline"
-          size="lg"
-          className="w-full h-auto py-4 flex flex-col items-center gap-2"
-          onClick={() => navigate('/consumos-tool?department=video')}
-        >
-          <Zap className="h-6 w-6" />
-          <span>Power Calculator</span>
-        </Button>
-        <Button
-          variant="outline"
-          size="lg"
-          className="w-full h-auto py-4 flex flex-col items-center gap-2"
-          onClick={() => navigate('/report-generator')}
-        >
-          <FileText className="h-6 w-6" />
-          <span>Report Generator</span>
-        </Button>
-      </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         <LightsCalendar date={date} onSelect={setDate} />
