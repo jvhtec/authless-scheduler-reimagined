@@ -13,7 +13,6 @@ import Profile from "@/pages/Profile";
 import ProjectManagement from "@/pages/ProjectManagement";
 import PesosTool from "@/pages/PesosTool";
 import ConsumosTool from "@/pages/ConsumosTool";
-import ReportGenerator from "@/components/ReportGenerator";
 import { useSessionManager } from "@/hooks/useSessionManager";
 import "./App.css";
 
@@ -73,7 +72,6 @@ function App() {
             <Route path="/project-management" element={<ProjectManagement />} />
             <Route path="/pesos-tool" element={<PesosTool />} />
             <Route path="/consumos-tool" element={<ConsumosTool />} />
-            <Route path="/report-generator" element={<ReportGenerator />} />
             <Route path="*" element={<RoleBasedRedirect />} />
           </Route>
         </Routes>
