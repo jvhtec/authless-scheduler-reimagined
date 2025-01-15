@@ -205,9 +205,10 @@ const ConsumosTool: React.FC = () => {
     try {
       const pdfBlob = await exportToPDF(
         selectedJob.title,
-        tables,
+        tables.map((table) => ({ ...table, toolType: 'consumos' })),
         'power',
         selectedJob.title,
+        undefined,
         safetyMargin
       );
 

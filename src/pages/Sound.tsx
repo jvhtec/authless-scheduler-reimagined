@@ -31,9 +31,6 @@ const Sound = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const currentDepartment = "sound";
-  const handleNavigateToReport = () => {
-    navigate("/ReportGenerator");
-  };
 
   const { data: jobs, isLoading } = useJobs();
   const { toast } = useToast();
@@ -232,7 +229,6 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
               variant="outline"
               size="lg"
               className="w-full h-auto py-4 flex flex-col items-center gap-2"
-              onClick={handleNavigateToReport}
             >
               <FileText className="h-6 w-6" />
               <span>SV Report Generator</span>

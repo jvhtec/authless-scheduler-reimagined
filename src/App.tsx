@@ -13,7 +13,6 @@ import Profile from "@/pages/Profile";
 import ProjectManagement from "@/pages/ProjectManagement";
 import PesosTool from "@/pages/PesosTool";
 import ConsumosTool from "@/pages/ConsumosTool";
-import ReportGenerator from "@/components/ReportGenerator";
 import { useSessionManager } from "@/hooks/useSessionManager";
 import "./App.css";
 
@@ -67,7 +66,6 @@ function App() {
             <Route path="/technician-dashboard" element={<TechnicianDashboard />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/sound" element={<Sound />} />
-            <Route path="/report-generator" element={<ReportGenerator />} />
             <Route path="/lights" element={<Lights />} />
             <Route path="/video" element={<Video />} />
             <Route path="/profile" element={<Profile />} />
