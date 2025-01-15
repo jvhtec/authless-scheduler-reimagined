@@ -17,7 +17,7 @@ const labels = [
   "SUBS SPL(Z) 32-80 Top View",
 ];
 
-const ReportGenerator = () => {
+export const ReportGenerator = () => {
   const { toast } = useToast();
   const { data: jobs } = useJobSelection(); // Fetch available jobs
   const [selectedJobId, setSelectedJobId] = useState<string>("");
@@ -161,5 +161,3 @@ const ReportGenerator = () => {
     </Card>
   );
 };
-
-export default ReportGenerator;
