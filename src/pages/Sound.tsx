@@ -16,6 +16,7 @@ import { Calculator, PieChart, FileText, Sparkles } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { ReportGenerator } from "@/components/sound/ReportGenerator";
 
 const Sound = () => {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ const Sound = () => {
   const [showAnalysisForm, setShowAnalysisForm] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
+  const [showReportGenerator, setShowReportGenerator] = useState(false);
   const currentDepartment = "sound";
 
   const { data: jobs, isLoading } = useJobs();
@@ -229,6 +231,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
               variant="outline"
               size="lg"
               className="w-full h-auto py-4 flex flex-col items-center gap-2"
+              onClick={() => setShowReportGenerator(true)}
             >
               <FileText className="h-6 w-6" />
               <span>SV Report Generator</span>
@@ -246,6 +249,25 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
           </div>
         </div>
       </Card>
+
+      {showReportGenerator && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-background rounded-lg w-full max-w-2xl">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold">SV Report Generator</h2>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowReportGenerator(false)}
+                >
+                  ×
+                </Button>
+              </div>
+              <ReportGenerator />
+            </div>
+          </div>
+        </div>
+      )}
 
       <CreateJobDialog
         open={isJobDialogOpen}
