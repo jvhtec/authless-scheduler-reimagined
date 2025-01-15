@@ -66,6 +66,7 @@ const PesosTool: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
+  const department = 'sound'; // Add department definition here
 
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
