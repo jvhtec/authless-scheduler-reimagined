@@ -17,6 +17,7 @@ import { FileText, Scale, Zap } from "lucide-react";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
 
 const Video = () => {
+  const navigate = useNavigate();
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
   const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
