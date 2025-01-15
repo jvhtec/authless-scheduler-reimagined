@@ -44,6 +44,8 @@ const soundComponentDatabase = [
   { id: 29, name: ' CABLEADO H ', weight: 250 },
 ];
 
+let soundTableCounter = 0;
+
 interface TableRow {
   quantity: string;
   componentId: string;
@@ -120,6 +122,20 @@ const PesosTool: React.FC = () => {
       return;
     }
 
+    // Generate table suffix
+    const suffix = (() => {
+      if (department === 'sound') {
+        soundTableCounter++;
+        const suffixNumber = soundTableCounter.toString().padStart(2, '0');
+        if (useDualMotors) {
+          soundTableCounter++; // Increment counter for dual motors
+          return `(SX${suffixNumber}, SX${soundTableCounter.toString().padStart(2, '0')})`;
+        }
+        return `(SX${suffixNumber})`;
+      }
+      return '';
+    })();
+
     const calculatedRows = currentTable.rows.map((row) => {
       const component = soundComponentDatabase.find((c) => c.id.toString() === row.componentId);
       const totalWeight =
@@ -137,6 +153,7 @@ const PesosTool: React.FC = () => {
 
     const newTable: Table = {
       name: tableName,
+      name: `${tableName} ${suffix}`,
       rows: calculatedRows,
       totalWeight,
       id: Date.now(),
