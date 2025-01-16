@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { createLaborPO, addResourceLineItem, updateLineItemDates, getProjectDetails, getProjectHeader } from './apiService';
 import { PlusCircle, Trash2, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
 
 const LaborPOForm: React.FC = () => {
+  const { toast } = useToast();
+  
   const departmentOptions = [
     { id: 'cdd5e372-d124-11e1-bba1-00e08175e43e', name: 'Sound Department' },
     { id: 'a89d124d-7a95-4384-943e-49f5c0f46b23', name: 'Video Department' },
@@ -34,46 +37,49 @@ const LaborPOForm: React.FC = () => {
     locationId: '',
   });
 
-  const [workers, setWorkers] = useState([
-    {
+  const [workers, setWorkers] = useState([{
+    id: 1,
+    name: '',
+    departmentId: '',
+    resourceId: '',
+    shifts: [{
       id: 1,
-      name: '',
-      departmentId: '',
-      resourceId: '',
-      shifts: [
-        {
-          id: 1,
-          date: '',
-          startTime: '09:00',
-          endTime: '17:00',
-        },
-      ],
-    },
-  ]);
+      date: '',
+      startTime: '09:00',
+      endTime: '17:00'
+    }]
+  }]);
 
   const handleProjectSearch = async () => {
     if (!projectData.projectNumber) {
-      alert('Please enter a project number.');
+      toast({
+        title: "Error",
+        description: "Please enter a project number",
+        variant: "destructive"
+      });
       return;
     }
 
     try {
-      // Step 1: Fetch project folder (append "HR" to project number)
       const searchText = `${projectData.projectNumber}HR`;
       const projectDetails = await getProjectDetails(searchText);
 
       if (projectDetails.length === 0) {
-        alert('No matching project folder found.');
+        toast({
+          title: "Error",
+          description: "No matching project folder found",
+          variant: "destructive"
+        });
         return;
       }
 
       const projectId = projectDetails[0].id;
       const projectHeader = await getProjectHeader(projectId);
 
-      setProjectData((prev) => ({
+      setProjectData(prev => ({
         ...prev,
-        jobName: projectHeader.documentName || projectDetails[0].name,
-        venue: projectHeader.venueId || '',
+        jobName: projectHeader.documentName,
+        venue: projectHeader.venueId,
         plannedStartDate: projectHeader.plannedStartDate?.split('T')[0] || '',
         plannedEndDate: projectHeader.plannedEndDate?.split('T')[0] || '',
       }));
@@ -81,12 +87,88 @@ const LaborPOForm: React.FC = () => {
       setRetrievedIds({
         parentElementId: projectId,
         personResponsibleId: projectHeader.personResponsibleId?.id || '',
-        locationId: projectHeader.locationId || '',
+        locationId: projectHeader.locationId,
+      });
+
+      toast({
+        title: "Success",
+        description: "Project details retrieved successfully",
       });
     } catch (error) {
       console.error('Error fetching project details:', error);
-      alert('Failed to fetch project details. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to fetch project details. Please try again.",
+        variant: "destructive"
+      });
     }
+  };
+
+  const addWorker = () => {
+    setWorkers((prev) => [
+      ...prev,
+      {
+        id: prev.length + 1,
+        name: '',
+        departmentId: '',
+        resourceId: '',
+        shifts: [{ id: 1, date: '', startTime: '09:00', endTime: '17:00' }],
+      },
+    ]);
+  };
+
+  const removeWorker = (id: number) => {
+    setWorkers((prev) => prev.filter((worker) => worker.id !== id));
+  };
+
+  const addShift = (workerId: number) => {
+    setWorkers((prev) =>
+      prev.map((worker) =>
+        worker.id === workerId
+          ? {
+              ...worker,
+              shifts: [
+                ...worker.shifts,
+                { id: worker.shifts.length + 1, date: '', startTime: '09:00', endTime: '17:00' },
+              ],
+            }
+          : worker
+      )
+    );
+  };
+
+  const removeShift = (workerId: number, shiftId: number) => {
+    setWorkers((prev) =>
+      prev.map((worker) =>
+        worker.id === workerId
+          ? {
+              ...worker,
+              shifts: worker.shifts.filter((shift) => shift.id !== shiftId),
+            }
+          : worker
+      )
+    );
+  };
+
+  const updateWorker = (id: number, name: string) => {
+    setWorkers((prev) =>
+      prev.map((worker) => (worker.id === id ? { ...worker, name } : worker))
+    );
+  };
+
+  const updateShift = (workerId: number, shiftId: number, date: string) => {
+    setWorkers((prev) =>
+      prev.map((worker) =>
+        worker.id === workerId
+          ? {
+              ...worker,
+              shifts: worker.shifts.map((shift) =>
+                shift.id === shiftId ? { ...shift, date } : shift
+              ),
+            }
+          : worker
+      )
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,7 +178,11 @@ const LaborPOForm: React.FC = () => {
       const { parentElementId, personResponsibleId, locationId } = retrievedIds;
 
       if (!parentElementId || !personResponsibleId || !locationId) {
-        alert('Please perform a project search first.');
+        toast({
+          title: "Error",
+          description: "Please perform a project search first",
+          variant: "destructive"
+        });
         return;
       }
 
@@ -129,10 +215,17 @@ const LaborPOForm: React.FC = () => {
         }
       }
 
-      alert('Labor PO and shifts successfully created and updated!');
+      toast({
+        title: "Success",
+        description: "Labor PO created successfully",
+      });
     } catch (error) {
       console.error('Error:', error);
-      alert('Failed to complete submission.');
+      toast({
+        title: "Error",
+        description: "Failed to create Labor PO",
+        variant: "destructive"
+      });
     }
   };
 
@@ -169,18 +262,7 @@ const LaborPOForm: React.FC = () => {
               <h3 className="text-lg font-medium">Workers</h3>
               <button
                 type="button"
-                onClick={() =>
-                  setWorkers((prev) => [
-                    ...prev,
-                    {
-                      id: prev.length + 1,
-                      name: '',
-                      departmentId: '',
-                      resourceId: '',
-                      shifts: [{ id: 1, date: '', startTime: '09:00', endTime: '17:00' }],
-                    },
-                  ])
-                }
+                onClick={addWorker}
                 className="flex items-center gap-2 text-blue-500 hover:text-blue-600"
               >
                 <PlusCircle className="w-5 h-5" />
@@ -194,20 +276,48 @@ const LaborPOForm: React.FC = () => {
                       <select
                         value={worker.name}
                         onChange={(e) =>
-                          setWorkers((prev) =>
-                            prev.map((w) =>
-                              w.id === worker.id ? { ...w, name: e.target.value } : w
-                            )
-                          )
+                          updateWorker(worker.id, e.target.value)
                         }
                       >
                         <option value="">Select Worker</option>
-                        {availableWorkers.map((worker) => (
-                          <option key={worker.id} value={worker.id}>
-                            {worker.name}
+                        {availableWorkers.map((availableWorker) => (
+                          <option key={availableWorker.id} value={availableWorker.id}>
+                            {availableWorker.name}
                           </option>
                         ))}
                       </select>
+                      <button
+                        type="button"
+                        onClick={() => removeWorker(worker.id)}
+                        className="text-red-500 hover:text-red-600"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                      {worker.shifts.map((shift) => (
+                        <div key={shift.id} className="flex items-center space-x-2">
+                          <input
+                            type="date"
+                            value={shift.date}
+                            onChange={(e) => updateShift(worker.id, shift.id, e.target.value)}
+                            className="border rounded"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeShift(worker.id, shift.id)}
+                            className="text-red-500 hover:text-red-600"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addShift(worker.id)}
+                        className="flex items-center gap-2 text-blue-500 hover:text-blue-600"
+                      >
+                        <PlusCircle className="w-5 h-5" />
+                        Add Shift
+                      </button>
                     </div>
                   </CardContent>
                 </Card>

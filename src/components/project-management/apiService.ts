@@ -53,7 +53,49 @@ export interface ProjectHeader {
   locationId: string;
 }
 
-const X_AUTH_TOKEN = '82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E';
+interface FlexField<T> {
+  fieldType: string;
+  data?: T;
+  fieldRestrictions: {
+    readOnly: boolean;
+    readOnlyReason: string | null;
+    timeAssociated: boolean;
+    required: boolean;
+  };
+}
+
+interface FlexUserData {
+  id: string;
+  name: string;
+  userName: string;
+  domainId: string;
+}
+
+interface FlexPersonResponsible {
+  id: string;
+  name: string;
+  preferredDisplayString: string;
+  barcode: string | null;
+  deleted: boolean;
+  shortName: string | null;
+  shortNameOrName: string;
+  className: string | null;
+}
+
+interface ProjectHeaderResponse {
+  documentName: FlexField<string>;
+  documentNumber: FlexField<string>;
+  personResponsibleId: FlexField<FlexPersonResponsible>;
+  plannedStartDate: FlexField<string>;
+  plannedEndDate: FlexField<string>;
+  venueId: FlexField<string>;
+  createdByUserId: FlexField<FlexUserData>;
+  lastEditBy: FlexField<FlexUserData>;
+  lastEditDate: FlexField<string>;
+  createdByDate: FlexField<string>;
+  clientId: FlexField<string>;
+  customerPO: FlexField<string>;
+}
 
 export const getProjectDetails = async (searchText: string): Promise<ProjectDetails[]> => {
   const url = `https://sectorpro.flexrentalsolutions.com/f5/api/element/search?searchText=${searchText}`;
@@ -73,7 +115,8 @@ export const getProjectDetails = async (searchText: string): Promise<ProjectDeta
 };
 
 export const getProjectHeader = async (projectId: string): Promise<ProjectHeader> => {
-  const url = `https://sectorpro.flexrentalsolutions.com/f5/api/element/${projectId}`;
+  const timestamp = new Date().getTime();
+  const url = `https://sectorpro.flexrentalsolutions.com/f5/api/element/${projectId}/header-data/?_dc=${timestamp}&codeList=documentName&codeList=documentNumber&codeList=personResponsibleId&codeList=plannedStartDate&codeList=plannedEndDate&codeList=createdByUserId&codeList=createdByDate&codeList=lastEditBy&codeList=lastEditDate&codeList=clientId&codeList=venueId&codeList=customerPO`;
   
   const response = await fetch(url, {
     headers: {
@@ -86,7 +129,17 @@ export const getProjectHeader = async (projectId: string): Promise<ProjectHeader
     throw new Error(`Failed to fetch project header: ${response.statusText}`);
   }
 
-  return response.json();
+  const data: ProjectHeaderResponse = await response.json();
+  
+  // Transform the response to match the expected ProjectHeader interface
+  return {
+    documentName: data.documentName.data || '',
+    venueId: data.venueId.data || '',
+    plannedStartDate: data.plannedStartDate.data || '',
+    plannedEndDate: data.plannedEndDate.data || '',
+    personResponsibleId: data.personResponsibleId.data ? { id: data.personResponsibleId.data.id } : { id: '' },
+    locationId: data.venueId.data || ''
+  };
 };
 
 export const createLaborPO = async (data: CreateLaborPORequest): Promise<CreateLaborPOResponse> => {
