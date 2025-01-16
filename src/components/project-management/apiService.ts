@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 export interface CreateLaborPORequest {
   name: string;
   plannedStartDate: string;
@@ -97,13 +99,32 @@ interface ProjectHeaderResponse {
   customerPO: FlexField<string>;
 }
 
+let cachedToken: string | null = null;
+
+const getAuthToken = async () => {
+  if (cachedToken) return cachedToken;
+  
+  const { data: { X_AUTH_TOKEN }, error } = await supabase
+    .functions.invoke('get-secret', {
+      body: { secretName: 'X_AUTH_TOKEN' }
+    });
+    
+  if (error) {
+    throw new Error('Failed to get auth token');
+  }
+  
+  cachedToken = X_AUTH_TOKEN;
+  return X_AUTH_TOKEN;
+};
+
 export const getProjectDetails = async (searchText: string): Promise<ProjectDetails[]> => {
+  const token = await getAuthToken();
   const url = `https://sectorpro.flexrentalsolutions.com/f5/api/element/search?searchText=${searchText}`;
   
   const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
-      'X-Auth-Token': X_AUTH_TOKEN,
+      'X-Auth-Token': token,
     },
   });
 
@@ -115,13 +136,14 @@ export const getProjectDetails = async (searchText: string): Promise<ProjectDeta
 };
 
 export const getProjectHeader = async (projectId: string): Promise<ProjectHeader> => {
+  const token = await getAuthToken();
   const timestamp = new Date().getTime();
   const url = `https://sectorpro.flexrentalsolutions.com/f5/api/element/${projectId}/header-data/?_dc=${timestamp}&codeList=documentName&codeList=documentNumber&codeList=personResponsibleId&codeList=plannedStartDate&codeList=plannedEndDate&codeList=createdByUserId&codeList=createdByDate&codeList=lastEditBy&codeList=lastEditDate&codeList=clientId&codeList=venueId&codeList=customerPO`;
   
   const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
-      'X-Auth-Token': X_AUTH_TOKEN,
+      'X-Auth-Token': token,
     },
   });
 
@@ -131,7 +153,6 @@ export const getProjectHeader = async (projectId: string): Promise<ProjectHeader
 
   const data: ProjectHeaderResponse = await response.json();
   
-  // Transform the response to match the expected ProjectHeader interface
   return {
     documentName: data.documentName.data || '',
     venueId: data.venueId.data || '',
@@ -143,6 +164,7 @@ export const getProjectHeader = async (projectId: string): Promise<ProjectHeader
 };
 
 export const createLaborPO = async (data: CreateLaborPORequest): Promise<CreateLaborPOResponse> => {
+  const token = await getAuthToken();
   const url = 'https://sectorpro.flexrentalsolutions.com/f5/api/element';
 
   const response = await fetch(url, {
@@ -150,7 +172,7 @@ export const createLaborPO = async (data: CreateLaborPORequest): Promise<CreateL
     headers: {
       'Content-Type': 'application/json',
       accept: '*/*',
-      'X-Auth-Token': X_AUTH_TOKEN,
+      'X-Auth-Token': token,
     },
     body: JSON.stringify({
       definitionId: 'labor-po-definition-id',
@@ -181,13 +203,14 @@ export const createLaborPO = async (data: CreateLaborPORequest): Promise<CreateL
 export const addResourceLineItem = async (
   data: AddResourceLineItemRequest
 ): Promise<AddResourceLineItemResponse> => {
+  const token = await getAuthToken();
   const url = `https://sectorpro.flexrentalsolutions.com/f5/api/financial-document-line-item/${data.documentId}/add-resource/${data.resourceId}?resourceParentId=${data.resourceParentId}&managedResourceLineItemType=${data.managedResourceLineItemType}&quantity=${data.quantity}`;
 
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       accept: '*/*',
-      'X-Auth-Token': X_AUTH_TOKEN,
+      'X-Auth-Token': token,
     },
   });
 
@@ -201,6 +224,7 @@ export const addResourceLineItem = async (
 export const updateLineItemDates = async (
   data: UpdateLineItemDatesRequest
 ): Promise<UpdateLineItemDatesResponse> => {
+  const token = await getAuthToken();
   const url = `https://sectorpro.flexrentalsolutions.com/f5/api/financial-document-line-item/${data.documentId}/bulk-update`;
 
   const payload = {
@@ -218,7 +242,7 @@ export const updateLineItemDates = async (
     headers: {
       'Content-Type': 'application/json',
       accept: '*/*',
-      'X-Auth-Token': X_AUTH_TOKEN,
+      'X-Auth-Token': token,
     },
     body: JSON.stringify(payload),
   });
