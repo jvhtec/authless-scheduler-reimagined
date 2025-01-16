@@ -13,6 +13,7 @@ import Profile from "@/pages/Profile";
 import ProjectManagement from "@/pages/ProjectManagement";
 import PesosTool from "@/pages/PesosTool";
 import ConsumosTool from "@/pages/ConsumosTool";
+import LaborPOForm from "@/components/project-management/LaborPOForm";
 import { useSessionManager } from "@/hooks/useSessionManager";
 import "./App.css";
 
@@ -70,6 +71,7 @@ function App() {
             <Route path="/video" element={<Video />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/project-management" element={<ProjectManagement />} />
+            <Route path="/labor-po-form" element={<LaborPOForm />} />
             <Route path="/pesos-tool" element={<PesosTool />} />
             <Route path="/consumos-tool" element={<ConsumosTool />} />
             <Route path="*" element={<RoleBasedRedirect />} />

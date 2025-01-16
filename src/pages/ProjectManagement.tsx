@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { Department } from "@/types/department";
 import { startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { MonthNavigation } from "@/components/project-management/MonthNavigation";
@@ -79,14 +80,6 @@ const ProjectManagement = () => {
     };
   }, [navigate]);
 
-  const handlePreviousMonth = () => {
-    setCurrentDate(prev => addMonths(prev, -1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentDate(prev => addMonths(prev, 1));
-  };
-
   // Show loading state when either initial auth check or jobs are loading
   if (loading || jobsLoading) {
     return (
@@ -99,14 +92,21 @@ const ProjectManagement = () => {
   return (
     <div className="container mx-auto px-4 space-y-6">
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle>Project Management</CardTitle>
+          <Button 
+            onClick={() => navigate('/labor-po-form')} 
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Create Labor PO
+          </Button>
         </CardHeader>
         <CardContent>
           <MonthNavigation
             currentDate={currentDate}
-            onPreviousMonth={handlePreviousMonth}
-            onNextMonth={handleNextMonth}
+            onPreviousMonth={() => setCurrentDate(prev => addMonths(prev, -1))}
+            onNextMonth={() => setCurrentDate(prev => addMonths(prev, 1))}
           />
           <DepartmentTabs
             selectedDepartment={selectedDepartment}
