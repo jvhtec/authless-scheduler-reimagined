@@ -138,7 +138,7 @@ export const getProjectDetails = async (searchText: string): Promise<ProjectDeta
 export const getProjectHeader = async (projectId: string): Promise<ProjectHeader> => {
   const token = await getAuthToken();
   const timestamp = new Date().getTime();
-  const url = `https://sectorpro.flexrentalsolutions.com/f5/api/element/${projectId}/header-data/?_dc=${timestamp}&codeList=documentName&codeList=documentNumber&codeList=personResponsibleId&codeList=plannedStartDate&codeList=plannedEndDate&codeList=createdByUserId&codeList=createdByDate&codeList=lastEditBy&codeList=lastEditDate&codeList=clientId&codeList=venueId&codeList=customerPO`;
+  const url = `https://sectorpro.flexrentalsolutions.com/f5/api/element/${projectId}/key-info/?_dc=1737066549442`;
   
   const response = await fetch(url, {
     headers: {
