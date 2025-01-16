@@ -82,6 +82,16 @@ export const exportToPDF = (
           : row.totalWatts?.toFixed(2) || ''
       ]);
 
+      // Add total weight row
+      if (type === 'weight' && table.totalWeight !== undefined) {
+        tableRows.push([
+          '',
+          'Total Weight',
+          '',
+          table.totalWeight.toFixed(2)
+        ]);
+      }
+
       const headers =
         type === 'weight'
           ? [['Quantity', 'Component', 'Weight (per unit)', 'Total Weight']]
