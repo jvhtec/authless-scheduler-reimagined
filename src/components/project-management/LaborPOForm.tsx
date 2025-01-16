@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
-import { createLaborPO, addResourceLineItem, updateLineItemDates } from './apiService';
 import { PlusCircle, Trash2, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { createLaborPO, addResourceLineItem, updateLineItemDates } from './apiService';
 
-const LaborPOForm: React.FC = () => {
+const LaborPOForm = () => {
+  // Hardcoded mappings for departments and resources (job roles)
   const departmentOptions = [
     { id: 'cdd5e372-d124-11e1-bba1-00e08175e43e', name: 'Sound Department' },
     { id: 'a89d124d-7a95-4384-943e-49f5c0f46b23', name: 'Video Department' },
@@ -28,22 +33,97 @@ const LaborPOForm: React.FC = () => {
     plannedEndDate: '',
   });
 
-  const [workers, setWorkers] = useState([
-    {
+  const [workers, setWorkers] = useState([{
+    id: 1,
+    name: '',
+    departmentId: '',
+    resourceId: '',
+    shifts: [{
       id: 1,
+      date: '',
+      startTime: '09:00',
+      endTime: '17:00'
+    }]
+  }]);
+
+  const handleProjectSearch = () => {
+    // Simulate API call to get project data
+    const mockProjectData = {
+      jobName: `${projectData.projectNumber} HR`,
+      venue: 'Main Venue',
+      plannedStartDate: '2025-01-20',
+      plannedEndDate: '2025-01-25'
+    };
+    setProjectData(prev => ({ ...prev, ...mockProjectData }));
+  };
+
+  const addWorker = () => {
+    setWorkers(prev => [...prev, {
+      id: prev.length + 1,
       name: '',
       departmentId: '',
       resourceId: '',
-      shifts: [
-        {
-          id: 1,
-          date: '',
-          startTime: '09:00',
-          endTime: '17:00',
-        },
-      ],
-    },
-  ]);
+      shifts: [{
+        id: 1,
+        date: '',
+        startTime: '09:00',
+        endTime: '17:00'
+      }]
+    }]);
+  };
+
+  const removeWorker = (workerId: number) => {
+    setWorkers(prev => prev.filter(w => w.id !== workerId));
+  };
+
+  const addShift = (workerId: number) => {
+    setWorkers(prev => prev.map(worker => {
+      if (worker.id === workerId) {
+        return {
+          ...worker,
+          shifts: [...worker.shifts, {
+            id: worker.shifts.length + 1,
+            date: '',
+            startTime: '09:00',
+            endTime: '17:00'
+          }]
+        };
+      }
+      return worker;
+    }));
+  };
+
+  const removeShift = (workerId: number, shiftId: number) => {
+    setWorkers(prev => prev.map(worker => {
+      if (worker.id === workerId) {
+        return {
+          ...worker,
+          shifts: worker.shifts.filter(shift => shift.id !== shiftId)
+        };
+      }
+      return worker;
+    }));
+  };
+
+  const updateWorker = (workerId: number, field: string, value: string) => {
+    setWorkers(prev => prev.map(worker => 
+      worker.id === workerId ? { ...worker, [field]: value } : worker
+    ));
+  };
+
+  const updateShift = (workerId: number, shiftId: number, field: string, value: string) => {
+    setWorkers(prev => prev.map(worker => {
+      if (worker.id === workerId) {
+        return {
+          ...worker,
+          shifts: worker.shifts.map(shift => 
+            shift.id === shiftId ? { ...shift, [field]: value } : shift
+          )
+        };
+      }
+      return worker;
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,10 +161,10 @@ const LaborPOForm: React.FC = () => {
         }
       }
 
-      alert('Labor PO and shifts successfully created and updated!');
+      alert('Labor PO and shifts successfully created!');
     } catch (error) {
       console.error('Error:', error);
-      alert('Failed to complete submission.');
+      alert('Failed to create Labor PO.');
     }
   };
 
@@ -96,72 +176,198 @@ const LaborPOForm: React.FC = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Project Details */}
+            {/* Project Details Section */}
             <div className="space-y-4">
-              <label className="block text-sm font-medium mb-1">Project Number</label>
-              <input
-                type="text"
-                value={projectData.projectNumber}
-                onChange={(e) =>
-                  setProjectData((prev) => ({ ...prev, projectNumber: e.target.value }))
-                }
-                className="w-full p-2 border rounded"
-              />
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <Label>Project Number</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={projectData.projectNumber}
+                      onChange={(e) => setProjectData(prev => ({ ...prev, projectNumber: e.target.value }))}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleProjectSearch}
+                    >
+                      Search
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <Label>Job Name</Label>
+                  <Input
+                    type="text"
+                    value={projectData.jobName}
+                    readOnly
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <Label>Venue</Label>
+                  <Input
+                    type="text"
+                    value={projectData.venue}
+                    readOnly
+                  />
+                </div>
+                <div className="flex-1">
+                  <Label>Planned Start Date</Label>
+                  <Input
+                    type="date"
+                    value={projectData.plannedStartDate}
+                    readOnly
+                  />
+                </div>
+                <div className="flex-1">
+                  <Label>Planned End Date</Label>
+                  <Input
+                    type="date"
+                    value={projectData.plannedEndDate}
+                    readOnly
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Workers Section */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Workers</h3>
-              <button
-                type="button"
-                onClick={() =>
-                  setWorkers((prev) => [
-                    ...prev,
-                    {
-                      id: prev.length + 1,
-                      name: '',
-                      departmentId: '',
-                      resourceId: '',
-                      shifts: [{ id: 1, date: '', startTime: '09:00', endTime: '17:00' }],
-                    },
-                  ])
-                }
-                className="flex items-center gap-2 text-blue-500 hover:text-blue-600"
-              >
-                <PlusCircle className="w-5 h-5" />
-                Add Worker
-              </button>
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium">Workers</h3>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={addWorker}
+                  className="flex items-center gap-2"
+                >
+                  <PlusCircle className="w-5 h-5" />
+                  Add Worker
+                </Button>
+              </div>
 
-              {workers.map((worker, index) => (
-                <Card key={index}>
-                  <CardContent>
-                    <div className="flex flex-col space-y-2">
-                      <select
-                        value={worker.name}
-                        onChange={(e) =>
-                          setWorkers((prev) =>
-                            prev.map((w) =>
-                              w.id === worker.id ? { ...w, name: e.target.value } : w
-                            )
-                          )
-                        }
-                      >
-                        <option value="">Select Worker</option>
-                        {availableWorkers.map((worker) => (
-                          <option key={worker.id} value={worker.id}>
-                            {worker.name}
-                          </option>
+              {workers.map((worker) => (
+                <Card key={worker.id}>
+                  <CardContent className="pt-6 space-y-4">
+                    <div className="flex justify-between">
+                      <h4 className="font-medium">Worker {worker.id}</h4>
+                      {workers.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => removeWorker(worker.id)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Worker Name</Label>
+                        <select
+                          className="w-full p-2 border rounded"
+                          value={worker.name}
+                          onChange={(e) => updateWorker(worker.id, 'name', e.target.value)}
+                        >
+                          <option value="">Select Worker</option>
+                          {availableWorkers.map(w => (
+                            <option key={w.id} value={w.id}>{w.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Department</Label>
+                        <select
+                          className="w-full p-2 border rounded"
+                          value={worker.departmentId}
+                          onChange={(e) => updateWorker(worker.id, 'departmentId', e.target.value)}
+                        >
+                          <option value="">Select Department</option>
+                          {departmentOptions.map(dept => (
+                            <option key={dept.id} value={dept.id}>{dept.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Job Role</Label>
+                        <select
+                          className="w-full p-2 border rounded"
+                          value={worker.resourceId}
+                          onChange={(e) => updateWorker(worker.id, 'resourceId', e.target.value)}
+                        >
+                          <option value="">Select Job Role</option>
+                          {jobRoleOptions.map(role => (
+                            <option key={role.id} value={role.id}>{role.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Shifts Section */}
+                    <div className="mt-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <h5 className="font-medium">Shifts</h5>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => addShift(worker.id)}
+                          className="flex items-center gap-1 text-sm"
+                        >
+                          <Clock className="w-4 h-4" />
+                          Add Shift
+                        </Button>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {worker.shifts.map((shift) => (
+                          <div key={shift.id} className="flex gap-2 items-center bg-muted p-2 rounded">
+                            <div className="flex-1">
+                              <Input
+                                type="date"
+                                value={shift.date}
+                                onChange={(e) => updateShift(worker.id, shift.id, 'date', e.target.value)}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <Input
+                                type="time"
+                                value={shift.startTime}
+                                onChange={(e) => updateShift(worker.id, shift.id, 'startTime', e.target.value)}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <Input
+                                type="time"
+                                value={shift.endTime}
+                                onChange={(e) => updateShift(worker.id, shift.id, 'endTime', e.target.value)}
+                              />
+                            </div>
+                            {worker.shifts.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => removeShift(worker.id, shift.id)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
                         ))}
-                      </select>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            <button type="submit" className="w-full p-3 bg-blue-500 text-white rounded">
-              Submit
-            </button>
+            <Button type="submit" className="w-full">
+              Create Labor PO
+            </Button>
           </form>
         </CardContent>
       </Card>
