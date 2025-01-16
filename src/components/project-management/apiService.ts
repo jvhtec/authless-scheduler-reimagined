@@ -39,7 +39,7 @@ export interface CreateLaborPORequest {
     success: boolean;
   }
   
-  const X_AUTH_TOKEN = 'your-auth-token-here'; // Replace with your actual token
+  const X_AUTH_TOKEN = '82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E'; // Replace with your actual token
   
   export const createLaborPO = async (data: CreateLaborPORequest): Promise<CreateLaborPOResponse> => {
     const url = 'https://sectorpro.flexrentalsolutions.com/f5/api/element';
