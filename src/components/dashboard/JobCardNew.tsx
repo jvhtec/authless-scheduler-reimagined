@@ -185,7 +185,7 @@ export const JobCardNew = ({
           .from('tour_dates')
           .select(`
             tour_id,
-            tours:tours (
+            tours (
               flex_main_folder_id,
               flex_sound_folder_id,
               flex_lights_folder_id,
