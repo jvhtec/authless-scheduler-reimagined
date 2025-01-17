@@ -449,8 +449,41 @@ export const JobCardNew = ({
 
     try {
       console.log('Starting job deletion process for job:', job.id);
+
+      // First delete lights_job_personnel records
+      const { error: lightsPersonnelError } = await supabase
+        .from('lights_job_personnel')
+        .delete()
+        .eq('job_id', job.id);
+
+      if (lightsPersonnelError) {
+        console.error('Error deleting lights personnel:', lightsPersonnelError);
+        throw lightsPersonnelError;
+      }
+
+      // Delete sound_job_personnel records
+      const { error: soundPersonnelError } = await supabase
+        .from('sound_job_personnel')
+        .delete()
+        .eq('job_id', job.id);
+
+      if (soundPersonnelError) {
+        console.error('Error deleting sound personnel:', soundPersonnelError);
+        throw soundPersonnelError;
+      }
+
+      // Delete video_job_personnel records
+      const { error: videoPersonnelError } = await supabase
+        .from('video_job_personnel')
+        .delete()
+        .eq('job_id', job.id);
+
+      if (videoPersonnelError) {
+        console.error('Error deleting video personnel:', videoPersonnelError);
+        throw videoPersonnelError;
+      }
       
-      // Delete job documents from storage first
+      // Delete job documents from storage if they exist
       if (job.job_documents?.length > 0) {
         console.log('Attempting to delete job documents from storage');
         const { error: storageError } = await supabase.storage
@@ -463,20 +496,40 @@ export const JobCardNew = ({
         }
       }
 
-      // Delete the job from the database
-      console.log('Attempting to delete job from database');
-      const { error: dbError } = await supabase
+      // Delete job assignments
+      const { error: assignmentsError } = await supabase
+        .from('job_assignments')
+        .delete()
+        .eq('job_id', job.id);
+
+      if (assignmentsError) {
+        console.error('Error deleting job assignments:', assignmentsError);
+        throw assignmentsError;
+      }
+
+      // Delete job departments
+      const { error: departmentsError } = await supabase
+        .from('job_departments')
+        .delete()
+        .eq('job_id', job.id);
+
+      if (departmentsError) {
+        console.error('Error deleting job departments:', departmentsError);
+        throw departmentsError;
+      }
+
+      // Finally delete the job
+      const { error: jobError } = await supabase
         .from('jobs')
         .delete()
         .eq('id', job.id);
 
-      if (dbError) {
-        console.error('Database deletion error:', dbError);
-        throw dbError;
+      if (jobError) {
+        console.error('Error deleting job:', jobError);
+        throw jobError;
       }
 
-      // Call the parent handler
-      console.log('Job deleted successfully, calling parent handler');
+      console.log('Job deletion completed successfully');
       onDeleteClick(job.id);
 
       toast({
