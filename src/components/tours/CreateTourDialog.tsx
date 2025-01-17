@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Department } from "@/types/department";
 import { useLocations } from "@/hooks/useLocations";
 import { TourFormFields } from "./TourFormFields";
-import { useTourCreation } from "./useTourCreation";
+import { useTourCreation } from "./hooks/useTourCreation";
 
 interface CreateTourDialogProps {
   open: boolean;
