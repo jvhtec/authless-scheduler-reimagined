@@ -11,7 +11,6 @@ import { Progress } from "@/components/ui/progress";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import createFolderIcon from "@/assets/icons/icon.png";
 import { Department } from "@/types/department";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 // Flex API constants
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
@@ -49,7 +48,6 @@ export const JobCardNew = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [assignments, setAssignments] = useState(job.job_assignments || []);
   const [documents, setDocuments] = useState<JobDocument[]>(job.job_documents || []);
 
@@ -304,14 +302,7 @@ export const JobCardNew = ({
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!userRole || !['admin', 'management'].includes(userRole)) {
-      toast({
-        title: "Permission Denied",
-        description: "Only management and admin users can delete jobs",
-        variant: "destructive",
-      });
-      return;
-    }
+    onDeleteClick(job.id);
   };
 
   const toggleCollapse = (e: React.MouseEvent) => {
@@ -452,52 +443,6 @@ export const JobCardNew = ({
     });
   };
 
-  const deleteJobMutation = useMutation({
-    mutationFn: async () => {
-      setIsDeleting(true);
-      try {
-        // Delete job documents first
-        if (job.job_documents?.length > 0) {
-          for (const doc of job.job_documents) {
-            const { error: storageError } = await supabase.storage
-              .from('job_documents')
-              .remove([doc.file_path]);
-            
-            if (storageError) throw storageError;
-          }
-        }
-
-        // Delete the job
-        const { error } = await supabase
-          .from('jobs')
-          .delete()
-          .eq('id', job.id);
-
-        if (error) throw error;
-
-        toast({
-          title: "Success",
-          description: "Job deleted successfully",
-        });
-
-        // Call the parent's onDeleteClick callback
-        onDeleteClick(job.id);
-      } catch (error: any) {
-        console.error('Error deleting job:', error);
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setIsDeleting(false);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
-    },
-  });
-
   return (
     <Card 
       className="mb-4 hover:shadow-md transition-shadow cursor-pointer"
@@ -526,41 +471,38 @@ export const JobCardNew = ({
           </Button>
         </div>
         <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={refreshData} 
+            title="Refresh"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={createFlexFolders}
+            disabled={job.flex_folders_created}
+            title={job.flex_folders_created ? "Folders already created" : "Create Flex folders"}
+          >
+            <img
+              src={createFolderIcon}
+              alt="Create Flex folders"
+              className="h-4 w-4"
+            />
+            <span className="absolute -bottom-8 scale-0 transition-all rounded bg-gray-800 p-2 text-xs text-white group-hover:scale-100 whitespace-nowrap">
+              {job.flex_folders_created ? "Folders already created" : "Create Flex Folders"}
+            </span>
+          </Button>
           {canEdit && (
             <>
               <Button variant="ghost" size="icon" onClick={handleEditClick}>
                 <Edit className="h-4 w-4" />
               </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={handleDeleteClick}
-                    disabled={isDeleting || !['admin', 'management'].includes(userRole || '')}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Job</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to delete this job? This action cannot be undone.
-                      All associated documents and data will be permanently deleted.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction 
-                      onClick={() => deleteJobMutation.mutate()}
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? 'Deleting...' : 'Delete'}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <Button variant="ghost" size="icon" onClick={handleDeleteClick}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </>
           )}
           {showUpload && (
