@@ -681,13 +681,15 @@ export const JobCardNew = ({
               alt="Create Flex folders"
               className="h-4 w-4"
             />
-            <span className="absolute -bottom-8 scale-0 transition-all rounded bg-gray-800 p-2 text-xs text-white group-hover:scale-100 whitespace-nowrap">
-              {job.flex_folders_created ? "Folders already created" : "Create Flex Folders"}
-            </span>
           </Button>
           {canEdit && (
             <>
-              <Button variant="ghost" size="icon" onClick={handleEditClick}>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleEditClick}
+                title="Edit job details, dates, and location"
+              >
                 <Edit className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="icon" onClick={handleDeleteClick}>
@@ -715,7 +717,10 @@ export const JobCardNew = ({
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground" />
-            {format(new Date(job.start_time), 'HH:mm')}
+            <div className="flex flex-col">
+              <span>{format(new Date(job.start_time), 'MMM d, yyyy')} - {format(new Date(job.end_time), 'MMM d, yyyy')}</span>
+              <span className="text-muted-foreground">{format(new Date(job.start_time), 'HH:mm')}</span>
+            </div>
           </div>
           {job.location?.name && (
             <div className="flex items-center gap-2">
