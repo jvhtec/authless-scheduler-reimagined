@@ -303,7 +303,10 @@ export const JobCardNew = ({
   const handleDeleteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     
+    console.log('Delete attempted by user with role:', userRole);
+    
     if (!['admin', 'management'].includes(userRole || '')) {
+      console.log('Permission check failed - user role not admin/management');
       toast({
         title: "Permission denied",
         description: "Only management users can delete jobs",
@@ -317,24 +320,35 @@ export const JobCardNew = ({
     }
 
     try {
+      console.log('Starting job deletion process for job:', job.id);
+      
       // Delete job documents from storage first
       if (job.job_documents?.length > 0) {
+        console.log('Attempting to delete job documents from storage');
         const { error: storageError } = await supabase.storage
           .from('job_documents')
           .remove(job.job_documents.map(doc => doc.file_path));
 
-        if (storageError) throw storageError;
+        if (storageError) {
+          console.error('Storage deletion error:', storageError);
+          throw storageError;
+        }
       }
 
       // Delete the job from the database
+      console.log('Attempting to delete job from database');
       const { error: dbError } = await supabase
         .from('jobs')
         .delete()
         .eq('id', job.id);
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Database deletion error:', dbError);
+        throw dbError;
+      }
 
       // Call the parent handler
+      console.log('Job deleted successfully, calling parent handler');
       onDeleteClick(job.id);
 
       toast({
@@ -348,7 +362,7 @@ export const JobCardNew = ({
       console.error('Error deleting job:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to delete job",
         variant: "destructive",
       });
     }
