@@ -195,7 +195,7 @@ export const JobCardNew = ({
             )
           `)
           .eq('id', job.tour_date_id)
-          .single();
+          .maybeSingle();
 
         if (tourDateError) {
           console.error('Error fetching tour date:', tourDateError);
