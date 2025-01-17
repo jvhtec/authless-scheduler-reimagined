@@ -5,6 +5,7 @@ import { SimplifiedJobColorPicker } from "@/components/jobs/SimplifiedJobColorPi
 import { TourDateForm } from "./TourDateForm";
 import { TourDepartmentSelector } from "./TourDepartmentSelector";
 import { Department } from "@/types/department";
+import { DatePicker } from "@/components/ui/date-picker";
 
 interface TourFormFieldsProps {
   title: string;
@@ -22,6 +23,10 @@ interface TourFormFieldsProps {
   currentDepartment: Department;
   onDepartmentChange: (dept: Department, checked: boolean) => void;
   locations?: { name: string }[];
+  startDate: Date | undefined;
+  endDate: Date | undefined;
+  onStartDateChange: (date: Date | undefined) => void;
+  onEndDateChange: (date: Date | undefined) => void;
 }
 
 export const TourFormFields = ({
@@ -40,6 +45,10 @@ export const TourFormFields = ({
   currentDepartment,
   onDepartmentChange,
   locations,
+  startDate,
+  endDate,
+  onStartDateChange,
+  onEndDateChange,
 }: TourFormFieldsProps) => {
   return (
     <div className="space-y-4">
@@ -60,6 +69,24 @@ export const TourFormFields = ({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Tour Start Date</Label>
+          <DatePicker
+            date={startDate}
+            onChange={onStartDateChange}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Tour End Date</Label>
+          <DatePicker
+            date={endDate}
+            onChange={onEndDateChange}
+            fromDate={startDate}
+          />
+        </div>
       </div>
 
       <TourDateForm

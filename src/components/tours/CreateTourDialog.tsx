@@ -24,6 +24,10 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
     color,
     setColor,
     departments,
+    startDate,
+    endDate,
+    handleStartDateChange,
+    handleEndDateChange,
     handleAddDate,
     handleRemoveDate,
     handleDateChange,
@@ -55,6 +59,10 @@ const CreateTourDialog = ({ open, onOpenChange, currentDepartment }: CreateTourD
             currentDepartment={currentDepartment}
             onDepartmentChange={handleDepartmentChange}
             locations={locations}
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={handleStartDateChange}
+            onEndDateChange={handleEndDateChange}
           />
 
           <Button type="submit" className="w-full">
