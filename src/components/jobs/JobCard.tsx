@@ -1,9 +1,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { Pencil, Trash2, MapPin, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { Pencil, Trash2, MapPin, Calendar, ChevronDown, ChevronUp, Download, Eye } from "lucide-react";
 import { Department } from "@/types/department";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+
+interface JobDocument {
+  id: string;
+  file_name: string;
+  file_path: string;
+  uploaded_at: string;
+}
 
 interface JobCardProps {
   job: any;
@@ -41,6 +49,55 @@ export const JobCard = ({
   const toggleCollapse = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCollapsed(!collapsed);
+  };
+
+  const handleViewDocument = async (document: JobDocument) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('job_documents')
+        .createSignedUrl(document.file_path, 60);
+
+      if (error) throw error;
+
+      window.open(data.signedUrl, '_blank');
+    } catch (error: any) {
+      toast({
+        title: "Error viewing document",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadDocument = async (document: JobDocument) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('job_documents')
+        .download(document.file_path);
+
+      if (error) throw error;
+
+      // Create a download link
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = document.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download started",
+        description: `Downloading ${document.file_name}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Download failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const canEdit = userRole !== 'logistics';
@@ -134,12 +191,39 @@ export const JobCard = ({
         )}
       </div>
 
-      {/* Expanded Details Placeholder */}
-      {!collapsed && (
-        <div className="p-2 space-y-2 border-t">
-          <p className="text-sm text-muted-foreground">
-            Additional job details can be displayed here.
-          </p>
+      {/* Documents Section */}
+      {!collapsed && job.job_documents && job.job_documents.length > 0 && (
+        <div className="p-2 border-t">
+          <h3 className="text-sm font-medium mb-2">Documents</h3>
+          <div className="space-y-2">
+            {job.job_documents.map((doc: JobDocument) => (
+              <div 
+                key={doc.id}
+                className="flex items-center justify-between p-2 rounded bg-accent/10"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="text-sm truncate flex-1">{doc.file_name}</span>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleViewDocument(doc)}
+                    title="View"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDownloadDocument(doc)}
+                    title="Download"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
