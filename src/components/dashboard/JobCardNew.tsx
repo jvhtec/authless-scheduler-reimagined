@@ -206,13 +206,26 @@ export const JobCardNew = ({
           throw new Error('Parent tour not found');
         }
 
-        // Access folder IDs directly from the tours object
-        const parentFolders = {
-          sound: tourDate.tours.flex_sound_folder_id,
-          lights: tourDate.tours.flex_lights_folder_id,
-          video: tourDate.tours.flex_video_folder_id,
-          production: tourDate.tours.flex_production_folder_id,
-          personnel: tourDate.tours.flex_personnel_folder_id
+        // Create a properly typed interface for the tours object
+        interface TourFolders {
+          flex_main_folder_id: string | null;
+          flex_sound_folder_id: string | null;
+          flex_lights_folder_id: string | null;
+          flex_video_folder_id: string | null;
+          flex_production_folder_id: string | null;
+          flex_personnel_folder_id: string | null;
+        }
+
+        // Type assertion to ensure TypeScript knows the shape of tours
+        const tourFolders = tourDate.tours as TourFolders;
+
+        // Create parentFolders object with proper typing
+        const parentFolders: Record<string, string | null> = {
+          sound: tourFolders.flex_sound_folder_id,
+          lights: tourFolders.flex_lights_folder_id,
+          video: tourFolders.flex_video_folder_id,
+          production: tourFolders.flex_production_folder_id,
+          personnel: tourFolders.flex_personnel_folder_id
         };
 
         // Create subfolders under each department folder
