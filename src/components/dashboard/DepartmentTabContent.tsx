@@ -13,13 +13,15 @@ interface DepartmentTabContentProps {
   jobs: any[];
   isLoading: boolean;
   onDeleteDocument: (jobId: string, document: JobDocument) => void;
+  userRole: string | null;
 }
 
 export const DepartmentTabContent = ({
   department,
   jobs,
   isLoading,
-  onDeleteDocument
+  onDeleteDocument,
+  userRole
 }: DepartmentTabContentProps) => {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
@@ -88,6 +90,7 @@ export const DepartmentTabContent = ({
           department={department}
           onDeleteDocument={onDeleteDocument}
           showUpload={true}
+          userRole={userRole}
         />
       ))}
       
