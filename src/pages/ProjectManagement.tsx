@@ -16,11 +16,11 @@ const ProjectManagement = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const startDate = startOfMonth(currentDate);
   const endDate = endOfMonth(currentDate);
 
-  // Set up tab visibility handling for jobs query
   useTabVisibility(['jobs']);
 
   const { jobs, jobsLoading, handleDeleteDocument } = useJobManagement(
@@ -29,7 +29,6 @@ const ProjectManagement = () => {
     endDate
   );
 
-  // Check user access
   useEffect(() => {
     let mounted = true;
 
@@ -64,6 +63,7 @@ const ProjectManagement = () => {
             return;
           }
 
+          setUserRole(profile.role);
           console.log("ProjectManagement: Access granted for role:", profile.role);
         }
       } catch (error) {
@@ -80,7 +80,6 @@ const ProjectManagement = () => {
     };
   }, [navigate]);
 
-  // Show loading state when either initial auth check or jobs are loading
   if (loading || jobsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -114,6 +113,7 @@ const ProjectManagement = () => {
             jobs={jobs || []}
             jobsLoading={jobsLoading}
             onDeleteDocument={handleDeleteDocument}
+            userRole={userRole}
           />
         </CardContent>
       </Card>
