@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Plus, FolderPlus } from "lucide-react";
 import { useState } from "react";
-import { TourManagementDialog } from "../tours/TourManagementDialog";
+import { TourDateManagementDialog } from "../tours/TourDateManagementDialog";
 import { TourCard } from "../tours/TourCard";
 import CreateTourDialog from "../tours/CreateTourDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -13,18 +13,25 @@ interface TourChipsProps {
 }
 
 export const TourChips = ({ onTourClick }: TourChipsProps) => {
-  const [selectedTour, setSelectedTour] = useState<any>(null);
-  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
+  const [isDatesDialogOpen, setIsDatesDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: tours = [], isLoading } = useQuery({
-    queryKey: ["tours"],
+    queryKey: ["tours-with-dates"],
     queryFn: async () => {
-      console.log("Fetching tours...");
+      console.log("Fetching tours and dates...");
       const { data: toursData, error: toursError } = await supabase
         .from("tours")
-        .select("*")
+        .select(`
+          *,
+          tour_dates (
+            id,
+            date,
+            location:locations (name)
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (toursError) {
@@ -32,10 +39,15 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         throw toursError;
       }
 
-      console.log("Tours fetched successfully");
+      console.log("Tours and dates fetched successfully");
       return toursData;
     }
   });
+
+  const handleManageDates = (tourId: string) => {
+    setSelectedTourId(tourId);
+    setIsDatesDialogOpen(true);
+  };
 
   const handleCreateFlexFolders = async (tourId: string) => {
     try {
@@ -103,6 +115,16 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
+                  handleManageDates(tour.id);
+                }}
+              >
+                Manage Dates
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
                   handleCreateFlexFolders(tour.id);
                 }}
               >
@@ -114,11 +136,12 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         ))}
       </div>
 
-      {selectedTour && (
-        <TourManagementDialog
-          open={isManageDialogOpen}
-          onOpenChange={setIsManageDialogOpen}
-          tour={selectedTour}
+      {selectedTourId && (
+        <TourDateManagementDialog
+          open={isDatesDialogOpen}
+          onOpenChange={setIsDatesDialogOpen}
+          tourId={selectedTourId}
+          tourDates={tours.find(t => t.id === selectedTourId)?.tour_dates || []}
         />
       )}
 
