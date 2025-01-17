@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createLaborPO, addResourceLineItem, updateLineItemDates, getProjectDetails, getProjectHeader } from './apiService';
-import { PlusCircle, Clock, Search } from 'lucide-react';
+import { PlusCircle, Clock, Search, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';

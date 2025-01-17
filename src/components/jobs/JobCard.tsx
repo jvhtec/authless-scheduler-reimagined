@@ -51,11 +51,11 @@ export const JobCard = ({
     setCollapsed(!collapsed);
   };
 
-  const handleViewDocument = async (document: JobDocument) => {
+  const handleViewDocument = async (doc: JobDocument) => {
     try {
       const { data, error } = await supabase.storage
         .from('job_documents')
-        .createSignedUrl(document.file_path, 60);
+        .createSignedUrl(doc.file_path, 60);
 
       if (error) throw error;
 
@@ -69,27 +69,27 @@ export const JobCard = ({
     }
   };
 
-  const handleDownloadDocument = async (document: JobDocument) => {
+  const handleDownloadDocument = async (doc: JobDocument) => {
     try {
       const { data, error } = await supabase.storage
         .from('job_documents')
-        .download(document.file_path);
+        .download(doc.file_path);
 
       if (error) throw error;
 
-      // Create a download link
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = document.file_name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Create a download link using the global document object
+      const downloadUrl = URL.createObjectURL(data);
+      const downloadLink = window.document.createElement('a');
+      downloadLink.href = downloadUrl;
+      downloadLink.download = doc.file_name;
+      window.document.body.appendChild(downloadLink);
+      downloadLink.click();
+      window.document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(downloadUrl);
 
       toast({
         title: "Download started",
-        description: `Downloading ${document.file_name}`,
+        description: `Downloading ${doc.file_name}`,
       });
     } catch (error: any) {
       toast({
