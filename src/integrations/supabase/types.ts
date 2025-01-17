@@ -669,6 +669,18 @@ export type Database = {
           created_by: string | null
           description: string | null
           end_date: string | null
+          flex_lights_folder_id: string | null
+          flex_lights_folder_number: string | null
+          flex_main_folder_id: string | null
+          flex_main_folder_number: string | null
+          flex_personnel_folder_id: string | null
+          flex_personnel_folder_number: string | null
+          flex_production_folder_id: string | null
+          flex_production_folder_number: string | null
+          flex_sound_folder_id: string | null
+          flex_sound_folder_number: string | null
+          flex_video_folder_id: string | null
+          flex_video_folder_number: string | null
           id: string
           name: string
           start_date: string | null
@@ -679,6 +691,18 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           end_date?: string | null
+          flex_lights_folder_id?: string | null
+          flex_lights_folder_number?: string | null
+          flex_main_folder_id?: string | null
+          flex_main_folder_number?: string | null
+          flex_personnel_folder_id?: string | null
+          flex_personnel_folder_number?: string | null
+          flex_production_folder_id?: string | null
+          flex_production_folder_number?: string | null
+          flex_sound_folder_id?: string | null
+          flex_sound_folder_number?: string | null
+          flex_video_folder_id?: string | null
+          flex_video_folder_number?: string | null
           id?: string
           name: string
           start_date?: string | null
@@ -689,6 +713,18 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           end_date?: string | null
+          flex_lights_folder_id?: string | null
+          flex_lights_folder_number?: string | null
+          flex_main_folder_id?: string | null
+          flex_main_folder_number?: string | null
+          flex_personnel_folder_id?: string | null
+          flex_personnel_folder_number?: string | null
+          flex_production_folder_id?: string | null
+          flex_production_folder_number?: string | null
+          flex_sound_folder_id?: string | null
+          flex_sound_folder_number?: string | null
+          flex_video_folder_id?: string | null
+          flex_video_folder_number?: string | null
           id?: string
           name?: string
           start_date?: string | null
