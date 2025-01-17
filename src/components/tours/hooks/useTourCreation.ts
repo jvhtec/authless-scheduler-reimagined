@@ -47,8 +47,7 @@ export const useTourCreation = (
       return;
     }
 
-    // Only validate dates if they exist
-    if (dates.length > 0 && !dates.every(date => date.date)) {
+    if (!dates.every(date => date.date)) {
       toast({
         title: "Error",
         description: "Please select a date for all tour dates",
