@@ -300,9 +300,58 @@ export const JobCardNew = ({
     onEditClick(job);
   };
 
-  const handleDeleteClick = (e: React.MouseEvent) => {
+  const handleDeleteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    onDeleteClick(job.id);
+    
+    if (!['admin', 'management'].includes(userRole || '')) {
+      toast({
+        title: "Permission denied",
+        description: "Only management users can delete jobs",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to delete this job?')) {
+      return;
+    }
+
+    try {
+      // Delete job documents from storage first
+      if (job.job_documents?.length > 0) {
+        const { error: storageError } = await supabase.storage
+          .from('job_documents')
+          .remove(job.job_documents.map(doc => doc.file_path));
+
+        if (storageError) throw storageError;
+      }
+
+      // Delete the job from the database
+      const { error: dbError } = await supabase
+        .from('jobs')
+        .delete()
+        .eq('id', job.id);
+
+      if (dbError) throw dbError;
+
+      // Call the parent handler
+      onDeleteClick(job.id);
+
+      toast({
+        title: "Success",
+        description: "Job deleted successfully",
+      });
+
+      // Refresh jobs data
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    } catch (error: any) {
+      console.error('Error deleting job:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const toggleCollapse = (e: React.MouseEvent) => {
@@ -647,5 +696,4 @@ export const JobCardNew = ({
 
       </CardContent>
     </Card>
-  );
 };
