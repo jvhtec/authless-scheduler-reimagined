@@ -206,7 +206,7 @@ export const JobCardNew = ({
           throw new Error('Parent tour not found');
         }
 
-        // Now tours is a single object, not an array
+        // Access folder IDs directly from the tours object
         const parentFolders = {
           sound: tourDate.tours.flex_sound_folder_id,
           lights: tourDate.tours.flex_lights_folder_id,
