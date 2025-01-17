@@ -668,30 +668,24 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
-          end_date: string | null
           id: string
           name: string
-          start_date: string | null
         }
         Insert: {
           color?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
-          end_date?: string | null
           id?: string
           name: string
-          start_date?: string | null
         }
         Update: {
           color?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
-          end_date?: string | null
           id?: string
           name?: string
-          start_date?: string | null
         }
         Relationships: []
       }
