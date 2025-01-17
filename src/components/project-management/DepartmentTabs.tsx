@@ -11,6 +11,7 @@ interface DepartmentTabsProps {
   jobs: any[];
   jobsLoading: boolean;
   onDeleteDocument: (jobId: string, document: JobDocument) => Promise<void>;
+  userRole: string | null;
 }
 
 export const DepartmentTabs = ({
@@ -19,6 +20,7 @@ export const DepartmentTabs = ({
   jobs,
   jobsLoading,
   onDeleteDocument,
+  userRole,
 }: DepartmentTabsProps) => {
   return (
     <Tabs defaultValue={selectedDepartment} onValueChange={onDepartmentChange}>
@@ -49,6 +51,7 @@ export const DepartmentTabs = ({
                 jobs={jobs}
                 isLoading={jobsLoading}
                 onDeleteDocument={onDeleteDocument}
+                userRole={userRole}
               />
             </CardContent>
           </Card>
