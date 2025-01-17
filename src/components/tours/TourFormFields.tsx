@@ -22,6 +22,10 @@ interface TourFormFieldsProps {
   currentDepartment: Department;
   onDepartmentChange: (dept: Department, checked: boolean) => void;
   locations?: { name: string }[];
+  startDate: string;
+  endDate: string;
+  onStartDateChange: (date: string) => void;
+  onEndDateChange: (date: string) => void;
 }
 
 export const TourFormFields = ({
@@ -40,6 +44,10 @@ export const TourFormFields = ({
   currentDepartment,
   onDepartmentChange,
   locations,
+  startDate,
+  endDate,
+  onStartDateChange,
+  onEndDateChange,
 }: TourFormFieldsProps) => {
   return (
     <div className="space-y-4">
@@ -60,6 +68,27 @@ export const TourFormFields = ({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="startDate">Start Date</Label>
+          <Input
+            id="startDate"
+            type="date"
+            value={startDate}
+            onChange={(e) => onStartDateChange(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="endDate">End Date</Label>
+          <Input
+            id="endDate"
+            type="date"
+            value={endDate}
+            onChange={(e) => onEndDateChange(e.target.value)}
+          />
+        </div>
       </div>
 
       <TourDateForm
