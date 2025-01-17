@@ -3,7 +3,6 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Plus, FolderPlus } from "lucide-react";
 import { useState } from "react";
-import { TourDateManagementDialog } from "../tours/TourDateManagementDialog";
 import { TourManagementDialog } from "../tours/TourManagementDialog";
 import { TourCard } from "../tours/TourCard";
 import CreateTourDialog from "../tours/CreateTourDialog";
@@ -14,27 +13,18 @@ interface TourChipsProps {
 }
 
 export const TourChips = ({ onTourClick }: TourChipsProps) => {
-  const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
   const [selectedTour, setSelectedTour] = useState<any>(null);
-  const [isDatesDialogOpen, setIsDatesDialogOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: tours = [], isLoading } = useQuery({
-    queryKey: ["tours-with-dates"],
+    queryKey: ["tours"],
     queryFn: async () => {
-      console.log("Fetching tours and dates...");
+      console.log("Fetching tours...");
       const { data: toursData, error: toursError } = await supabase
         .from("tours")
-        .select(`
-          *,
-          tour_dates (
-            id,
-            date,
-            location:locations (name)
-          )
-        `)
+        .select("*")
         .order('created_at', { ascending: false });
 
       if (toursError) {
@@ -42,19 +32,47 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         throw toursError;
       }
 
-      console.log("Tours and dates fetched successfully");
+      console.log("Tours fetched successfully");
       return toursData;
     }
   });
 
-  const handleManageDates = (tourId: string) => {
-    setSelectedTourId(tourId);
-    setIsDatesDialogOpen(true);
-  };
+  const handleCreateFlexFolders = async (tourId: string) => {
+    try {
+      const { data: tour, error: tourError } = await supabase
+        .from('tours')
+        .select('*')
+        .eq('id', tourId)
+        .single();
 
-  const handleManageTour = (tour: any) => {
-    setSelectedTour(tour);
-    setIsManageDialogOpen(true);
+      if (tourError) throw tourError;
+
+      // Call the Edge Function to create Flex folders
+      const response = await fetch('/api/create-flex-folders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tourId: tour.id }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create Flex folders');
+      }
+
+      toast({
+        title: "Success",
+        description: "Flex folders created successfully",
+      });
+
+    } catch (error) {
+      console.error('Error creating Flex folders:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create Flex folders",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading) return <div>Loading tours...</div>;
@@ -85,34 +103,16 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleManageDates(tour.id);
+                  handleCreateFlexFolders(tour.id);
                 }}
               >
-                Manage Dates
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleManageTour(tour);
-                }}
-              >
-                Manage Tour
+                <FolderPlus className="h-4 w-4 mr-2" />
+                Create Flex Folders
               </Button>
             </div>
           </div>
         ))}
       </div>
-
-      {selectedTourId && (
-        <TourDateManagementDialog
-          open={isDatesDialogOpen}
-          onOpenChange={setIsDatesDialogOpen}
-          tourId={selectedTourId}
-          tourDates={tours.find(t => t.id === selectedTourId)?.tour_dates || []}
-        />
-      )}
 
       {selectedTour && (
         <TourManagementDialog
