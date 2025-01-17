@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, FolderPlus } from "lucide-react";
 import { useState } from "react";
 import { TourDateManagementDialog } from "../tours/TourDateManagementDialog";
 import { TourManagementDialog } from "../tours/TourManagementDialog";
 import { TourCard } from "../tours/TourCard";
 import CreateTourDialog from "../tours/CreateTourDialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface TourChipsProps {
   onTourClick: (tourId: string) => void;
@@ -18,6 +19,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
   const [isDatesDialogOpen, setIsDatesDialogOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   const { data: tours = [], isLoading } = useQuery({
     queryKey: ["tours-with-dates"],
@@ -45,6 +47,16 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
     }
   });
 
+  const handleManageDates = (tourId: string) => {
+    setSelectedTourId(tourId);
+    setIsDatesDialogOpen(true);
+  };
+
+  const handleManageTour = (tour: any) => {
+    setSelectedTour(tour);
+    setIsManageDialogOpen(true);
+  };
+
   if (isLoading) return <div>Loading tours...</div>;
 
   return (
@@ -62,11 +74,34 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {tours.map((tour) => (
-          <TourCard
-            key={tour.id}
-            tour={tour}
-            onTourClick={onTourClick}
-          />
+          <div key={tour.id} className="relative">
+            <TourCard
+              tour={tour}
+              onTourClick={onTourClick}
+            />
+            <div className="absolute top-2 right-2 flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleManageDates(tour.id);
+                }}
+              >
+                Manage Dates
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleManageTour(tour);
+                }}
+              >
+                Manage Tour
+              </Button>
+            </div>
+          </div>
         ))}
       </div>
 
