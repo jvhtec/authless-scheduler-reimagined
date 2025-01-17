@@ -185,7 +185,7 @@ export const JobCardNew = ({
           .from('tour_dates')
           .select(`
             tour_id,
-            tours (
+            tours:tours (
               flex_main_folder_id,
               flex_sound_folder_id,
               flex_lights_folder_id,
@@ -195,7 +195,7 @@ export const JobCardNew = ({
             )
           `)
           .eq('id', job.tour_date_id)
-          .maybeSingle();
+          .single();
 
         if (tourDateError) {
           console.error('Error fetching tour date:', tourDateError);
@@ -206,6 +206,7 @@ export const JobCardNew = ({
           throw new Error('Parent tour not found');
         }
 
+        // Now tours is a single object, not an array
         const parentFolders = {
           sound: tourDate.tours.flex_sound_folder_id,
           lights: tourDate.tours.flex_lights_folder_id,
@@ -215,10 +216,10 @@ export const JobCardNew = ({
         };
 
         // Create subfolders under each department folder
-        const departments = ['sound', 'lights', 'video', 'production', 'personnel'];
+        const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
         
         for (const dept of departments) {
-          const parentFolderId = parentFolders[dept as keyof typeof parentFolders];
+          const parentFolderId = parentFolders[dept];
           
           if (!parentFolderId) {
             console.warn(`No parent folder ID found for ${dept} department`);
@@ -234,10 +235,10 @@ export const JobCardNew = ({
             plannedStartDate: formattedStartDate,
             plannedEndDate: formattedEndDate,
             locationId: FLEX_FOLDER_IDS.location,
-            departmentId: DEPARTMENT_IDS[dept as keyof typeof DEPARTMENT_IDS],
+            departmentId: DEPARTMENT_IDS[dept],
             notes: `Tour date subfolder for ${dept}`,
-            documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}`,
-            personResponsibleId: RESPONSIBLE_PERSON_IDS[dept as keyof typeof RESPONSIBLE_PERSON_IDS]
+            documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`,
+            personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
           };
 
           console.log(`Creating subfolder for ${dept} with payload:`, subFolderPayload);
@@ -333,10 +334,10 @@ export const JobCardNew = ({
             plannedStartDate: formattedStartDate,
             plannedEndDate: formattedEndDate,
             locationId: FLEX_FOLDER_IDS.location,
-            departmentId: DEPARTMENT_IDS[dept as keyof typeof DEPARTMENT_IDS],
+            departmentId: DEPARTMENT_IDS[dept],
             notes: `Automated subfolder creation for ${dept}`,
-            documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}`,
-            personResponsibleId: RESPONSIBLE_PERSON_IDS[dept as keyof typeof RESPONSIBLE_PERSON_IDS]
+            documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`,
+            personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
           };
 
           console.log(`Creating subfolder for ${dept} with payload:`, subFolderPayload);
