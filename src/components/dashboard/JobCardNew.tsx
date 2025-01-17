@@ -696,4 +696,5 @@ export const JobCardNew = ({
 
       </CardContent>
     </Card>
+  );
 };
