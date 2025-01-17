@@ -35,6 +35,15 @@ interface JobCardNewProps {
   showUpload?: boolean;
 }
 
+interface TourFolders {
+  flex_main_folder_id: string | null;
+  flex_sound_folder_id: string | null;
+  flex_lights_folder_id: string | null;
+  flex_video_folder_id: string | null;
+  flex_production_folder_id: string | null;
+  flex_personnel_folder_id: string | null;
+}
+
 export const JobCardNew = ({
   job,
   onEditClick,
@@ -206,33 +215,21 @@ export const JobCardNew = ({
           throw new Error('Parent tour not found');
         }
 
-        // Create a properly typed interface for the tours object
-        interface TourFolders {
-          flex_main_folder_id: string | null;
-          flex_sound_folder_id: string | null;
-          flex_lights_folder_id: string | null;
-          flex_video_folder_id: string | null;
-          flex_production_folder_id: string | null;
-          flex_personnel_folder_id: string | null;
-        }
-
-        // Type assertion to ensure TypeScript knows the shape of tours
-        const tourFolders = tourDate.tours as TourFolders;
-
         // Create parentFolders object with proper typing
-        const parentFolders: Record<string, string | null> = {
-          sound: tourFolders.flex_sound_folder_id,
-          lights: tourFolders.flex_lights_folder_id,
-          video: tourFolders.flex_video_folder_id,
-          production: tourFolders.flex_production_folder_id,
-          personnel: tourFolders.flex_personnel_folder_id
+        const tourFolders: TourFolders = {
+          flex_main_folder_id: tourDate.tours.flex_main_folder_id,
+          flex_sound_folder_id: tourDate.tours.flex_sound_folder_id,
+          flex_lights_folder_id: tourDate.tours.flex_lights_folder_id,
+          flex_video_folder_id: tourDate.tours.flex_video_folder_id,
+          flex_production_folder_id: tourDate.tours.flex_production_folder_id,
+          flex_personnel_folder_id: tourDate.tours.flex_personnel_folder_id
         };
 
         // Create subfolders under each department folder
         const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
         
         for (const dept of departments) {
-          const parentFolderId = parentFolders[dept];
+          const parentFolderId = tourFolders[`flex_${dept}_folder_id` as keyof TourFolders];
           
           if (!parentFolderId) {
             console.warn(`No parent folder ID found for ${dept} department`);
