@@ -7,12 +7,12 @@ interface TourData {
   } | null;
   tours: {
     name: string;
-    flex_main_folder_id: string;
-    flex_sound_folder_id: string;
-    flex_lights_folder_id: string;
-    flex_video_folder_id: string;
-    flex_production_folder_id: string;
-    flex_personnel_folder_id: string;
+    flex_main_folder_id: string | null;
+    flex_sound_folder_id: string | null;
+    flex_lights_folder_id: string | null;
+    flex_video_folder_id: string | null;
+    flex_production_folder_id: string | null;
+    flex_personnel_folder_id: string | null;
   };
 }
 
