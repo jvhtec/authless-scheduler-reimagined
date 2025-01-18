@@ -25,7 +25,13 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
       const { data: toursData, error: toursError } = await supabase
         .from("tours")
         .select(`
-          *,
+          id,
+          name,
+          description,
+          start_date,
+          end_date,
+          color,
+          flex_folders_created,
           tour_dates (
             id,
             date,
@@ -51,12 +57,39 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
   const handleCreateFlexFolders = async (tourId: string) => {
     try {
+      console.log("Creating Flex folders for tour:", tourId);
+      const tour = tours.find(t => t.id === tourId);
+      
+      if (!tour) {
+        throw new Error("Tour not found");
+      }
+
       const { data, error } = await supabase.functions.invoke('create-flex-folders', {
-        body: { tourId }
+        body: { 
+          tourId: tour.id,
+          tourName: tour.name,
+          startDate: tour.start_date,
+          endDate: tour.end_date,
+          description: tour.description || '',
+          // Include hardcoded parameters
+          departmentFolders: ['sound', 'lights', 'video', 'production', 'personnel'],
+          mainFolderPrefix: 'TOUR',
+          departmentPrefixes: {
+            sound: 'SND',
+            lights: 'LTS',
+            video: 'VID',
+            production: 'PRD',
+            personnel: 'PER'
+          }
+        }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error creating Flex folders:", error);
+        throw error;
+      }
 
+      console.log("Flex folders created successfully:", data);
       toast({
         title: "Success",
         description: "Flex folders created successfully",
