@@ -667,6 +667,7 @@ export type Database = {
           color: string | null
           created_at: string
           created_by: string | null
+          deleted: boolean | null
           description: string | null
           end_date: string | null
           flex_folders_created: boolean | null
@@ -690,6 +691,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           created_by?: string | null
+          deleted?: boolean | null
           description?: string | null
           end_date?: string | null
           flex_folders_created?: boolean | null
@@ -713,6 +715,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           created_by?: string | null
+          deleted?: boolean | null
           description?: string | null
           end_date?: string | null
           flex_folders_created?: boolean | null
