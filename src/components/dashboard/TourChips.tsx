@@ -51,25 +51,11 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
   const handleCreateFlexFolders = async (tourId: string) => {
     try {
-      const { data: tour, error: tourError } = await supabase
-        .from('tours')
-        .select('*')
-        .eq('id', tourId)
-        .single();
-
-      if (tourError) throw tourError;
-
-      const response = await fetch('/api/create-flex-folders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ tourId: tour.id }),
+      const { data, error } = await supabase.functions.invoke('create-flex-folders', {
+        body: { tourId }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to create Flex folders');
-      }
+      if (error) throw error;
 
       toast({
         title: "Success",
