@@ -1,11 +1,15 @@
-// First add this additional interface if not already present
-interface TourFolders {
-  flex_main_folder_id: string | null;
-  flex_sound_folder_id: string | null;
-  flex_lights_folder_id: string | null;
-  flex_video_folder_id: string | null;
-  flex_production_folder_id: string | null;
-  flex_personnel_folder_id: string | null;
+interface TourData {
+  date: string;
+  tour_id: string;
+  tours: {
+    name: string;
+    flex_main_folder_id: string;
+    flex_sound_folder_id: string;
+    flex_lights_folder_id: string;
+    flex_video_folder_id: string;
+    flex_production_folder_id: string;
+    flex_personnel_folder_id: string;
+  };
 }
 
 import { useState } from "react";
@@ -43,15 +47,6 @@ interface JobCardNewProps {
   userRole?: string | null;
   onDeleteDocument?: (jobId: string, document: JobDocument) => void;
   showUpload?: boolean;
-}
-
-interface TourFolders {
-  flex_main_folder_id: string | null;
-  flex_sound_folder_id: string | null;
-  flex_lights_folder_id: string | null;
-  flex_video_folder_id: string | null;
-  flex_production_folder_id: string | null;
-  flex_personnel_folder_id: string | null;
 }
 
 export const JobCardNew = ({
@@ -231,7 +226,7 @@ export const JobCardNew = ({
         const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
         
         for (const dept of departments) {
-          const parentFolderId = tourDate.tours[`flex_${dept}_folder_id` as keyof TourFolders];
+          const parentFolderId = tourDate.tours[`flex_${dept}_folder_id` as keyof TourData];
           
           if (!parentFolderId) {
             console.warn(`No parent folder ID found for ${dept} department`);
@@ -376,7 +371,7 @@ export const JobCardNew = ({
         variant: "destructive"
       });
     }
-  ;
+  };
 
   const calculateTotalProgress = () => {
     if (!soundTasks?.length) return 0;
