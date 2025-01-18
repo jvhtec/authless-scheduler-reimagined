@@ -195,7 +195,7 @@ export const JobCardNew = ({
         console.log('Handling tour date folder creation:', job.tour_date_id);
   
         // Fetch the parent tour information with folder IDs
-        const { data: tourDateData, error: tourDateError } = await supabase
+        const { data: tourData, error: tourDateError } = await supabase
           .from('tour_dates')
           .select(`
             date,
@@ -218,16 +218,9 @@ export const JobCardNew = ({
           throw tourDateError;
         }
 
-        console.log('Tour date data:', tourDateData);
+        console.log('Tour date data:', tourData);
         
-        // Cast the data to match our interface
-        const tourData: TourData = {
-          date: tourDateData.date,
-          tour_id: tourDateData.tour_id,
-          tours: tourDateData.tours[0] // Access the first item of the array
-        };
-  
-        if (!tourData.tours || !tourData.tours.flex_main_folder_id) {
+        if (!tourData?.tours?.flex_main_folder_id) {
           throw new Error('Parent tour folders not found. Please create tour folders first.');
         }
   
@@ -235,7 +228,7 @@ export const JobCardNew = ({
         const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
         
         for (const dept of departments) {
-          const parentFolderId = tourData.tours[`flex_${dept}_folder_id` as keyof typeof tourData.tours];
+          const parentFolderId = tourData.tours[`flex_${dept}_folder_id`];
           
           if (!parentFolderId) {
             console.warn(`No parent folder ID found for ${dept} department`);
