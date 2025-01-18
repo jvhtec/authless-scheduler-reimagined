@@ -25,7 +25,7 @@ const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
 const FLEX_FOLDER_IDS = {
   mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
   subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
-  location: "2f49c62b-b139-11df-b8d5-00e08175e43e",
+  location: "2f49c62c-b139-11df-b8d5-00e08175e43e",
   mainResponsible: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb"
 };
 
