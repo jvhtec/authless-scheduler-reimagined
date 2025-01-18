@@ -195,7 +195,7 @@ export const JobCardNew = ({
         console.log('Handling tour date folder creation:', job.tour_date_id);
   
         // Fetch the parent tour information with folder IDs
-        const { data: tourData, error: tourDateError } = await supabase
+        const { data: tourDateData, error: tourDateError } = await supabase
           .from('tour_dates')
           .select(`
             date,
@@ -218,9 +218,9 @@ export const JobCardNew = ({
           throw tourDateError;
         }
 
-        console.log('Tour date data:', tourData);
+        console.log('Tour date data:', tourDateData);
         
-        if (!tourData?.tours?.flex_main_folder_id) {
+        if (!tourDateData?.tours?.flex_main_folder_id) {
           throw new Error('Parent tour folders not found. Please create tour folders first.');
         }
   
@@ -228,7 +228,7 @@ export const JobCardNew = ({
         const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
         
         for (const dept of departments) {
-          const parentFolderId = tourData.tours[`flex_${dept}_folder_id`];
+          const parentFolderId = tourDateData.tours[`flex_${dept}_folder_id`];
           
           if (!parentFolderId) {
             console.warn(`No parent folder ID found for ${dept} department`);
@@ -236,14 +236,14 @@ export const JobCardNew = ({
           }
   
           // Format the date for the folder name
-          const formattedDate = format(new Date(tourData.date), 'MMM d');
+          const formattedDate = format(new Date(tourDateData.date), 'MMM d');
   
           const subFolderPayload = {
             definitionId: FLEX_FOLDER_IDS.subFolder,
             parentElementId: parentFolderId,
             open: true,
             locked: false,
-            name: `${tourData.tours.name} - ${formattedDate} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+            name: `${tourDateData.tours.name} - ${formattedDate} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
             plannedStartDate: formattedStartDate,
             plannedEndDate: formattedEndDate,
             locationId: FLEX_FOLDER_IDS.location,
