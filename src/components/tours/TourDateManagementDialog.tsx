@@ -92,7 +92,7 @@ export const TourDateManagementDialog = ({
       const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
       
       for (const dept of departments) {
-        const parentFolderId = tourData[`flex_${dept}_folder_id` as keyof typeof tourData];
+        const parentFolderId = tourData[`flex_${dept}_folder_id`];
         
         if (!parentFolderId) {
           console.warn(`No parent folder ID found for ${dept} department`);
@@ -152,64 +152,54 @@ export const TourDateManagementDialog = ({
     }
   };
 
-  const createAllFolders = async () => {
-    try {
-      for (const date of tourDates) {
-        await createFoldersForDate(date);
-      }
-      toast({
-        title: "Success",
-        description: "Folders created for all tour dates",
-      });
-    } catch (error: any) {
-      console.error('Error creating all folders:', error);
-      toast({
-        title: "Error creating folders",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
   const handleAddDate = async (date: string, location: string) => {
     try {
-      console.log("Adding new tour date:", { date, location, tourId });
+      console.log("Adding new tour date:", { date, location });
 
-      // First get tour details to get the color
+      // First get tour details to get the color and departments
       const { data: tourData, error: tourError } = await supabase
         .from("tours")
         .select(`
           name,
+          color,
           tour_dates (
             jobs (
-              color
+              color,
+              job_departments (
+                department
+              )
             )
           )
         `)
         .eq('id', tourId)
         .single();
 
-      if (tourError) throw tourError;
-
-      // Get the color from the first job of any tour date, or use default
-      const color = tourData?.tour_dates?.[0]?.jobs?.[0]?.color || '#7E69AB';
+      if (tourError) {
+        console.error('Error fetching tour:', tourError);
+        throw tourError;
+      }
 
       // Get or create location
-      const { data: existingLocation } = await supabase
-        .from("locations")
-        .select("id")
-        .eq("name", location)
-        .single();
-
-      let locationId = existingLocation?.id;
-
-      if (!locationId) {
-        const { data: newLocation } = await supabase
+      let locationId = null;
+      if (location) {
+        const { data: existingLocation } = await supabase
           .from("locations")
-          .insert({ name: location })
-          .select()
-          .single();
-        locationId = newLocation?.id;
+          .select("id")
+          .eq("name", location)
+          .maybeSingle();
+
+        if (existingLocation) {
+          locationId = existingLocation.id;
+        } else {
+          const { data: newLocation, error: locationError } = await supabase
+            .from("locations")
+            .insert({ name: location })
+            .select()
+            .single();
+
+          if (locationError) throw locationError;
+          locationId = newLocation.id;
+        }
       }
 
       // Create tour date
@@ -223,10 +213,20 @@ export const TourDateManagementDialog = ({
         .select()
         .single();
 
-      if (tourDateError) throw tourDateError;
+      if (tourDateError) {
+        console.error('Error creating tour date:', tourDateError);
+        throw tourDateError;
+      }
+
+      console.log('Tour date created:', newTourDate);
+
+      // Get departments from existing tour jobs
+      const departments = tourData.tour_dates?.[0]?.jobs?.[0]?.job_departments?.map(
+        (dept: any) => dept.department
+      ) || ['sound', 'lights', 'video']; // Default departments if none found
 
       // Create job for this tour date
-      const { error: jobError } = await supabase
+      const { data: newJob, error: jobError } = await supabase
         .from('jobs')
         .insert({
           title: `${tourData.name} (Tour Date)`,
@@ -234,18 +234,44 @@ export const TourDateManagementDialog = ({
           end_time: `${date}T23:59:59`,
           location_id: locationId,
           tour_date_id: newTourDate.id,
-          color: color,
+          color: tourData.color || '#7E69AB',
           job_type: 'single'
-        });
+        })
+        .select()
+        .single();
 
-      if (jobError) throw jobError;
+      if (jobError) {
+        console.error('Error creating job:', jobError);
+        throw jobError;
+      }
+
+      console.log('Job created:', newJob);
+
+      // Create job departments
+      const jobDepartments = departments.map(department => ({
+        job_id: newJob.id,
+        department
+      }));
+
+      const { error: deptError } = await supabase
+        .from("job_departments")
+        .insert(jobDepartments);
+
+      if (deptError) {
+        console.error('Error creating job departments:', deptError);
+        throw deptError;
+      }
 
       await queryClient.invalidateQueries({ queryKey: ["tours"] });
-      toast({ title: "Date added successfully" });
-    } catch (error) {
+      toast({ 
+        title: "Success", 
+        description: "Tour date and job created successfully" 
+      });
+    } catch (error: any) {
       console.error("Error adding date:", error);
       toast({
         title: "Error adding date",
+        description: error.message,
         variant: "destructive",
       });
     }
