@@ -1,4 +1,3 @@
-// First add this additional interface if not already present
 interface TourFolders {
   flex_main_folder_id: string | null;
   flex_sound_folder_id: string | null;
@@ -376,7 +375,7 @@ export const JobCardNew = ({
         variant: "destructive"
       });
     }
-  ;
+  };
 
   const calculateTotalProgress = () => {
     if (!soundTasks?.length) return 0;
