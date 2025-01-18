@@ -258,7 +258,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
           <TourCard
             key={tour.id}
             tour={tour}
-            onClick={() => onTourClick(tour.id)}
+            onTourClick={() => onTourClick(tour.id)}
             onManageDates={() => handleManageDates(tour.id)}
             onCreateFolders={() => handleCreateFlexFolders(tour.id)}
           />
@@ -269,11 +269,13 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         tourId={selectedTourId}
         open={isDatesDialogOpen}
         onOpenChange={setIsDatesDialogOpen}
+        tourDates={tours.find(t => t.id === selectedTourId)?.tour_dates || []}
       />
 
       <CreateTourDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
+        currentDepartment="sound"
       />
     </div>
   );

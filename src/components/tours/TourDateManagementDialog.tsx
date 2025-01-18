@@ -10,7 +10,7 @@ import { Calendar, MapPin, Plus, Trash2 } from "lucide-react";
 interface TourDateManagementDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tourId: string;
+  tourId: string | null;
   tourDates: any[];
 }
 
@@ -18,7 +18,7 @@ export const TourDateManagementDialog = ({
   open,
   onOpenChange,
   tourId,
-  tourDates,
+  tourDates = [], // Provide default empty array
 }: TourDateManagementDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -169,7 +169,7 @@ export const TourDateManagementDialog = ({
         
         <div className="space-y-4">
           <div className="space-y-4">
-            {tourDates.map((date) => (
+            {tourDates?.map((date) => (
               <div
                 key={date.id}
                 className="flex items-center justify-between p-3 border rounded-lg"
