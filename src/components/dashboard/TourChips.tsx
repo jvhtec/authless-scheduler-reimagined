@@ -260,7 +260,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
             tour={tour}
             onTourClick={() => onTourClick(tour.id)}
             onManageDates={() => handleManageDates(tour.id)}
-            onCreateFolders={() => handleCreateFlexFolders(tour.id)}
+            onCreateFlexFolders={() => handleCreateFlexFolders(tour.id)}
           />
         ))}
       </div>
