@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Plus, FolderPlus, Calendar, Edit2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { TourDateManagementDialog } from "../tours/TourDateManagementDialog";
 import { TourCard } from "../tours/TourCard";
 import CreateTourDialog from "../tours/CreateTourDialog";
-import { TourManagementDialog } from "../tours/TourManagementDialog";
 import { useToast } from "@/hooks/use-toast";
 
 interface TourChipsProps {
@@ -17,13 +16,12 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
   const [isDatesDialogOpen, setIsDatesDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: tours = [], isLoading } = useQuery({
-    queryKey: ["tours-with-dates"],
+    queryKey: ["tours"],
     queryFn: async () => {
-      console.log("Fetching tours and dates...");
+      console.log("Fetching tours...");
       const { data: toursData, error: toursError } = await supabase
         .from("tours")
         .select(`
@@ -41,7 +39,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         throw toursError;
       }
 
-      console.log("Tours and dates fetched successfully");
+      console.log("Tours fetched successfully");
       return toursData;
     }
   });
@@ -49,11 +47,6 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
   const handleManageDates = (tourId: string) => {
     setSelectedTourId(tourId);
     setIsDatesDialogOpen(true);
-  };
-
-  const handleEditTour = (tourId: string) => {
-    setSelectedTourId(tourId);
-    setIsEditDialogOpen(true);
   };
 
   const handleCreateFlexFolders = async (tourId: string) => {
@@ -110,64 +103,23 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {tours.map((tour) => (
-          <div key={tour.id} className="relative">
-            <TourCard
-              tour={tour}
-              onTourClick={onTourClick}
-            />
-            <div className="absolute top-2 right-2 flex gap-1">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleManageDates(tour.id);
-                }}
-                title="Manage Dates"
-              >
-                <Calendar className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEditTour(tour.id);
-                }}
-                title="Edit Tour"
-              >
-                <Edit2 className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCreateFlexFolders(tour.id);
-                }}
-                title="Create Flex Folders"
-              >
-                <FolderPlus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          <TourCard
+            key={tour.id}
+            tour={tour}
+            onTourClick={onTourClick}
+            onManageDates={handleManageDates}
+            onCreateFlexFolders={handleCreateFlexFolders}
+          />
         ))}
       </div>
 
       {selectedTourId && (
-        <>
-          <TourDateManagementDialog
-            open={isDatesDialogOpen}
-            onOpenChange={setIsDatesDialogOpen}
-            tourId={selectedTourId}
-            tourDates={tours.find(t => t.id === selectedTourId)?.tour_dates || []}
-          />
-          <TourManagementDialog
-            open={isEditDialogOpen}
-            onOpenChange={setIsEditDialogOpen}
-            tour={tours.find(t => t.id === selectedTourId)}
-          />
-        </>
+        <TourDateManagementDialog
+          open={isDatesDialogOpen}
+          onOpenChange={setIsDatesDialogOpen}
+          tourId={selectedTourId}
+          tourDates={tours.find(t => t.id === selectedTourId)?.tour_dates || []}
+        />
       )}
 
       <CreateTourDialog
