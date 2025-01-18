@@ -43,6 +43,20 @@ interface JobCardNewProps {
   showUpload?: boolean;
 }
 
+interface TourData {
+  date: string;
+  tour_id: string;
+  tours: {
+    name: string;
+    flex_main_folder_id: string | null;
+    flex_sound_folder_id: string | null;
+    flex_lights_folder_id: string | null;
+    flex_video_folder_id: string | null;
+    flex_production_folder_id: string | null;
+    flex_personnel_folder_id: string | null;
+  };
+}
+
 export const JobCardNew = ({
   job,
   onEditClick,
@@ -208,13 +222,15 @@ export const JobCardNew = ({
           console.error('Error fetching tour date:', tourDateError);
           throw tourDateError;
         }
+
+        const typedTourDate = tourDate as TourData;
   
-        if (!tourDate?.tours || !tourDate.tours.flex_main_folder_id) {
+        if (!typedTourDate?.tours || !typedTourDate.tours.flex_main_folder_id) {
           throw new Error('Parent tour folders not found. Please create tour folders first.');
         }
   
-        const tourInfo = tourDate.tours;
-        const formattedDate = format(new Date(tourDate.date), 'MMM d');
+        const tourInfo = typedTourDate.tours;
+        const formattedDate = format(new Date(typedTourDate.date), 'MMM d');
   
         const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
         
@@ -240,7 +256,7 @@ export const JobCardNew = ({
             documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`,
             personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
           };
-  
+
           console.log(`Creating subfolder for ${dept} with payload:`, subFolderPayload);
   
           try {
