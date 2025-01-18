@@ -334,6 +334,26 @@ export const TourDateManagementDialog = ({
     }
   };
 
+  const createAllFolders = async () => {
+    try {
+      for (const date of tourDates) {
+        await createFoldersForDate(date);
+      }
+      
+      toast({
+        title: "Success",
+        description: "Folders created for all dates",
+      });
+    } catch (error: any) {
+      console.error('Error creating folders for all dates:', error);
+      toast({
+        title: "Error creating folders",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
