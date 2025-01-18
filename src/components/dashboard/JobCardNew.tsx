@@ -194,12 +194,16 @@ export const JobCardNew = ({
       if (job.tour_date_id) {
         console.log('Handling tour date folder creation:', job.tour_date_id);
   
-        // Fetch the parent tour information with folder IDs
+        // Fetch the parent tour information with folder IDs and location
         const { data: tourDateData, error: tourDateError } = await supabase
           .from('tour_dates')
           .select(`
             date,
             tour_id,
+            location_id,
+            locations (
+              name
+            ),
             tours (
               name,
               flex_main_folder_id,
@@ -223,6 +227,22 @@ export const JobCardNew = ({
         if (!tourDateData?.tours?.flex_main_folder_id) {
           throw new Error('Parent tour folders not found. Please create tour folders first.');
         }
+
+        // Check if subfolders were already created for this date
+        const { data: existingJobs, error: existingJobsError } = await supabase
+          .from('jobs')
+          .select('flex_folders_created')
+          .eq('tour_date_id', job.tour_date_id);
+
+        if (existingJobsError) {
+          console.error('Error checking existing jobs:', existingJobsError);
+          throw existingJobsError;
+        }
+
+        const hasExistingFolders = existingJobs.some(j => j.flex_folders_created);
+        if (hasExistingFolders) {
+          throw new Error('Subfolders have already been created for this tour date.');
+        }
   
         // Create subfolders under each department folder
         const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
@@ -237,13 +257,14 @@ export const JobCardNew = ({
   
           // Format the date for the folder name
           const formattedDate = format(new Date(tourDateData.date), 'MMM d');
+          const locationName = tourDateData.locations?.name || 'No Location';
   
           const subFolderPayload = {
             definitionId: FLEX_FOLDER_IDS.subFolder,
             parentElementId: parentFolderId,
             open: true,
             locked: false,
-            name: `${tourDateData.tours.name} - ${formattedDate} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+            name: `${tourDateData.tours.name} - ${formattedDate} - ${locationName} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
             plannedStartDate: formattedStartDate,
             plannedEndDate: formattedEndDate,
             locationId: FLEX_FOLDER_IDS.location,
