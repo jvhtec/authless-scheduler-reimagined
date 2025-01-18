@@ -25,6 +25,7 @@ const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
 const FLEX_FOLDER_IDS = {
   mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
   subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
+  location: "2f49c62b-b139-11df-b8d5-00e08175e43e",
   mainResponsible: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb"
 };
 
@@ -99,181 +100,145 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
     setIsDatesDialogOpen(true);
   };
 
-  const handleCreateFlexFolders = async (tourId: string) => {
-    try {
-      console.log("Creating Flex folders for tour:", tourId);
-      const tour = tours.find(t => t.id === tourId);
-      
-      if (!tour) {
-        throw new Error("Tour not found");
-      }
+ // Replace the existing handleCreateFlexFolders with this version
+const handleCreateFlexFolders = async (tourId: string) => {
+  try {
+    console.log("Creating Flex folders for tour:", tourId);
+    const tour = tours.find(t => t.id === tourId);
+    
+    if (!tour) {
+      throw new Error("Tour not found");
+    }
 
-      if (tour.flex_folders_created) {
-        toast({
-          title: "Folders already created",
-          description: "Flex folders have already been created for this tour.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const startDate = new Date(tour.start_date);
-      const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
-      
-      const formattedStartDate = new Date(tour.start_date).toISOString().split('.')[0] + '.000Z';
-      const formattedEndDate = new Date(tour.end_date).toISOString().split('.')[0] + '.000Z';
-
-      console.log('Formatted dates:', { formattedStartDate, formattedEndDate });
-
-      // Create main folder
-      const mainFolderPayload = {
-        definitionId: FLEX_FOLDER_IDS.mainFolder,
-        parentElementId: null,
-        open: true,
-        locked: false,
-        name: tour.name,
-        plannedStartDate: formattedStartDate,
-        plannedEndDate: formattedEndDate,
-        notes: "Automated folder creation from Web App",
-        documentNumber,
-        personResponsibleId: FLEX_FOLDER_IDS.mainResponsible
-      };
-
-      console.log('Creating main folder with payload:', mainFolderPayload);
-
-      const mainResponse = await fetch(BASE_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Auth-Token': API_KEY
-        },
-        body: JSON.stringify(mainFolderPayload)
-      });
-
-      if (!mainResponse.ok) {
-        const errorData = await mainResponse.json();
-        console.error('Flex API error creating main folder:', errorData);
-        throw new Error(errorData.exceptionMessage || 'Failed to create main folder');
-      }
-
-      const mainFolder = await mainResponse.json();
-      console.log('Main folder created:', mainFolder);
-
-      // Store the main folder information
-      const folderUpdates: any = {
-        flex_main_folder_id: mainFolder.elementId,
-        flex_main_folder_number: mainFolder.elementNumber
-      };
-
-      // Create department subfolders
-      const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
-      
-      for (const dept of departments) {
-        const subFolderPayload = {
-          definitionId: FLEX_FOLDER_IDS.subFolder,
-          parentElementId: mainFolder.elementId,
-          open: true,
-          locked: false,
-          name: `${tour.name} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
-          plannedStartDate: formattedStartDate,
-          plannedEndDate: formattedEndDate,
-          departmentId: DEPARTMENT_IDS[dept],
-          notes: `Automated subfolder creation for ${dept}`,
-          documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`,
-          personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
-        };
-
-        console.log(`Creating subfolder for ${dept} with payload:`, subFolderPayload);
-
-        try {
-          const subResponse = await fetch(BASE_URL, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Auth-Token': API_KEY
-            },
-            body: JSON.stringify(subFolderPayload)
-          });
-
-          if (!subResponse.ok) {
-            const errorData = await subResponse.json();
-            console.error(`Error creating ${dept} subfolder:`, errorData);
-            continue;
-          }
-
-          const subFolder = await subResponse.json();
-          console.log(`${dept} subfolder created:`, subFolder);
-
-          folderUpdates[`flex_${dept}_folder_id`] = subFolder.elementId;
-          folderUpdates[`flex_${dept}_folder_number`] = subFolder.elementNumber;
-        } catch (error) {
-          console.error(`Error creating ${dept} subfolder:`, error);
-        }
-      }
-
-      // Update tour with all folder IDs
-      const { error: updateError } = await supabase
-        .from('tours')
-        .update({
-          ...folderUpdates,
-          flex_folders_created: true
-        })
-        .eq('id', tourId);
-
-      if (updateError) {
-        console.error('Error updating tour with folder info:', updateError);
-        throw updateError;
-      }
-
+    if (tour.flex_folders_created) {
       toast({
-        title: "Success",
-        description: "Flex folders have been created successfully.",
-      });
-
-    } catch (error: any) {
-      console.error('Error creating Flex folders:', error);
-      toast({
-        title: "Error creating folders",
-        description: error.message,
+        title: "Folders already created",
+        description: "Flex folders have already been created for this tour.",
         variant: "destructive"
       });
+      return;
     }
-  }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Tours</h2>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Tour
-        </Button>
-      </div>
+    const startDate = new Date(tour.start_date);
+    const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, '');
+    
+    const formattedStartDate = new Date(tour.start_date).toISOString().split('.')[0] + '.000Z';
+    const formattedEndDate = new Date(tour.end_date).toISOString().split('.')[0] + '.000Z';
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {tours.map((tour) => (
-          <TourCard
-            key={tour.id}
-            tour={tour}
-            onTourClick={() => onTourClick(tour.id)}
-            onManageDates={() => handleManageDates(tour.id)}
-            onCreateFlexFolders={() => handleCreateFlexFolders(tour.id)}
-          />
-        ))}
-      </div>
+    console.log('Formatted dates:', { formattedStartDate, formattedEndDate });
 
-      <TourDateManagementDialog
-        tourId={selectedTourId}
-        open={isDatesDialogOpen}
-        onOpenChange={setIsDatesDialogOpen}
-        tourDates={tours.find(t => t.id === selectedTourId)?.tour_dates || []}
-      />
+    // Create main folder
+    const mainFolderPayload = {
+      definitionId: FLEX_FOLDER_IDS.mainFolder,
+      parentElementId: null,
+      open: true,
+      locked: false,
+      name: tour.name,
+      plannedStartDate: formattedStartDate,
+      plannedEndDate: formattedEndDate,
+      locationId: FLEX_FOLDER_IDS.location,
+      notes: "Automated folder creation from Web App",
+      documentNumber,
+      personResponsibleId: FLEX_FOLDER_IDS.mainResponsible
+    };
 
-      <CreateTourDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        currentDepartment="sound"
-      />
-    </div>
-  );
-};
+    console.log('Creating main folder with payload:', mainFolderPayload);
+
+    const mainResponse = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Auth-Token': API_KEY
+      },
+      body: JSON.stringify(mainFolderPayload)
+    });
+
+    if (!mainResponse.ok) {
+      const errorData = await mainResponse.json();
+      console.error('Flex API error creating main folder:', errorData);
+      throw new Error(errorData.exceptionMessage || 'Failed to create main folder');
+    }
+
+    const mainFolder = await mainResponse.json();
+    console.log('Main folder created:', mainFolder);
+
+    // Store the main folder information
+    const folderUpdates: any = {
+      flex_main_folder_id: mainFolder.elementId,
+      flex_main_folder_number: mainFolder.elementNumber
+    };
+
+    // Create department subfolders
+    const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
+    
+    for (const dept of departments) {
+      const subFolderPayload = {
+        definitionId: FLEX_FOLDER_IDS.subFolder,
+        parentElementId: mainFolder.elementId,
+        open: true,
+        locked: false,
+        name: `${tour.name} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+        plannedStartDate: formattedStartDate,
+        plannedEndDate: formattedEndDate,
+        locationId: FLEX_FOLDER_IDS.location,
+        departmentId: DEPARTMENT_IDS[dept],
+        notes: `Automated subfolder creation for ${dept}`,
+        documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`,
+        personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
+      };
+
+      console.log(`Creating subfolder for ${dept} with payload:`, subFolderPayload);
+
+      try {
+        const subResponse = await fetch(BASE_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Auth-Token': API_KEY
+          },
+          body: JSON.stringify(subFolderPayload)
+        });
+
+        if (!subResponse.ok) {
+          const errorData = await subResponse.json();
+          console.error(`Error creating ${dept} subfolder:`, errorData);
+          continue;
+        }
+
+        const subFolder = await subResponse.json();
+        console.log(`${dept} subfolder created:`, subFolder);
+
+        folderUpdates[`flex_${dept}_folder_id`] = subFolder.elementId;
+        folderUpdates[`flex_${dept}_folder_number`] = subFolder.elementNumber;
+      } catch (error) {
+        console.error(`Error creating ${dept} subfolder:`, error);
+      }
+    }
+
+    // Update tour with all folder IDs
+    const { error: updateError } = await supabase
+      .from('tours')
+      .update({
+        ...folderUpdates,
+        flex_folders_created: true
+      })
+      .eq('id', tourId);
+
+    if (updateError) {
+      console.error('Error updating tour with folder info:', updateError);
+      throw updateError;
+    }
+
+    toast({
+      title: "Success",
+      description: "Flex folders have been created successfully.",
+    });
+
+  } catch (error: any) {
+    console.error('Error creating Flex folders:', error);
+    toast({
+      title: "Error creating folders",
+      description: error.message,
+      variant: "destructive"
+    });
+  };
