@@ -669,6 +669,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           end_date: string | null
+          flex_folders_created: boolean | null
           flex_lights_folder_id: string | null
           flex_lights_folder_number: string | null
           flex_main_folder_id: string | null
@@ -691,6 +692,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           end_date?: string | null
+          flex_folders_created?: boolean | null
           flex_lights_folder_id?: string | null
           flex_lights_folder_number?: string | null
           flex_main_folder_id?: string | null
@@ -713,6 +715,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           end_date?: string | null
+          flex_folders_created?: boolean | null
           flex_lights_folder_id?: string | null
           flex_lights_folder_number?: string | null
           flex_main_folder_id?: string | null
