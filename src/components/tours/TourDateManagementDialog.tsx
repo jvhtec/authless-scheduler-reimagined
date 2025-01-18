@@ -179,6 +179,8 @@ export const TourDateManagementDialog = ({
         throw tourError;
       }
 
+      console.log('Tour data fetched:', tourData);
+
       // Get or create location
       let locationId = null;
       if (location) {
@@ -220,12 +222,12 @@ export const TourDateManagementDialog = ({
 
       console.log('Tour date created:', newTourDate);
 
-      // Get departments from existing tour jobs
+      // Get departments from existing tour jobs or use default departments
       const departments = tourData.tour_dates?.[0]?.jobs?.[0]?.job_departments?.map(
         (dept: any) => dept.department
       ) || ['sound', 'lights', 'video']; // Default departments if none found
 
-      // Create job for this tour date
+      // Create job for this tour date with proper start/end times
       const { data: newJob, error: jobError } = await supabase
         .from('jobs')
         .insert({
@@ -263,6 +265,8 @@ export const TourDateManagementDialog = ({
       }
 
       await queryClient.invalidateQueries({ queryKey: ["tours"] });
+      await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      
       toast({ 
         title: "Success", 
         description: "Tour date and job created successfully" 
