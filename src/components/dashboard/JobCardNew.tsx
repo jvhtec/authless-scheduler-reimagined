@@ -9,14 +9,14 @@ interface TourData {
     flex_video_folder_id: string;
     flex_production_folder_id: string;
     flex_personnel_folder_id: string;
-  }[];
+  };
 }
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp, Eye, FolderPlus } from "lucide-react";
+import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -217,11 +217,11 @@ export const JobCardNew = ({
           console.error('Error fetching tour date:', tourDateError);
           throw tourDateError;
         }
-  
-        const tourData = tourDate as TourData;
+
+        console.log('Tour date data:', tourDate);
         
-        // Since tours is now an array, we get the first tour
-        const tour = tourData.tours[0];
+        const tourData = tourDate as TourData;
+        const tour = tourData.tours;
   
         if (!tour || !tour.flex_main_folder_id) {
           throw new Error('Parent tour folders not found. Please create tour folders first.');
