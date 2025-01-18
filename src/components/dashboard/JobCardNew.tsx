@@ -136,7 +136,7 @@ export const JobCardNew = ({
   const FLEX_FOLDER_IDS = {
     mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
     subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
-    location: "2f49c62c-b139-11df-b8d5-00e08175e43e",
+    location: "2f49c62b-b139-11df-b8d5-00e08175e43e",
     mainResponsible: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb"
   };
 
@@ -215,7 +215,7 @@ export const JobCardNew = ({
           throw new Error('Parent tour not found');
         }
 
-        // Create parentFolders object with proper typing
+        // Create tourFolders object from the tours data
         const tourFolders: TourFolders = {
           flex_main_folder_id: tourDate.tours.flex_main_folder_id,
           flex_sound_folder_id: tourDate.tours.flex_sound_folder_id,
