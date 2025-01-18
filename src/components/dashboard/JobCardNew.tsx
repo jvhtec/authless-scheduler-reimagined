@@ -148,7 +148,6 @@ export const JobCardNew = ({
   const FLEX_FOLDER_IDS = {
     mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
     subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
-    location: "2f49c62b-b139-11df-b8d5-00e08175e43e",
     mainResponsible: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb"
   };
 
@@ -250,7 +249,6 @@ export const JobCardNew = ({
             name: `${tourInfo.name} - ${formattedDate} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
             plannedStartDate: formattedStartDate,
             plannedEndDate: formattedEndDate,
-            locationId: FLEX_FOLDER_IDS.location,
             departmentId: DEPARTMENT_IDS[dept],
             notes: `Tour date subfolder for ${dept}`,
             documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`,
@@ -290,7 +288,6 @@ export const JobCardNew = ({
           name: job.title,
           plannedStartDate: formattedStartDate,
           plannedEndDate: formattedEndDate,
-          locationId: FLEX_FOLDER_IDS.location,
           notes: "Automated folder creation from Web App",
           documentNumber,
           personResponsibleId: FLEX_FOLDER_IDS.mainResponsible
@@ -327,7 +324,6 @@ export const JobCardNew = ({
             name: `${job.title} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
             plannedStartDate: formattedStartDate,
             plannedEndDate: formattedEndDate,
-            locationId: FLEX_FOLDER_IDS.location,
             departmentId: DEPARTMENT_IDS[dept],
             notes: `Automated subfolder creation for ${dept}`,
             documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`,
