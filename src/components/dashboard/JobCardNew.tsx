@@ -1,4 +1,3 @@
-// First add this additional interface if not already present
 interface TourFolders {
   flex_main_folder_id: string | null;
   flex_sound_folder_id: string | null;
@@ -12,7 +11,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp, Eye, FolderPlus } from "lucide-react";
+import { Clock, MapPin, Users, Edit, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -22,7 +21,6 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import createFolderIcon from "@/assets/icons/icon.png";
 import { Department } from "@/types/department";
 
-// Flex API constants
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
 const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
 
@@ -43,15 +41,6 @@ interface JobCardNewProps {
   userRole?: string | null;
   onDeleteDocument?: (jobId: string, document: JobDocument) => void;
   showUpload?: boolean;
-}
-
-interface TourFolders {
-  flex_main_folder_id: string | null;
-  flex_sound_folder_id: string | null;
-  flex_lights_folder_id: string | null;
-  flex_video_folder_id: string | null;
-  flex_production_folder_id: string | null;
-  flex_personnel_folder_id: string | null;
 }
 
 export const JobCardNew = ({
@@ -142,7 +131,6 @@ export const JobCardNew = ({
     }
   });
 
-  // Flex Folder and Department constants
   const FLEX_FOLDER_IDS = {
     mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
     subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
@@ -195,11 +183,9 @@ export const JobCardNew = ({
   
       console.log('Formatted dates:', { formattedStartDate, formattedEndDate });
   
-      // Check if this is a tour date
       if (job.tour_date_id) {
         console.log('Handling tour date folder creation:', job.tour_date_id);
   
-        // Fetch the parent tour information with folder IDs
         const { data: tourDate, error: tourDateError } = await supabase
           .from('tour_dates')
           .select(`
@@ -227,7 +213,6 @@ export const JobCardNew = ({
           throw new Error('Parent tour folders not found. Please create tour folders first.');
         }
   
-        // Create subfolders under each department folder
         const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
         
         for (const dept of departments) {
@@ -238,7 +223,6 @@ export const JobCardNew = ({
             continue;
           }
   
-          // Format the date for the folder name
           const formattedDate = format(new Date(tourDate.date), 'MMM d');
   
           const subFolderPayload = {
@@ -281,7 +265,6 @@ export const JobCardNew = ({
           }
         }
       } else {
-        // Original folder creation logic for regular jobs
         const mainFolderPayload = {
           definitionId: FLEX_FOLDER_IDS.mainFolder,
           parentElementId: null,
@@ -316,7 +299,6 @@ export const JobCardNew = ({
         const mainFolder = await mainResponse.json();
         console.log('Main folder created:', mainFolder);
   
-        // Create department subfolders
         const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
         
         for (const dept of departments) {
@@ -376,7 +358,7 @@ export const JobCardNew = ({
         variant: "destructive"
       });
     }
-  ;
+  };
 
   const calculateTotalProgress = () => {
     if (!soundTasks?.length) return 0;
@@ -426,7 +408,6 @@ export const JobCardNew = ({
     try {
       console.log('Starting job deletion process for job:', job.id);
 
-      // First delete lights_job_personnel records
       const { error: lightsPersonnelError } = await supabase
         .from('lights_job_personnel')
         .delete()
@@ -437,7 +418,6 @@ export const JobCardNew = ({
         throw lightsPersonnelError;
       }
 
-      // Delete sound_job_personnel records
       const { error: soundPersonnelError } = await supabase
         .from('sound_job_personnel')
         .delete()
@@ -448,7 +428,6 @@ export const JobCardNew = ({
         throw soundPersonnelError;
       }
 
-      // Delete video_job_personnel records
       const { error: videoPersonnelError } = await supabase
         .from('video_job_personnel')
         .delete()
@@ -459,7 +438,6 @@ export const JobCardNew = ({
         throw videoPersonnelError;
       }
       
-      // Delete job documents from storage if they exist
       if (job.job_documents?.length > 0) {
         console.log('Attempting to delete job documents from storage');
         const { error: storageError } = await supabase.storage
@@ -472,7 +450,6 @@ export const JobCardNew = ({
         }
       }
 
-      // Delete job assignments
       const { error: assignmentsError } = await supabase
         .from('job_assignments')
         .delete()
@@ -483,7 +460,6 @@ export const JobCardNew = ({
         throw assignmentsError;
       }
 
-      // Delete job departments
       const { error: departmentsError } = await supabase
         .from('job_departments')
         .delete()
@@ -494,7 +470,6 @@ export const JobCardNew = ({
         throw departmentsError;
       }
 
-      // Finally delete the job
       const { error: jobError } = await supabase
         .from('jobs')
         .delete()
@@ -513,7 +488,6 @@ export const JobCardNew = ({
         description: "Job deleted successfully",
       });
 
-      // Refresh jobs data
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
     } catch (error: any) {
       console.error('Error deleting job:', error);
@@ -774,7 +748,6 @@ export const JobCardNew = ({
               </div>
             </div>
           )}
-          {/* Documents Section */}
           {documents.length > 0 && (
             <div className="mt-4 space-y-2">
               <div className="text-sm font-medium">Documents</div>
@@ -814,7 +787,6 @@ export const JobCardNew = ({
           )}
         </div>
 
-        {/* Only show additional details when expanded */}
         {!collapsed && (
           <>
             {department === 'sound' && personnel && (
