@@ -218,7 +218,9 @@ export const JobCardNew = ({
           throw tourDateError;
         }
   
-        if (!tourDate?.tours || !tourDate.tours.flex_main_folder_id) {
+        const tourData = tourDate as TourData;
+  
+        if (!tourData?.tours || !tourData.tours.flex_main_folder_id) {
           throw new Error('Parent tour folders not found. Please create tour folders first.');
         }
   
@@ -226,7 +228,7 @@ export const JobCardNew = ({
         const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
         
         for (const dept of departments) {
-          const parentFolderId = tourDate.tours[`flex_${dept}_folder_id` as keyof TourData];
+          const parentFolderId = tourData.tours[`flex_${dept}_folder_id` as keyof typeof tourData.tours];
           
           if (!parentFolderId) {
             console.warn(`No parent folder ID found for ${dept} department`);
@@ -234,14 +236,14 @@ export const JobCardNew = ({
           }
   
           // Format the date for the folder name
-          const formattedDate = format(new Date(tourDate.date), 'MMM d');
+          const formattedDate = format(new Date(tourData.date), 'MMM d');
   
           const subFolderPayload = {
             definitionId: FLEX_FOLDER_IDS.subFolder,
             parentElementId: parentFolderId,
             open: true,
             locked: false,
-            name: `${tourDate.tours.name} - ${formattedDate} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+            name: `${tourData.tours.name} - ${formattedDate} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
             plannedStartDate: formattedStartDate,
             plannedEndDate: formattedEndDate,
             locationId: FLEX_FOLDER_IDS.location,
