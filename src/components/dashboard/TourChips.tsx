@@ -84,7 +84,8 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
             location:locations (name)
           )
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .eq('deleted', false); // Add this line to filter out deleted tours
 
       if (toursError) {
         console.error("Error fetching tours:", toursError);
