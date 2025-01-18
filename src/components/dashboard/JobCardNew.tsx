@@ -1,6 +1,10 @@
 interface TourData {
   date: string;
   tour_id: string;
+  location_id: string | null;
+  locations: {
+    name: string;
+  } | null;
   tours: {
     name: string;
     flex_main_folder_id: string;
