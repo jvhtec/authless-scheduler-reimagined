@@ -906,3 +906,7 @@ export const JobCardNew = ({
 
       </CardContent>
     </Card>
+  );
+};
+
+export default JobCardNew;
