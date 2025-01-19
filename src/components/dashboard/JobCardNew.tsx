@@ -228,7 +228,7 @@ export const JobCardNew = ({
 
         console.log('Tour date data:', tourDateData);
         
-        if (!tourDateData?.tours?.flex_main_folder_id) {
+        if (!tourDateData.tours.flex_main_folder_id) {
           throw new Error('Parent tour folders not found. Please create tour folders first.');
         }
 
