@@ -217,27 +217,40 @@ export const TourDateManagementDialog = ({
       // Get or create location
       let locationId = null;
       if (location) {
-        const { data: existingLocation } = await supabase
+        // First try to find existing location
+        const { data: existingLocation, error: findError } = await supabase
           .from("locations")
           .select("id")
-          .eq("name", location)
+          .ilike("name", location)
           .maybeSingle();
 
+        if (findError) {
+          console.error('Error finding location:', findError);
+          throw findError;
+        }
+
         if (existingLocation) {
+          console.log('Found existing location:', existingLocation);
           locationId = existingLocation.id;
         } else {
-          const { data: newLocation, error: locationError } = await supabase
+          // Create new location if none exists
+          const { data: newLocation, error: createError } = await supabase
             .from("locations")
             .insert({ name: location })
             .select()
             .single();
 
-          if (locationError) throw locationError;
+          if (createError) {
+            console.error('Error creating location:', createError);
+            throw createError;
+          }
+
+          console.log('Created new location:', newLocation);
           locationId = newLocation.id;
         }
       }
 
-      // Create tour date
+      // Create tour date with location ID
       const { data: newTourDate, error: tourDateError } = await supabase
         .from("tour_dates")
         .insert({
@@ -258,7 +271,7 @@ export const TourDateManagementDialog = ({
       // Get departments from existing tour jobs or use default departments
       const departments = tourData.tour_dates?.[0]?.jobs?.[0]?.job_departments?.map(
         (dept: any) => dept.department
-      ) || ['sound', 'lights', 'video']; // Default departments if none found
+      ) || ['sound', 'lights', 'video'];
 
       // Create job for this tour date with proper start/end times
       const { data: newJob, error: jobError } = await supabase
