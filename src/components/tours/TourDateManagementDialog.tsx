@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Calendar, MapPin, Plus, Trash2, FolderPlus } from "lucide-react";
+import { useLocationManagement } from "@/hooks/useLocationManagement";
 
 // Flex API constants
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
@@ -55,10 +56,30 @@ export const TourDateManagementDialog = ({
 }: TourDateManagementDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { getOrCreateLocation } = useLocationManagement();
 
-  const createFoldersForDate = async (date: any) => {
+  const createFoldersForDate = async (date: any, skipExistingCheck = false) => {
     try {
       console.log('Creating folders for date:', date);
+
+      // Check if folders already exist for this date's jobs
+      if (!skipExistingCheck) {
+        const { data: jobs, error: jobsError } = await supabase
+          .from('jobs')
+          .select('flex_folders_created')
+          .eq('tour_date_id', date.id);
+
+        if (jobsError) {
+          console.error('Error checking existing jobs:', jobsError);
+          throw jobsError;
+        }
+
+        const hasExistingFolders = jobs.some(j => j.flex_folders_created);
+        if (hasExistingFolders) {
+          console.log('Skipping date - folders already exist:', date.date);
+          return false;
+        }
+      }
 
       // Fetch the parent tour information
       const { data: tourData, error: tourError } = await supabase
@@ -84,22 +105,6 @@ export const TourDateManagementDialog = ({
         throw new Error('Parent tour folders not found. Please create tour folders first.');
       }
 
-      // Check if any job associated with this tour date already has folders created
-      const { data: existingJobs, error: existingJobsError } = await supabase
-        .from('jobs')
-        .select('flex_folders_created')
-        .eq('tour_date_id', date.id);
-
-      if (existingJobsError) {
-        console.error('Error checking existing jobs:', existingJobsError);
-        throw existingJobsError;
-      }
-
-      const hasExistingFolders = existingJobs.some(j => j.flex_folders_created);
-      if (hasExistingFolders) {
-        throw new Error('Folders have already been created for this tour date.');
-      }
-
       const formattedStartDate = new Date(date.date).toISOString().split('.')[0] + '.000Z';
       const formattedEndDate = new Date(date.date).toISOString().split('.')[0] + '.000Z';
       const documentNumber = new Date(date.date).toISOString().slice(2, 10).replace(/-/g, '');
@@ -115,9 +120,8 @@ export const TourDateManagementDialog = ({
           continue;
         }
 
-        // Format the date and get location name
         const formattedDate = format(new Date(date.date), 'MMM d');
-        const locationName = date.locations?.name || 'No Location';
+        const locationName = date.location?.name || 'No Location';
 
         const subFolderPayload = {
           definitionId: FLEX_FOLDER_IDS.subFolder,
@@ -170,18 +174,10 @@ export const TourDateManagementDialog = ({
         throw updateError;
       }
 
-      toast({
-        title: "Success",
-        description: `Folders created for ${format(new Date(date.date), 'MMM d, yyyy')}`,
-      });
-
+      return true;
     } catch (error: any) {
       console.error('Error creating folders:', error);
-      toast({
-        title: "Error creating folders",
-        description: error.message,
-        variant: "destructive"
-      });
+      throw error;
     }
   };
 
@@ -189,7 +185,36 @@ export const TourDateManagementDialog = ({
     try {
       console.log("Adding new tour date:", { date, location });
 
-      // First get tour details to get the color and departments
+      // Get or create location
+      const locationId = await getOrCreateLocation(location);
+      console.log("Location ID:", locationId);
+
+      // Create tour date with location ID
+      const { data: newTourDate, error: tourDateError } = await supabase
+        .from("tour_dates")
+        .insert({
+          tour_id: tourId,
+          date,
+          location_id: locationId,
+        })
+        .select(`
+          id,
+          date,
+          location:locations (
+            id,
+            name
+          )
+        `)
+        .single();
+
+      if (tourDateError) {
+        console.error('Error creating tour date:', tourDateError);
+        throw tourDateError;
+      }
+
+      console.log('Tour date created:', newTourDate);
+
+      // Get tour details for job creation
       const { data: tourData, error: tourError } = await supabase
         .from("tours")
         .select(`
@@ -212,68 +237,7 @@ export const TourDateManagementDialog = ({
         throw tourError;
       }
 
-      console.log('Tour data fetched:', tourData);
-
-      // Get or create location
-      let locationId = null;
-      if (location) {
-        // First try to find existing location
-        const { data: existingLocation, error: findError } = await supabase
-          .from("locations")
-          .select("id")
-          .ilike("name", location)
-          .maybeSingle();
-
-        if (findError) {
-          console.error('Error finding location:', findError);
-          throw findError;
-        }
-
-        if (existingLocation) {
-          console.log('Found existing location:', existingLocation);
-          locationId = existingLocation.id;
-        } else {
-          // Create new location if none exists
-          const { data: newLocation, error: createError } = await supabase
-            .from("locations")
-            .insert({ name: location })
-            .select()
-            .single();
-
-          if (createError) {
-            console.error('Error creating location:', createError);
-            throw createError;
-          }
-
-          console.log('Created new location:', newLocation);
-          locationId = newLocation.id;
-        }
-      }
-
-      // Create tour date with location ID
-      const { data: newTourDate, error: tourDateError } = await supabase
-        .from("tour_dates")
-        .insert({
-          tour_id: tourId,
-          date,
-          location_id: locationId,
-        })
-        .select()
-        .single();
-
-      if (tourDateError) {
-        console.error('Error creating tour date:', tourDateError);
-        throw tourDateError;
-      }
-
-      console.log('Tour date created:', newTourDate);
-
-      // Get departments from existing tour jobs or use default departments
-      const departments = tourData.tour_dates?.[0]?.jobs?.[0]?.job_departments?.map(
-        (dept: any) => dept.department
-      ) || ['sound', 'lights', 'video'];
-
-      // Create job for this tour date with proper start/end times
+      // Create job for this tour date
       const { data: newJob, error: jobError } = await supabase
         .from('jobs')
         .insert({
@@ -294,6 +258,11 @@ export const TourDateManagementDialog = ({
       }
 
       console.log('Job created:', newJob);
+
+      // Get departments from existing tour jobs or use default departments
+      const departments = tourData.tour_dates?.[0]?.jobs?.[0]?.job_departments?.map(
+        (dept: any) => dept.department
+      ) || ['sound', 'lights', 'video'];
 
       // Create job departments
       const jobDepartments = departments.map(department => ({
@@ -373,7 +342,7 @@ export const TourDateManagementDialog = ({
 
       if (dateError) throw dateError;
 
-      await queryClient.invalidateQueries({ queryKey: ["tours-with-dates"] });
+      await queryClient.invalidateQueries({ queryKey: ["tours"] });
       toast({ title: "Date deleted successfully" });
     } catch (error) {
       console.error("Error deleting date:", error);
@@ -386,13 +355,26 @@ export const TourDateManagementDialog = ({
 
   const createAllFolders = async () => {
     try {
+      let successCount = 0;
+      let skipCount = 0;
+
       for (const date of tourDates) {
-        await createFoldersForDate(date);
+        try {
+          const created = await createFoldersForDate(date);
+          if (created) {
+            successCount++;
+          } else {
+            skipCount++;
+          }
+        } catch (error) {
+          console.error(`Error creating folders for date ${date.date}:`, error);
+          continue;
+        }
       }
       
       toast({
-        title: "Success",
-        description: "Folders created for all dates",
+        title: "Folders Creation Complete",
+        description: `Successfully created folders for ${successCount} dates. ${skipCount} dates were skipped (already had folders).`,
       });
     } catch (error: any) {
       console.error('Error creating folders for all dates:', error);
@@ -445,7 +427,7 @@ export const TourDateManagementDialog = ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => createFoldersForDate(date)}
+                    onClick={() => createFoldersForDate(date, true)}
                     title="Create Flex folders"
                   >
                     <FolderPlus className="h-4 w-4" />
