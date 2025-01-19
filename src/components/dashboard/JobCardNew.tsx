@@ -232,7 +232,7 @@ export const JobCardNew = ({
           throw new Error('Parent tour folders not found. Please create tour folders first.');
         }
 
-        // Check if subfolders were already created for this date
+        // Check if any job associated with this tour date already has folders created
         const { data: existingJobs, error: existingJobsError } = await supabase
           .from('jobs')
           .select('flex_folders_created')
@@ -245,7 +245,7 @@ export const JobCardNew = ({
 
         const hasExistingFolders = existingJobs.some(j => j.flex_folders_created);
         if (hasExistingFolders) {
-          throw new Error('Subfolders have already been created for this tour date.');
+          throw new Error('Folders have already been created for this tour date.');
         }
   
         // Create subfolders under each department folder
@@ -302,6 +302,18 @@ export const JobCardNew = ({
             console.error(`Error creating ${dept} subfolder:`, error);
           }
         }
+
+        // Update all jobs for this tour date to mark folders as created
+        const { error: updateError } = await supabase
+          .from('jobs')
+          .update({ flex_folders_created: true })
+          .eq('tour_date_id', job.tour_date_id);
+
+        if (updateError) {
+          console.error('Error updating jobs:', updateError);
+          throw updateError;
+        }
+
       } else {
         // Original folder creation logic for regular jobs
         const mainFolderPayload = {
