@@ -84,6 +84,22 @@ export const TourDateManagementDialog = ({
         throw new Error('Parent tour folders not found. Please create tour folders first.');
       }
 
+      // Check if any job associated with this tour date already has folders created
+      const { data: existingJobs, error: existingJobsError } = await supabase
+        .from('jobs')
+        .select('flex_folders_created')
+        .eq('tour_date_id', date.id);
+
+      if (existingJobsError) {
+        console.error('Error checking existing jobs:', existingJobsError);
+        throw existingJobsError;
+      }
+
+      const hasExistingFolders = existingJobs.some(j => j.flex_folders_created);
+      if (hasExistingFolders) {
+        throw new Error('Folders have already been created for this tour date.');
+      }
+
       const formattedStartDate = new Date(date.date).toISOString().split('.')[0] + '.000Z';
       const formattedEndDate = new Date(date.date).toISOString().split('.')[0] + '.000Z';
       const documentNumber = new Date(date.date).toISOString().slice(2, 10).replace(/-/g, '');
@@ -99,14 +115,16 @@ export const TourDateManagementDialog = ({
           continue;
         }
 
+        // Format the date and get location name
         const formattedDate = format(new Date(date.date), 'MMM d');
+        const locationName = date.locations?.name || 'No Location';
 
         const subFolderPayload = {
           definitionId: FLEX_FOLDER_IDS.subFolder,
           parentElementId: parentFolderId,
           open: true,
           locked: false,
-          name: `${tourData.name} - ${formattedDate} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+          name: `${tourData.name} - ${formattedDate} - ${locationName} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
           plannedStartDate: formattedStartDate,
           plannedEndDate: formattedEndDate,
           locationId: FLEX_FOLDER_IDS.location,
@@ -118,23 +136,38 @@ export const TourDateManagementDialog = ({
 
         console.log(`Creating subfolder for ${dept} with payload:`, subFolderPayload);
 
-        const subResponse = await fetch(BASE_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Auth-Token': API_KEY
-          },
-          body: JSON.stringify(subFolderPayload)
-        });
+        try {
+          const subResponse = await fetch(BASE_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Auth-Token': API_KEY
+            },
+            body: JSON.stringify(subFolderPayload)
+          });
 
-        if (!subResponse.ok) {
-          const errorData = await subResponse.json();
-          console.error(`Error creating ${dept} subfolder:`, errorData);
-          continue;
+          if (!subResponse.ok) {
+            const errorData = await subResponse.json();
+            console.error(`Error creating ${dept} subfolder:`, errorData);
+            continue;
+          }
+
+          const subFolder = await subResponse.json();
+          console.log(`${dept} subfolder created:`, subFolder);
+        } catch (error) {
+          console.error(`Error creating ${dept} subfolder:`, error);
         }
+      }
 
-        const subFolder = await subResponse.json();
-        console.log(`${dept} subfolder created:`, subFolder);
+      // Update all jobs for this tour date to mark folders as created
+      const { error: updateError } = await supabase
+        .from('jobs')
+        .update({ flex_folders_created: true })
+        .eq('tour_date_id', date.id);
+
+      if (updateError) {
+        console.error('Error updating jobs:', updateError);
+        throw updateError;
       }
 
       toast({
