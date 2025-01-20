@@ -353,7 +353,7 @@ export const JobCardNew = ({
           plannedEndDate: formattedEndDate,
           locationId: FLEX_FOLDER_IDS.location,
           notes: "Automated folder creation from Web App",
-          documentNumber,
+          documentNumber: documentNumber.toString(),
           personResponsibleId: FLEX_FOLDER_IDS.mainResponsible
         };
 
