@@ -23,39 +23,35 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import createFolderIcon from "@/assets/icons/icon.png";
 import { Department } from "@/types/department";
 
-/**
- * Flex API base URL and token
- */
+// Flex API base URL and token
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
 const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
 
 /**
- * The real definition/resource IDs from your file:
+ * Known Flex definitions/IDs you had in your original code:
  */
 const FLEX_FOLDER_IDS = {
-  // Used as definitionId for the TOP-LEVEL folder (no parent).
+  // This is used as the top-level folder definition (no parentElementId).
   mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
 
-  // Used as definitionId for each Department folder. 
-  // (If these are “subFolder,” that’s what Flex calls them.)
+  // Used for departmental folders. Often called “subFolder” in your code:
   subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
 
-  // Possibly used for plannedStartDate / plannedEndDate location references
+  // For planned location references (unchanged from your code):
   location: "2f49c62c-b139-11df-b8d5-00e08175e43e",
 
-  // (Not strictly needed if we’re not applying a single “mainResponsible” to the top folder,
-  // but left here if you want to use it.)
+  // Optional “main responsible person” for the top folder:
   mainResponsible: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb",
 
-  // Subfolder definitions for doc, budgets, etc.
+  // Subfolder definitions:
   documentacionTecnica: "3787806c-af2d-11df-b8d5-00e08175e43e",
   presupuestosRecibidos: "378f1234-af2d-11df-b8d5-00e08175e43e",
+
+  // **Hoja de Gastos** – using the ID you confirmed in the web inspector:
   hojaGastos: "566d32e0-1a1e-11e0-a472-00e08175e43e"
 };
 
-/**
- * Department ID references (if you’re assigning them in Flex):
- */
+// Department references (unchanged)
 const DEPARTMENT_IDS = {
   sound: "cdd5e372-d124-11e1-bba1-00e08175e43e",
   lights: "d5af7892-d124-11e1-bba1-00e08175e43e",
@@ -64,9 +60,7 @@ const DEPARTMENT_IDS = {
   personnel: "b972d682-598d-4802-a390-82e28dc4480e"
 };
 
-/**
- * Optionally linking a “responsible person” if Flex requires it:
- */
+// Responsible person IDs per department:
 const RESPONSIBLE_PERSON_IDS = {
   sound: "4b0d98e0-e700-11ea-97d0-2a0a4490a7fb",
   lights: "4b559e60-e700-11ea-97d0-2a0a4490a7fb",
@@ -75,9 +69,7 @@ const RESPONSIBLE_PERSON_IDS = {
   personnel: "4b618540-e700-11ea-97d0-2a0a4490a7fb"
 };
 
-/**
- * For generating documentNumber suffixes, if you want them in Flex:
- */
+// For appended docNumber suffixes
 const DEPARTMENT_SUFFIXES = {
   sound: "S",
   lights: "L",
@@ -106,7 +98,8 @@ interface JobCardNewProps {
 }
 
 /**
- * Helper: POST a single folder-creation payload to the Flex API
+ * Helper to POST an element-creation payload to Flex. 
+ * Returns the newly created folder object with an `elementId`.
  */
 async function createFlexFolder(payload: Record<string, any>) {
   console.log("Creating Flex folder with payload:", payload);
@@ -127,35 +120,14 @@ async function createFlexFolder(payload: Record<string, any>) {
 
   const data = await response.json();
   console.log("Created Flex folder:", data);
-  return data; // data.elementId is the new folder's ID
+  return data; // => { elementId: "...", ... }
 }
 
 /**
- * Creates the entire top-level folder + the sibling “Documentación Técnica” +
- * each Department folder + that department’s 3 subfolders.
- *
- * High-level structure:
- *
- *  (Top-level job folder)   [definitionId = FLEX_FOLDER_IDS.mainFolder, no parentElementId]
- *   ├─ Documentación Técnica
- *   ├─ Sound
- *   │   ├─ Documentación Técnica
- *   │   ├─ Presupuestos Recibidos
- *   │   └─ Hoja de Gastos
- *   ├─ Lights
- *   │   ├─ Documentación Técnica
- *   │   ├─ Presupuestos Recibidos
- *   │   └─ Hoja de Gastos
- *   ├─ Video
- *   │   ├─ Documentación Técnica
- *   │   ├─ Presupuestos Recibidos
- *   │   └─ Hoja de Gastos
- *   ├─ Production
- *   │   ├─ Documentación Técnica
- *   │   ├─ Presupuestos Recibidos
- *   │   └─ Hoja de Gastos
- *   └─ Personnel
- *       (no subfolders)
+ * Creates the entire top-level folder, plus:
+ *  - a sibling "Documentación Técnica" folder,
+ *  - department folders (Sound, Lights, Video, Production, Personnel),
+ *  - each department's subfolders (Documentación Técnica, Presupuestos Recibidos, Hoja de Gastos).
  */
 async function createAllFoldersForJob(
   job: any,
@@ -163,25 +135,24 @@ async function createAllFoldersForJob(
   formattedEndDate: string,
   documentNumber: string
 ) {
-  // 1) Create top-level folder (no parentElementId)
+  // 1) Create top-level folder (no parentElementId).
+  //    definitionId = FLEX_FOLDER_IDS.mainFolder
   const topLevelPayload = {
-    definitionId: FLEX_FOLDER_IDS.mainFolder, // e.g. “Tour Folder”
+    definitionId: FLEX_FOLDER_IDS.mainFolder,
     open: true,
     locked: false,
     name: job.title,
     plannedStartDate: formattedStartDate,
     plannedEndDate: formattedEndDate,
     locationId: FLEX_FOLDER_IDS.location,
-    // If you want a single “responsible” person for the top folder:
     personResponsibleId: FLEX_FOLDER_IDS.mainResponsible,
-    // For example doc numbers:
     documentNumber
-    // parentElementId is omitted, so it becomes top-level
+    // Omit parentElementId to make it top-level
   };
   const topFolder = await createFlexFolder(topLevelPayload);
   const topFolderId = topFolder.elementId;
 
-  // 2) Create a sibling “Documentación Técnica” folder under topFolder
+  // 2) Sibling folder: "Documentación Técnica" at the same level as dept folders
   const docTecPayload = {
     definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
     parentElementId: topFolderId,
@@ -192,52 +163,48 @@ async function createAllFoldersForJob(
     plannedEndDate: formattedEndDate,
     locationId: FLEX_FOLDER_IDS.location
   };
-  await createFlexFolder(docTecPayload); // no further subfolders
+  await createFlexFolder(docTecPayload);
 
-  // 3) Departments: Sound, Lights, Video, Production, Personnel
+  // 3) Create the 5 department folders under topFolder
   const departments = ["sound", "lights", "video", "production", "personnel"] as const;
 
   for (const dept of departments) {
-    // Create the department folder under topFolder
+    // Create the main dept folder
     const deptPayload = {
       definitionId: FLEX_FOLDER_IDS.subFolder,
       parentElementId: topFolderId,
       open: true,
       locked: false,
-      name: dept.charAt(0).toUpperCase() + dept.slice(1), // e.g. “Sound”
+      name: dept.charAt(0).toUpperCase() + dept.slice(1), // "Sound", "Lights", ...
       plannedStartDate: formattedStartDate,
       plannedEndDate: formattedEndDate,
       locationId: FLEX_FOLDER_IDS.location,
       departmentId: DEPARTMENT_IDS[dept],
-      documentNumber: documentNumber,
-      personResponsibleId:
-        RESPONSIBLE_PERSON_IDS[dept as keyof typeof RESPONSIBLE_PERSON_IDS]
+      documentNumber,
+      personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
     };
     const deptFolder = await createFlexFolder(deptPayload);
     const deptFolderId = deptFolder.elementId;
 
-    // “Personnel” gets no subfolders, so skip subfolders for that
-    if (dept === "personnel") {
-      continue;
-    }
+    // If it's "personnel", no subfolders needed
+    if (dept === "personnel") continue;
 
-    // Otherwise create 3 subfolders: Documentación Técnica, Presupuestos Recibidos, Hoja de Gastos
-    // We'll attach a suffix in documentNumber to differentiate them:
+    // Otherwise create the 3 subfolders:
     const subfolders = [
       {
         definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
         name: "Documentación Técnica",
-        docNumberSuffix: "DT"
+        suffix: "DT"
       },
       {
         definitionId: FLEX_FOLDER_IDS.presupuestosRecibidos,
         name: "Presupuestos Recibidos",
-        docNumberSuffix: "PR"
+        suffix: "PR"
       },
       {
         definitionId: FLEX_FOLDER_IDS.hojaGastos,
         name: "Hoja de Gastos",
-        docNumberSuffix: "HG"
+        suffix: "HG"
       }
     ];
 
@@ -252,8 +219,8 @@ async function createAllFoldersForJob(
         plannedEndDate: formattedEndDate,
         locationId: FLEX_FOLDER_IDS.location,
         departmentId: DEPARTMENT_IDS[dept],
-        // e.g. "YYMMDDS-DT" or something:
-        documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.docNumberSuffix}`,
+        // e.g. "YYMMDDSHG" etc.
+        documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
         personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
       };
       await createFlexFolder(subPayload);
@@ -277,7 +244,7 @@ export const JobCardNew = ({
   const [assignments, setAssignments] = useState(job.job_assignments || []);
   const [documents, setDocuments] = useState<JobDocument[]>(job.job_documents || []);
 
-  // Example: Fetch tasks for sound
+  // Example: Query for "sound" tasks
   const { data: soundTasks } = useQuery({
     queryKey: ["sound-tasks", job.id],
     queryFn: async () => {
@@ -298,9 +265,9 @@ export const JobCardNew = ({
           .eq("job_id", job.id);
         if (error) throw error;
         return data;
-      } catch (error) {
-        console.error("Failed to fetch sound tasks:", error);
-        throw error;
+      } catch (err) {
+        console.error("Error fetching sound tasks:", err);
+        throw err;
       }
     },
     enabled: department === "sound",
@@ -308,7 +275,7 @@ export const JobCardNew = ({
     retryDelay: 1000
   });
 
-  // Example: Fetch “sound_job_personnel”
+  // Example: Query for "sound_job_personnel"
   const { data: personnel } = useQuery({
     queryKey: ["sound-personnel", job.id],
     queryFn: async () => {
@@ -342,7 +309,7 @@ export const JobCardNew = ({
     enabled: department === "sound"
   });
 
-  // Mark job as “flex_folders_created” in your own DB
+  // Mark the job as having created folders
   const updateFolderStatus = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
@@ -357,7 +324,7 @@ export const JobCardNew = ({
   });
 
   /**
-   * Actually creates the entire folder structure in Flex
+   * Called by the "Create Flex folders" button
    */
   const createFlexFolders = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -372,25 +339,19 @@ export const JobCardNew = ({
     }
 
     try {
-      // We’ll base a “documentNumber” on the job’s start date (like "YYMMDD"):
+      // For docNumber, we take job.start_time => "YYMMDD" etc.
       const startDate = new Date(job.start_time);
       const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, "");
 
-      // Format times for Flex
       const formattedStartDate =
         new Date(job.start_time).toISOString().split(".")[0] + ".000Z";
       const formattedEndDate =
         new Date(job.end_time).toISOString().split(".")[0] + ".000Z";
 
-      // Create the entire structure
-      await createAllFoldersForJob(
-        job,
-        formattedStartDate,
-        formattedEndDate,
-        documentNumber
-      );
+      // Actually create the folder structure
+      await createAllFoldersForJob(job, formattedStartDate, formattedEndDate, documentNumber);
 
-      // Then mark job as having created folders
+      // Update Supabase job entry
       await updateFolderStatus.mutateAsync();
 
       toast({
@@ -407,9 +368,7 @@ export const JobCardNew = ({
     }
   };
 
-  /**
-   * Example: Summaries for tasks, progress
-   */
+  // Compute progress
   const calculateTotalProgress = () => {
     if (!soundTasks?.length) return 0;
     const totalProgress = soundTasks.reduce((acc, task) => acc + (task.progress || 0), 0);
@@ -430,7 +389,7 @@ export const JobCardNew = ({
   };
 
   /**
-   * Edit job
+   * Handle edit
    */
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -438,7 +397,7 @@ export const JobCardNew = ({
   };
 
   /**
-   * Delete job from DB (and related tasks/docs).
+   * Handle delete job from DB
    */
   const handleDeleteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -457,9 +416,9 @@ export const JobCardNew = ({
     }
 
     try {
-      console.log("Starting job deletion for:", job.id);
+      console.log("Deleting job:", job.id);
 
-      // 1. Gather all department tasks, remove their documents
+      // 1) gather all tasks for each dept
       const { data: soundTaskIds } = await supabase
         .from("sound_job_tasks")
         .select("id")
@@ -473,7 +432,7 @@ export const JobCardNew = ({
         .select("id")
         .eq("job_id", job.id);
 
-      // Remove task_documents referencing those IDs
+      // 2) delete task documents referencing those tasks
       if (soundTaskIds?.length) {
         const { error: soundDocsError } = await supabase
           .from("task_documents")
@@ -505,21 +464,21 @@ export const JobCardNew = ({
         if (videoDocsError) throw videoDocsError;
       }
 
-      // 2. Delete department tasks
+      // 3) delete tasks
       await Promise.all([
         supabase.from("sound_job_tasks").delete().eq("job_id", job.id),
         supabase.from("lights_job_tasks").delete().eq("job_id", job.id),
         supabase.from("video_job_tasks").delete().eq("job_id", job.id)
       ]);
 
-      // 3. Delete department personnel
+      // 4) delete department personnel
       await Promise.all([
         supabase.from("sound_job_personnel").delete().eq("job_id", job.id),
         supabase.from("lights_job_personnel").delete().eq("job_id", job.id),
         supabase.from("video_job_personnel").delete().eq("job_id", job.id)
       ]);
 
-      // 4. Delete job docs from storage
+      // 5) delete job documents from storage
       if (job.job_documents?.length > 0) {
         const { error: storageError } = await supabase.storage
           .from("job_documents")
@@ -527,37 +486,35 @@ export const JobCardNew = ({
         if (storageError) throw storageError;
       }
 
-      // 5. Delete job docs from DB
+      // 6) delete job documents from DB
       const { error: jobDocsError } = await supabase
         .from("job_documents")
         .delete()
         .eq("job_id", job.id);
       if (jobDocsError) throw jobDocsError;
 
-      // 6. Delete job assignments
+      // 7) delete job assignments
       const { error: assignmentsError } = await supabase
         .from("job_assignments")
         .delete()
         .eq("job_id", job.id);
       if (assignmentsError) throw assignmentsError;
 
-      // 7. Delete job_departments
+      // 8) delete job_departments
       const { error: departmentsError } = await supabase
         .from("job_departments")
         .delete()
         .eq("job_id", job.id);
       if (departmentsError) throw departmentsError;
 
-      // 8. Finally, delete the job itself
+      // 9) finally delete the job itself
       const { error: jobError } = await supabase
         .from("jobs")
         .delete()
         .eq("id", job.id);
       if (jobError) throw jobError;
 
-      console.log("Job deletion successful:", job.id);
       onDeleteClick(job.id);
-
       toast({
         title: "Success",
         description: "Job deleted successfully"
@@ -574,16 +531,13 @@ export const JobCardNew = ({
     }
   };
 
-  /**
-   * Toggle collapsed/expanded in UI
-   */
   const toggleCollapse = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCollapsed(!collapsed);
   };
 
   /**
-   * File upload -> Supabase storage
+   * File upload to Supabase storage
    */
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
@@ -594,7 +548,7 @@ export const JobCardNew = ({
       const fileExt = file.name.split(".").pop();
       const filePath = `${department}/${job.id}/${crypto.randomUUID()}.${fileExt}`;
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("job_documents")
         .upload(filePath, file);
       if (uploadError) throw uploadError;
@@ -611,7 +565,6 @@ export const JobCardNew = ({
       if (dbError) throw dbError;
 
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
-
       toast({
         title: "Document uploaded",
         description: "The document has been successfully uploaded."
@@ -626,7 +579,7 @@ export const JobCardNew = ({
   };
 
   /**
-   * View a file in a new tab via signed URL
+   * View doc with signed URL
    */
   const handleViewDocument = async (document: JobDocument) => {
     try {
@@ -634,7 +587,6 @@ export const JobCardNew = ({
         .from("job_documents")
         .createSignedUrl(document.file_path, 60);
       if (error) throw error;
-
       window.open(data.signedUrl, "_blank");
     } catch (error: any) {
       toast({
@@ -646,11 +598,10 @@ export const JobCardNew = ({
   };
 
   /**
-   * Delete a single document from Supabase
+   * Delete doc from Supabase
    */
   const handleDeleteDocument = async (document: JobDocument) => {
     if (!window.confirm("Are you sure you want to delete this document?")) return;
-
     try {
       const { error: storageError } = await supabase.storage
         .from("job_documents")
@@ -679,12 +630,10 @@ export const JobCardNew = ({
     }
   };
 
-  // If userRole is "logistics," restrict editing
+  // if userRole === "logistics", no edits
   const canEdit = userRole !== "logistics";
 
-  /**
-   * Convert job assignments into a list of {id, name, role} to display
-   */
+  // Make a list of assigned technicians
   const assignedTechnicians = assignments
     .map((assignment: any) => {
       let role = null;
@@ -702,6 +651,7 @@ export const JobCardNew = ({
           role = assignment.sound_role || assignment.lights_role || assignment.video_role;
       }
       if (!role) return null;
+
       return {
         id: assignment.technician_id,
         name: `${assignment.profiles?.first_name || ""} ${
@@ -713,7 +663,7 @@ export const JobCardNew = ({
     .filter((tech: any) => tech !== null && tech.name !== "");
 
   /**
-   * Simple refresh of React Query data
+   * Simple refresh of the job data
    */
   const refreshData = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -886,7 +836,6 @@ export const JobCardNew = ({
                 </div>
               </div>
             )}
-
             {department === "sound" && soundTasks?.length > 0 && (
               <div className="mt-4 space-y-2">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -921,7 +870,6 @@ export const JobCardNew = ({
                 </div>
               </div>
             )}
-
             {job.job_documents && onDeleteDocument && (
               <JobDocuments
                 jobId={job.id}
