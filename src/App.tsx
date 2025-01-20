@@ -42,17 +42,36 @@ const RoleBasedRedirect = () => {
   // If we have a role, redirect based on it
   if (userRole) {
     console.log('Redirecting to dashboard based on role:', userRole);
-    return (
-      <Navigate 
-        to={userRole === 'technician' ? "/technician-dashboard" : "/dashboard"} 
-        replace 
-      />
-    );
+    const dashboardPath = userRole === 'technician' ? "/technician-dashboard" : "/dashboard";
+    // Only redirect if we're not already on the correct dashboard
+    if (window.location.pathname !== dashboardPath) {
+      return <Navigate to={dashboardPath} replace />;
+    }
+    return null;
   }
 
   // If we have a session but no role (edge case), redirect to auth
   console.log('Session exists but no role found, redirecting to auth');
   return <Navigate to="/auth" replace />;
+};
+
+// Protected Route wrapper component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { session, isLoading } = useSessionManager();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white" />
+      </div>
+    );
+  }
+  
+  if (!session) {
+    return <Navigate to="/auth" replace />;
+  }
+  
+  return <>{children}</>;
 };
 
 function App() {
@@ -63,17 +82,94 @@ function App() {
           <Route path="/auth" element={<Auth />} />
           <Route element={<Layout><Outlet /></Layout>}>
             <Route path="/" element={<RoleBasedRedirect />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/technician-dashboard" element={<TechnicianDashboard />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/sound" element={<Sound />} />
-            <Route path="/lights" element={<Lights />} />
-            <Route path="/video" element={<Video />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/project-management" element={<ProjectManagement />} />
-            <Route path="/labor-po-form" element={<LaborPOForm />} />
-            <Route path="/pesos-tool" element={<PesosTool />} />
-            <Route path="/consumos-tool" element={<ConsumosTool />} />
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/technician-dashboard" 
+              element={
+                <ProtectedRoute>
+                  <TechnicianDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/sound" 
+              element={
+                <ProtectedRoute>
+                  <Sound />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/lights" 
+              element={
+                <ProtectedRoute>
+                  <Lights />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/video" 
+              element={
+                <ProtectedRoute>
+                  <Video />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/project-management" 
+              element={
+                <ProtectedRoute>
+                  <ProjectManagement />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/labor-po-form" 
+              element={
+                <ProtectedRoute>
+                  <LaborPOForm />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/pesos-tool" 
+              element={
+                <ProtectedRoute>
+                  <PesosTool />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/consumos-tool" 
+              element={
+                <ProtectedRoute>
+                  <ConsumosTool />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="*" element={<RoleBasedRedirect />} />
           </Route>
         </Routes>
