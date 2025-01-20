@@ -10,8 +10,6 @@ import { MonthNavigation } from "@/components/project-management/MonthNavigation
 import { DepartmentTabs } from "@/components/project-management/DepartmentTabs";
 import { useJobManagement } from "@/hooks/useJobManagement";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
-import { useSessionManager } from "@/hooks/useSessionManager";
-import { useToast } from "@/hooks/use-toast";
 
 const ProjectManagement = () => {
   const navigate = useNavigate();
@@ -19,8 +17,6 @@ const ProjectManagement = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [userRole, setUserRole] = useState<string | null>(null);
-  const { session } = useSessionManager();
-  const { toast } = useToast();
 
   const startDate = startOfMonth(currentDate);
   const endDate = endOfMonth(currentDate);
@@ -36,6 +32,8 @@ const ProjectManagement = () => {
   useEffect(() => {
     const checkAccess = async () => {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
         if (!session) {
           console.log("ProjectManagement: No session found, redirecting to auth");
           navigate('/auth');
@@ -50,22 +48,11 @@ const ProjectManagement = () => {
 
         if (profileError) {
           console.error("ProjectManagement: Error fetching profile:", profileError);
-          toast({
-            title: "Error",
-            description: "Failed to verify access permissions",
-            variant: "destructive",
-          });
-          navigate('/dashboard');
-          return;
+          throw profileError;
         }
 
         if (!profile || !['admin', 'logistics', 'management'].includes(profile.role)) {
           console.log("ProjectManagement: Unauthorized access attempt");
-          toast({
-            title: "Access Denied",
-            description: "You don't have permission to access this page",
-            variant: "destructive",
-          });
           navigate('/dashboard');
           return;
         }
@@ -74,17 +61,12 @@ const ProjectManagement = () => {
         setLoading(false);
       } catch (error) {
         console.error("ProjectManagement: Error in access check:", error);
-        toast({
-          title: "Error",
-          description: "An error occurred while checking permissions",
-          variant: "destructive",
-        });
         navigate('/dashboard');
       }
     };
 
     checkAccess();
-  }, [navigate, session, toast]);
+  }, [navigate]);
 
   if (loading || jobsLoading) {
     return (

@@ -152,29 +152,23 @@ async function createAllFoldersForJob(
   const topFolder = await createFlexFolder(topPayload);
   const topFolderId = topFolder.elementId;
 
- // 2) Sibling "Documentación Técnica"
-const docTecPayload = {
-  definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
-  parentElementId: topFolderId,
-  open: true,
-  locked: false,
-  name: `${job.title} - Documentación Técnica`,
-  plannedStartDate: formattedStartDate,
-  plannedEndDate: formattedEndDate,
-  locationId: FLEX_FOLDER_IDS.location
-};
+  // 2) Sibling "Documentación Técnica"
+  const docTecPayload = {
+    definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
+    parentElementId: topFolderId,
+    open: true,
+    locked: false,
+    name: "Documentación Técnica",
+    plannedStartDate: formattedStartDate,
+    plannedEndDate: formattedEndDate,
+    locationId: FLEX_FOLDER_IDS.location
+  };
   await createFlexFolder(docTecPayload);
 
   // 3) Department folders
   const departments = ["sound", "lights", "video", "production", "personnel"] as const;
 
   for (const dept of departments) {
-    // Validate that the department exists in DEPARTMENT_SUFFIXES
-    if (!(dept in DEPARTMENT_SUFFIXES)) {
-      console.error(`Invalid department: ${dept}`);
-      continue; // Skip invalid department
-    }
-  
     const deptPayload = {
       definitionId: FLEX_FOLDER_IDS.subFolder,
       parentElementId: topFolderId,
@@ -185,7 +179,7 @@ const docTecPayload = {
       plannedEndDate: formattedEndDate,
       locationId: FLEX_FOLDER_IDS.location,
       departmentId: DEPARTMENT_IDS[dept],
-      documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`, // Correct concatenation of suffix
+      documentNumber: documentNumber + DEPARTMENT_SUFFIXES[dept], // Added department suffix here
       personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
     };
     const deptFolder = await createFlexFolder(deptPayload);
