@@ -24,13 +24,14 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+    
     setLoading(true);
     setError(null);
 
     try {
       console.log("Starting login process for email:", formData.email);
       
-      // First attempt to sign in
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email.toLowerCase(),
         password: formData.password,
@@ -56,17 +57,15 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
 
       console.log("Login successful, fetching user profile");
 
-      // Fetch user profile data
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role, department')
         .eq('id', signInData.user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error("Error fetching user profile:", profileError);
         setError("Error fetching user profile. Please try logging in again.");
-        // Sign out the user since we couldn't get their profile
         await supabase.auth.signOut();
         return;
       }
@@ -85,12 +84,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
         description: "You have successfully logged in.",
       });
 
-      // Redirect based on role
-      if (profileData.role === 'technician') {
-        navigate("/technician-dashboard");
-      } else {
-        navigate("/dashboard");
-      }
+      // Let the auth state change handler in Auth.tsx handle the redirect
     } catch (error: any) {
       console.error("Unexpected error during login:", error);
       setError("An unexpected error occurred. Please try again.");
@@ -116,6 +110,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           required
           className="w-full"
+          disabled={loading}
         />
       </div>
 
@@ -128,6 +123,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           required
           className="w-full"
+          disabled={loading}
         />
       </div>
 
@@ -142,7 +138,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
             'Log In'
           )}
         </Button>
-        <Button type="button" variant="ghost" onClick={onShowSignUp}>
+        <Button type="button" variant="ghost" onClick={onShowSignUp} disabled={loading}>
           Don't have an account? Sign Up
         </Button>
       </div>
