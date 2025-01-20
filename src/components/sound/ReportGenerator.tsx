@@ -10,6 +10,7 @@ import { jsPDF } from "jspdf";
 import { useJobSelection, JobSelection } from "@/hooks/useJobSelection";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/lib/supabase";
 
 const reportSections = [
   {
@@ -52,6 +53,43 @@ export const ReportGenerator = () => {
       ...prev,
       [section]: !prev[section]
     }));
+  };
+
+  const uploadPdfToJob = async (pdfBlob: Blob, jobId: string, jobTitle: string) => {
+    try {
+      const fileName = `SoundVision_Report_${jobTitle.replace(/\s+/g, "_")}.pdf`;
+      const filePath = `sound/${jobId}/${crypto.randomUUID()}.pdf`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('job_documents')
+        .upload(filePath, pdfBlob);
+
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase
+        .from('job_documents')
+        .insert({
+          job_id: jobId,
+          file_name: fileName,
+          file_path: filePath,
+          file_type: 'application/pdf',
+          file_size: pdfBlob.size
+        });
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Success",
+        description: "Report has been generated and uploaded successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error uploading PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload the report.",
+        variant: "destructive",
+      });
+    }
   };
 
   const generatePDF = async () => {
@@ -118,12 +156,8 @@ export const ReportGenerator = () => {
       }
     }
 
-    const filename = `SoundVision_Report_${jobTitle.replace(/\s+/g, "_")}.pdf`;
-    pdf.save(filename);
-    toast({
-      title: "Success",
-      description: "Report generated successfully",
-    });
+    const blob = pdf.output('blob');
+    await uploadPdfToJob(blob, selectedJobId, jobTitle);
   };
 
   const addImageToPDF = async (pdf: jsPDF, file: File, viewType: string, x: number, y: number, width: number) => {
