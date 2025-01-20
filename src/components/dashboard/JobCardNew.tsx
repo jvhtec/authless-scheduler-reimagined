@@ -1,21 +1,3 @@
-interface TourData {
-  date: string;
-  tour_id: string;
-  location_id: string | null;
-  locations: {
-    name: string;
-  } | null;
-  tours: {
-    name: string;
-    flex_main_folder_id: string | null;
-    flex_sound_folder_id: string | null;
-    flex_lights_folder_id: string | null;
-    flex_video_folder_id: string | null;
-    flex_production_folder_id: string | null;
-    flex_personnel_folder_id: string | null;
-  } | null;
-}
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,22 +55,35 @@ export const JobCardNew = ({
     queryFn: async () => {
       if (department !== 'sound') return null;
 
-      const { data, error } = await supabase
-        .from('sound_job_tasks')
-        .select(`
-          *,
-          assigned_to (
-            first_name,
-            last_name
-          ),
-          task_documents(*)
-        `)
-        .eq('job_id', job.id);
+      try {
+        console.log('Fetching sound tasks for job:', job.id);
+        const { data, error } = await supabase
+          .from('sound_job_tasks')
+          .select(`
+            *,
+            assigned_to (
+              first_name,
+              last_name
+            ),
+            task_documents(*)
+          `)
+          .eq('job_id', job.id);
 
-      if (error) throw error;
-      return data;
+        if (error) {
+          console.error('Error fetching sound tasks:', error);
+          throw error;
+        }
+
+        console.log('Fetched sound tasks:', data);
+        return data;
+      } catch (error) {
+        console.error('Failed to fetch sound tasks:', error);
+        throw error;
+      }
     },
-    enabled: department === 'sound'
+    enabled: department === 'sound',
+    retry: 3,
+    retryDelay: 1000
   });
 
   const { data: personnel } = useQuery({
@@ -944,6 +939,7 @@ export const JobCardNew = ({
 
       </CardContent>
     </Card>
+  );
 };
 
 export default JobCardNew;
