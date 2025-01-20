@@ -456,16 +456,51 @@ export const JobCardNew = ({
     try {
       console.log('Starting job deletion process for job:', job.id);
 
-      // 1. Delete task documents first
+      // 1. Delete task documents first - using separate queries for each task type
       console.log('Deleting task documents...');
-      const { error: taskDocsError } = await supabase
-        .from('task_documents')
-        .delete()
-        .or(`sound_task_id.in.(select id from sound_job_tasks where job_id='${job.id}'),lights_task_id.in.(select id from lights_job_tasks where job_id='${job.id}'),video_task_id.in.(select id from video_job_tasks where job_id='${job.id}')`);
+      
+      // Get all task IDs first
+      const { data: soundTaskIds } = await supabase
+        .from('sound_job_tasks')
+        .select('id')
+        .eq('job_id', job.id);
 
-      if (taskDocsError) {
-        console.error('Error deleting task documents:', taskDocsError);
-        throw taskDocsError;
+      const { data: lightsTaskIds } = await supabase
+        .from('lights_job_tasks')
+        .select('id')
+        .eq('job_id', job.id);
+
+      const { data: videoTaskIds } = await supabase
+        .from('video_job_tasks')
+        .select('id')
+        .eq('job_id', job.id);
+
+      // Delete task documents for each department
+      if (soundTaskIds?.length) {
+        const { error: soundDocsError } = await supabase
+          .from('task_documents')
+          .delete()
+          .in('sound_task_id', soundTaskIds.map(t => t.id));
+        
+        if (soundDocsError) throw soundDocsError;
+      }
+
+      if (lightsTaskIds?.length) {
+        const { error: lightsDocsError } = await supabase
+          .from('task_documents')
+          .delete()
+          .in('lights_task_id', lightsTaskIds.map(t => t.id));
+        
+        if (lightsDocsError) throw lightsDocsError;
+      }
+
+      if (videoTaskIds?.length) {
+        const { error: videoDocsError } = await supabase
+          .from('task_documents')
+          .delete()
+          .in('video_task_id', videoTaskIds.map(t => t.id));
+        
+        if (videoDocsError) throw videoDocsError;
       }
 
       // 2. Delete department tasks
@@ -909,7 +944,6 @@ export const JobCardNew = ({
 
       </CardContent>
     </Card>
-  );
 };
 
 export default JobCardNew;
