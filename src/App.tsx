@@ -33,10 +33,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!session) {
+    console.log('No session found, redirecting to auth');
     return <Navigate to="/auth" replace state={{ from: location }} />;
   }
 
-  // Check access for project management
+  // Check access for project management routes
   if (location.pathname.startsWith('/project-management')) {
     console.log('Checking project management access for role:', userRole);
     const allowedRoles = ['admin', 'logistics', 'management'];
@@ -52,7 +53,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 // Home redirect component
 const HomeRedirect = () => {
   const { userRole, isLoading, session } = useSessionManager();
-  const location = useLocation();
   
   if (isLoading) {
     return (
@@ -63,12 +63,8 @@ const HomeRedirect = () => {
   }
 
   if (!session) {
+    console.log('No session in HomeRedirect, redirecting to auth');
     return <Navigate to="/auth" replace />;
-  }
-
-  // If we're already on a valid route, don't redirect
-  if (location.pathname !== '/') {
-    return null;
   }
 
   const allowedRoles = ['admin', 'logistics', 'management'];
@@ -142,7 +138,7 @@ function App() {
               } 
             />
             <Route 
-              path="/project-management" 
+              path="/project-management/*" 
               element={
                 <ProtectedRoute>
                   <ProjectManagement />
