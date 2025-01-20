@@ -222,8 +222,13 @@ export const JobCardNew = ({
           throw tourDateError;
         }
 
+        if (!tourDateData || !tourDateData.tours) {
+          throw new Error('Tour data not found');
+        }
+
         console.log('Tour date data:', tourDateData);
         
+        // Check if parent tour has flex folders created
         if (!tourDateData.tours.flex_main_folder_id) {
           throw new Error('Parent tour folders not found. Please create tour folders first.');
         }
@@ -238,7 +243,7 @@ export const JobCardNew = ({
           throw existingJobsError;
         }
 
-        const hasExistingFolders = existingJobs.some(j => j.flex_folders_created);
+        const hasExistingFolders = existingJobs?.some(j => j.flex_folders_created);
         if (hasExistingFolders) {
           throw new Error('Folders have already been created for this tour date.');
         }
@@ -246,7 +251,7 @@ export const JobCardNew = ({
         const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
         
         for (const dept of departments) {
-          const parentFolderId = tourDateData.tours[`flex_${dept}_folder_id`];
+          const parentFolderId = tourDateData.tours[`flex_${dept}_folder_id` as keyof typeof tourDateData.tours];
           
           if (!parentFolderId) {
             console.warn(`No parent folder ID found for ${dept} department`);
@@ -296,6 +301,7 @@ export const JobCardNew = ({
           }
         }
 
+        // Update all jobs with the same tour_date_id
         const { error: updateError } = await supabase
           .from('jobs')
           .update({ flex_folders_created: true })
