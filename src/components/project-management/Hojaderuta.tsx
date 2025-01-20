@@ -224,7 +224,66 @@ const HojaDeRutaGenerator = () => {
     </div>
   );
 
+  const uploadPdfToJob = async (pdfBlob: Blob, jobId: string, fileName: string) => {
+    try {
+      console.log('Starting upload for PDF:', fileName);
+      
+      // Upload to Supabase storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('job_documents')
+        .upload(`hoja_de_ruta/${crypto.randomUUID()}-${fileName}`, pdfBlob, {
+          contentType: 'application/pdf',
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+
+      // Create database record
+      const { error: dbError } = await supabase
+        .from('job_documents')
+        .insert({
+          job_id: jobId,
+          file_name: fileName,
+          file_path: uploadData.path,
+          file_type: 'application/pdf',
+          file_size: pdfBlob.size
+        });
+
+      if (dbError) {
+        console.error('Database error:', dbError);
+        throw dbError;
+      }
+
+      toast({
+        title: "Success",
+        description: "Hoja de Ruta has been generated and uploaded",
+      });
+    } catch (error: any) {
+      console.error('Upload failed:', error);
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const generateDocument = async () => {
+    if (!selectedJobId) {
+      toast({
+        title: "Error",
+        description: "Please select a job before generating the document.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedJob = jobs?.find((job) => job.id === selectedJobId);
+    const jobTitle = selectedJob?.title || "Unnamed_Job";
+
     const doc = new jsPDF() as AutoTableJsPDF;
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
@@ -443,17 +502,17 @@ const HojaDeRutaGenerator = () => {
       try {
         doc.addImage(logo, 'PNG', xPosition, yPosition, logoWidth, logoHeight);
         const blob = doc.output('blob');
+        const fileName = `hoja_de_ruta_${jobTitle.replace(/\s+/g, '_')}.pdf`;
+        
+        // Start the upload
+        uploadPdfToJob(blob, selectedJobId, fileName);
+        
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `hoja_de_ruta_${eventData.eventName.replace(/\s+/g, '_')}.pdf`;
+        link.download = fileName;
         link.click();
         URL.revokeObjectURL(url);
-
-        toast({
-          title: "Success",
-          description: "Hoja de Ruta has been generated and downloaded",
-        });
       } catch (error) {
         console.error('Error adding logo:', error);
         const blob = doc.output('blob');
