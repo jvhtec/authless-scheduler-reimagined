@@ -10,7 +10,7 @@ import {
   SidebarTrigger
 } from "@/components/ui/sidebar";
 import { LogOut } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Outlet } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { ThemeToggle } from "./layout/ThemeToggle";
@@ -21,11 +21,7 @@ import { NotificationBadge } from "./layout/NotificationBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionManager } from "@/hooks/useSessionManager";
 
-interface LayoutProps {
-  children: React.ReactNode;
-}
-
-const Layout = ({ children }: LayoutProps) => {
+const Layout = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -77,7 +73,6 @@ const Layout = ({ children }: LayoutProps) => {
     );
   }
 
-  // Only redirect if we're certain there's no session
   if (!session && !isLoading) {
     console.log("No session found in Layout, redirecting to auth");
     navigate('/auth');
@@ -132,7 +127,7 @@ const Layout = ({ children }: LayoutProps) => {
             </div>
           </header>
           <main className="p-6">
-            {children}
+            <Outlet />
           </main>
         </div>
       </div>
