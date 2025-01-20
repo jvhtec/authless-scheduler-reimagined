@@ -7,7 +7,7 @@ import { exportToPDF } from "@/utils/pdfExport";
 import { useToast } from "@/hooks/use-toast";
 
 interface PowerRow {
-  quantity: number;
+  quantity: string; // Changed from number to string
   componentName: string;
   watts: number;
   totalWatts: number;
@@ -28,27 +28,27 @@ const VideoConsumosTool = () => {
     {
       name: "LED Screens",
       rows: [
-        { quantity: 0, componentName: "LED Panel P3.9", watts: 450, totalWatts: 0 },
-        { quantity: 0, componentName: "LED Panel P2.6", watts: 500, totalWatts: 0 },
-        { quantity: 0, componentName: "LED Processor", watts: 800, totalWatts: 0 },
+        { quantity: "0", componentName: "LED Panel P3.9", watts: 450, totalWatts: 0 },
+        { quantity: "0", componentName: "LED Panel P2.6", watts: 500, totalWatts: 0 },
+        { quantity: "0", componentName: "LED Processor", watts: 800, totalWatts: 0 },
       ],
       totalWatts: 0,
     },
     {
       name: "Cameras & Control",
       rows: [
-        { quantity: 0, componentName: "Professional Camera", watts: 80, totalWatts: 0 },
-        { quantity: 0, componentName: "Video Switcher", watts: 350, totalWatts: 0 },
-        { quantity: 0, componentName: "Monitor", watts: 150, totalWatts: 0 },
+        { quantity: "0", componentName: "Professional Camera", watts: 80, totalWatts: 0 },
+        { quantity: "0", componentName: "Video Switcher", watts: 350, totalWatts: 0 },
+        { quantity: "0", componentName: "Monitor", watts: 150, totalWatts: 0 },
       ],
       totalWatts: 0,
     },
     {
       name: "Projection Systems",
       rows: [
-        { quantity: 0, componentName: "Projector 20K", watts: 2200, totalWatts: 0 },
-        { quantity: 0, componentName: "Media Server", watts: 750, totalWatts: 0 },
-        { quantity: 0, componentName: "Signal Processor", watts: 300, totalWatts: 0 },
+        { quantity: "0", componentName: "Projector 20K", watts: 2200, totalWatts: 0 },
+        { quantity: "0", componentName: "Media Server", watts: 750, totalWatts: 0 },
+        { quantity: "0", componentName: "Signal Processor", watts: 300, totalWatts: 0 },
       ],
       totalWatts: 0,
     },
@@ -61,7 +61,7 @@ const VideoConsumosTool = () => {
     const quantity = parseInt(value) || 0;
     const row = newTables[tableIndex].rows[rowIndex];
     
-    row.quantity = quantity;
+    row.quantity = value; // Store as string
     row.totalWatts = quantity * row.watts;
     
     // Recalculate table total
@@ -69,9 +69,6 @@ const VideoConsumosTool = () => {
       (sum, row) => sum + row.totalWatts,
       0
     );
-    
-    // Calculate current per phase (assuming 400V three-phase)
-    newTables[tableIndex].currentPerPhase = (newTables[tableIndex].totalWatts * (1 + safetyMargin/100)) / (400 * Math.sqrt(3));
     
     setTables(newTables);
   };

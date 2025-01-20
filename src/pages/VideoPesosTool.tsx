@@ -7,7 +7,7 @@ import { exportToPDF } from "@/utils/pdfExport";
 import { useToast } from "@/hooks/use-toast";
 
 interface EquipmentRow {
-  quantity: number;
+  quantity: string; // Changed from number to string
   componentName: string;
   weight: number;
   totalWeight: number;
@@ -26,27 +26,27 @@ const VideoPesosTool = () => {
     {
       name: "LED Screens",
       rows: [
-        { quantity: 0, componentName: "LED Panel P3.9", weight: 8.5, totalWeight: 0 },
-        { quantity: 0, componentName: "LED Panel P2.6", weight: 9.2, totalWeight: 0 },
-        { quantity: 0, componentName: "LED Panel Processor", weight: 4.8, totalWeight: 0 },
+        { quantity: "0", componentName: "LED Panel P3.9", weight: 8.5, totalWeight: 0 },
+        { quantity: "0", componentName: "LED Panel P2.6", weight: 9.2, totalWeight: 0 },
+        { quantity: "0", componentName: "LED Panel Processor", weight: 4.8, totalWeight: 0 },
       ],
       totalWeight: 0,
     },
     {
       name: "Cameras & Equipment",
       rows: [
-        { quantity: 0, componentName: "Professional Camera", weight: 7.2, totalWeight: 0 },
-        { quantity: 0, componentName: "Camera Tripod", weight: 4.5, totalWeight: 0 },
-        { quantity: 0, componentName: "Video Switcher", weight: 5.3, totalWeight: 0 },
+        { quantity: "0", componentName: "Professional Camera", weight: 7.2, totalWeight: 0 },
+        { quantity: "0", componentName: "Camera Tripod", weight: 4.5, totalWeight: 0 },
+        { quantity: "0", componentName: "Video Switcher", weight: 5.3, totalWeight: 0 },
       ],
       totalWeight: 0,
     },
     {
       name: "Projection Systems",
       rows: [
-        { quantity: 0, componentName: "Projector 20K", weight: 55, totalWeight: 0 },
-        { quantity: 0, componentName: "Projector Screen", weight: 35, totalWeight: 0 },
-        { quantity: 0, componentName: "Media Server", weight: 12, totalWeight: 0 },
+        { quantity: "0", componentName: "Projector 20K", weight: 55, totalWeight: 0 },
+        { quantity: "0", componentName: "Projector Screen", weight: 35, totalWeight: 0 },
+        { quantity: "0", componentName: "Media Server", weight: 12, totalWeight: 0 },
       ],
       totalWeight: 0,
     },
@@ -59,7 +59,7 @@ const VideoPesosTool = () => {
     const quantity = parseInt(value) || 0;
     const row = newTables[tableIndex].rows[rowIndex];
     
-    row.quantity = quantity;
+    row.quantity = value; // Store as string
     row.totalWeight = quantity * row.weight;
     
     // Recalculate table total
