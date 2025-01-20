@@ -15,6 +15,9 @@ const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
 const FLEX_FOLDER_IDS = {
   subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
   location: "2f49c62c-b139-11df-b8d5-00e08175e43e",
+  documentacionTecnica: "documentacion-tecnica-folder-id", // Replace with actual ID
+  presupuestosRecibidos: "presupuestos-recibidos-folder-id", // Replace with actual ID
+  hojaGastos: "hoja-gastos-folder-id" // Replace with actual ID
 };
 
 const DEPARTMENT_IDS = {
