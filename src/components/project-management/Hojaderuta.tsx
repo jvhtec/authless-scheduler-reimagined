@@ -226,63 +226,257 @@ const HojaDeRutaGenerator = () => {
 
   const generateDocument = async () => {
     const doc = new jsPDF() as AutoTableJsPDF;
-    
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+
     // Add header
-    doc.setFontSize(20);
-    doc.text("Hoja de Ruta", 105, 20, { align: "center" });
-    
-    // Event details
-    doc.setFontSize(12);
-    doc.text(`Event: ${eventData.eventName}`, 20, 40);
-    doc.text(`Dates: ${eventData.eventDates}`, 20, 50);
-    
-    // Venue information
-    doc.text("Venue Information", 20, 70);
-    doc.setFontSize(10);
-    doc.text(`Name: ${eventData.venue.name}`, 30, 80);
-    doc.text(`Address: ${eventData.venue.address}`, 30, 90);
-    
-    // Staff table
-    doc.setFontSize(12);
-    doc.text("Staff List", 20, 120);
-    
-    const staffTableData = eventData.staff.map(person => [
-      person.name,
-      person.surname1,
-      person.surname2,
-      person.position
-    ]);
-    
-    autoTable(doc, {
-      startY: 130,
-      head: [["Name", "First Surname", "Second Surname", "Position"]],
-      body: staffTableData,
-    });
-    
-    // Schedule
-    const finalY = doc.lastAutoTable?.finalY || 150;
-    doc.text("Schedule", 20, finalY + 20);
-    doc.setFontSize(10);
-    const scheduleLines = doc.splitTextToSize(eventData.schedule, 170);
-    doc.text(scheduleLines, 20, finalY + 30);
-    
-    // Generate blob and download
-    const blob = doc.output('blob');
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `hoja_de_ruta_${eventData.eventName.replace(/\s+/g, '_')}.pdf`;
-    link.click();
-    URL.revokeObjectURL(url);
+    doc.setFillColor(125, 1, 1);
+    doc.rect(0, 0, pageWidth, 40, 'F');
 
-    setAlertMessage("Document generated successfully!");
-    setShowAlert(true);
-    setTimeout(() => setShowAlert(false), 3000);
+    // Title
+    doc.setFontSize(24);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Hoja de Ruta", pageWidth / 2, 20, { align: 'center' });
 
-    toast({
-      title: "Success",
-      description: "Hoja de Ruta has been generated and downloaded",
+    // Event Name
+    doc.setFontSize(16);
+    doc.setTextColor(255, 255, 255);
+    doc.text(eventData.eventName, pageWidth / 2, 30, { align: 'center' });
+
+    let yPosition = 50;
+
+    // Event Details
+    doc.setFontSize(12);
+    doc.setTextColor(51, 51, 51);
+    doc.text(`Dates: ${eventData.eventDates}`, 20, yPosition);
+    yPosition += 15;
+
+    // Venue Information
+    doc.setFontSize(14);
+    doc.setTextColor(125, 1, 1);
+    doc.text("Venue Information", 20, yPosition);
+    yPosition += 10;
+    doc.setFontSize(10);
+    doc.setTextColor(51, 51, 51);
+    doc.text(`Name: ${eventData.venue.name}`, 30, yPosition);
+    yPosition += 7;
+    doc.text(`Address: ${eventData.venue.address}`, 30, yPosition);
+    yPosition += 15;
+
+    // Contacts Section
+    if (eventData.contacts.length > 0) {
+      doc.setFontSize(14);
+      doc.setTextColor(125, 1, 1);
+      doc.text("Contacts", 20, yPosition);
+      yPosition += 10;
+
+      const contactsTableData = eventData.contacts.map(contact => [
+        contact.name,
+        contact.role,
+        contact.phone
+      ]);
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [["Name", "Role", "Phone"]],
+        body: contactsTableData,
+        theme: 'grid',
+        styles: { fontSize: 10 },
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // Logistics Section
+    doc.setFontSize(14);
+    doc.setTextColor(125, 1, 1);
+    doc.text("Logistics", 20, yPosition);
+    yPosition += 10;
+    doc.setFontSize(10);
+    doc.setTextColor(51, 51, 51);
+
+    const logisticsText = [
+      { label: "Transport:", value: eventData.logistics.transport },
+      { label: "Loading Details:", value: eventData.logistics.loadingDetails },
+      { label: "Unloading Details:", value: eventData.logistics.unloadingDetails }
+    ];
+
+    logisticsText.forEach(item => {
+      if (item.value) {
+        doc.text(item.label, 30, yPosition);
+        const lines = doc.splitTextToSize(item.value, pageWidth - 60);
+        doc.text(lines, 30, yPosition + 7);
+        yPosition += (lines.length * 7) + 15;
+      }
     });
+
+    // Staff Section
+    if (eventData.staff.length > 0) {
+      doc.setFontSize(14);
+      doc.setTextColor(125, 1, 1);
+      doc.text("Staff List", 20, yPosition);
+      yPosition += 10;
+
+      const staffTableData = eventData.staff.map(person => [
+        person.name,
+        person.surname1,
+        person.surname2,
+        person.position
+      ]);
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [["Name", "First Surname", "Second Surname", "Position"]],
+        body: staffTableData,
+        theme: 'grid',
+        styles: { fontSize: 10 },
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // Check if we need a new page
+    if (yPosition > pageHeight - 60) {
+      doc.addPage();
+      yPosition = 20;
+    }
+
+    // Schedule Section
+    if (eventData.schedule) {
+      doc.setFontSize(14);
+      doc.setTextColor(125, 1, 1);
+      doc.text("Schedule", 20, yPosition);
+      yPosition += 10;
+      doc.setFontSize(10);
+      doc.setTextColor(51, 51, 51);
+      const scheduleLines = doc.splitTextToSize(eventData.schedule, pageWidth - 40);
+      doc.text(scheduleLines, 20, yPosition);
+      yPosition += (scheduleLines.length * 7) + 15;
+    }
+
+    // Check if we need a new page
+    if (yPosition > pageHeight - 60) {
+      doc.addPage();
+      yPosition = 20;
+    }
+
+    // Power Requirements Section
+    if (eventData.powerRequirements) {
+      doc.setFontSize(14);
+      doc.setTextColor(125, 1, 1);
+      doc.text("Power Requirements", 20, yPosition);
+      yPosition += 10;
+      doc.setFontSize(10);
+      doc.setTextColor(51, 51, 51);
+      const powerLines = doc.splitTextToSize(eventData.powerRequirements, pageWidth - 40);
+      doc.text(powerLines, 20, yPosition);
+      yPosition += (powerLines.length * 7) + 15;
+    }
+
+    // Auxiliary Needs Section
+    if (eventData.auxiliaryNeeds) {
+      doc.setFontSize(14);
+      doc.setTextColor(125, 1, 1);
+      doc.text("Auxiliary Needs", 20, yPosition);
+      yPosition += 10;
+      doc.setFontSize(10);
+      doc.setTextColor(51, 51, 51);
+      const auxLines = doc.splitTextToSize(eventData.auxiliaryNeeds, pageWidth - 40);
+      doc.text(auxLines, 20, yPosition);
+      yPosition += (auxLines.length * 7) + 15;
+    }
+
+    // Add venue images if they exist
+    if (imagePreviews.venue.length > 0) {
+      doc.addPage();
+      doc.setFontSize(14);
+      doc.setTextColor(125, 1, 1);
+      doc.text("Venue Images", 20, 20);
+
+      let imageY = 40;
+      const imageWidth = 80;
+      const imagesPerRow = 2;
+      let currentX = 20;
+
+      for (let i = 0; i < imagePreviews.venue.length; i++) {
+        try {
+          doc.addImage(
+            imagePreviews.venue[i],
+            'JPEG',
+            currentX,
+            imageY,
+            imageWidth,
+            60
+          );
+
+          if ((i + 1) % imagesPerRow === 0) {
+            imageY += 70;
+            currentX = 20;
+          } else {
+            currentX += imageWidth + 10;
+          }
+
+          if (imageY > pageHeight - 80 && i < imagePreviews.venue.length - 1) {
+            doc.addPage();
+            imageY = 40;
+            currentX = 20;
+          }
+        } catch (error) {
+          console.error('Error adding image:', error);
+          continue;
+        }
+      }
+    }
+
+    // Add logo at the end
+    const logo = new Image();
+    logo.crossOrigin = 'anonymous';
+    logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
+    
+    logo.onload = () => {
+      doc.setPage(doc.getNumberOfPages());
+      const logoWidth = 50;
+      const logoHeight = logoWidth * (logo.height / logo.width);
+      const xPosition = (pageWidth - logoWidth) / 2;
+      const yPosition = pageHeight - 20;
+      
+      try {
+        doc.addImage(logo, 'PNG', xPosition, yPosition, logoWidth, logoHeight);
+        const blob = doc.output('blob');
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `hoja_de_ruta_${eventData.eventName.replace(/\s+/g, '_')}.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
+
+        toast({
+          title: "Success",
+          description: "Hoja de Ruta has been generated and downloaded",
+        });
+      } catch (error) {
+        console.error('Error adding logo:', error);
+        const blob = doc.output('blob');
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `hoja_de_ruta_${eventData.eventName.replace(/\s+/g, '_')}.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+    };
+
+    // If the image fails to load, still generate the PDF
+    logo.onerror = () => {
+      console.error('Failed to load logo');
+      const blob = doc.output('blob');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `hoja_de_ruta_${eventData.eventName.replace(/\s+/g, '_')}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    };
   };
 
   return (
