@@ -30,7 +30,6 @@ const RoleBasedRedirect = () => {
   
   useEffect(() => {
     const now = Date.now();
-    // Reset redirect count after 10 seconds of no redirects
     if (now - lastRedirectTime.current > 10000) {
       redirectCount.current = 0;
     }
@@ -63,14 +62,13 @@ const RoleBasedRedirect = () => {
     return null;
   }
 
-  // Handle redirects with rate limiting
   const handleRedirect = (to: string) => {
     const now = Date.now();
     if (now - lastRedirectTime.current < 1000) {
-      // Prevent redirects more frequent than once per second
       return null;
     }
 
+    console.log('Redirecting to:', to);
     setIsRedirecting(true);
     lastRedirectTime.current = now;
     redirectCount.current += 1;
@@ -81,7 +79,6 @@ const RoleBasedRedirect = () => {
   // If no session, redirect to auth
   if (!session) {
     if (location.pathname !== '/auth') {
-      console.log('No session found, redirecting to auth');
       return handleRedirect('/auth');
     }
     return null;
@@ -89,7 +86,9 @@ const RoleBasedRedirect = () => {
 
   // If we have a role, redirect based on it
   if (userRole) {
-    const dashboardPath = userRole === 'technician' ? "/technician-dashboard" : "/dashboard";
+    const allowedRoles = ['admin', 'logistics', 'management'];
+    const dashboardPath = allowedRoles.includes(userRole) ? "/dashboard" : "/technician-dashboard";
+    
     if (location.pathname === '/') {
       console.log('Redirecting to dashboard based on role:', userRole);
       return handleRedirect(dashboardPath);
@@ -99,7 +98,6 @@ const RoleBasedRedirect = () => {
 
   // If we have a session but no role (edge case), redirect to auth
   if (location.pathname !== '/auth') {
-    console.log('Session exists but no role found, redirecting to auth');
     return handleRedirect('/auth');
   }
   
