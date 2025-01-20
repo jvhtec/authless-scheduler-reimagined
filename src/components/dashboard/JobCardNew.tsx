@@ -189,20 +189,29 @@ export const JobCardNew = ({
       const formattedEndDate = new Date(job.end_time).toISOString().split('.')[0] + '.000Z';
 
       // Helper function to create a subfolder
-      const createSubfolder = async (parentId: string, name: string, deptId: string | null = null, docNumber: string) => {
-        const payload = {
-          definitionId: FLEX_FOLDER_IDS.subFolder,
-          parentElementId: parentId,
-          open: true,
-          locked: false,
-          name,
-          plannedStartDate: formattedStartDate,
-          plannedEndDate: formattedEndDate,
-          locationId: FLEX_FOLDER_IDS.location,
-          departmentId: deptId,
-          documentNumber: docNumber,
-          personResponsibleId: deptId ? RESPONSIBLE_PERSON_IDS[deptId as keyof typeof RESPONSIBLE_PERSON_IDS] : FLEX_FOLDER_IDS.mainResponsible
-        };
+      const createSubfolder = async (parentId: string, name: string, deptId: string | null = null, docNumber: string, folderType?: string) => {
+        let payload;
+
+        if (folderType === 'documentacionTecnica' || folderType === 'hojaGastos') {
+          payload = {
+            parentElementId: parentId,
+            name
+          };
+        } else {
+          payload = {
+            definitionId: FLEX_FOLDER_IDS.subFolder,
+            parentElementId: parentId,
+            open: true,
+            locked: false,
+            name,
+            plannedStartDate: formattedStartDate,
+            plannedEndDate: formattedEndDate,
+            locationId: FLEX_FOLDER_IDS.location,
+            departmentId: deptId,
+            documentNumber: docNumber,
+            personResponsibleId: deptId ? RESPONSIBLE_PERSON_IDS[deptId as keyof typeof RESPONSIBLE_PERSON_IDS] : FLEX_FOLDER_IDS.mainResponsible
+          };
+        }
 
         console.log(`Creating subfolder: ${name} with payload:`, payload);
 
@@ -241,7 +250,8 @@ export const JobCardNew = ({
             deptFolder.elementId,
             `${baseName} - Documentación Técnica`,
             deptId,
-            `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}DT`
+            `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}DT`,
+            'documentacionTecnica'
           );
 
           await createSubfolder(
@@ -255,7 +265,8 @@ export const JobCardNew = ({
             deptFolder.elementId,
             `${baseName} - Hoja de Gastos`,
             deptId,
-            `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}HG`
+            `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}HG`,
+            'hojaGastos'
           );
         } 
         else if (dept === 'production') {
@@ -263,7 +274,8 @@ export const JobCardNew = ({
             deptFolder.elementId,
             `${baseName} - Hoja de Gastos`,
             deptId,
-            `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}HG`
+            `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}HG`,
+            'hojaGastos'
           );
         }
       };
