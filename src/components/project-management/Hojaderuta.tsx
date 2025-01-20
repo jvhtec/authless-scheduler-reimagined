@@ -224,14 +224,26 @@ const HojaDeRutaGenerator = () => {
     </div>
   );
 
-  const uploadPdfToJob = async (pdfBlob: Blob, jobId: string, fileName: string) => {
+  const uploadPdfToJob = async (jobId: string, pdfBlob: Blob, fileName: string) => {
     try {
       console.log('Starting upload for PDF:', fileName);
       
+      // Sanitize the filename - remove accents and special characters
+      const sanitizedFileName = fileName
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')  // Remove accents
+        .replace(/[^a-zA-Z0-9._-]/g, '_')  // Replace special chars with underscore
+        .replace(/\s+/g, '_');             // Replace spaces with underscore
+
+      // Create a unique filename without subfolder structure
+      const filePath = `${crypto.randomUUID()}-${sanitizedFileName}`;
+      
+      console.log('Uploading with sanitized path:', filePath);
+
       // Upload to Supabase storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('job_documents')
-        .upload(`hoja_de_ruta/${crypto.randomUUID()}-${fileName}`, pdfBlob, {
+        .upload(filePath, pdfBlob, {
           contentType: 'application/pdf',
           upsert: false
         });
@@ -241,13 +253,15 @@ const HojaDeRutaGenerator = () => {
         throw uploadError;
       }
 
+      console.log('File uploaded successfully:', uploadData);
+
       // Create database record
       const { error: dbError } = await supabase
         .from('job_documents')
         .insert({
           job_id: jobId,
           file_name: fileName,
-          file_path: uploadData.path,
+          file_path: filePath,
           file_type: 'application/pdf',
           file_size: pdfBlob.size
         });
@@ -505,7 +519,7 @@ const HojaDeRutaGenerator = () => {
         const fileName = `hoja_de_ruta_${jobTitle.replace(/\s+/g, '_')}.pdf`;
         
         // Start the upload
-        uploadPdfToJob(blob, selectedJobId, fileName);
+        uploadPdfToJob(selectedJobId, blob, fileName);
         
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
