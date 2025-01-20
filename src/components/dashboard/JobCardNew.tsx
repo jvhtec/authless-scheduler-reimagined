@@ -179,7 +179,7 @@ async function createAllFoldersForJob(
       plannedEndDate: formattedEndDate,
       locationId: FLEX_FOLDER_IDS.location,
       departmentId: DEPARTMENT_IDS[dept],
-      documentNumber,
+      documentNumber: documentNumber + DEPARTMENT_SUFFIXES[dept], // Added department suffix here
       personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
     };
     const deptFolder = await createFlexFolder(deptPayload);
@@ -189,8 +189,6 @@ async function createAllFoldersForJob(
     if (dept === "personnel") continue;
 
     // 3 subfolders for the other depts
-    // Both "Documentación Técnica" & "Presupuestos Recibidos" share the same definitionId, 
-    // with different names.
     const subfolders = [
       {
         definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
@@ -869,3 +867,4 @@ export const JobCardNew = ({
 };
 
 export default JobCardNew;
+
