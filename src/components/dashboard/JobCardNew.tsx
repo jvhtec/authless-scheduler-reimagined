@@ -188,12 +188,14 @@ export const JobCardNew = ({
       const formattedStartDate = new Date(job.start_time).toISOString().split('.')[0] + '.000Z';
       const formattedEndDate = new Date(job.end_time).toISOString().split('.')[0] + '.000Z';
 
-      // Helper function to create a subfolder
       const createSubfolder = async (parentId: string, name: string, deptId: string | null = null, docNumber: string, folderType?: string) => {
         let payload;
 
         if (folderType === 'documentacionTecnica' || folderType === 'hojaGastos') {
           payload = {
+            definitionId: folderType === 'documentacionTecnica' 
+              ? FLEX_FOLDER_IDS.documentacionTecnica 
+              : FLEX_FOLDER_IDS.hojaGastos,
             parentElementId: parentId,
             name
           };
@@ -235,187 +237,31 @@ export const JobCardNew = ({
         return result;
       };
 
-      // Helper function to create department-specific subfolders
-      const createDepartmentSubfolders = async (
-        deptFolder: any,
-        baseName: string,
-        dept: string,
-        deptId: string,
-        documentNumber: string
-      ) => {
-        console.log(`Creating subfolders for department: ${dept}`);
-        
-        if (['sound', 'lights', 'video'].includes(dept)) {
-          await createSubfolder(
-            deptFolder.elementId,
-            `${baseName} - Documentación Técnica`,
-            deptId,
-            `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}DT`,
-            'documentacionTecnica'
-          );
-
-          await createSubfolder(
-            deptFolder.elementId,
-            `${baseName} - Presupuestos Recibidos`,
-            deptId,
-            `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}PR`
-          );
-
-          await createSubfolder(
-            deptFolder.elementId,
-            `${baseName} - Hoja de Gastos`,
-            deptId,
-            `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}HG`,
-            'hojaGastos'
-          );
-        } 
-        else if (dept === 'production') {
-          await createSubfolder(
-            deptFolder.elementId,
-            `${baseName} - Hoja de Gastos`,
-            deptId,
-            `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}HG`,
-            'hojaGastos'
-          );
-        }
-      };
-
-      if (job.tour_date_id) {
-        console.log('Processing tour date folder creation:', job.tour_date_id);
-        
-        const { data: tourDateData, error: tourDateError } = await supabase
-          .from('tour_dates')
-          .select(`
-            date,
-            tour_id,
-            location_id,
-            locations (name),
-            tours (
-              name,
-              flex_main_folder_id,
-              flex_sound_folder_id,
-              flex_lights_folder_id,
-              flex_video_folder_id,
-              flex_production_folder_id,
-              flex_personnel_folder_id
-            )
-          `)
-          .eq('id', job.tour_date_id)
-          .single();
-
-        if (tourDateError) {
-          console.error('Error fetching tour date:', tourDateError);
-          throw tourDateError;
-        }
-
-        if (!tourDateData.tours.flex_main_folder_id) {
-          throw new Error('Parent tour folders not found. Please create tour folders first.');
-        }
-
-        const formattedDate = format(new Date(tourDateData.date), 'MMM d');
-        const baseName = `${tourDateData.tours.name} - ${formattedDate}`;
-        
-        // Create technical documentation folder at root
-        await createSubfolder(
-          tourDateData.tours.flex_main_folder_id,
-          `${baseName} - Documentación Técnica`,
-          null,
-          `${documentNumber.toString()}DT`
+      const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
+      
+      for (const dept of departments) {
+        const deptFolder = await createSubfolder(
+          job.id,
+          `${job.title} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+          DEPARTMENT_IDS[dept],
+          documentNumber
         );
 
-        const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
-        
-        for (const dept of departments) {
-          const folderIdKey = `flex_${dept}_folder_id` as keyof typeof tourDateData.tours;
-          const parentFolderId = tourDateData.tours[folderIdKey];
-          
-          if (!parentFolderId) {
-            console.warn(`No parent folder ID found for ${dept} department`);
-            continue;
-          }
-
-          const locationName = tourDateData.locations?.name || 'No Location';
-          const deptName = `${baseName} - ${locationName} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`;
-          
-          const deptFolder = await createSubfolder(
-            parentFolderId,
-            deptName,
-            DEPARTMENT_IDS[dept],
-            `${documentNumber.toString()}${DEPARTMENT_SUFFIXES[dept]}`
-          );
-
-          await createDepartmentSubfolders(
-            deptFolder,
-            deptName,
-            dept,
-            DEPARTMENT_IDS[dept],
-            documentNumber.toString()
-          );
-        }
-
-      } else {
-        console.log('Processing regular job folder creation');
-        
-        const mainFolderPayload = {
-          definitionId: FLEX_FOLDER_IDS.mainFolder,
-          parentElementId: null,
-          open: true,
-          locked: false,
-          name: job.title,
-          plannedStartDate: formattedStartDate,
-          plannedEndDate: formattedEndDate,
-          locationId: FLEX_FOLDER_IDS.location,
-          notes: "Automated folder creation from Web App",
-          documentNumber: documentNumber.toString(),
-          personResponsibleId: FLEX_FOLDER_IDS.mainResponsible
-        };
-
-        console.log('Creating main folder with payload:', mainFolderPayload);
-
-        const mainResponse = await fetch(BASE_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Auth-Token': API_KEY
-          },
-          body: JSON.stringify(mainFolderPayload)
-        });
-
-        if (!mainResponse.ok) {
-          const errorData = await mainResponse.json();
-          console.error('Error creating main folder:', errorData);
-          throw new Error(errorData.exceptionMessage || 'Failed to create main folder');
-        }
-
-        const mainFolder = await mainResponse.json();
-        console.log('Main folder created:', mainFolder);
-
-        // Create technical documentation folder at root
         await createSubfolder(
-          mainFolder.elementId,
+          deptFolder.elementId,
           `${job.title} - Documentación Técnica`,
-          null,
-          `${documentNumber}DT`
+          DEPARTMENT_IDS[dept],
+          `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}DT`,
+          'documentacionTecnica'
         );
 
-        const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
-        
-        for (const dept of departments) {
-          const deptFolder = await createSubfolder(
-            mainFolder.elementId,
-            `${job.title} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
-            DEPARTMENT_IDS[dept],
-            `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`
-          );
-
-          await createDepartmentSubfolders(
-            deptFolder,
-            job.title,
-            dept,
-            DEPARTMENT_IDS[dept],
-            documentNumber
-          );
-        }
+        await createSubfolder(
+          deptFolder.elementId,
+          `${job.title} - Hoja de Gastos`,
+          DEPARTMENT_IDS[dept],
+          `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}HG`,
+          'hojaGastos'
+        );
       }
 
       await updateFolderStatus.mutateAsync();
