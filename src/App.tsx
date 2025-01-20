@@ -15,6 +15,7 @@ import PesosTool from "@/pages/PesosTool";
 import LightsPesosTool from "@/pages/LightsPesosTool";
 import ConsumosTool from "@/pages/ConsumosTool";
 import LaborPOForm from "@/components/project-management/LaborPOForm";
+import LightsConsumosTool from "@/pages/LightsConsumosTool";
 import { useSessionManager } from "@/hooks/useSessionManager";
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
@@ -248,6 +249,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ConsumosTool />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/lights-consumos-tool" 
+              element={
+                <ProtectedRoute>
+                  <LightsConsumosTool />
                 </ProtectedRoute>
               } 
             />
