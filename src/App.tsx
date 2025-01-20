@@ -30,26 +30,26 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Auth />} />
-            <Route path="/" element={<Layout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/sound" element={<Sound />} />
-              <Route path="/lights" element={<Lights />} />
-              <Route path="/video" element={<Video />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/project-management" element={<ProjectManagement />} />
-              <Route path="/technician" element={<TechnicianDashboard />} />
+            <Route path="/*" element={<Layout />}>
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="sound" element={<Sound />} />
+              <Route path="lights" element={<Lights />} />
+              <Route path="video" element={<Video />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="project-management" element={<ProjectManagement />} />
+              <Route path="technician" element={<TechnicianDashboard />} />
               
               {/* Tools Routes */}
-              <Route path="/pesos-tool" element={<PesosTool />} />
-              <Route path="/lights-pesos-tool" element={<LightsPesosTool />} />
-              <Route path="/video-pesos-tool" element={<VideoPesosTool />} />
-              <Route path="/consumos-tool" element={<ConsumosTool />} />
-              <Route path="/lights-consumos-tool" element={<LightsConsumosTool />} />
-              <Route path="/video-consumos-tool" element={<VideoConsumosTool />} />
-              <Route path="/excel-tool" element={<ExcelTool />} />
-              <Route path="/hoja-de-ruta" element={<HojaDeRuta />} />
-              <Route path="/labor-po-form" element={<LaborPOForm />} />
+              <Route path="pesos-tool" element={<PesosTool />} />
+              <Route path="lights-pesos-tool" element={<LightsPesosTool />} />
+              <Route path="video-pesos-tool" element={<VideoPesosTool />} />
+              <Route path="consumos-tool" element={<ConsumosTool />} />
+              <Route path="lights-consumos-tool" element={<LightsConsumosTool />} />
+              <Route path="video-consumos-tool" element={<VideoConsumosTool />} />
+              <Route path="excel-tool" element={<ExcelTool />} />
+              <Route path="hoja-de-ruta" element={<HojaDeRuta />} />
+              <Route path="labor-po-form" element={<LaborPOForm />} />
             </Route>
           </Routes>
         </BrowserRouter>
