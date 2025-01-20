@@ -62,7 +62,6 @@ export const TourDateManagementDialog = ({
     try {
       console.log('Creating folders for date:', date);
 
-      // Check if folders already exist for this date's jobs
       if (!skipExistingCheck) {
         const { data: jobs, error: jobsError } = await supabase
           .from('jobs')
@@ -81,7 +80,6 @@ export const TourDateManagementDialog = ({
         }
       }
 
-      // Fetch the parent tour information
       const { data: tourData, error: tourError } = await supabase
         .from('tours')
         .select(`
@@ -108,27 +106,28 @@ export const TourDateManagementDialog = ({
       const formattedStartDate = new Date(date.date).toISOString().split('.')[0] + '.000Z';
       const formattedEndDate = new Date(date.date).toISOString().split('.')[0] + '.000Z';
       const documentNumber = new Date(date.date).toISOString().slice(2, 10).replace(/-/g, '');
+      const formattedDate = format(new Date(date.date), 'MMM d');
+      const locationName = date.location?.name || 'No Location';
 
       // Create subfolders under each department folder
       const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
       
       for (const dept of departments) {
         const parentFolderId = tourData[`flex_${dept}_folder_id`];
+        const capitalizedDept = dept.charAt(0).toUpperCase() + dept.slice(1);
         
         if (!parentFolderId) {
           console.warn(`No parent folder ID found for ${dept} department`);
           continue;
         }
 
-        const formattedDate = format(new Date(date.date), 'MMM d');
-        const locationName = date.location?.name || 'No Location';
-
+        // Create department date folder
         const subFolderPayload = {
           definitionId: FLEX_FOLDER_IDS.subFolder,
           parentElementId: parentFolderId,
           open: true,
           locked: false,
-          name: `${tourData.name} - ${formattedDate} - ${locationName} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+          name: `${tourData.name} - ${formattedDate} - ${locationName} - ${capitalizedDept}`,
           plannedStartDate: formattedStartDate,
           plannedEndDate: formattedEndDate,
           locationId: FLEX_FOLDER_IDS.location,
@@ -156,8 +155,63 @@ export const TourDateManagementDialog = ({
             continue;
           }
 
-          const subFolder = await subResponse.json();
-          console.log(`${dept} subfolder created:`, subFolder);
+          const deptFolder = await subResponse.json();
+          console.log(`${dept} subfolder created:`, deptFolder);
+
+          // Skip creating subfolders for Personnel department
+          if (dept !== 'personnel') {
+            // Create the three subfolders under each department
+            const subfolders = [
+              {
+                name: `Documentación Técnica - ${capitalizedDept}`,
+                suffix: 'DT',
+                definitionId: FLEX_FOLDER_IDS.documentacionTecnica
+              },
+              {
+                name: `Presupuestos Recibidos`,
+                suffix: 'PR',
+                definitionId: FLEX_FOLDER_IDS.presupuestosRecibidos
+              },
+              {
+                name: `Hoja de Gastos - ${capitalizedDept}`,
+                suffix: 'HG',
+                definitionId: FLEX_FOLDER_IDS.hojaGastos
+              }
+            ];
+
+            for (const sf of subfolders) {
+              const subSubFolderPayload = {
+                definitionId: sf.definitionId,
+                parentElementId: deptFolder.elementId,
+                open: true,
+                locked: false,
+                name: sf.name,
+                plannedStartDate: formattedStartDate,
+                plannedEndDate: formattedEndDate,
+                locationId: FLEX_FOLDER_IDS.location,
+                departmentId: DEPARTMENT_IDS[dept],
+                documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
+                personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
+              };
+
+              const subSubResponse = await fetch(BASE_URL, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Auth-Token': API_KEY
+                },
+                body: JSON.stringify(subSubFolderPayload)
+              });
+
+              if (!subSubResponse.ok) {
+                const errorData = await subSubResponse.json();
+                console.error(`Error creating ${sf.name} subfolder:`, errorData);
+                continue;
+              }
+
+              console.log(`Created ${sf.name} subfolder for ${dept}`);
+            }
+          }
         } catch (error) {
           console.error(`Error creating ${dept} subfolder:`, error);
         }
