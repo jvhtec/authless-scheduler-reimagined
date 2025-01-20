@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, FileText } from "lucide-react";
 import { Department } from "@/types/department";
 import { startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { MonthNavigation } from "@/components/project-management/MonthNavigation";
@@ -81,13 +81,23 @@ const ProjectManagement = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle>Project Management</CardTitle>
-          <Button 
-            onClick={() => navigate('/labor-po-form')} 
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Create Labor PO
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => navigate('/hoja-de-ruta')} 
+              className="flex items-center gap-2"
+              variant="outline"
+            >
+              <FileText className="h-4 w-4" />
+              Hoja de Ruta
+            </Button>
+            <Button 
+              onClick={() => navigate('/labor-po-form')} 
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Create Labor PO
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <MonthNavigation
