@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import HojaDeRutaGenerator from "@/components/project-management/Hojaderuta";
 
 const HojaDeRuta = () => {
   const navigate = useNavigate();
@@ -22,10 +23,7 @@ const HojaDeRuta = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Form content will be added in the next step */}
-          <div className="text-center text-muted-foreground">
-            Form content coming soon...
-          </div>
+          <HojaDeRutaGenerator />
         </CardContent>
       </Card>
     </div>
