@@ -14,6 +14,8 @@ export interface JobSelection {
   title: string;
   tour_date_id: string | null;
   tour_date: TourDate | null;
+  start_time: string;
+  end_time: string;
 }
 
 export const useJobSelection = () => {
@@ -26,6 +28,8 @@ export const useJobSelection = () => {
         .select(`
           id,
           title,
+          start_time,
+          end_time,
           tour_date_id,
           tour_date:tour_dates!tour_date_id (
             id,
@@ -48,6 +52,8 @@ export const useJobSelection = () => {
       const transformedJobs = jobs?.map(job => ({
         id: job.id,
         title: job.title,
+        start_time: job.start_time,
+        end_time: job.end_time,
         tour_date_id: job.tour_date_id,
         tour_date: job.tour_date ? {
           id: job.tour_date[0]?.id, // Access first element of tour_date array
