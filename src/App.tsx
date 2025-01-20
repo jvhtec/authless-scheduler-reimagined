@@ -15,7 +15,7 @@ import PesosTool from "@/pages/PesosTool";
 import ConsumosTool from "@/pages/ConsumosTool";
 import LaborPOForm from "@/components/project-management/LaborPOForm";
 import { useSessionManager } from "@/hooks/useSessionManager";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 const queryClient = new QueryClient();
@@ -24,18 +24,16 @@ const queryClient = new QueryClient();
 const RoleBasedRedirect = () => {
   const { userRole, isLoading, session } = useSessionManager();
   const location = useLocation();
-  const redirectAttempts = useRef(0);
-  const lastRedirectTime = useRef(Date.now());
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const lastRedirectTime = useRef(0);
+  const redirectCount = useRef(0);
   
   useEffect(() => {
-    // Reset redirect attempts counter after 10 seconds
-    const resetTimer = setInterval(() => {
-      if (Date.now() - lastRedirectTime.current >= 10000) {
-        redirectAttempts.current = 0;
-      }
-    }, 10000);
-
-    return () => clearInterval(resetTimer);
+    const now = Date.now();
+    // Reset redirect count after 10 seconds of no redirects
+    if (now - lastRedirectTime.current > 10000) {
+      redirectCount.current = 0;
+    }
   }, []);
 
   // If loading, show loading state
@@ -47,8 +45,8 @@ const RoleBasedRedirect = () => {
     );
   }
 
-  // Prevent too many redirects
-  if (redirectAttempts.current >= 5) {
+  // Prevent redirect loops
+  if (redirectCount.current >= 5) {
     console.error('Too many redirect attempts, showing error state');
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -60,13 +58,31 @@ const RoleBasedRedirect = () => {
     );
   }
 
+  // Prevent multiple simultaneous redirects
+  if (isRedirecting) {
+    return null;
+  }
+
+  // Handle redirects with rate limiting
+  const handleRedirect = (to: string) => {
+    const now = Date.now();
+    if (now - lastRedirectTime.current < 1000) {
+      // Prevent redirects more frequent than once per second
+      return null;
+    }
+
+    setIsRedirecting(true);
+    lastRedirectTime.current = now;
+    redirectCount.current += 1;
+    
+    return <Navigate to={to} replace />;
+  };
+
   // If no session, redirect to auth
   if (!session) {
     if (location.pathname !== '/auth') {
-      redirectAttempts.current++;
-      lastRedirectTime.current = Date.now();
       console.log('No session found, redirecting to auth');
-      return <Navigate to="/auth" replace />;
+      return handleRedirect('/auth');
     }
     return null;
   }
@@ -75,20 +91,16 @@ const RoleBasedRedirect = () => {
   if (userRole) {
     const dashboardPath = userRole === 'technician' ? "/technician-dashboard" : "/dashboard";
     if (location.pathname === '/') {
-      redirectAttempts.current++;
-      lastRedirectTime.current = Date.now();
       console.log('Redirecting to dashboard based on role:', userRole);
-      return <Navigate to={dashboardPath} replace />;
+      return handleRedirect(dashboardPath);
     }
     return null;
   }
 
   // If we have a session but no role (edge case), redirect to auth
   if (location.pathname !== '/auth') {
-    redirectAttempts.current++;
-    lastRedirectTime.current = Date.now();
     console.log('Session exists but no role found, redirecting to auth');
-    return <Navigate to="/auth" replace />;
+    return handleRedirect('/auth');
   }
   
   return null;
@@ -98,7 +110,15 @@ const RoleBasedRedirect = () => {
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, isLoading } = useSessionManager();
   const location = useLocation();
-  const redirectAttempts = useRef(0);
+  const [redirectAttempts, setRedirectAttempts] = useState(0);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setRedirectAttempts(0);
+    }, 10000);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   if (isLoading) {
     return (
@@ -109,8 +129,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!session && location.pathname !== '/auth') {
-    if (redirectAttempts.current < 5) {
-      redirectAttempts.current++;
+    if (redirectAttempts < 5) {
+      setRedirectAttempts(prev => prev + 1);
       return <Navigate to="/auth" replace />;
     }
     return (
