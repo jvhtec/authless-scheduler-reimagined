@@ -4,7 +4,7 @@ interface TourData {
   location_id: string | null;
   locations: {
     name: string;
-  };
+  } | null;
   tours: {
     name: string;
     flex_main_folder_id: string | null;
@@ -13,7 +13,7 @@ interface TourData {
     flex_video_folder_id: string | null;
     flex_production_folder_id: string | null;
     flex_personnel_folder_id: string | null;
-  };
+  } | null;
 }
 
 import { useState } from "react";
@@ -222,13 +222,15 @@ export const JobCardNew = ({
           throw tourDateError;
         }
 
-        if (!tourDateData || !tourDateData.tours) {
+        const tourData = tourDateData as unknown as TourData;
+
+        if (!tourData || !tourData.tours) {
           throw new Error('Tour data not found');
         }
 
-        console.log('Tour date data:', tourDateData);
+        console.log('Tour date data:', tourData);
         
-        if (!tourDateData.tours.flex_main_folder_id) {
+        if (!tourData.tours.flex_main_folder_id) {
           throw new Error('Parent tour folders not found. Please create tour folders first.');
         }
 
@@ -250,22 +252,22 @@ export const JobCardNew = ({
         const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
         
         for (const dept of departments) {
-          const parentFolderId = tourDateData.tours[`flex_${dept}_folder_id` as keyof typeof tourDateData.tours];
+          const parentFolderId = tourData.tours[`flex_${dept}_folder_id` as keyof typeof tourData.tours];
           
           if (!parentFolderId) {
             console.warn(`No parent folder ID found for ${dept} department`);
             continue;
           }
   
-          const formattedDate = format(new Date(tourDateData.date), 'MMM d');
-          const locationName = tourDateData.locations?.name || 'No Location';
+          const formattedDate = format(new Date(tourData.date), 'MMM d');
+          const locationName = tourData.locations?.name || 'No Location';
   
           const subFolderPayload = {
             definitionId: FLEX_FOLDER_IDS.subFolder,
             parentElementId: parentFolderId,
             open: true,
             locked: false,
-            name: `${tourDateData.tours.name} - ${formattedDate} - ${locationName} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+            name: `${tourData.tours.name} - ${formattedDate} - ${locationName} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
             plannedStartDate: formattedStartDate,
             plannedEndDate: formattedEndDate,
             locationId: FLEX_FOLDER_IDS.location,
