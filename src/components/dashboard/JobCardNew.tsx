@@ -228,7 +228,6 @@ export const JobCardNew = ({
 
         console.log('Tour date data:', tourDateData);
         
-        // Check if parent tour has flex folders created
         if (!tourDateData.tours.flex_main_folder_id) {
           throw new Error('Parent tour folders not found. Please create tour folders first.');
         }
@@ -301,7 +300,6 @@ export const JobCardNew = ({
           }
         }
 
-        // Update all jobs with the same tour_date_id
         const { error: updateError } = await supabase
           .from('jobs')
           .update({ flex_folders_created: true })
@@ -456,7 +454,6 @@ export const JobCardNew = ({
     try {
       console.log('Starting job deletion process for job:', job.id);
 
-      // Delete all related tasks first
       const taskTables = ['lights_job_tasks', 'sound_job_tasks', 'video_job_tasks'];
       for (const table of taskTables) {
         const { error: tasksError } = await supabase
@@ -470,7 +467,6 @@ export const JobCardNew = ({
         }
       }
 
-      // Delete all related personnel records
       const personnelTables = ['lights_job_personnel', 'sound_job_personnel', 'video_job_personnel'];
       for (const table of personnelTables) {
         const { error: personnelError } = await supabase
@@ -484,7 +480,6 @@ export const JobCardNew = ({
         }
       }
 
-      // Delete job documents from storage if they exist
       if (job.job_documents?.length > 0) {
         console.log('Attempting to delete job documents from storage');
         const { error: storageError } = await supabase.storage
@@ -497,7 +492,6 @@ export const JobCardNew = ({
         }
       }
 
-      // Delete job assignments
       const { error: assignmentsError } = await supabase
         .from('job_assignments')
         .delete()
@@ -508,7 +502,6 @@ export const JobCardNew = ({
         throw assignmentsError;
       }
 
-      // Delete job departments
       const { error: departmentsError } = await supabase
         .from('job_departments')
         .delete()
@@ -519,7 +512,6 @@ export const JobCardNew = ({
         throw departmentsError;
       }
 
-      // Finally delete the job itself
       const { error: jobError } = await supabase
         .from('jobs')
         .delete()
