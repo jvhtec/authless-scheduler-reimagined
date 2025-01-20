@@ -1,190 +1,338 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { exportToPDF } from "@/utils/pdfExport";
-import { useToast } from "@/hooks/use-toast";
+import React, { useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FileText, ArrowLeft } from 'lucide-react';
+import { exportToPDF } from '@/utils/pdfExport';
+import { useJobSelection } from '@/hooks/useJobSelection';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
-interface EquipmentRow {
-  quantity: string; // Changed from number to string
-  componentName: string;
-  weight: number;
-  totalWeight: number;
+const videoComponentDatabase = [
+  { id: 1, name: 'LED Panel P3.9', weight: 8.5 },
+  { id: 2, name: 'LED Panel P2.6', weight: 9.2 },
+  { id: 3, name: 'LED Processor', weight: 4.8 },
+  { id: 4, name: 'Professional Camera', weight: 7.2 },
+  { id: 5, name: 'Camera Tripod', weight: 4.5 },
+  { id: 6, name: 'Video Switcher', weight: 5.3 },
+  { id: 7, name: 'Projector 20K', weight: 55 },
+  { id: 8, name: 'Projector Screen', weight: 35 }
+];
+
+interface TableRow {
+  quantity: string;
+  componentId: string;
+  weight: string;
+  componentName?: string;
+  totalWeight?: number;
 }
 
-interface EquipmentTable {
+interface Table {
   name: string;
-  rows: EquipmentRow[];
-  totalWeight: number;
+  rows: TableRow[];
+  totalWeight?: number;
+  id?: number;
+  dualMotors?: boolean;
 }
 
-const VideoPesosTool = () => {
-  const [projectName, setProjectName] = useState("");
-  const [jobName, setJobName] = useState("");
-  const [tables, setTables] = useState<EquipmentTable[]>([
-    {
-      name: "LED Screens",
-      rows: [
-        { quantity: "0", componentName: "LED Panel P3.9", weight: 8.5, totalWeight: 0 },
-        { quantity: "0", componentName: "LED Panel P2.6", weight: 9.2, totalWeight: 0 },
-        { quantity: "0", componentName: "LED Panel Processor", weight: 4.8, totalWeight: 0 },
-      ],
-      totalWeight: 0,
-    },
-    {
-      name: "Cameras & Equipment",
-      rows: [
-        { quantity: "0", componentName: "Professional Camera", weight: 7.2, totalWeight: 0 },
-        { quantity: "0", componentName: "Camera Tripod", weight: 4.5, totalWeight: 0 },
-        { quantity: "0", componentName: "Video Switcher", weight: 5.3, totalWeight: 0 },
-      ],
-      totalWeight: 0,
-    },
-    {
-      name: "Projection Systems",
-      rows: [
-        { quantity: "0", componentName: "Projector 20K", weight: 55, totalWeight: 0 },
-        { quantity: "0", componentName: "Projector Screen", weight: 35, totalWeight: 0 },
-        { quantity: "0", componentName: "Media Server", weight: 12, totalWeight: 0 },
-      ],
-      totalWeight: 0,
-    },
-  ]);
-
+const VideoPesosTool: React.FC = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const { data: jobs } = useJobSelection();
+  const department = 'video';
 
-  const handleQuantityChange = (tableIndex: number, rowIndex: number, value: string) => {
-    const newTables = [...tables];
-    const quantity = parseInt(value) || 0;
-    const row = newTables[tableIndex].rows[rowIndex];
-    
-    row.quantity = value; // Store as string
-    row.totalWeight = quantity * row.weight;
-    
-    // Recalculate table total
-    newTables[tableIndex].totalWeight = newTables[tableIndex].rows.reduce(
-      (sum, row) => sum + row.totalWeight,
-      0
-    );
-    
-    setTables(newTables);
+  const [selectedJobId, setSelectedJobId] = useState<string>('');
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [tableName, setTableName] = useState('');
+  const [tables, setTables] = useState<Table[]>([]);
+  const [useDualMotors, setUseDualMotors] = useState(false);
+
+  const [currentTable, setCurrentTable] = useState<Table>({
+    name: '',
+    rows: [{ quantity: '', componentId: '', weight: '' }],
+  });
+
+  const addRow = () => {
+    setCurrentTable((prev) => ({
+      ...prev,
+      rows: [...prev.rows, { quantity: '', componentId: '', weight: '' }],
+    }));
   };
 
-  const calculateTotalWeight = () => {
-    return tables.reduce((sum, table) => sum + table.totalWeight, 0);
+  const updateInput = (index: number, field: keyof TableRow, value: string) => {
+    const newRows = [...currentTable.rows];
+    if (field === 'componentId') {
+      const component = videoComponentDatabase.find((c) => c.id.toString() === value);
+      newRows[index] = {
+        ...newRows[index],
+        [field]: value,
+        weight: component ? component.weight.toString() : '',
+      };
+    } else {
+      newRows[index] = {
+        ...newRows[index],
+        [field]: value,
+      };
+    }
+    setCurrentTable((prev) => ({
+      ...prev,
+      rows: newRows,
+    }));
   };
 
-  const handleExport = async () => {
+  const handleJobSelect = (jobId: string) => {
+    setSelectedJobId(jobId);
+    const job = jobs?.find((j) => j.id === jobId) || null;
+    setSelectedJob(job);
+  };
+
+  const generateTable = () => {
+    if (!tableName) {
+      toast({
+        title: 'Missing table name',
+        description: 'Please enter a name for the table',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const suffix = (() => {
+      const tableCount = tables.length + 1;
+      const suffixNumber = tableCount.toString().padStart(2, '0');
+      if (useDualMotors) {
+        return `(VX${suffixNumber}, VX${(tableCount + 1).toString().padStart(2, '0')})`;
+      }
+      return `(VX${suffixNumber})`;
+    })();
+
+    const calculatedRows = currentTable.rows.map((row) => {
+      const component = videoComponentDatabase.find((c) => c.id.toString() === row.componentId);
+      const totalWeight =
+        parseFloat(row.quantity) && parseFloat(row.weight)
+          ? parseFloat(row.quantity) * parseFloat(row.weight)
+          : 0;
+      return {
+        ...row,
+        componentName: component?.name || '',
+        totalWeight,
+      };
+    });
+
+    const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
+
+    const newTable: Table = {
+      name: `${tableName} ${suffix}`,
+      rows: calculatedRows,
+      totalWeight,
+      id: Date.now(),
+      dualMotors: useDualMotors,
+    };
+
+    setTables((prev) => [...prev, newTable]);
+    resetCurrentTable();
+    setUseDualMotors(false);
+  };
+
+  const resetCurrentTable = () => {
+    setCurrentTable({
+      name: '',
+      rows: [{ quantity: '', componentId: '', weight: '' }],
+    });
+    setTableName('');
+  };
+
+  const removeTable = (tableId: number) => {
+    setTables((prev) => prev.filter((table) => table.id !== tableId));
+  };
+
+  const handleExportPDF = async () => {
+    if (!selectedJobId || !selectedJob) {
+      toast({
+        title: 'No job selected',
+        description: 'Please select a job before exporting.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      const blob = await exportToPDF(
-        projectName || "Untitled Project",
-        tables,
-        "weight",
-        jobName || "Untitled Job"
+      const pdfBlob = await exportToPDF(
+        selectedJob.title,
+        tables.map((table) => ({ ...table, toolType: 'pesos' })),
+        'weight',
+        selectedJob.title
       );
-      
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${projectName || "video-weight-report"}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+
+      const fileName = `Video Weight Report - ${selectedJob.title}.pdf`;
+      const url = window.URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
       window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
       toast({
-        title: "Success",
-        description: "PDF exported successfully",
+        title: 'Success',
+        description: 'PDF has been generated successfully.',
       });
     } catch (error) {
-      console.error("Error exporting PDF:", error);
+      console.error('Error exporting PDF:', error);
       toast({
-        title: "Error",
-        description: "Failed to export PDF",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to generate the PDF.',
+        variant: 'destructive',
       });
     }
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Video Weight Calculator</h1>
-        <Button onClick={handleExport}>Export PDF</Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div>
-          <Label htmlFor="projectName">Project Name</Label>
-          <Input
-            id="projectName"
-            value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
-            placeholder="Enter project name"
-          />
+    <Card className="w-full max-w-4xl mx-auto my-6">
+      <CardHeader className="space-y-1">
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/video')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <CardTitle className="text-2xl font-bold">Video Weight Calculator</CardTitle>
         </div>
-        <div>
-          <Label htmlFor="jobName">Job Name</Label>
-          <Input
-            id="jobName"
-            value={jobName}
-            onChange={(e) => setJobName(e.target.value)}
-            placeholder="Enter job name"
-          />
-        </div>
-      </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="jobSelect">Select Job</Label>
+            <Select value={selectedJobId} onValueChange={handleJobSelect}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a job" />
+              </SelectTrigger>
+              <SelectContent>
+                {jobs?.map((job) => (
+                  <SelectItem key={job.id} value={job.id}>
+                    {job.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <div className="space-y-6">
-        {tables.map((table, tableIndex) => (
-          <Card key={tableIndex}>
-            <CardHeader>
-              <CardTitle>{table.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {table.rows.map((row, rowIndex) => (
-                  <div key={rowIndex} className="grid grid-cols-4 gap-4 items-center">
-                    <div>
-                      <Label>Quantity</Label>
+          <div className="space-y-2">
+            <Label htmlFor="tableName">Table Name</Label>
+            <Input
+              id="tableName"
+              value={tableName}
+              onChange={(e) => setTableName(e.target.value)}
+              placeholder="Enter table name"
+            />
+          </div>
+
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-muted">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                  <th className="px-4 py-3 text-left font-medium">Component</th>
+                  <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentTable.rows.map((row, index) => (
+                  <tr key={index} className="border-t">
+                    <td className="p-4">
                       <Input
                         type="number"
-                        min="0"
                         value={row.quantity}
-                        onChange={(e) =>
-                          handleQuantityChange(tableIndex, rowIndex, e.target.value)
-                        }
+                        onChange={(e) => updateInput(index, 'quantity', e.target.value)}
+                        min="0"
+                        className="w-full"
                       />
-                    </div>
-                    <div className="col-span-2">
-                      <Label>Component</Label>
-                      <div className="p-2 bg-muted rounded-md">{row.componentName}</div>
-                    </div>
-                    <div>
-                      <Label>Weight (kg)</Label>
-                      <div className="p-2 bg-muted rounded-md">{row.totalWeight.toFixed(2)}</div>
-                    </div>
-                  </div>
+                    </td>
+                    <td className="p-4">
+                      <Select
+                        value={row.componentId}
+                        onValueChange={(value) => updateInput(index, 'componentId', value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select component" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {videoComponentDatabase.map((component) => (
+                            <SelectItem key={component.id} value={component.id.toString()}>
+                              {component.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-4">
+                      <Input type="number" value={row.weight} readOnly className="w-full bg-muted" />
+                    </td>
+                  </tr>
                 ))}
-                <div className="flex justify-end pt-4">
-                  <div className="text-lg font-semibold">
-                    Total: {table.totalWeight.toFixed(2)} kg
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-xl font-bold text-right">
-            Total System Weight: {calculateTotalWeight().toFixed(2)} kg
+              </tbody>
+            </table>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+
+          <div className="flex gap-2">
+            <Button onClick={addRow}>Add Row</Button>
+            <Button onClick={generateTable} variant="secondary">
+              Generate Table
+            </Button>
+            <Button onClick={resetCurrentTable} variant="destructive">
+              Reset
+            </Button>
+            {tables.length > 0 && (
+              <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
+                <FileText className="w-4 h-4" />
+                Export PDF
+              </Button>
+            )}
+          </div>
+
+          {tables.map((table) => (
+            <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
+              <div className="bg-muted px-4 py-3 flex justify-between items-center">
+                <h3 className="font-semibold">{table.name}</h3>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => table.id && removeTable(table.id)}
+                >
+                  Remove Table
+                </Button>
+              </div>
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                    <th className="px-4 py-3 text-left font-medium">Component</th>
+                    <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
+                    <th className="px-4 py-3 text-left font-medium">Total Weight</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.rows.map((row, index) => (
+                    <tr key={index} className="border-t">
+                      <td className="px-4 py-3">{row.quantity}</td>
+                      <td className="px-4 py-3">{row.componentName}</td>
+                      <td className="px-4 py-3">{row.weight}</td>
+                      <td className="px-4 py-3">{row.totalWeight?.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr className="border-t bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-right">
+                      Total Weight:
+                    </td>
+                    <td className="px-4 py-3">{table.totalWeight?.toFixed(2)} kg</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
