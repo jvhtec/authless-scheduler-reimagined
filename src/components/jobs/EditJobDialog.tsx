@@ -22,6 +22,8 @@ interface EditJobDialogProps {
 export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) => {
   const [title, setTitle] = useState(job.title);
   const [description, setDescription] = useState(job.description || "");
+  const [startTime, setStartTime] = useState(job.start_time?.slice(0, 16) || "");
+  const [endTime, setEndTime] = useState(job.end_time?.slice(0, 16) || "");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -37,6 +39,8 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
         .update({
           title,
           description,
+          start_time: startTime,
+          end_time: endTime,
         })
         .eq("id", job.id);
 
@@ -84,6 +88,26 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
+            />
+          </div>
+          <div>
+            <Label htmlFor="startTime">Start Time</Label>
+            <Input
+              id="startTime"
+              type="datetime-local"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="endTime">End Time</Label>
+            <Input
+              id="endTime"
+              type="datetime-local"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              required
             />
           </div>
           <div className="flex justify-end gap-2">
