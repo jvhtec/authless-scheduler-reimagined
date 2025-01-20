@@ -8,6 +8,7 @@ import { Department } from "@/types/department";
 import { startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { MonthNavigation } from "@/components/project-management/MonthNavigation";
 import { DepartmentTabs } from "@/components/project-management/DepartmentTabs";
+import ProjectForm from "@/components/project-management/ProjectForm";
 import { useJobManagement } from "@/hooks/useJobManagement";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
 
@@ -115,6 +116,8 @@ const ProjectManagement = () => {
           />
         </CardContent>
       </Card>
+
+      <ProjectForm />
     </div>
   );
 };
