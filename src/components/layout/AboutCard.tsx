@@ -43,5 +43,5 @@ export const AboutCard = () => {
         </div>
       </HoverCardContent>
     </HoverCard>
-  )
-}
+  );
+};
