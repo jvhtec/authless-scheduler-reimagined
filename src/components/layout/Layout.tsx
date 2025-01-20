@@ -13,11 +13,11 @@ import { LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { ThemeToggle } from "./layout/ThemeToggle";
-import { UserInfo } from "./layout/UserInfo";
-import { SidebarNavigation } from "./layout/SidebarNavigation";
-import { AboutCard } from "./layout/AboutCard";
-import { NotificationBadge } from "./layout/NotificationBadge";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { UserInfo } from "@/components/layout/UserInfo";
+import { SidebarNavigation } from "@/components/layout/SidebarNavigation";
+import { AboutCard } from "@/components/layout/AboutCard";
+import { NotificationBadge } from "@/components/layout/NotificationBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionManager } from "@/hooks/useSessionManager";
 
