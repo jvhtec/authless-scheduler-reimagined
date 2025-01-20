@@ -33,6 +33,13 @@ import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+// Add type declaration for jsPDF with autotable
+interface AutoTableJsPDF extends jsPDF {
+  lastAutoTable?: {
+    finalY: number;
+  };
+}
+
 const HojaDeRutaGenerator = () => {
   const { toast } = useToast();
   const { data: jobs, isLoading: isLoadingJobs } = useJobSelection();
@@ -218,7 +225,7 @@ const HojaDeRutaGenerator = () => {
   );
 
   const generateDocument = async () => {
-    const doc = new jsPDF();
+    const doc = new jsPDF() as AutoTableJsPDF;
     
     // Add header
     doc.setFontSize(20);
@@ -253,10 +260,11 @@ const HojaDeRutaGenerator = () => {
     });
     
     // Schedule
-    doc.text("Schedule", 20, doc.lastAutoTable.finalY + 20);
+    const finalY = doc.lastAutoTable?.finalY || 150;
+    doc.text("Schedule", 20, finalY + 20);
     doc.setFontSize(10);
     const scheduleLines = doc.splitTextToSize(eventData.schedule, 170);
-    doc.text(scheduleLines, 20, doc.lastAutoTable.finalY + 30);
+    doc.text(scheduleLines, 20, finalY + 30);
     
     // Generate blob and download
     const blob = doc.output('blob');
