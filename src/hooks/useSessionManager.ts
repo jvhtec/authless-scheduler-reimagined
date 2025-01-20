@@ -18,19 +18,19 @@ export const useSessionManager = () => {
   const handleSessionUpdate = useCallback(async (currentSession: any) => {
     console.log("Session update handler called with session:", !!currentSession);
     
-    try {
-      if (!currentSession?.user?.id) {
-        console.log("No valid session or user ID, clearing user data");
-        setSession(null);
-        setUserRole(null);
-        setUserDepartment(null);
-        setIsLoading(false);
-        return;
-      }
+    if (!currentSession?.user?.id) {
+      console.log("No valid session or user ID, clearing user data");
+      setSession(null);
+      setUserRole(null);
+      setUserDepartment(null);
+      setIsLoading(false);
+      return;
+    }
 
-      console.log("Session found, updating user data for ID:", currentSession.user.id);
-      setSession(currentSession);
-      
+    console.log("Session found, updating user data for ID:", currentSession.user.id);
+    setSession(currentSession);
+    
+    try {
       const profileData = await fetchUserProfile(currentSession.user.id);
       
       if (profileData) {
@@ -43,7 +43,7 @@ export const useSessionManager = () => {
       }
     } catch (error) {
       console.error("Error in session update:", error);
-      setSession(null);
+      // Don't clear session on profile fetch error
       setUserRole(null);
       setUserDepartment(null);
     } finally {
@@ -91,6 +91,7 @@ export const useSessionManager = () => {
     };
   }, [handleSessionUpdate]);
 
+  // Always call useProfileChanges, even if there's no session
   useProfileChanges(
     session,
     userRole,

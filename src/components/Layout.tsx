@@ -77,7 +77,9 @@ const Layout = ({ children }: LayoutProps) => {
     );
   }
 
-  if (!session || !userRole) {
+  // Only redirect if we're certain there's no session
+  if (!session && !isLoading) {
+    console.log("No session found in Layout, redirecting to auth");
     navigate('/auth');
     return null;
   }
