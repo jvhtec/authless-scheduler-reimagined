@@ -56,7 +56,9 @@ const HojaDeRutaGenerator = () => {
     equipment: [],
   });
 
-  const handleImageUpload = (type, files) => {
+  const handleImageUpload = (type: keyof typeof images, files: FileList | null) => {
+    if (!files) return;
+    
     const fileArray = Array.from(files);
     const newImages = [...(images[type] || []), ...fileArray];
     setImages({ ...images, [type]: newImages });
@@ -68,7 +70,7 @@ const HojaDeRutaGenerator = () => {
     }));
   };
 
-  const removeImage = (type, index) => {
+  const removeImage = (type: keyof typeof images, index: number) => {
     const newImages = [...images[type]];
     const newPreviews = [...imagePreviews[type]];
     URL.revokeObjectURL(newPreviews[index]);
@@ -78,13 +80,13 @@ const HojaDeRutaGenerator = () => {
     setImagePreviews({ ...imagePreviews, [type]: newPreviews });
   };
 
-  const handleContactChange = (index, field, value) => {
+  const handleContactChange = (index: number, field: string, value: string) => {
     const newContacts = [...eventData.contacts];
     newContacts[index] = { ...newContacts[index], [field]: value };
     setEventData({ ...eventData, contacts: newContacts });
   };
 
-  const handleStaffChange = (index, field, value) => {
+  const handleStaffChange = (index: number, field: string, value: string) => {
     const newStaff = [...eventData.staff];
     newStaff[index] = { ...newStaff[index], [field]: value };
     setEventData({ ...eventData, staff: newStaff });
