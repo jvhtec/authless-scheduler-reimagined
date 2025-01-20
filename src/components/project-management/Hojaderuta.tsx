@@ -228,10 +228,21 @@ const HojaDeRutaGenerator = () => {
     try {
       console.log('Starting upload for PDF:', fileName);
       
+      // Sanitize filename: remove accents and special characters, replace spaces with underscores
+      const sanitizedFileName = fileName
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove accents
+        .replace(/[^a-zA-Z0-9._-]/g, '_') // Replace special chars with underscore
+        .replace(/\s+/g, '_'); // Replace spaces with underscore
+
+      const filePath = `${crypto.randomUUID()}-${sanitizedFileName}`;
+      
+      console.log('Uploading with sanitized path:', filePath);
+
       // Upload to Supabase storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('job_documents')
-        .upload(`hoja_de_ruta/${crypto.randomUUID()}-${fileName}`, pdfBlob, {
+        .upload(filePath, pdfBlob, {
           contentType: 'application/pdf',
           upsert: false
         });
@@ -246,8 +257,8 @@ const HojaDeRutaGenerator = () => {
         .from('job_documents')
         .insert({
           job_id: jobId,
-          file_name: fileName,
-          file_path: uploadData.path,
+          file_name: fileName, // Keep original filename for display
+          file_path: filePath,
           file_type: 'application/pdf',
           file_size: pdfBlob.size
         });
