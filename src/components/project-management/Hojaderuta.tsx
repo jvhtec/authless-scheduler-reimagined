@@ -29,6 +29,9 @@ import { Trash2, Calendar } from "lucide-react";
 import { useJobSelection } from "@/hooks/useJobSelection";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const HojaDeRutaGenerator = () => {
   const { toast } = useToast();
@@ -79,6 +82,9 @@ const HojaDeRutaGenerator = () => {
           eventDates: formattedDates,
         }));
 
+        // Fetch assigned staff
+        fetchAssignedStaff(selectedJob.id);
+
         toast({
           title: "Job Selected",
           description: "Form has been updated with job details",
@@ -86,6 +92,44 @@ const HojaDeRutaGenerator = () => {
       }
     }
   }, [selectedJobId, jobs]);
+
+  const fetchAssignedStaff = async (jobId: string) => {
+    try {
+      const { data: assignments, error } = await supabase
+        .from('job_assignments')
+        .select(`
+          *,
+          profiles:technician_id (
+            first_name,
+            last_name
+          )
+        `)
+        .eq('job_id', jobId);
+
+      if (error) throw error;
+
+      if (assignments && assignments.length > 0) {
+        const staffList = assignments.map(assignment => ({
+          name: assignment.profiles.first_name,
+          surname1: assignment.profiles.last_name,
+          surname2: "",
+          position: assignment.sound_role || assignment.lights_role || assignment.video_role || "Technician"
+        }));
+
+        setEventData(prev => ({
+          ...prev,
+          staff: staffList
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch assigned staff",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleImageUpload = (type: keyof typeof images, files: FileList | null) => {
     if (!files) return;
@@ -173,17 +217,64 @@ const HojaDeRutaGenerator = () => {
     </div>
   );
 
-  const generateDocument = () => {
-    const documentData = {
-      ...eventData,
-      images,
-    };
+  const generateDocument = async () => {
+    const doc = new jsPDF();
+    
+    // Add header
+    doc.setFontSize(20);
+    doc.text("Hoja de Ruta", 105, 20, { align: "center" });
+    
+    // Event details
+    doc.setFontSize(12);
+    doc.text(`Event: ${eventData.eventName}`, 20, 40);
+    doc.text(`Dates: ${eventData.eventDates}`, 20, 50);
+    
+    // Venue information
+    doc.text("Venue Information", 20, 70);
+    doc.setFontSize(10);
+    doc.text(`Name: ${eventData.venue.name}`, 30, 80);
+    doc.text(`Address: ${eventData.venue.address}`, 30, 90);
+    
+    // Staff table
+    doc.setFontSize(12);
+    doc.text("Staff List", 20, 120);
+    
+    const staffTableData = eventData.staff.map(person => [
+      person.name,
+      person.surname1,
+      person.surname2,
+      person.position
+    ]);
+    
+    autoTable(doc, {
+      startY: 130,
+      head: [["Name", "First Surname", "Second Surname", "Position"]],
+      body: staffTableData,
+    });
+    
+    // Schedule
+    doc.text("Schedule", 20, doc.lastAutoTable.finalY + 20);
+    doc.setFontSize(10);
+    const scheduleLines = doc.splitTextToSize(eventData.schedule, 170);
+    doc.text(scheduleLines, 20, doc.lastAutoTable.finalY + 30);
+    
+    // Generate blob and download
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `hoja_de_ruta_${eventData.eventName.replace(/\s+/g, '_')}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
 
-    console.log("Document Data:", documentData);
-
-    setAlertMessage("Document data generated successfully! Check console for details.");
+    setAlertMessage("Document generated successfully!");
     setShowAlert(true);
     setTimeout(() => setShowAlert(false), 3000);
+
+    toast({
+      title: "Success",
+      description: "Hoja de Ruta has been generated and downloaded",
+    });
   };
 
   return (
