@@ -13,9 +13,11 @@ import Profile from "@/pages/Profile";
 import ProjectManagement from "@/pages/ProjectManagement";
 import PesosTool from "@/pages/PesosTool";
 import LightsPesosTool from "@/pages/LightsPesosTool";
+import VideoPesosTool from "@/pages/VideoPesosTool";
 import ConsumosTool from "@/pages/ConsumosTool";
-import LaborPOForm from "@/components/project-management/LaborPOForm";
 import LightsConsumosTool from "@/pages/LightsConsumosTool";
+import VideoConsumosTool from "@/pages/VideoConsumosTool";
+import LaborPOForm from "@/components/project-management/LaborPOForm";
 import { useSessionManager } from "@/hooks/useSessionManager";
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
@@ -245,6 +247,14 @@ function App() {
               } 
             />
             <Route 
+              path="/video-pesos-tool" 
+              element={
+                <ProtectedRoute>
+                  <VideoPesosTool />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/consumos-tool" 
               element={
                 <ProtectedRoute>
@@ -257,6 +267,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <LightsConsumosTool />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/video-consumos-tool" 
+              element={
+                <ProtectedRoute>
+                  <VideoConsumosTool />
                 </ProtectedRoute>
               } 
             />

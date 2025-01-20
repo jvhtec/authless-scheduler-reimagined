@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import CreateJobDialog from "@/components/jobs/CreateJobDialog";
 import CreateTourDialog from "@/components/tours/CreateTourDialog";
 import { useJobs } from "@/hooks/useJobs";
@@ -12,6 +13,8 @@ import { LightsHeader } from "@/components/lights/LightsHeader";
 import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { LightsSchedule } from "@/components/lights/LightsSchedule";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
+import { Link } from "react-router-dom";
+import { Scale, Zap } from "lucide-react";
 
 const Video = () => {
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
@@ -180,6 +183,21 @@ const Video = () => {
           department="video"
           userRole={userRole}
         />
+      </div>
+
+      <div className="flex gap-4 justify-end mt-4">
+        <Link to="/video-pesos-tool">
+          <Button variant="outline" className="gap-2">
+            <Scale className="h-4 w-4" />
+            Weight Calculator
+          </Button>
+        </Link>
+        <Link to="/video-consumos-tool">
+          <Button variant="outline" className="gap-2">
+            <Zap className="h-4 w-4" />
+            Power Calculator
+          </Button>
+        </Link>
       </div>
 
       <CreateJobDialog
