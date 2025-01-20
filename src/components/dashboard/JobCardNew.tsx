@@ -169,6 +169,114 @@ export const JobCardNew = ({
     personnel: "HR"
   };
 
+  const createFolderForDepartment = async (
+    parentFolderId: string,
+    deptName: string,
+    deptId: string,
+    formattedStartDate: string,
+    formattedEndDate: string,
+    documentNumber: string
+  ) => {
+    // Create department folder
+    const deptFolderPayload = {
+      definitionId: FLEX_FOLDER_IDS.subFolder,
+      parentElementId: parentFolderId,
+      open: true,
+      locked: false,
+      name: `${job.title} - ${deptName}`,
+      plannedStartDate: formattedStartDate,
+      plannedEndDate: formattedEndDate,
+      locationId: FLEX_FOLDER_IDS.location,
+      departmentId: deptId,
+      documentNumber: documentNumber,
+      personResponsibleId: RESPONSIBLE_PERSON_IDS[deptName.toLowerCase() as keyof typeof RESPONSIBLE_PERSON_IDS]
+    };
+
+    console.log(`Creating ${deptName} folder with payload:`, deptFolderPayload);
+
+    const deptResponse = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Auth-Token': API_KEY
+      },
+      body: JSON.stringify(deptFolderPayload)
+    });
+
+    if (!deptResponse.ok) {
+      const errorData = await deptResponse.json();
+      console.error(`Error creating ${deptName} folder:`, errorData);
+      throw new Error(errorData.exceptionMessage || `Failed to create ${deptName} folder`);
+    }
+
+    const deptFolder = await deptResponse.json();
+    console.log(`${deptName} folder created:`, deptFolder);
+
+    // Create Documentación Técnica subfolder
+    const docTecnicaPayload = {
+      definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
+      parentElementId: deptFolder.elementId,
+      name: `${job.title} - Documentación Técnica`,
+      open: true,
+      locked: false,
+      plannedStartDate: formattedStartDate,
+      plannedEndDate: formattedEndDate,
+      locationId: FLEX_FOLDER_IDS.location,
+      departmentId: deptId,
+      documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[deptName.toLowerCase() as keyof typeof DEPARTMENT_SUFFIXES]}DT`,
+      personResponsibleId: RESPONSIBLE_PERSON_IDS[deptName.toLowerCase() as keyof typeof RESPONSIBLE_PERSON_IDS]
+    };
+
+    console.log(`Creating Documentación Técnica subfolder for ${deptName} with payload:`, docTecnicaPayload);
+
+    const docTecnicaResponse = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Auth-Token': API_KEY
+      },
+      body: JSON.stringify(docTecnicaPayload)
+    });
+
+    if (!docTecnicaResponse.ok) {
+      const errorData = await docTecnicaResponse.json();
+      console.error(`Error creating Documentación Técnica subfolder for ${deptName}:`, errorData);
+      throw new Error(errorData.exceptionMessage || `Failed to create Documentación Técnica subfolder for ${deptName}`);
+    }
+
+    // Create Hoja de Gastos subfolder
+    const hojaGastosPayload = {
+      definitionId: FLEX_FOLDER_IDS.hojaGastos,
+      parentElementId: deptFolder.elementId,
+      name: `${job.title} - Hoja de Gastos`,
+      open: true,
+      locked: false,
+      plannedStartDate: formattedStartDate,
+      plannedEndDate: formattedEndDate,
+      locationId: FLEX_FOLDER_IDS.location,
+      departmentId: deptId,
+      documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[deptName.toLowerCase() as keyof typeof DEPARTMENT_SUFFIXES]}HG`,
+      personResponsibleId: RESPONSIBLE_PERSON_IDS[deptName.toLowerCase() as keyof typeof RESPONSIBLE_PERSON_IDS]
+    };
+
+    console.log(`Creating Hoja de Gastos subfolder for ${deptName} with payload:`, hojaGastosPayload);
+
+    const hojaGastosResponse = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Auth-Token': API_KEY
+      },
+      body: JSON.stringify(hojaGastosPayload)
+    });
+
+    if (!hojaGastosResponse.ok) {
+      const errorData = await hojaGastosResponse.json();
+      console.error(`Error creating Hoja de Gastos subfolder for ${deptName}:`, errorData);
+      throw new Error(errorData.exceptionMessage || `Failed to create Hoja de Gastos subfolder for ${deptName}`);
+    }
+  };
+
   const createFlexFolders = async (e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -188,79 +296,16 @@ export const JobCardNew = ({
       const formattedStartDate = new Date(job.start_time).toISOString().split('.')[0] + '.000Z';
       const formattedEndDate = new Date(job.end_time).toISOString().split('.')[0] + '.000Z';
 
-      const createSubfolder = async (parentId: string, name: string, deptId: string | null = null, docNumber: string, folderType?: string) => {
-        let payload;
-
-        if (folderType === 'documentacionTecnica' || folderType === 'hojaGastos') {
-          payload = {
-            definitionId: folderType === 'documentacionTecnica' 
-              ? FLEX_FOLDER_IDS.documentacionTecnica 
-              : FLEX_FOLDER_IDS.hojaGastos,
-            parentElementId: parentId,
-            name
-          };
-        } else {
-          payload = {
-            definitionId: FLEX_FOLDER_IDS.subFolder,
-            parentElementId: parentId,
-            open: true,
-            locked: false,
-            name,
-            plannedStartDate: formattedStartDate,
-            plannedEndDate: formattedEndDate,
-            locationId: FLEX_FOLDER_IDS.location,
-            departmentId: deptId,
-            documentNumber: docNumber,
-            personResponsibleId: deptId ? RESPONSIBLE_PERSON_IDS[deptId as keyof typeof RESPONSIBLE_PERSON_IDS] : FLEX_FOLDER_IDS.mainResponsible
-          };
-        }
-
-        console.log(`Creating subfolder: ${name} with payload:`, payload);
-
-        const response = await fetch(BASE_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Auth-Token': API_KEY
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error(`Error creating subfolder ${name}:`, errorData);
-          throw new Error(errorData.exceptionMessage || 'Failed to create subfolder');
-        }
-
-        const result = await response.json();
-        console.log(`Successfully created subfolder: ${name}`, result);
-        return result;
-      };
-
       const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
       
       for (const dept of departments) {
-        const deptFolder = await createSubfolder(
+        await createFolderForDepartment(
           job.id,
-          `${job.title} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+          dept.charAt(0).toUpperCase() + dept.slice(1),
           DEPARTMENT_IDS[dept],
+          formattedStartDate,
+          formattedEndDate,
           documentNumber
-        );
-
-        await createSubfolder(
-          deptFolder.elementId,
-          `${job.title} - Documentación Técnica`,
-          DEPARTMENT_IDS[dept],
-          `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}DT`,
-          'documentacionTecnica'
-        );
-
-        await createSubfolder(
-          deptFolder.elementId,
-          `${job.title} - Hoja de Gastos`,
-          DEPARTMENT_IDS[dept],
-          `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}HG`,
-          'hojaGastos'
         );
       }
 
