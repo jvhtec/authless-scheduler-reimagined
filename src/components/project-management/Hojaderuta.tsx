@@ -74,6 +74,44 @@ const HojaDeRutaGenerator = () => {
     venue: [],
   });
 
+  // Add new state for power requirements
+  const [powerRequirements, setPowerRequirements] = useState<string>('');
+
+  // Add function to fetch power requirements
+  const fetchPowerRequirements = async (jobId: string) => {
+    try {
+      const { data: requirements, error } = await supabase
+        .from('power_requirement_tables')
+        .select('*')
+        .eq('job_id', jobId);
+
+      if (error) throw error;
+
+      if (requirements && requirements.length > 0) {
+        // Format power requirements into readable text
+        const formattedRequirements = requirements.map(req => {
+          return `${req.department.toUpperCase()} - ${req.table_name}:\n` +
+                 `Total Power: ${req.total_watts}W\n` +
+                 `Current per Phase: ${req.current_per_phase}A\n` +
+                 `Recommended PDU: ${req.pdu_type}\n`;
+        }).join('\n');
+
+        setPowerRequirements(formattedRequirements);
+        setEventData(prev => ({
+          ...prev,
+          powerRequirements: formattedRequirements
+        }));
+      }
+    } catch (error: any) {
+      console.error('Error fetching power requirements:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch power requirements",
+        variant: "destructive"
+      });
+    }
+  };
+
   useEffect(() => {
     if (selectedJobId && jobs) {
       const selectedJob = jobs.find(job => job.id === selectedJobId);
@@ -88,6 +126,9 @@ const HojaDeRutaGenerator = () => {
           eventName: selectedJob.title,
           eventDates: formattedDates,
         }));
+
+        // Fetch power requirements
+        fetchPowerRequirements(selectedJob.id);
 
         // Fetch assigned staff
         fetchAssignedStaff(selectedJob.id);
@@ -797,7 +838,7 @@ const HojaDeRutaGenerator = () => {
               value={eventData.powerRequirements}
               onChange={(e) => setEventData({ ...eventData, powerRequirements: e.target.value })}
               className="min-h-[150px]"
-              placeholder="Specify power needs for sound, lighting, etc..."
+              placeholder="Power requirements will be automatically populated when available..."
             />
           </div>
 

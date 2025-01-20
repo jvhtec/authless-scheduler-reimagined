@@ -407,6 +407,47 @@ export type Database = {
           },
         ]
       }
+      power_requirement_tables: {
+        Row: {
+          created_at: string | null
+          current_per_phase: number
+          department: Database["public"]["Enums"]["department"]
+          id: string
+          job_id: string | null
+          pdu_type: string
+          table_name: string
+          total_watts: number
+        }
+        Insert: {
+          created_at?: string | null
+          current_per_phase: number
+          department: Database["public"]["Enums"]["department"]
+          id?: string
+          job_id?: string | null
+          pdu_type: string
+          table_name: string
+          total_watts: number
+        }
+        Update: {
+          created_at?: string | null
+          current_per_phase?: number
+          department?: Database["public"]["Enums"]["department"]
+          id?: string
+          job_id?: string | null
+          pdu_type?: string
+          table_name?: string
+          total_watts?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "power_requirement_tables_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

@@ -9,61 +9,56 @@ import { exportToPDF } from '@/utils/pdfExport';
 import { useJobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from "@/lib/supabase";
 
 const videoComponentDatabase = [
-  { id: 1, name: 'LED Panel P3.9', watts: 450 },
-  { id: 2, name: 'LED Panel P2.6', watts: 500 },
-  { id: 3, name: 'LED Processor', watts: 800 },
-  { id: 4, name: 'Professional Camera', watts: 80 },
-  { id: 5, name: 'Video Switcher', watts: 350 },
-  { id: 6, name: 'Monitor', watts: 150 },
-  { id: 7, name: 'Projector 20K', watts: 2200 },
-  { id: 8, name: 'Media Server', watts: 750 }
+  { id: 1, name: 'LED Panel P3.9', weight: 8.5 },
+  { id: 2, name: 'LED Panel P2.6', weight: 9.2 },
+  { id: 3, name: 'LED Processor', weight: 4.8 },
+  { id: 4, name: 'Professional Camera', weight: 7.2 },
+  { id: 5, name: 'Camera Tripod', weight: 4.5 },
+  { id: 6, name: 'Video Switcher', weight: 5.3 },
+  { id: 7, name: 'Projector 20K', weight: 55 },
+  { id: 8, name: 'Projector Screen', weight: 35 }
 ];
-
-const VOLTAGE_3PHASE = 400;
-const POWER_FACTOR = 0.85;
-const PHASES = 3;
-
-const PDU_TYPES = ['CEE32A 3P+N+G', 'CEE63A 3P+N+G', 'CEE125A 3P+N+G'];
 
 interface TableRow {
   quantity: string;
   componentId: string;
-  watts: string;
+  weight: string;
   componentName?: string;
-  totalWatts?: number;
+  totalWeight?: number;
 }
 
 interface Table {
   name: string;
   rows: TableRow[];
-  totalWatts?: number;
-  currentPerPhase?: number;
-  pduType?: string;
+  totalWeight?: number;
   id?: number;
+  dualMotors?: boolean;
 }
 
-const VideoConsumosTool: React.FC = () => {
+const VideoPesosTool: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
+  const department = 'video';
 
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
-  const [safetyMargin, setSafetyMargin] = useState(0);
+  const [useDualMotors, setUseDualMotors] = useState(false);
 
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
-    rows: [{ quantity: '', componentId: '', watts: '' }],
+    rows: [{ quantity: '', componentId: '', weight: '' }],
   });
 
   const addRow = () => {
     setCurrentTable((prev) => ({
       ...prev,
-      rows: [...prev.rows, { quantity: '', componentId: '', watts: '' }],
+      rows: [...prev.rows, { quantity: '', componentId: '', weight: '' }],
     }));
   };
 
@@ -74,7 +69,7 @@ const VideoConsumosTool: React.FC = () => {
       newRows[index] = {
         ...newRows[index],
         [field]: value,
-        watts: component ? component.watts.toString() : '',
+        weight: component ? component.weight.toString() : '',
       };
     } else {
       newRows[index] = {
@@ -94,19 +89,6 @@ const VideoConsumosTool: React.FC = () => {
     setSelectedJob(job);
   };
 
-  const calculatePhaseCurrents = (totalWatts: number) => {
-    const adjustedWatts = totalWatts * (1 + safetyMargin / 100);
-    const wattsPerPhase = adjustedWatts / PHASES;
-    const currentPerPhase = wattsPerPhase / (VOLTAGE_3PHASE * POWER_FACTOR);
-    return { wattsPerPhase, currentPerPhase };
-  };
-
-  const recommendPDU = (current: number) => {
-    if (current < 32) return PDU_TYPES[0];
-    if (current < 63) return PDU_TYPES[1];
-    return PDU_TYPES[2];
-  };
-
   const generateTable = () => {
     if (!tableName) {
       toast({
@@ -117,46 +99,93 @@ const VideoConsumosTool: React.FC = () => {
       return;
     }
 
+    const suffix = (() => {
+      const tableCount = tables.length + 1;
+      const suffixNumber = tableCount.toString().padStart(2, '0');
+      if (useDualMotors) {
+        return `(VX${suffixNumber}, VX${(tableCount + 1).toString().padStart(2, '0')})`;
+      }
+      return `(VX${suffixNumber})`;
+    })();
+
     const calculatedRows = currentTable.rows.map((row) => {
       const component = videoComponentDatabase.find((c) => c.id.toString() === row.componentId);
-      const totalWatts =
-        parseFloat(row.quantity) && parseFloat(row.watts)
-          ? parseFloat(row.quantity) * parseFloat(row.watts)
+      const totalWeight =
+        parseFloat(row.quantity) && parseFloat(row.weight)
+          ? parseFloat(row.quantity) * parseFloat(row.weight)
           : 0;
       return {
         ...row,
         componentName: component?.name || '',
-        totalWatts,
+        totalWeight,
       };
     });
 
-    const totalWatts = calculatedRows.reduce((sum, row) => sum + (row.totalWatts || 0), 0);
-    const { currentPerPhase } = calculatePhaseCurrents(totalWatts);
-    const pduSuggestion = recommendPDU(currentPerPhase);
+    const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
 
-    const newTable = {
-      name: `${tableName} (${pduSuggestion})`,
+    const newTable: Table = {
+      name: `${tableName} ${suffix}`,
       rows: calculatedRows,
-      totalWatts,
-      currentPerPhase,
-      pduType: pduSuggestion,
+      totalWeight,
       id: Date.now(),
+      dualMotors: useDualMotors,
     };
 
     setTables((prev) => [...prev, newTable]);
+    
+    // Save to database if job is selected
+    if (selectedJobId) {
+      savePowerRequirementTable(newTable);
+    } else {
+      toast({
+        title: "Warning",
+        description: "Please select a job to save power requirements",
+        variant: "destructive"
+      });
+    }
+    
     resetCurrentTable();
   };
 
   const resetCurrentTable = () => {
     setCurrentTable({
       name: '',
-      rows: [{ quantity: '', componentId: '', watts: '' }],
+      rows: [{ quantity: '', componentId: '', weight: '' }],
     });
     setTableName('');
   };
 
   const removeTable = (tableId: number) => {
     setTables((prev) => prev.filter((table) => table.id !== tableId));
+  };
+
+  const savePowerRequirementTable = async (table: Table) => {
+    try {
+      const { error } = await supabase
+        .from('power_requirement_tables')
+        .insert({
+          job_id: selectedJobId,
+          department: 'video',
+          table_name: table.name,
+          total_watts: table.totalWeight || 0,
+          current_per_phase: 0, // Placeholder, adjust as needed
+          pdu_type: '' // Placeholder, adjust as needed
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Power requirement table saved successfully",
+      });
+    } catch (error: any) {
+      console.error('Error saving power requirement table:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save power requirement table",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleExportPDF = async () => {
@@ -172,14 +201,12 @@ const VideoConsumosTool: React.FC = () => {
     try {
       const pdfBlob = await exportToPDF(
         selectedJob.title,
-        tables.map((table) => ({ ...table, toolType: 'consumos' })),
-        'power',
-        selectedJob.title,
-        undefined,
-        safetyMargin
+        tables.map((table) => ({ ...table, toolType: 'pesos' })),
+        'weight',
+        selectedJob.title
       );
 
-      const fileName = `Video Power Report - ${selectedJob.title}.pdf`;
+      const fileName = `Video Weight Report - ${selectedJob.title}.pdf`;
       const url = window.URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -210,30 +237,11 @@ const VideoConsumosTool: React.FC = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate('/video')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <CardTitle className="text-2xl font-bold">Video Power Calculator</CardTitle>
+          <CardTitle className="text-2xl font-bold">Video Weight Calculator</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="safetyMargin">Safety Margin</Label>
-            <Select
-              value={safetyMargin.toString()}
-              onValueChange={(value) => setSafetyMargin(Number(value))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Safety Margin" />
-              </SelectTrigger>
-              <SelectContent>
-                {[0, 10, 20, 30, 40, 50].map((percentage) => (
-                  <SelectItem key={percentage} value={percentage.toString()}>
-                    {percentage}%
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="jobSelect">Select Job</Label>
             <Select value={selectedJobId} onValueChange={handleJobSelect}>
@@ -266,7 +274,7 @@ const VideoConsumosTool: React.FC = () => {
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Quantity</th>
                   <th className="px-4 py-3 text-left font-medium">Component</th>
-                  <th className="px-4 py-3 text-left font-medium">Watts (per unit)</th>
+                  <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
                 </tr>
               </thead>
               <tbody>
@@ -299,12 +307,7 @@ const VideoConsumosTool: React.FC = () => {
                       </Select>
                     </td>
                     <td className="p-4">
-                      <Input
-                        type="number"
-                        value={row.watts}
-                        readOnly
-                        className="w-full bg-muted"
-                      />
+                      <Input type="number" value={row.weight} readOnly className="w-full bg-muted" />
                     </td>
                   </tr>
                 ))}
@@ -345,8 +348,8 @@ const VideoConsumosTool: React.FC = () => {
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">Quantity</th>
                     <th className="px-4 py-3 text-left font-medium">Component</th>
-                    <th className="px-4 py-3 text-left font-medium">Watts (per unit)</th>
-                    <th className="px-4 py-3 text-left font-medium">Total Watts</th>
+                    <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
+                    <th className="px-4 py-3 text-left font-medium">Total Weight</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -354,29 +357,18 @@ const VideoConsumosTool: React.FC = () => {
                     <tr key={index} className="border-t">
                       <td className="px-4 py-3">{row.quantity}</td>
                       <td className="px-4 py-3">{row.componentName}</td>
-                      <td className="px-4 py-3">{row.watts}</td>
-                      <td className="px-4 py-3">{row.totalWatts?.toFixed(2)}</td>
+                      <td className="px-4 py-3">{row.weight}</td>
+                      <td className="px-4 py-3">{row.totalWeight?.toFixed(2)}</td>
                     </tr>
                   ))}
                   <tr className="border-t bg-muted/50 font-medium">
                     <td colSpan={3} className="px-4 py-3 text-right">
-                      Total Watts:
+                      Total Weight:
                     </td>
-                    <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
-                  </tr>
-                  <tr className="bg-muted/50 font-medium">
-                    <td colSpan={3} className="px-4 py-3 text-right">
-                      Current per Phase:
-                    </td>
-                    <td className="px-4 py-3">{table.currentPerPhase?.toFixed(2)} A</td>
+                    <td className="px-4 py-3">{table.totalWeight?.toFixed(2)} kg</td>
                   </tr>
                 </tbody>
               </table>
-              {table.pduType && (
-                <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
-                  Recommended PDU: {table.pduType}
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -385,4 +377,4 @@ const VideoConsumosTool: React.FC = () => {
   );
 };
 
-export default VideoConsumosTool;
+export default VideoPesosTool;
