@@ -450,6 +450,40 @@ export const JobCardNew = ({
     try {
       console.log('Starting job deletion process for job:', job.id);
 
+      // Delete lights job tasks first
+      const { error: lightsTasksError } = await supabase
+        .from('lights_job_tasks')
+        .delete()
+        .eq('job_id', job.id);
+
+      if (lightsTasksError) {
+        console.error('Error deleting lights tasks:', lightsTasksError);
+        throw lightsTasksError;
+      }
+
+      // Delete sound job tasks
+      const { error: soundTasksError } = await supabase
+        .from('sound_job_tasks')
+        .delete()
+        .eq('job_id', job.id);
+
+      if (soundTasksError) {
+        console.error('Error deleting sound tasks:', soundTasksError);
+        throw soundTasksError;
+      }
+
+      // Delete video job tasks
+      const { error: videoTasksError } = await supabase
+        .from('video_job_tasks')
+        .delete()
+        .eq('job_id', job.id);
+
+      if (videoTasksError) {
+        console.error('Error deleting video tasks:', videoTasksError);
+        throw videoTasksError;
+      }
+
+      // Now proceed with the rest of the deletion process
       const { error: lightsPersonnelError } = await supabase
         .from('lights_job_personnel')
         .delete()
