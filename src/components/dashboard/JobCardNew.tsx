@@ -174,7 +174,7 @@ async function createAllFoldersForJob(
       parentElementId: topFolderId,
       open: true,
       locked: false,
-      name: dept.charAt(0).toUpperCase() + dept.slice(1),
+      name: `${job.title} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
       plannedStartDate: formattedStartDate,
       plannedEndDate: formattedEndDate,
       locationId: FLEX_FOLDER_IDS.location,
@@ -194,17 +194,17 @@ async function createAllFoldersForJob(
     const subfolders = [
       {
         definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
-        name: "Documentación Técnica",
+        name: `Documentación Técnica - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
         suffix: "DT"
       },
       {
-        definitionId: FLEX_FOLDER_IDS.presupuestosRecibidos, // same ID
-        name: "Presupuestos Recibidos",
+        definitionId: FLEX_FOLDER_IDS.presupuestosRecibidos,
+        name: `Presupuestos Recibidos - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
         suffix: "PR"
       },
       {
         definitionId: FLEX_FOLDER_IDS.hojaGastos,
-        name: "Hoja de Gastos",
+        name: `Hoja de Gastos - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
         suffix: "HG"
       }
     ];
@@ -220,7 +220,7 @@ async function createAllFoldersForJob(
         plannedEndDate: formattedEndDate,
         locationId: FLEX_FOLDER_IDS.location,
         departmentId: DEPARTMENT_IDS[dept],
-        documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
+        documentNumber: documentNumber + DEPARTMENT_SUFFIXES[dept] + sf.suffix,
         personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
       };
       await createFlexFolder(subPayload);
