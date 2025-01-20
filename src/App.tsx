@@ -37,7 +37,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   // Check access for project management
-  if (location.pathname === '/project-management') {
+  if (location.pathname.startsWith('/project-management')) {
+    console.log('Checking project management access for role:', userRole);
     const allowedRoles = ['admin', 'logistics', 'management'];
     if (!allowedRoles.includes(userRole || '')) {
       console.log('Unauthorized access attempt to project management');
