@@ -266,7 +266,6 @@ export const JobCardNew = ({
             `${documentNumber}${DEPARTMENT_SUFFIXES[dept as keyof typeof DEPARTMENT_SUFFIXES]}HG`
           );
         }
-        // Personnel department gets no additional folders
       };
 
       if (job.tour_date_id) {
@@ -309,13 +308,15 @@ export const JobCardNew = ({
           tourDateData.tours.flex_main_folder_id,
           `${baseName} - Documentación Técnica`,
           null,
-          `${documentNumber}DT`
+          `${documentNumber.toString()}DT`
         );
 
         const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
         
         for (const dept of departments) {
-          const parentFolderId = tourDateData.tours[`flex_${dept}_folder_id` as keyof typeof tourDateData.tours];
+          const folderIdKey = `flex_${dept}_folder_id` as keyof typeof tourDateData.tours;
+          const parentFolderId = tourDateData.tours[folderIdKey];
+          
           if (!parentFolderId) {
             console.warn(`No parent folder ID found for ${dept} department`);
             continue;
@@ -328,7 +329,7 @@ export const JobCardNew = ({
             parentFolderId,
             deptName,
             DEPARTMENT_IDS[dept],
-            `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`
+            `${documentNumber.toString()}${DEPARTMENT_SUFFIXES[dept]}`
           );
 
           await createDepartmentSubfolders(
@@ -336,7 +337,7 @@ export const JobCardNew = ({
             deptName,
             dept,
             DEPARTMENT_IDS[dept],
-            documentNumber
+            documentNumber.toString()
           );
         }
 
