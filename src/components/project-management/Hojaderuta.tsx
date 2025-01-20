@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardHeader,
@@ -12,17 +12,31 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Trash2 } from "lucide-react";
+import { Trash2, Calendar } from "lucide-react";
+import { useJobSelection } from "@/hooks/useJobSelection";
+import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 const HojaDeRutaGenerator = () => {
+  const { toast } = useToast();
+  const { data: jobs, isLoading: isLoadingJobs } = useJobSelection();
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [selectedJobId, setSelectedJobId] = useState<string>("");
+  
   const [eventData, setEventData] = useState({
     eventName: "",
     eventDates: "",
@@ -43,18 +57,35 @@ const HojaDeRutaGenerator = () => {
   });
 
   const [images, setImages] = useState({
-    logo: null,
     venue: [],
-    stage: [],
-    equipment: [],
   });
 
   const [imagePreviews, setImagePreviews] = useState({
-    logo: null,
     venue: [],
-    stage: [],
-    equipment: [],
   });
+
+  useEffect(() => {
+    if (selectedJobId && jobs) {
+      const selectedJob = jobs.find(job => job.id === selectedJobId);
+      if (selectedJob) {
+        console.log("Selected job:", selectedJob);
+        
+        // Format dates
+        const formattedDates = `${format(new Date(selectedJob.start_time), 'dd/MM/yyyy HH:mm')} - ${format(new Date(selectedJob.end_time), 'dd/MM/yyyy HH:mm')}`;
+        
+        setEventData(prev => ({
+          ...prev,
+          eventName: selectedJob.title,
+          eventDates: formattedDates,
+        }));
+
+        toast({
+          title: "Job Selected",
+          description: "Form has been updated with job details",
+        });
+      }
+    }
+  }, [selectedJobId, jobs]);
 
   const handleImageUpload = (type: keyof typeof images, files: FileList | null) => {
     if (!files) return;
@@ -148,10 +179,8 @@ const HojaDeRutaGenerator = () => {
       images,
     };
 
-    // Log the complete data
     console.log("Document Data:", documentData);
 
-    // Show success message
     setAlertMessage("Document data generated successfully! Check console for details.");
     setShowAlert(true);
     setTimeout(() => setShowAlert(false), 3000);
@@ -170,8 +199,33 @@ const HojaDeRutaGenerator = () => {
             </Alert>
           )}
 
-          {/* Basic Event Info */}
+          {/* Job Selection */}
           <div className="space-y-4">
+            <div className="flex flex-col space-y-2">
+              <Label htmlFor="jobSelect">Select Job</Label>
+              <Select
+                value={selectedJobId}
+                onValueChange={setSelectedJobId}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a job..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoadingJobs ? (
+                    <SelectItem value="loading" disabled>
+                      Loading jobs...
+                    </SelectItem>
+                  ) : (
+                    jobs?.map((job) => (
+                      <SelectItem key={job.id} value={job.id}>
+                        {job.title}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label htmlFor="eventName">Event Name</Label>
               <Input
@@ -182,35 +236,22 @@ const HojaDeRutaGenerator = () => {
             </div>
             <div>
               <Label htmlFor="eventDates">Event Dates</Label>
-              <Input
-                id="eventDates"
-                value={eventData.eventDates}
-                onChange={(e) => setEventData({ ...eventData, eventDates: e.target.value })}
-              />
+              <div className="relative">
+                <Input
+                  id="eventDates"
+                  value={eventData.eventDates}
+                  onChange={(e) => setEventData({ ...eventData, eventDates: e.target.value })}
+                />
+                <Calendar className="absolute right-3 top-2.5 h-5 w-5 text-muted-foreground" />
+              </div>
             </div>
           </div>
 
           {/* Images Section */}
           <div className="space-y-6">
             <ImageUploadSection
-              type="logo"
-              label="Company Logo"
-              multiple={false}
-            />
-            
-            <ImageUploadSection
               type="venue"
               label="Venue Images"
-            />
-            
-            <ImageUploadSection
-              type="stage"
-              label="Stage Setup Images"
-            />
-            
-            <ImageUploadSection
-              type="equipment"
-              label="Equipment Images"
             />
           </div>
 
