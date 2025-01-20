@@ -15,7 +15,6 @@ import PesosTool from "@/pages/PesosTool";
 import ConsumosTool from "@/pages/ConsumosTool";
 import LaborPOForm from "@/components/project-management/LaborPOForm";
 import { useSessionManager } from "@/hooks/useSessionManager";
-import { useEffect } from "react";
 import "./App.css";
 
 const queryClient = new QueryClient();
@@ -52,6 +51,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 // Home redirect component
 const HomeRedirect = () => {
   const { userRole, isLoading, session } = useSessionManager();
+  const location = useLocation();
   
   if (isLoading) {
     return (
@@ -63,6 +63,11 @@ const HomeRedirect = () => {
 
   if (!session) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // If we're already on a valid route, don't redirect
+  if (location.pathname !== '/') {
+    return null;
   }
 
   const allowedRoles = ['admin', 'logistics', 'management'];
@@ -167,7 +172,6 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            <Route path="*" element={<HomeRedirect />} />
           </Route>
         </Routes>
       </Router>
