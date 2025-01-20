@@ -1,126 +1,233 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import CreateJobDialog from "@/components/jobs/CreateJobDialog";
+import CreateTourDialog from "@/components/tours/CreateTourDialog";
+import { useJobs } from "@/hooks/useJobs";
+import { format } from "date-fns";
+import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
+import { EditJobDialog } from "@/components/jobs/EditJobDialog";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { Loader2, Plus, FileText } from "lucide-react";
-import { Department } from "@/types/department";
-import { startOfMonth, endOfMonth, addMonths } from "date-fns";
-import { MonthNavigation } from "@/components/project-management/MonthNavigation";
-import { DepartmentTabs } from "@/components/project-management/DepartmentTabs";
-import { useJobManagement } from "@/hooks/useJobManagement";
+import { useQueryClient } from "@tanstack/react-query";
+import { LightsHeader } from "@/components/lights/LightsHeader";
+import { LightsCalendar } from "@/components/lights/LightsCalendar";
+import { LightsSchedule } from "@/components/lights/LightsSchedule";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
+import { Link } from "react-router-dom";
+import { Scale, Zap } from "lucide-react";
 
 const Video = () => {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
+  const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
+  const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [date, setDate] = useState<Date | undefined>(new Date());
   const [userRole, setUserRole] = useState<string | null>(null);
-  const department: Department = "video";
-
-  const startDate = startOfMonth(currentDate);
-  const endDate = endOfMonth(currentDate);
-
+  const currentDepartment = "video";
+  
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  // Use the tab visibility hook to handle tab switching
   useTabVisibility(['jobs']);
 
-  const { jobs, jobsLoading, handleDeleteDocument } = useJobManagement(
-    department,
-    startDate,
-    endDate
-  );
+  // Remove the options object since useJobs no longer accepts parameters
+  const { data: jobs, isLoading } = useJobs();
 
   useEffect(() => {
-    const checkAccess = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          console.log("Video: No session found, redirecting to auth");
-          navigate('/auth');
-          return;
-        }
+    console.log("Video page: Fetching user role");
+    const fetchUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.log("Video page: No user found");
+        return;
+      }
 
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
 
-        if (profileError) {
-          console.error("Video: Error fetching profile:", profileError);
-          throw profileError;
-        }
+      if (error) {
+        console.error('Video page: Error fetching user role:', error);
+        return;
+      }
 
-        if (!profile || !['admin', 'logistics', 'management'].includes(profile.role)) {
-          console.log("Video: Unauthorized access attempt");
-          navigate('/dashboard');
-          return;
-        }
-
-        setUserRole(profile.role);
-        setLoading(false);
-      } catch (error) {
-        console.error("Video: Error in access check:", error);
-        navigate('/dashboard');
+      if (data) {
+        console.log("Video page: User role fetched:", data.role);
+        setUserRole(data.role);
       }
     };
 
-    checkAccess();
-  }, [navigate]);
+    fetchUserRole();
+  }, []);
 
-  if (loading || jobsLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
+  const getDepartmentJobs = () => {
+    if (!jobs) {
+      console.log("Video page: No jobs data available");
+      return [];
+    }
+    // Filter out jobs that are related to deleted tours
+    return jobs.filter(job => {
+      const isInDepartment = job.job_departments.some(dept => 
+        dept.department === currentDepartment
+      );
+      // If it's a tour job, make sure the tour_date_id exists and is valid
+      if (job.tour_date_id) {
+        return isInDepartment && job.tour_date;
+      }
+      return isInDepartment;
+    });
+  };
+
+  const getSelectedDateJobs = () => {
+    if (!date || !jobs) return [];
+    const selectedDate = format(date, 'yyyy-MM-dd');
+    const filteredJobs = getDepartmentJobs().filter(job => {
+      const jobDate = format(new Date(job.start_time), 'yyyy-MM-dd');
+      return jobDate === selectedDate;
+    });
+    console.log("Video page: Filtered jobs for selected date:", filteredJobs.length);
+    return filteredJobs;
+  };
+
+  const handleJobClick = (jobId: string) => {
+    setSelectedJobId(jobId);
+    setIsAssignmentDialogOpen(true);
+  };
+
+  const handleEditClick = (job: any) => {
+    setSelectedJob(job);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = async (jobId: string) => {
+    if (!window.confirm("Are you sure you want to delete this job?")) return;
+
+    try {
+      console.log("Starting deletion process for job:", jobId);
+
+      // Delete job assignments
+      console.log("Deleting job assignments...");
+      const { error: assignmentsError } = await supabase
+        .from("job_assignments")
+        .delete()
+        .eq("job_id", jobId);
+
+      if (assignmentsError) {
+        console.error("Error deleting job assignments:", assignmentsError);
+        throw assignmentsError;
+      }
+
+      // Delete job departments
+      console.log("Deleting job departments...");
+      const { error: departmentsError } = await supabase
+        .from("job_departments")
+        .delete()
+        .eq("job_id", jobId);
+
+      if (departmentsError) {
+        console.error("Error deleting job departments:", departmentsError);
+        throw departmentsError;
+      }
+
+      // Delete the job
+      console.log("Deleting the job...");
+      const { error: jobError } = await supabase
+        .from("jobs")
+        .delete()
+        .eq("id", jobId);
+
+      if (jobError) {
+        console.error("Error deleting job:", jobError);
+        throw jobError;
+      }
+
+      console.log("Job deletion completed successfully");
+      toast({
+        title: "Job deleted successfully",
+        description: "The job and all related records have been removed.",
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    } catch (error: any) {
+      console.error("Error in deletion process:", error);
+      toast({
+        title: "Error deleting job",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
-    <div className="container mx-auto px-4 space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle>Video Department</CardTitle>
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => navigate('/video-consumos')} 
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Power Calculator
-            </Button>
-            <Button 
-              onClick={() => navigate('/video-pesos')} 
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Weight Calculator
-            </Button>
-            <Button 
-              onClick={() => navigate('/hojaderuta')} 
-              className="flex items-center gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              Hoja de Ruta
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <MonthNavigation
-            currentDate={currentDate}
-            onPreviousMonth={() => setCurrentDate(prev => addMonths(prev, -1))}
-            onNextMonth={() => setCurrentDate(prev => addMonths(prev, 1))}
-          />
-          <DepartmentTabs
-            selectedDepartment={department}
-            onDepartmentChange={() => {}}
-            jobs={jobs || []}
-            jobsLoading={jobsLoading}
-            onDeleteDocument={handleDeleteDocument}
-            userRole={userRole}
-          />
-        </CardContent>
-      </Card>
+    <div className="max-w-7xl mx-auto space-y-6">
+      <LightsHeader 
+        onCreateJob={() => setIsJobDialogOpen(true)}
+        onCreateTour={() => setIsTourDialogOpen(true)}
+        department="Video"
+      />
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <LightsCalendar date={date} onSelect={setDate} />
+        <LightsSchedule
+          date={date}
+          jobs={getSelectedDateJobs()}
+          isLoading={isLoading}
+          onJobClick={handleJobClick}
+          onEditClick={handleEditClick}
+          onDeleteClick={handleDeleteClick}
+          department="video"
+          userRole={userRole}
+        />
+      </div>
+
+      <div className="flex gap-4 justify-end mt-4">
+        <Link to="/video-pesos-tool">
+          <Button variant="outline" className="gap-2">
+            <Scale className="h-4 w-4" />
+            Weight Calculator
+          </Button>
+        </Link>
+        <Link to="/video-consumos-tool">
+          <Button variant="outline" className="gap-2">
+            <Zap className="h-4 w-4" />
+            Power Calculator
+          </Button>
+        </Link>
+      </div>
+
+      <CreateJobDialog
+        open={isJobDialogOpen}
+        onOpenChange={setIsJobDialogOpen}
+        currentDepartment={currentDepartment}
+      />
+      
+      <CreateTourDialog
+        open={isTourDialogOpen}
+        onOpenChange={setIsTourDialogOpen}
+        currentDepartment={currentDepartment}
+      />
+
+      {selectedJobId && (
+        <JobAssignmentDialog
+          open={isAssignmentDialogOpen}
+          onOpenChange={setIsAssignmentDialogOpen}
+          jobId={selectedJobId}
+          department={currentDepartment}
+        />
+      )}
+
+      {selectedJob && (
+        <EditJobDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          job={selectedJob}
+        />
+      )}
     </div>
   );
 };
