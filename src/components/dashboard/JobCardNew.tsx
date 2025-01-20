@@ -454,37 +454,40 @@ export const JobCardNew = ({
     try {
       console.log('Starting job deletion process for job:', job.id);
 
-      const taskTables = ['lights_job_tasks', 'sound_job_tasks', 'video_job_tasks'];
-      for (const table of taskTables) {
-        const { error: tasksError } = await supabase
-          .from(table)
-          .delete()
-          .eq('job_id', job.id);
+      // 1. Delete task documents first
+      console.log('Deleting task documents...');
+      const { error: taskDocsError } = await supabase
+        .from('task_documents')
+        .delete()
+        .or(`sound_task_id.in.(select id from sound_job_tasks where job_id='${job.id}'),lights_task_id.in.(select id from lights_job_tasks where job_id='${job.id}'),video_task_id.in.(select id from video_job_tasks where job_id='${job.id}')`);
 
-        if (tasksError) {
-          console.error(`Error deleting ${table}:`, tasksError);
-          throw tasksError;
-        }
+      if (taskDocsError) {
+        console.error('Error deleting task documents:', taskDocsError);
+        throw taskDocsError;
       }
 
-      const personnelTables = ['lights_job_personnel', 'sound_job_personnel', 'video_job_personnel'];
-      for (const table of personnelTables) {
-        const { error: personnelError } = await supabase
-          .from(table)
-          .delete()
-          .eq('job_id', job.id);
+      // 2. Delete department tasks
+      console.log('Deleting department tasks...');
+      await Promise.all([
+        supabase.from('sound_job_tasks').delete().eq('job_id', job.id),
+        supabase.from('lights_job_tasks').delete().eq('job_id', job.id),
+        supabase.from('video_job_tasks').delete().eq('job_id', job.id)
+      ]);
 
-        if (personnelError) {
-          console.error(`Error deleting ${table}:`, personnelError);
-          throw personnelError;
-        }
-      }
+      // 3. Delete department personnel
+      console.log('Deleting department personnel...');
+      await Promise.all([
+        supabase.from('sound_job_personnel').delete().eq('job_id', job.id),
+        supabase.from('lights_job_personnel').delete().eq('job_id', job.id),
+        supabase.from('video_job_personnel').delete().eq('job_id', job.id)
+      ]);
 
+      // 4. Delete job documents from storage if they exist
       if (job.job_documents?.length > 0) {
-        console.log('Attempting to delete job documents from storage');
+        console.log('Deleting job documents from storage...');
         const { error: storageError } = await supabase.storage
           .from('job_documents')
-          .remove(job.job_documents.map(doc => doc.file_path));
+          .remove(job.job_documents.map((doc: JobDocument) => doc.file_path));
 
         if (storageError) {
           console.error('Storage deletion error:', storageError);
@@ -492,6 +495,20 @@ export const JobCardNew = ({
         }
       }
 
+      // 5. Delete job documents from database
+      console.log('Deleting job documents from database...');
+      const { error: jobDocsError } = await supabase
+        .from('job_documents')
+        .delete()
+        .eq('job_id', job.id);
+
+      if (jobDocsError) {
+        console.error('Error deleting job documents:', jobDocsError);
+        throw jobDocsError;
+      }
+
+      // 6. Delete job assignments
+      console.log('Deleting job assignments...');
       const { error: assignmentsError } = await supabase
         .from('job_assignments')
         .delete()
@@ -502,6 +519,8 @@ export const JobCardNew = ({
         throw assignmentsError;
       }
 
+      // 7. Delete job departments
+      console.log('Deleting job departments...');
       const { error: departmentsError } = await supabase
         .from('job_departments')
         .delete()
@@ -512,6 +531,8 @@ export const JobCardNew = ({
         throw departmentsError;
       }
 
+      // 8. Finally delete the job itself
+      console.log('Deleting the job...');
       const { error: jobError } = await supabase
         .from('jobs')
         .delete()
