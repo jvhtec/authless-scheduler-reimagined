@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import Layout from "@/components/Layout";
@@ -15,6 +15,7 @@ import PesosTool from "@/pages/PesosTool";
 import ConsumosTool from "@/pages/ConsumosTool";
 import LaborPOForm from "@/components/project-management/LaborPOForm";
 import { useSessionManager } from "@/hooks/useSessionManager";
+import { useEffect, useRef } from "react";
 import "./App.css";
 
 const queryClient = new QueryClient();
@@ -22,8 +23,21 @@ const queryClient = new QueryClient();
 // Custom redirect component that checks user role
 const RoleBasedRedirect = () => {
   const { userRole, isLoading, session } = useSessionManager();
-  console.log('RoleBasedRedirect - Role:', userRole, 'Loading:', isLoading, 'Has Session:', !!session);
+  const location = useLocation();
+  const redirectAttempts = useRef(0);
+  const lastRedirectTime = useRef(Date.now());
   
+  useEffect(() => {
+    // Reset redirect attempts counter after 10 seconds
+    const resetTimer = setInterval(() => {
+      if (Date.now() - lastRedirectTime.current >= 10000) {
+        redirectAttempts.current = 0;
+      }
+    }, 10000);
+
+    return () => clearInterval(resetTimer);
+  }, []);
+
   // If loading, show loading state
   if (isLoading) {
     return (
@@ -33,31 +47,58 @@ const RoleBasedRedirect = () => {
     );
   }
 
+  // Prevent too many redirects
+  if (redirectAttempts.current >= 5) {
+    console.error('Too many redirect attempts, showing error state');
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Error Loading Page</h2>
+          <p className="text-gray-600">Please try refreshing the page</p>
+        </div>
+      </div>
+    );
+  }
+
   // If no session, redirect to auth
   if (!session) {
-    console.log('No session found, redirecting to auth');
-    return <Navigate to="/auth" replace />;
+    if (location.pathname !== '/auth') {
+      redirectAttempts.current++;
+      lastRedirectTime.current = Date.now();
+      console.log('No session found, redirecting to auth');
+      return <Navigate to="/auth" replace />;
+    }
+    return null;
   }
 
   // If we have a role, redirect based on it
   if (userRole) {
-    console.log('Redirecting to dashboard based on role:', userRole);
     const dashboardPath = userRole === 'technician' ? "/technician-dashboard" : "/dashboard";
-    // Only redirect if we're not already on the correct dashboard
-    if (window.location.pathname !== dashboardPath) {
+    if (location.pathname === '/' && location.pathname !== dashboardPath) {
+      redirectAttempts.current++;
+      lastRedirectTime.current = Date.now();
+      console.log('Redirecting to dashboard based on role:', userRole);
       return <Navigate to={dashboardPath} replace />;
     }
     return null;
   }
 
   // If we have a session but no role (edge case), redirect to auth
-  console.log('Session exists but no role found, redirecting to auth');
-  return <Navigate to="/auth" replace />;
+  if (location.pathname !== '/auth') {
+    redirectAttempts.current++;
+    lastRedirectTime.current = Date.now();
+    console.log('Session exists but no role found, redirecting to auth');
+    return <Navigate to="/auth" replace />;
+  }
+  
+  return null;
 };
 
 // Protected Route wrapper component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, isLoading } = useSessionManager();
+  const location = useLocation();
+  const redirectAttempts = useRef(0);
   
   if (isLoading) {
     return (
@@ -67,8 +108,19 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   
-  if (!session) {
-    return <Navigate to="/auth" replace />;
+  if (!session && location.pathname !== '/auth') {
+    if (redirectAttempts.current < 5) {
+      redirectAttempts.current++;
+      return <Navigate to="/auth" replace />;
+    }
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Error Loading Page</h2>
+          <p className="text-gray-600">Please try refreshing the page</p>
+        </div>
+      </div>
+    );
   }
   
   return <>{children}</>;
