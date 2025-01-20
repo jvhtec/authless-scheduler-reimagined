@@ -12,6 +12,7 @@ import TechnicianDashboard from "@/pages/TechnicianDashboard";
 import Profile from "@/pages/Profile";
 import ProjectManagement from "@/pages/ProjectManagement";
 import PesosTool from "@/pages/PesosTool";
+import LightsPesosTool from "@/pages/LightsPesosTool";
 import ConsumosTool from "@/pages/ConsumosTool";
 import LaborPOForm from "@/components/project-management/LaborPOForm";
 import { useSessionManager } from "@/hooks/useSessionManager";
@@ -231,6 +232,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PesosTool />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/lights-pesos-tool" 
+              element={
+                <ProtectedRoute>
+                  <LightsPesosTool />
                 </ProtectedRoute>
               } 
             />

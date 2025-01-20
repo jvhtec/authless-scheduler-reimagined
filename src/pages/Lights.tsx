@@ -12,6 +12,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { LightsHeader } from "@/components/lights/LightsHeader";
 import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { LightsSchedule } from "@/components/lights/LightsSchedule";
+import { Button } from "@/components/ui/button";
+import { Scale } from "lucide-react";
 
 const Lights = () => {
   const navigate = useNavigate();
@@ -156,11 +158,21 @@ const Lights = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <LightsHeader 
-        onCreateJob={() => setIsJobDialogOpen(true)}
-        onCreateTour={() => setIsTourDialogOpen(true)}
-        department="Lights"
-      />
+      <div className="flex justify-between items-center">
+        <LightsHeader 
+          onCreateJob={() => setIsJobDialogOpen(true)}
+          onCreateTour={() => setIsTourDialogOpen(true)}
+          department="Lights"
+        />
+        <Button 
+          variant="outline" 
+          onClick={() => navigate('/lights-pesos-tool')}
+          className="flex items-center gap-2"
+        >
+          <Scale className="h-4 w-4" />
+          Weight Calculator
+        </Button>
+      </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         <LightsCalendar date={date} onSelect={setDate} />
