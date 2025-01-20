@@ -27,20 +27,6 @@ const soundComponentDatabase = [
   { id: 13, name: 'Yamaha CL5', watts: 1200 },
 ];
 
-const lightComponentDatabase = [
-  { id: 1, name: 'LED Moving Head', watts: 300 },
-  { id: 2, name: 'Spotlight 1200W', watts: 1200 },
-  { id: 3, name: 'Stage Par 64', watts: 500 },
-  { id: 4, name: 'DMX Controller', watts: 50 },
-];
-
-const videoComponentDatabase = [
-  { id: 1, name: 'LED Wall Panel', watts: 450 },
-  { id: 2, name: 'Projector 5000 Lumens', watts: 350 },
-  { id: 3, name: 'Video Processor', watts: 250 },
-  { id: 4, name: 'Media Server', watts: 500 },
-];
-
 const VOLTAGE_3PHASE = 400;
 const POWER_FACTOR = 0.85;
 const PHASES = 3;
@@ -80,19 +66,6 @@ const ConsumosTool: React.FC = () => {
     rows: [{ quantity: '', componentId: '', watts: '' }],
   });
 
-  const department = window.location.pathname.includes('/lights')
-    ? 'lights'
-    : window.location.pathname.includes('/video')
-    ? 'video'
-    : 'sound';
-
-  const componentDatabase =
-    department === 'sound'
-      ? soundComponentDatabase
-      : department === 'lights'
-      ? lightComponentDatabase
-      : videoComponentDatabase;
-
   const addRow = () => {
     setCurrentTable((prev) => ({
       ...prev,
@@ -103,7 +76,7 @@ const ConsumosTool: React.FC = () => {
   const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
     if (field === 'componentId') {
-      const component = componentDatabase.find((c) => c.id.toString() === value);
+      const component = soundComponentDatabase.find((c) => c.id.toString() === value);
       newRows[index] = {
         ...newRows[index],
         [field]: value,
@@ -140,6 +113,35 @@ const ConsumosTool: React.FC = () => {
     return PDU_TYPES[2];
   };
 
+  const savePowerRequirementTable = async (table: Table) => {
+    try {
+      const { error } = await supabase
+        .from('power_requirement_tables')
+        .insert({
+          job_id: selectedJobId,
+          department: 'sound',
+          table_name: table.name,
+          total_watts: table.totalWatts || 0,
+          current_per_phase: table.currentPerPhase || 0,
+          pdu_type: table.pduType || ''
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Power requirement table saved successfully",
+      });
+    } catch (error: any) {
+      console.error('Error saving power requirement table:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save power requirement table",
+        variant: "destructive"
+      });
+    }
+  };
+
   const generateTable = () => {
     if (!tableName) {
       toast({
@@ -151,7 +153,7 @@ const ConsumosTool: React.FC = () => {
     }
 
     const calculatedRows = currentTable.rows.map((row) => {
-      const component = componentDatabase.find((c) => c.id.toString() === row.componentId);
+      const component = soundComponentDatabase.find((c) => c.id.toString() === row.componentId);
       const totalWatts =
         parseFloat(row.quantity) && parseFloat(row.watts)
           ? parseFloat(row.quantity) * parseFloat(row.watts)
@@ -164,7 +166,7 @@ const ConsumosTool: React.FC = () => {
     });
 
     const totalWatts = calculatedRows.reduce((sum, row) => sum + (row.totalWatts || 0), 0);
-    const { wattsPerPhase, currentPerPhase } = calculatePhaseCurrents(totalWatts);
+    const { currentPerPhase } = calculatePhaseCurrents(totalWatts);
     const pduSuggestion = recommendPDU(currentPerPhase);
 
     const newTable = {
@@ -177,6 +179,12 @@ const ConsumosTool: React.FC = () => {
     };
 
     setTables((prev) => [...prev, newTable]);
+    
+    // Save to database if job is selected
+    if (selectedJobId) {
+      savePowerRequirementTable(newTable);
+    }
+    
     resetCurrentTable();
   };
 
@@ -214,7 +222,7 @@ const ConsumosTool: React.FC = () => {
 
       const fileName = `Power Report - ${selectedJob.title}.pdf`;
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-      const filePath = `${department}/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+      const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
 
       const { error: uploadError } = await supabase.storage
         .from('task_documents')
@@ -336,7 +344,7 @@ const ConsumosTool: React.FC = () => {
                           <SelectValue placeholder="Select component" />
                         </SelectTrigger>
                         <SelectContent>
-                          {componentDatabase.map((component) => (
+                          {soundComponentDatabase.map((component) => (
                             <SelectItem key={component.id} value={component.id.toString()}>
                               {component.name}
                             </SelectItem>

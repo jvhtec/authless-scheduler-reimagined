@@ -110,6 +110,35 @@ const LightsConsumosTool: React.FC = () => {
     return PDU_TYPES[2];
   };
 
+  const savePowerRequirementTable = async (table: Table) => {
+    try {
+      const { error } = await supabase
+        .from('power_requirement_tables')
+        .insert({
+          job_id: selectedJobId,
+          department: 'lights',
+          table_name: table.name,
+          total_watts: table.totalWatts || 0,
+          current_per_phase: table.currentPerPhase || 0,
+          pdu_type: table.pduType || ''
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Power requirement table saved successfully",
+      });
+    } catch (error: any) {
+      console.error('Error saving power requirement table:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save power requirement table",
+        variant: "destructive"
+      });
+    }
+  };
+
   const generateTable = () => {
     if (!tableName) {
       toast({
@@ -147,6 +176,12 @@ const LightsConsumosTool: React.FC = () => {
     };
 
     setTables((prev) => [...prev, newTable]);
+    
+    // Save to database if job is selected
+    if (selectedJobId) {
+      savePowerRequirementTable(newTable);
+    }
+    
     resetCurrentTable();
   };
 
