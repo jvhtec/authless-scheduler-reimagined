@@ -23,40 +23,35 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import createFolderIcon from "@/assets/icons/icon.png";
 import { Department } from "@/types/department";
 
-// FLEX API Info
+// Flex API base & token
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
 const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
 
 /**
- * The resource/definition IDs for your Flex environment.
- * 
- * IMPORTANT CHANGE:
- * - “Documentación Técnica” is "3787806c-af2d-11df-b8d5-00e08175e43e"
- * - “Presupuestos Recibidos” now ALSO points to the SAME ID.
+ * NOTE: “documentacionTecnica” and “presupuestosRecibidos” now both point to the
+ * same working definitionId => "3787806c-af2d-11df-b8d5-00e08175e43e".
  */
 const FLEX_FOLDER_IDS = {
-  // Top-level "main folder" definition (no parentElementId)
+  // The top-level folder (no parentElementId) definition
   mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
 
   // Department folder definition
   subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
 
-  // Possibly used for plannedStartDate / plannedEndDate
   location: "2f49c62c-b139-11df-b8d5-00e08175e43e",
-
-  // Optional “main responsible” for the top folder
   mainResponsible: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb",
 
-  // Documentación Técnica
+  // Both "Documentación Técnica" and "Presupuestos Recibidos" share this ID:
   documentacionTecnica: "3787806c-af2d-11df-b8d5-00e08175e43e",
-  // Presupuestos Recibidos => Using the SAME definition ID
   presupuestosRecibidos: "3787806c-af2d-11df-b8d5-00e08175e43e",
 
   // Hoja de Gastos
   hojaGastos: "566d32e0-1a1e-11e0-a472-00e08175e43e"
 };
 
-// Department references
+/**
+ * Department references
+ */
 const DEPARTMENT_IDS = {
   sound: "cdd5e372-d124-11e1-bba1-00e08175e43e",
   lights: "d5af7892-d124-11e1-bba1-00e08175e43e",
@@ -65,7 +60,6 @@ const DEPARTMENT_IDS = {
   personnel: "b972d682-598d-4802-a390-82e28dc4480e"
 };
 
-// Responsible person IDs
 const RESPONSIBLE_PERSON_IDS = {
   sound: "4b0d98e0-e700-11ea-97d0-2a0a4490a7fb",
   lights: "4b559e60-e700-11ea-97d0-2a0a4490a7fb",
@@ -74,7 +68,6 @@ const RESPONSIBLE_PERSON_IDS = {
   personnel: "4b618540-e700-11ea-97d0-2a0a4490a7fb"
 };
 
-// Department suffixes for docNumbers
 const DEPARTMENT_SUFFIXES = {
   sound: "S",
   lights: "L",
@@ -103,8 +96,7 @@ interface JobCardNewProps {
 }
 
 /**
- * Simple helper to create a folder in Flex. 
- * Returns the new folder object (with .elementId).
+ * Create a folder in Flex. Returns the newly created folder object with .elementId
  */
 async function createFlexFolder(payload: Record<string, any>) {
   console.log("Creating Flex folder with payload:", payload);
@@ -125,19 +117,18 @@ async function createFlexFolder(payload: Record<string, any>) {
 
   const data = await response.json();
   console.log("Created Flex folder:", data);
-  return data; // => { elementId: "uuid", ... }
+  return data;
 }
 
 /**
- * Create the entire hierarchy:
- * - Top-level folder (definition = mainFolder, no parentElementId)
- * - Sibling “Documentación Técnica”
- * - Department folders: Sound, Lights, Video, Production, Personnel
- * - Subfolders under each department (except Personnel):
- *   “Documentación Técnica,” “Presupuestos Recibidos,” “Hoja de Gastos”
- * 
- * “Presupuestos Recibidos” uses the SAME definition ID as “Documentación Técnica,” 
- * just a different name, since they’re the same doc type in Flex.
+ * Creates the entire hierarchy:
+ * 1) Top-level folder (no parentElementId, using "mainFolder" definition)
+ * 2) Sibling "Documentación Técnica" folder under top-level
+ * 3) Department folders: Sound, Lights, Video, Production, Personnel
+ * 4) For each department (except Personnel), 3 subfolders:
+ *    - Documentación Técnica (definitionId = "3787806c...")
+ *    - Presupuestos Recibidos (ALSO "3787806c...", just different name)
+ *    - Hoja de Gastos
  */
 async function createAllFoldersForJob(
   job: any,
@@ -147,7 +138,7 @@ async function createAllFoldersForJob(
 ) {
   // 1) Top-level folder
   const topPayload = {
-    definitionId: FLEX_FOLDER_IDS.mainFolder, // “no parent” => top-level
+    definitionId: FLEX_FOLDER_IDS.mainFolder,
     open: true,
     locked: false,
     name: job.title,
@@ -156,11 +147,12 @@ async function createAllFoldersForJob(
     locationId: FLEX_FOLDER_IDS.location,
     personResponsibleId: FLEX_FOLDER_IDS.mainResponsible,
     documentNumber
+    // no parentElementId => top-level
   };
   const topFolder = await createFlexFolder(topPayload);
   const topFolderId = topFolder.elementId;
 
-  // 2) Sibling folder: "Documentación Técnica" under top
+  // 2) Sibling "Documentación Técnica"
   const docTecPayload = {
     definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
     parentElementId: topFolderId,
@@ -193,13 +185,12 @@ async function createAllFoldersForJob(
     const deptFolder = await createFlexFolder(deptPayload);
     const deptFolderId = deptFolder.elementId;
 
-    // Personnel has no subfolders
+    // "Personnel" has no subfolders
     if (dept === "personnel") continue;
 
-    // 3 subfolders for the other depts:
-    //   Documentación Técnica (same ID as above),
-    //   Presupuestos Recibidos (SAME ID, different name),
-    //   Hoja de Gastos
+    // 3 subfolders for the other depts
+    // Both "Documentación Técnica" & "Presupuestos Recibidos" share the same definitionId, 
+    // with different names.
     const subfolders = [
       {
         definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
@@ -229,7 +220,6 @@ async function createAllFoldersForJob(
         plannedEndDate: formattedEndDate,
         locationId: FLEX_FOLDER_IDS.location,
         departmentId: DEPARTMENT_IDS[dept],
-        // e.g. "YYMMDDS-PR"
         documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
         personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
       };
@@ -255,7 +245,7 @@ export const JobCardNew = ({
   const [assignments, setAssignments] = useState(job.job_assignments || []);
   const [documents, setDocuments] = useState<JobDocument[]>(job.job_documents || []);
 
-  // Example: Sound tasks
+  // Example: sound tasks
   const { data: soundTasks } = useQuery({
     queryKey: ["sound-tasks", job.id],
     queryFn: async () => {
@@ -281,7 +271,7 @@ export const JobCardNew = ({
     retryDelay: 1000
   });
 
-  // Example: Sound personnel
+  // Example: sound_job_personnel
   const { data: personnel } = useQuery({
     queryKey: ["sound-personnel", job.id],
     queryFn: async () => {
@@ -313,7 +303,7 @@ export const JobCardNew = ({
     enabled: department === "sound"
   });
 
-  // Mark job as having flex_folders_created
+  // Mutation to mark job as having flex_folders_created
   const updateFolderStatus = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
@@ -327,7 +317,9 @@ export const JobCardNew = ({
     }
   });
 
-  // Main function to create all folders
+  /**
+   * Called by "Create Flex folders" button
+   */
   const createFlexFolders = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
@@ -341,7 +333,6 @@ export const JobCardNew = ({
     }
 
     try {
-      // For docNumber, e.g. "YYMMDD"
       const startDate = new Date(job.start_time);
       const documentNumber = startDate.toISOString().slice(2, 10).replace(/-/g, "");
 
@@ -350,10 +341,10 @@ export const JobCardNew = ({
       const formattedEndDate =
         new Date(job.end_time).toISOString().split(".")[0] + ".000Z";
 
-      // Create the entire structure
+      // Create hierarchy
       await createAllFoldersForJob(job, formattedStartDate, formattedEndDate, documentNumber);
 
-      // Mark in DB
+      // Mark DB
       await updateFolderStatus.mutateAsync();
 
       toast({
@@ -370,10 +361,10 @@ export const JobCardNew = ({
     }
   };
 
-  // Helpers for progress
+  // Some helpers
   const calculateTotalProgress = () => {
     if (!soundTasks?.length) return 0;
-    const totalProgress = soundTasks.reduce((acc, t) => acc + (t.progress || 0), 0);
+    const totalProgress = soundTasks.reduce((acc, task) => acc + (task.progress || 0), 0);
     return Math.round(totalProgress / soundTasks.length);
   };
   const getCompletedTasks = () => {
@@ -390,13 +381,13 @@ export const JobCardNew = ({
     );
   };
 
-  // Edit
+  // Edit job
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onEditClick(job);
   };
 
-  // Delete logic
+  // Delete job from DB
   const handleDeleteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
@@ -505,7 +496,7 @@ export const JobCardNew = ({
         .eq("job_id", job.id);
       if (departmentsError) throw departmentsError;
 
-      // 9) finally delete job
+      // 9) finally delete the job
       const { error: jobError } = await supabase
         .from("jobs")
         .delete()
@@ -529,7 +520,7 @@ export const JobCardNew = ({
     }
   };
 
-  // Collapsing UI
+  // Toggle collapse
   const toggleCollapse = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCollapsed(!collapsed);
@@ -624,10 +615,10 @@ export const JobCardNew = ({
     }
   };
 
-  // If userRole="logistics", no edit
+  // If userRole="logistics", can't edit
   const canEdit = userRole !== "logistics";
 
-  // Convert assignments => [ {id, name, role} ]
+  // Convert assignments => array of {id, name, role}
   const assignedTechnicians = assignments
     .map((assignment: any) => {
       let role = null;
@@ -645,6 +636,7 @@ export const JobCardNew = ({
           role = assignment.sound_role || assignment.lights_role || assignment.video_role;
       }
       if (!role) return null;
+
       return {
         id: assignment.technician_id,
         name: `${assignment.profiles?.first_name || ""} ${
@@ -655,7 +647,7 @@ export const JobCardNew = ({
     })
     .filter(Boolean);
 
-  // Force refresh
+  // Refresh data
   const refreshData = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await queryClient.invalidateQueries({ queryKey: ["jobs"] });
@@ -765,7 +757,7 @@ export const JobCardNew = ({
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
               <div className="flex flex-wrap gap-1">
-                {assignedTechnicians.map((tech: any) => (
+                {assignedTechnicians.map((tech) => (
                   <Badge key={tech.id} variant="secondary" className="text-xs">
                     {tech.name} {tech.role && `(${tech.role})`}
                   </Badge>
