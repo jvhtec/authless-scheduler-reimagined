@@ -30,54 +30,42 @@ const ProjectManagement = () => {
   );
 
   useEffect(() => {
-    let mounted = true;
-
     const checkAccess = async () => {
       try {
-        console.log("ProjectManagement: Checking session...");
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (!session && mounted) {
+        if (!session) {
           console.log("ProjectManagement: No session found, redirecting to auth");
           navigate('/auth');
           return;
         }
 
-        if (session && mounted) {
-          console.log("ProjectManagement: Session found, checking user role");
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', session.user.id)
-            .maybeSingle();
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
 
-          if (profileError) {
-            console.error("ProjectManagement: Error fetching profile:", profileError);
-            navigate('/dashboard');
-            return;
-          }
-
-          if (!profile || !['admin', 'logistics', 'management'].includes(profile.role)) {
-            console.log("ProjectManagement: Unauthorized access attempt, redirecting to dashboard");
-            navigate('/dashboard');
-            return;
-          }
-
-          setUserRole(profile.role);
-          console.log("ProjectManagement: Access granted for role:", profile.role);
+        if (profileError) {
+          console.error("ProjectManagement: Error fetching profile:", profileError);
+          throw profileError;
         }
+
+        if (!profile || !['admin', 'logistics', 'management'].includes(profile.role)) {
+          console.log("ProjectManagement: Unauthorized access attempt");
+          navigate('/dashboard');
+          return;
+        }
+
+        setUserRole(profile.role);
+        setLoading(false);
       } catch (error) {
         console.error("ProjectManagement: Error in access check:", error);
-        if (mounted) navigate('/auth');
-      } finally {
-        if (mounted) setLoading(false);
+        navigate('/dashboard');
       }
     };
 
     checkAccess();
-    return () => {
-      mounted = false;
-    };
   }, [navigate]);
 
   if (loading || jobsLoading) {
