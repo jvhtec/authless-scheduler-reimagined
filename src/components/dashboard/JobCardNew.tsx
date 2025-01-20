@@ -874,4 +874,3 @@ export const JobCardNew = ({
 
 export default JobCardNew;
 
-d.

@@ -15,110 +15,44 @@ import PesosTool from "@/pages/PesosTool";
 import ConsumosTool from "@/pages/ConsumosTool";
 import LaborPOForm from "@/components/project-management/LaborPOForm";
 import { useSessionManager } from "@/hooks/useSessionManager";
-import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 const queryClient = new QueryClient();
 
-// Custom redirect component that checks user role
-const RoleBasedRedirect = () => {
-  const { userRole, isLoading, session } = useSessionManager();
-  const location = useLocation();
-  const [isRedirecting, setIsRedirecting] = useState(false);
-  const lastRedirectTime = useRef(0);
-  const redirectCount = useRef(0);
-  
-  useEffect(() => {
-    const now = Date.now();
-    // Reset redirect count after 10 seconds of no redirects
-    if (now - lastRedirectTime.current > 10000) {
-      redirectCount.current = 0;
-    }
-  }, []);
-
-  // If loading, show loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white" />
-      </div>
-    );
-  }
-
-  // Prevent redirect loops
-  if (redirectCount.current >= 5) {
-    console.error('Too many redirect attempts, showing error state');
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Error Loading Page</h2>
-          <p className="text-gray-600">Please try refreshing the page</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Prevent multiple simultaneous redirects
-  if (isRedirecting) {
-    return null;
-  }
-
-  // Handle redirects with rate limiting
-  const handleRedirect = (to: string) => {
-    const now = Date.now();
-    if (now - lastRedirectTime.current < 1000) {
-      // Prevent redirects more frequent than once per second
-      return null;
-    }
-
-    setIsRedirecting(true);
-    lastRedirectTime.current = now;
-    redirectCount.current += 1;
-    
-    return <Navigate to={to} replace />;
-  };
-
-  // If no session, redirect to auth
-  if (!session) {
-    if (location.pathname !== '/auth') {
-      console.log('No session found, redirecting to auth');
-      return handleRedirect('/auth');
-    }
-    return null;
-  }
-
-  // If we have a role, redirect based on it
-  if (userRole) {
-    const dashboardPath = userRole === 'technician' ? "/technician-dashboard" : "/dashboard";
-    if (location.pathname === '/') {
-      console.log('Redirecting to dashboard based on role:', userRole);
-      return handleRedirect(dashboardPath);
-    }
-    return null;
-  }
-
-  // If we have a session but no role (edge case), redirect to auth
-  if (location.pathname !== '/auth') {
-    console.log('Session exists but no role found, redirecting to auth');
-    return handleRedirect('/auth');
-  }
-  
-  return null;
-};
-
 // Protected Route wrapper component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { session, isLoading } = useSessionManager();
+  const { session, isLoading, userRole } = useSessionManager();
   const location = useLocation();
-  const [redirectAttempts, setRedirectAttempts] = useState(0);
-  
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setRedirectAttempts(0);
-    }, 10000);
-    
-    return () => clearTimeout(timer);
-  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    console.log('No session found, redirecting to auth');
+    return <Navigate to="/auth" replace state={{ from: location }} />;
+  }
+
+  // Check access for project management routes
+  if (location.pathname.startsWith('/project-management')) {
+    console.log('Checking project management access for role:', userRole);
+    const allowedRoles = ['admin', 'logistics', 'management'];
+    if (!allowedRoles.includes(userRole || '')) {
+      console.log('Unauthorized access attempt to project management');
+      return <Navigate to="/dashboard" replace />;
+    }
+  }
+
+  return <>{children}</>;
+};
+
+// Home redirect component
+const HomeRedirect = () => {
+  const { userRole, isLoading, session } = useSessionManager();
   
   if (isLoading) {
     return (
@@ -127,23 +61,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-  
-  if (!session && location.pathname !== '/auth') {
-    if (redirectAttempts < 5) {
-      setRedirectAttempts(prev => prev + 1);
-      return <Navigate to="/auth" replace />;
-    }
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Error Loading Page</h2>
-          <p className="text-gray-600">Please try refreshing the page</p>
-        </div>
-      </div>
-    );
+
+  if (!session) {
+    console.log('No session in HomeRedirect, redirecting to auth');
+    return <Navigate to="/auth" replace />;
   }
+
+  const allowedRoles = ['admin', 'logistics', 'management'];
+  const dashboardPath = allowedRoles.includes(userRole || '') ? "/dashboard" : "/technician-dashboard";
   
-  return <>{children}</>;
+  return <Navigate to={dashboardPath} replace />;
 };
 
 function App() {
@@ -153,7 +80,7 @@ function App() {
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route element={<Layout><Outlet /></Layout>}>
-            <Route path="/" element={<RoleBasedRedirect />} />
+            <Route path="/" element={<HomeRedirect />} />
             <Route 
               path="/dashboard" 
               element={
@@ -211,7 +138,7 @@ function App() {
               } 
             />
             <Route 
-              path="/project-management" 
+              path="/project-management/*" 
               element={
                 <ProtectedRoute>
                   <ProjectManagement />
@@ -242,7 +169,6 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            <Route path="*" element={<RoleBasedRedirect />} />
           </Route>
         </Routes>
       </Router>

@@ -31,9 +31,20 @@ export const useSessionManager = () => {
       console.log("Session found, updating user data for ID:", currentSession.user.id);
       setSession(currentSession);
       
-      const profileData = await fetchUserProfile(currentSession.user.id);
+      // Fetch profile data directly from the database
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role, department')
+        .eq('id', currentSession.user.id)
+        .single();
       
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
+        throw profileError;
+      }
+
       if (profileData) {
+        console.log("Profile data fetched successfully:", profileData);
         setUserRole(profileData.role);
         setUserDepartment(profileData.department);
       } else {
@@ -43,13 +54,13 @@ export const useSessionManager = () => {
       }
     } catch (error) {
       console.error("Error in session update:", error);
-      setSession(null);
+      // Don't clear session on profile fetch error
       setUserRole(null);
       setUserDepartment(null);
     } finally {
       setIsLoading(false);
     }
-  }, [fetchUserProfile]);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -91,14 +102,8 @@ export const useSessionManager = () => {
     };
   }, [handleSessionUpdate]);
 
-  useProfileChanges(
-    session,
-    userRole,
-    fetchUserProfile,
-    setUserRole,
-    setUserDepartment
-  );
-
+  // Remove the useProfileChanges hook since we're handling profile updates directly
+  
   return {
     session,
     userRole,
