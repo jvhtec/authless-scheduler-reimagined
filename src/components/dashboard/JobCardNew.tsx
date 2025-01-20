@@ -574,12 +574,20 @@ export const JobCardNew = ({
   // View doc => signed URL
   const handleViewDocument = async (doc: JobDocument) => {
     try {
+      console.log('Attempting to view document:', doc);
       const { data, error } = await supabase.storage
-        .from("job_documents")
+        .from('job_documents')
         .createSignedUrl(doc.file_path, 60);
-      if (error) throw error;
-      window.open(data.signedUrl, "_blank");
+
+      if (error) {
+        console.error('Error creating signed URL:', error);
+        throw error;
+      }
+
+      console.log('Signed URL created:', data.signedUrl);
+      window.open(data.signedUrl, '_blank');
     } catch (err: any) {
+      console.error('Error in handleViewDocument:', err);
       toast({
         title: "Error viewing document",
         description: err.message,
@@ -592,16 +600,25 @@ export const JobCardNew = ({
   const handleDeleteDocument = async (doc: JobDocument) => {
     if (!window.confirm("Are you sure you want to delete this document?")) return;
     try {
+      console.log('Starting document deletion:', doc);
       const { error: storageError } = await supabase.storage
-        .from("job_documents")
+        .from('job_documents')
         .remove([doc.file_path]);
-      if (storageError) throw storageError;
+      
+      if (storageError) {
+        console.error('Storage deletion error:', storageError);
+        throw storageError;
+      }
 
       const { error: dbError } = await supabase
-        .from("job_documents")
+        .from('job_documents')
         .delete()
-        .eq("id", doc.id);
-      if (dbError) throw dbError;
+        .eq('id', doc.id);
+      
+      if (dbError) {
+        console.error('Database deletion error:', dbError);
+        throw dbError;
+      }
 
       setDocuments(documents.filter((d) => d.id !== doc.id));
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
@@ -611,6 +628,7 @@ export const JobCardNew = ({
         description: "The document has been successfully deleted."
       });
     } catch (err: any) {
+      console.error('Error in handleDeleteDocument:', err);
       toast({
         title: "Error deleting document",
         description: err.message,
