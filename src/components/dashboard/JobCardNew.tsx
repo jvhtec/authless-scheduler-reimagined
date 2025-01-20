@@ -152,17 +152,17 @@ async function createAllFoldersForJob(
   const topFolder = await createFlexFolder(topPayload);
   const topFolderId = topFolder.elementId;
 
- // 2) Sibling "Documentación Técnica"
-const docTecPayload = {
-  definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
-  parentElementId: topFolderId,
-  open: true,
-  locked: false,
-  name: `${job.title} - Documentación Técnica`,
-  plannedStartDate: formattedStartDate,
-  plannedEndDate: formattedEndDate,
-  locationId: FLEX_FOLDER_IDS.location
-};
+  // 2) Sibling "Documentación Técnica"
+  const docTecPayload = {
+    definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
+    parentElementId: topFolderId,
+    open: true,
+    locked: false,
+    name: `${job.title} - Documentación Técnica`,
+    plannedStartDate: formattedStartDate,
+    plannedEndDate: formattedEndDate,
+    locationId: FLEX_FOLDER_IDS.location
+  };
   await createFlexFolder(docTecPayload);
 
   // 3) Department folders
@@ -873,5 +873,3 @@ export const JobCardNew = ({
 };
 
 export default JobCardNew;
-
-d.
