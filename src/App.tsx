@@ -74,7 +74,7 @@ const RoleBasedRedirect = () => {
   // If we have a role, redirect based on it
   if (userRole) {
     const dashboardPath = userRole === 'technician' ? "/technician-dashboard" : "/dashboard";
-    if (location.pathname === '/' && location.pathname !== dashboardPath) {
+    if (location.pathname === '/') {
       redirectAttempts.current++;
       lastRedirectTime.current = Date.now();
       console.log('Redirecting to dashboard based on role:', userRole);
