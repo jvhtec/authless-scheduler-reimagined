@@ -54,6 +54,49 @@ export const ReportGenerator = () => {
     }));
   };
 
+  const addPageHeader = async (pdf: jsPDF, pageNumber: number) => {
+    return new Promise<void>((resolve) => {
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const logoPath = '/lovable-uploads/a2246e0e-373b-4091-9471-1a7c00fe82ed.png';
+      
+      // Purple header background
+      pdf.setFillColor(125, 1, 1);
+      pdf.rect(0, 0, pageWidth, 40, 'F');
+
+      // White text for header
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(24);
+      pdf.text("SOUNDVISION REPORT", pageWidth / 2, 20, { align: 'center' });
+
+      pdf.setFontSize(16);
+      pdf.text(pageNumber.toString(), pageWidth - 10, 15, { align: 'right' });
+
+      // Add the logo
+      const logo = new Image();
+      logo.crossOrigin = 'anonymous';
+      logo.src = logoPath;
+
+      logo.onload = () => {
+        const logoWidth = 30;
+        const logoHeight = logoWidth * (logo.height / logo.width);
+        const logoX = pageWidth - logoWidth - 10;
+        const logoY = 5;
+
+        try {
+          pdf.addImage(logo, 'PNG', logoX, logoY, logoWidth, logoHeight);
+        } catch (error) {
+          console.error('Error adding header logo:', error);
+        }
+        resolve();
+      };
+
+      logo.onerror = () => {
+        console.error('Failed to load header logo');
+        resolve();
+      };
+    });
+  };
+
   const generatePDF = async () => {
     if (!selectedJobId) {
       toast({
@@ -78,49 +121,8 @@ export const ReportGenerator = () => {
     const pageHeight = pdf.internal.pageSize.getHeight();
     const contentWidth = pageWidth - (2 * margin);
 
-    const addPageHeader = (pageNumber) => {
-  const logoPath = '/lovable-uploads/images.png'; // Relative path to the logo
-  const logoWidth = 30; // Desired logo width in mm
-  const logoHeight = 20; // Desired logo height in mm (aspect ratio maintained)
-  const padding = 10; // Padding from edges
-
-  // Purple header background
-  pdf.setFillColor(125, 1, 1); // #7E69AB
-  pdf.rect(0, 0, pageWidth, 40, 'F');
-
-  // White text for header
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(24);
-  pdf.text("SOUNDVISION REPORT", pageWidth / 2, 20, { align: 'center' });
-
-  pdf.setFontSize(16);
-  pdf.text(pageNumber.toString(), pageWidth - padding, 15, { align: 'right' });
-
-  // Add the logo in the top-right corner
-  const logoX = pageWidth - logoWidth - padding; // Position based on padding
-  const logoY = padding; // Top padding
-  const logo = new Image();
-  logo.crossOrigin = 'anonymous';
-  logo.src = logoPath;
-
-  logo.onload = () => {
-    try {
-      pdf.addImage(logo, 'PNG', logoX, logoY, logoWidth, logoHeight);
-    } catch (error) {
-      console.error('Error adding logo:', error);
-    }
-  };
-
-  logo.onerror = () => {
-    console.error('Failed to load logo');
-  };
-
-  // Reset text color for content
-  pdf.setTextColor(51, 51, 51);
-};
-
     // Page 1: Equipment
-    await addPageHeader(1);
+    await addPageHeader(pdf, 1);
     pdf.setFontSize(14);
     pdf.setFont(undefined, 'bold');
     pdf.text("EQUIPAMIENTO:", margin, margin + 45);
@@ -141,7 +143,7 @@ export const ReportGenerator = () => {
     for (let i = 1; i < reportSections.length; i++) {
       const section = reportSections[i];
       pdf.addPage();
-      await addPageHeader(section.pageNumber);
+      await addPageHeader(pdf, section.pageNumber);
       
       // Bold section title
       pdf.setFontSize(14);
@@ -163,19 +165,21 @@ export const ReportGenerator = () => {
       }
     }
 
-    // Add logo at the bottom of the last page
-    const logo = new Image();
-    logo.crossOrigin = 'anonymous';
-    logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
+    // Add footer logo
+    const footerLogo = new Image();
+    footerLogo.crossOrigin = 'anonymous';
+    footerLogo.src = '/lovable-uploads/a2246e0e-373b-4091-9471-1a7c00fe82ed.png';
     
-    logo.onload = () => {
+    footerLogo.onload = () => {
+      pdf.setPage(pdf.getNumberOfPages());
       const logoWidth = 50;
-      const logoHeight = logoWidth * (logo.height / logo.width);
+      const logoHeight = logoWidth * (footerLogo.height / footerLogo.width);
       const xPosition = (pageWidth - logoWidth) / 2;
       const yPosition = pageHeight - 20;
       
       try {
-        pdf.addImage(logo, 'PNG', xPosition, yPosition - logoHeight, logoWidth, logoHeight);
+        pdf.addImage(footerLogo, 'PNG', xPosition, yPosition - logoHeight, logoWidth, logoHeight);
+        const blob = pdf.output('blob');
         const filename = `SoundVision_Report_${jobTitle.replace(/\s+/g, "_")}.pdf`;
         pdf.save(filename);
         toast({
@@ -183,7 +187,8 @@ export const ReportGenerator = () => {
           description: "Report generated successfully",
         });
       } catch (error) {
-        console.error('Error adding logo:', error);
+        console.error('Error adding footer logo:', error);
+        const blob = pdf.output('blob');
         const filename = `SoundVision_Report_${jobTitle.replace(/\s+/g, "_")}.pdf`;
         pdf.save(filename);
         toast({
@@ -193,8 +198,8 @@ export const ReportGenerator = () => {
       }
     };
 
-    logo.onerror = () => {
-      console.error('Failed to load logo');
+    footerLogo.onerror = () => {
+      console.error('Failed to load footer logo');
       const filename = `SoundVision_Report_${jobTitle.replace(/\s+/g, "_")}.pdf`;
       pdf.save(filename);
       toast({
