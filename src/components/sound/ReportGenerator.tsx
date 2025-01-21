@@ -120,7 +120,7 @@ export const ReportGenerator = () => {
 };
 
     // Page 1: Equipment
-    addPageHeader(1);
+    await addPageHeader(1);
     pdf.setFontSize(14);
     pdf.setFont(undefined, 'bold');
     pdf.text("EQUIPAMIENTO:", margin, margin + 45);
@@ -141,7 +141,7 @@ export const ReportGenerator = () => {
     for (let i = 1; i < reportSections.length; i++) {
       const section = reportSections[i];
       pdf.addPage();
-      addPageHeader(section.pageNumber);
+      await addPageHeader(section.pageNumber);
       
       // Bold section title
       pdf.setFontSize(14);
