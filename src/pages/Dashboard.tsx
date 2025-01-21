@@ -78,19 +78,32 @@ const Dashboard = () => {
 
   const getDepartmentJobs = (department: Department) => {
     if (!jobs) return [];
+    
     const endDate = getTimeSpanEndDate();
-    return jobs.filter(job => 
-      job.job_departments.some((dept: any) => dept.department === department) &&
-      isAfter(new Date(job.start_time), new Date()) &&
-      isBefore(new Date(job.start_time), endDate) &&
-      job.job_type !== 'tour'
-    );
+    return jobs.filter(job => {
+      // Add null check for job_departments
+      if (!job?.job_departments || !Array.isArray(job.job_departments)) {
+        console.log(`Job ${job?.id} has invalid job_departments:`, job?.job_departments);
+        return false;
+      }
+
+      return (
+        job.job_departments.some((dept: any) => dept?.department === department) &&
+        job.start_time && // Ensure start_time exists
+        isAfter(new Date(job.start_time), new Date()) &&
+        isBefore(new Date(job.start_time), endDate) &&
+        job.job_type !== 'tour'
+      );
+    });
   };
 
   const getSelectedDateJobs = () => {
     if (!date || !jobs) return [];
+    
     const selectedDate = format(date, 'yyyy-MM-dd');
     return jobs.filter(job => {
+      if (!job?.start_time) return false;
+      
       const jobDate = format(new Date(job.start_time), 'yyyy-MM-dd');
       return jobDate === selectedDate && job.job_type !== 'tour';
     });
