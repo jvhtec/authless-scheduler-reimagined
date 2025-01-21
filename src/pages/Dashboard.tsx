@@ -155,138 +155,139 @@ const Dashboard = () => {
   };
 
   return (
-  <div className="container mx-auto px-4 py-6 space-y-8">
-    <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
-    
-    {userRole === 'management' && (
-      <Card className="w-full">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="w-6 h-6" />
-            Messages
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setNewMessageDialogOpen(true)}
-              className="gap-2"
-            >
-              <Send className="h-4 w-4" />
-              New Message
-            </Button>
-            <button
-              onClick={() => setShowMessages(!showMessages)}
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              {showMessages ? 'Hide' : 'Show'}
-            </button>
-          </div>
-        </CardHeader>
-        {showMessages && (
-          <CardContent>
-            <div className="space-y-6">
-              <MessagesList />
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-medium mb-4">Direct Messages</h3>
-                <DirectMessagesList />
-              </div>
+    <div className="container mx-auto px-4 py-6 space-y-8">
+      <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
+      
+      {userRole === 'management' && (
+        <Card className="w-full">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="w-6 h-6" />
+              Messages
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setNewMessageDialogOpen(true)}
+                className="gap-2"
+              >
+                <Send className="h-4 w-4" />
+                New Message
+              </Button>
+              <button
+                onClick={() => setShowMessages(!showMessages)}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                {showMessages ? 'Hide' : 'Show'}
+              </button>
             </div>
-          </CardContent>
-        )}
-      </Card>
-    )}
+          </CardHeader>
+          {showMessages && (
+            <CardContent>
+              <div className="space-y-6">
+                <MessagesList />
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-medium mb-4">Direct Messages</h3>
+                  <DirectMessagesList />
+                </div>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
 
-    <Card className="w-full bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarDays className="w-6 h-6" />
-          Tours {new Date().getFullYear()}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <TourChips 
-          onTourClick={(tourId) => {
-            if (userRole === 'logistics') return;
-            const tour = jobs?.find(job => job.id === tourId);
-            if (tour) handleEditClick(tour);
-          }} 
-        />
-      </CardContent>
-    </Card>
-
-    <div className="grid grid-cols-12 gap-8">
-      <div className="col-span-8">
-        <CalendarSection 
-          date={date} 
-          onDateSelect={setDate} 
-          jobs={jobs} 
-        />
-      </div>
-      <Card className="col-span-4">
+      <Card className="w-full bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30">
         <CardHeader>
-          <CardTitle>Today's Schedule</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarDays className="w-6 h-6" />
+            Tours {new Date().getFullYear()}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="p-4">
-          <div className="space-y-4">
-            {getSelectedDateJobs().map(job => (
-              <JobCard
-                key={job.id}
-                job={job}
-                onEditClick={handleEditClick}
-                onDeleteClick={handleDeleteClick}
-                onJobClick={(jobId) => handleJobClick(jobId, "sound")}
-                userRole={userRole}
-                department="sound"
-              />
-            ))}
-          </div>
+        <CardContent>
+          <TourChips 
+            onTourClick={(tourId) => {
+              if (userRole === 'logistics') return;
+              const tour = jobs?.find(job => job.id === tourId);
+              if (tour) handleEditClick(tour);
+            }} 
+          />
         </CardContent>
       </Card>
-    </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {[
-        { name: "sound" as Department, icon: Music, color: "text-blue-500" },
-        { name: "lights" as Department, icon: Lightbulb, color: "text-yellow-500" },
-        { name: "video" as Department, icon: Video, color: "text-purple-500" }
-      ].map(({ name, icon, color }) => (
-        <DepartmentSchedule
-          key={name}
-          name={name}
-          icon={icon}
-          color={color}
-          jobs={getDepartmentJobs(name)}
-          onEditClick={handleEditClick}
-          onDeleteClick={handleDeleteClick}
-          onJobClick={(jobId) => handleJobClick(jobId, name)}
-          userRole={userRole}
+      <div className="grid grid-cols-12 gap-8">
+        <div className="col-span-8">
+          <CalendarSection 
+            date={date} 
+            onDateSelect={setDate} 
+            jobs={jobs} 
+          />
+        </div>
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Today's Schedule</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="space-y-4">
+              {getSelectedDateJobs().map(job => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onEditClick={handleEditClick}
+                  onDeleteClick={handleDeleteClick}
+                  onJobClick={(jobId) => handleJobClick(jobId, "sound")}
+                  userRole={userRole}
+                  department="sound"
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[
+          { name: "sound" as Department, icon: Music, color: "text-blue-500" },
+          { name: "lights" as Department, icon: Lightbulb, color: "text-yellow-500" },
+          { name: "video" as Department, icon: Video, color: "text-purple-500" }
+        ].map(({ name, icon, color }) => (
+          <DepartmentSchedule
+            key={name}
+            name={name}
+            icon={icon}
+            color={color}
+            jobs={getDepartmentJobs(name)}
+            onEditClick={handleEditClick}
+            onDeleteClick={handleDeleteClick}
+            onJobClick={(jobId) => handleJobClick(jobId, name)}
+            userRole={userRole}
+          />
+        ))}
+      </div>
+
+      {selectedJobId && (
+        <JobAssignmentDialog
+          open={isAssignmentDialogOpen}
+          onOpenChange={setIsAssignmentDialogOpen}
+          jobId={selectedJobId}
+          department={selectedDepartment}
         />
-      ))}
+      )}
+
+      {selectedJob && (
+        <EditJobDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          job={selectedJob}
+        />
+      )}
+
+      <DirectMessageDialog
+        open={newMessageDialogOpen}
+        onOpenChange={setNewMessageDialogOpen}
+      />
     </div>
+  );
+};
 
-    {selectedJobId && (
-      <JobAssignmentDialog
-        open={isAssignmentDialogOpen}
-        onOpenChange={setIsAssignmentDialogOpen}
-        jobId={selectedJobId}
-        department={selectedDepartment}
-      />
-    )}
-
-    {selectedJob && (
-      <EditJobDialog
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        job={selectedJob}
-      />
-    )}
-
-    <DirectMessageDialog
-      open={newMessageDialogOpen}
-      onOpenChange={setNewMessageDialogOpen}
-    />
-  </div>
-);
-  
 export default Dashboard;
