@@ -98,15 +98,13 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         <Tooltip>
           <TooltipTrigger asChild>
             <div
-              className="p-1 rounded text-sm truncate hover:bg-accent/50 transition-colors flex items-center gap-1"
+              className="px-1.5 py-0.5 rounded text-xs truncate hover:bg-accent/50 transition-colors"
               style={{
                 backgroundColor: `${job.color}20`,
                 color: job.color,
               }}
             >
-              {!isStart && <ArrowLeft className="h-3 w-3" />}
-              <span className="truncate flex-1">{job.title}</span>
-              {!isEnd && <ArrowRight className="h-3 w-3" />}
+              {job.title}
             </div>
           </TooltipTrigger>
           <TooltipContent className="w-64 p-2">
