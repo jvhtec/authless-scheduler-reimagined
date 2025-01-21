@@ -166,22 +166,26 @@ const Lights = () => {
         />
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <LightsCalendar 
-          date={date} 
-          onSelect={setDate} 
-          jobs={getDepartmentJobs()}
-        />
-        <LightsSchedule
-          date={date}
-          jobs={getSelectedDateJobs()}
-          isLoading={isLoading}
-          onJobClick={handleJobClick}
-          onEditClick={handleEditClick}
-          onDeleteClick={handleDeleteClick}
-          department="lights"
-          userRole={userRole}
-        />
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-8">
+          <LightsCalendar 
+            date={date} 
+            onSelect={setDate} 
+            jobs={getDepartmentJobs()}
+          />
+        </div>
+        <div className="col-span-4">
+          <LightsSchedule
+            date={date}
+            jobs={getSelectedDateJobs()}
+            isLoading={isLoading}
+            onJobClick={handleJobClick}
+            onEditClick={handleEditClick}
+            onDeleteClick={handleDeleteClick}
+            department="lights"
+            userRole={userRole}
+          />
+        </div>
       </div>
 
       <div className="flex gap-4 justify-end">
