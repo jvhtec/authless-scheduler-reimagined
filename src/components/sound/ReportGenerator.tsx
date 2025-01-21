@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { jsPDF } from "jspdf";
+import type { JobSelection } from '@/hooks/useJobSelection';
 
 const soundComponentDatabase = [
   { id: 1, name: ' K1 ', weight: 106 },
@@ -445,4 +446,4 @@ const PesosTool: React.FC = () => {
   );
 };
 
-export default ReportGenerator;
+export default PesosTool;
