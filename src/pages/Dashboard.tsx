@@ -9,7 +9,6 @@ import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { LightsCalendar } from "@/components/lights/LightsCalendar";
 import { TourChips } from "@/components/dashboard/TourChips";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, Music, Video, Lightbulb, MessageSquare, Send } from "lucide-react";
@@ -19,6 +18,7 @@ import { MessagesList } from "@/components/messages/MessagesList";
 import { DirectMessagesList } from "@/components/messages/DirectMessagesList";
 import { Button } from "@/components/ui/button";
 import { DirectMessageDialog } from "@/components/messages/DirectMessageDialog";
+import { CalendarSection } from "@/components/dashboard/CalendarSection";
 
 const Dashboard = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -217,10 +217,10 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="w-full">
-          <LightsCalendar 
+          <CalendarSection 
             date={date} 
-            onSelect={setDate} 
-            jobs={jobs} // Pass all jobs to calendar
+            onDateSelect={setDate} 
+            jobs={jobs} 
           />
         </div>
         <Card className="w-full">
