@@ -11,12 +11,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+import { Department } from "@/types/department";
 
 interface CalendarSectionProps {
   date: Date | undefined;
   onDateSelect: (date: Date | undefined) => void;
   jobs?: any[];
-  department?: string;
+  department?: Department;
 }
 
 export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], department }: CalendarSectionProps) => {
@@ -74,6 +75,14 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
       default:
         return null;
     }
+  };
+
+  const getAssignedTechniciansByDepartment = (job: any, dept: string) => {
+    return job.job_assignments?.filter((assignment: any) => {
+      return (dept === 'sound' && assignment.sound_role) ||
+             (dept === 'lights' && assignment.lights_role) ||
+             (dept === 'video' && assignment.video_role);
+    }).length || 0;
   };
 
   const handlePreviousMonth = () => {
@@ -156,15 +165,13 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
                                   <span>{format(new Date(job.start_time), "HH:mm")}</span>
                                 </div>
                                 <div className="truncate">{job.title}</div>
-                                {!department && (
-                                  <div className="flex gap-1 mt-1">
-                                    {job.job_departments.map((dept: any) => (
-                                      <div key={dept.department} className="text-xs">
-                                        {getDepartmentIcon(dept.department)}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
+                                <div className="flex gap-1 mt-1">
+                                  {job.job_departments.map((dept: any) => (
+                                    <div key={dept.department} className="text-xs">
+                                      {getDepartmentIcon(dept.department)}
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent className="w-64 p-2">
@@ -186,23 +193,25 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
                                     <span>{job.location.name}</span>
                                   </div>
                                 )}
-                                {!department && (
-                                  <div className="space-y-1">
-                                    <div className="text-sm font-medium">Departments:</div>
-                                    <div className="flex flex-wrap gap-1">
-                                      {job.job_departments.map((dept: any) => (
+                                <div className="space-y-1">
+                                  <div className="text-sm font-medium">Departments:</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {job.job_departments.map((dept: any) => {
+                                      const techCount = getAssignedTechniciansByDepartment(job, dept.department);
+                                      return (
                                         <Badge key={dept.department} variant="secondary" className="flex items-center gap-1">
                                           {getDepartmentIcon(dept.department)}
                                           <span className="capitalize">{dept.department}</span>
+                                          <span className="text-xs">({techCount})</span>
                                         </Badge>
-                                      ))}
-                                    </div>
+                                      );
+                                    })}
                                   </div>
-                                )}
+                                </div>
                                 <div className="flex items-center gap-2 text-sm">
                                   <Users className="h-4 w-4" />
                                   <span>
-                                    {job.job_assignments?.length || 0} assigned
+                                    {job.job_assignments?.length || 0} total assigned
                                   </span>
                                 </div>
                               </div>
