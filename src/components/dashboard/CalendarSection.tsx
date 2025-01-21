@@ -186,19 +186,17 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
                                     <span>{job.location.name}</span>
                                   </div>
                                 )}
-                                {!department && (
-                                  <div className="space-y-1">
-                                    <div className="text-sm font-medium">Departments:</div>
-                                    <div className="flex flex-wrap gap-1">
-                                      {job.job_departments.map((dept: any) => (
-                                        <Badge key={dept.department} variant="secondary" className="flex items-center gap-1">
-                                          {getDepartmentIcon(dept.department)}
-                                          <span className="capitalize">{dept.department}</span>
-                                        </Badge>
-                                      ))}
-                                    </div>
+                                <div className="space-y-1">
+                                  <div className="text-sm font-medium">Departments:</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {job.job_departments.map((dept: any) => (
+                                      <Badge key={dept.department} variant="secondary" className="flex items-center gap-1">
+                                        {getDepartmentIcon(dept.department)}
+                                        <span className="capitalize">{dept.department}</span>
+                                      </Badge>
+                                    ))}
                                   </div>
-                                )}
+                                </div>
                                 <div className="flex items-center gap-2 text-sm">
                                   <Users className="h-4 w-4" />
                                   <span>
