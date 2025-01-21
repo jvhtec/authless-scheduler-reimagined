@@ -107,11 +107,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
               {!isStart && <ArrowLeft className="h-3 w-3" />}
               <span className="truncate flex-1">{job.title}</span>
               {!isEnd && <ArrowRight className="h-3 w-3" />}
-              {totalDays > 1 && (
-                <span className="text-xs opacity-75">
-                  ({currentDay}/{totalDays})
-                </span>
-              )}
             </div>
           </TooltipTrigger>
           <TooltipContent className="w-64 p-2">
