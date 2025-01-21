@@ -189,23 +189,28 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
         department="Sound"
       />
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <CalendarSection 
-          date={date} 
-          onDateSelect={setDate}
-          jobs={getDepartmentJobs()}
-        />
-        <LightsSchedule
-          date={date}
-          jobs={getSelectedDateJobs()}
-          isLoading={isLoading}
-          onJobClick={handleJobClick}
-          onEditClick={handleEditClick}
-          onDeleteClick={handleDeleteClick}
-          department="sound"
-          userRole={userRole}
-        />
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-8">
+          <CalendarSection 
+            date={date} 
+            onDateSelect={setDate}
+            jobs={getDepartmentJobs()}
+          />
+        </div>
+        <div className="col-span-4">
+          <LightsSchedule
+            date={date}
+            jobs={getSelectedDateJobs()}
+            isLoading={isLoading}
+            onJobClick={handleJobClick}
+            onEditClick={handleEditClick}
+            onDeleteClick={handleDeleteClick}
+            department="sound"
+            userRole={userRole}
+          />
+        </div>
       </div>
+
 
       <Card className="mt-8">
         <div className="p-6">
