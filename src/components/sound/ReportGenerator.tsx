@@ -78,7 +78,17 @@ export const ReportGenerator = () => {
     const pageHeight = pdf.internal.pageSize.getHeight();
     const contentWidth = pageWidth - (2 * margin);
 
-      // White text for header
+  const addPageHeader = (pageNumber) => {
+  const logoPath = '/lovable-uploads/images.png'; // Relative path to the logo
+  const logoWidth = 30; // Desired logo width in mm
+  const logoHeight = 20; // Desired logo height in mm (aspect ratio maintained)
+  const padding = 10; // Padding from edges
+
+  // Purple header background
+  pdf.setFillColor(125, 1, 1); // #7E69AB
+  pdf.rect(0, 0, pageWidth, 40, 'F');
+
+  // White text for header
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(24);
   pdf.text("SOUNDVISION REPORT", pageWidth / 2, 20, { align: 'center' });
