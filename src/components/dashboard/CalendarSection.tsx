@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from "date-fns";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, ArrowRight, ArrowLeft } from "lucide-react";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isAfter, isBefore, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -48,17 +48,28 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     if (!jobs) return [];
     
     return jobs.filter(job => {
-      const jobDate = new Date(job.start_time);
+      const startDate = new Date(job.start_time);
+      const endDate = new Date(job.end_time);
+      
+      // Check if the date falls within the job's duration
+      const isWithinDuration = !isBefore(date, startDate) && !isAfter(date, endDate);
       
       // If department is specified, filter by department
       if (department) {
-        return isSameDay(jobDate, date) && 
+        return isWithinDuration && 
                job.job_departments.some((dept: any) => dept.department === department);
       }
       
-      // For dashboard view, show all jobs for the date
-      return isSameDay(jobDate, date);
+      return isWithinDuration;
     });
+  };
+
+  const isJobStart = (job: any, date: Date) => {
+    return isSameDay(new Date(job.start_time), date);
+  };
+
+  const isJobEnd = (job: any, date: Date) => {
+    return isSameDay(new Date(job.end_time), date);
   };
 
   const getDepartmentIcon = (dept: string) => {
@@ -72,6 +83,76 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
       default:
         return null;
     }
+  };
+
+  const renderJobCard = (job: any, date: Date) => {
+    const isStart = isJobStart(job, date);
+    const isEnd = isJobEnd(job, date);
+    const startDate = new Date(job.start_time);
+    const endDate = new Date(job.end_time);
+    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const currentDay = Math.ceil((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+    return (
+      <TooltipProvider key={job.id}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className="p-1 rounded text-sm truncate hover:bg-accent/50 transition-colors flex items-center gap-1"
+              style={{
+                backgroundColor: `${job.color}20`,
+                color: job.color,
+              }}
+            >
+              {!isStart && <ArrowLeft className="h-3 w-3" />}
+              <span className="truncate flex-1">{job.title}</span>
+              {!isEnd && <ArrowRight className="h-3 w-3" />}
+              {totalDays > 1 && (
+                <span className="text-xs opacity-75">
+                  ({currentDay}/{totalDays})
+                </span>
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent className="w-64 p-2">
+            <div className="space-y-2">
+              <h4 className="font-semibold">{job.title}</h4>
+              {job.description && (
+                <p className="text-sm text-muted-foreground">{job.description}</p>
+              )}
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4" />
+                <span>
+                  {format(new Date(job.start_time), "MMM d, HH:mm")} - 
+                  {format(new Date(job.end_time), "MMM d, HH:mm")}
+                </span>
+              </div>
+              {job.location && job.location.name && (
+                <div className="flex items-center gap-2 text-sm">
+                  <MapPin className="h-4 w-4" />
+                  <span>{job.location.name}</span>
+                </div>
+              )}
+              <div className="space-y-1">
+                <div className="text-sm font-medium">Departments:</div>
+                <div className="flex flex-wrap gap-1">
+                  {job.job_departments.map((dept: any) => (
+                    <Badge key={dept.department} variant="secondary" className="flex items-center gap-1">
+                      {getDepartmentIcon(dept.department)}
+                      <span className="capitalize">{dept.department}</span>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Users className="h-4 w-4" />
+                <span>{job.job_assignments?.length || 0} assigned</span>
+              </div>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
   };
 
   const handlePreviousMonth = () => {
@@ -126,6 +207,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
               {allDays.map((day, i) => {
                 const dayJobs = getJobsForDate(day);
                 const isCurrentMonth = isSameMonth(day, currentMonth);
+                const maxVisibleJobs = 3;
                 
                 return (
                   <div
@@ -138,74 +220,12 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
                   >
                     <span className="text-sm">{format(day, "d")}</span>
                     <div className="space-y-1 mt-1">
-                      {dayJobs.map((job: any) => (
-                        <TooltipProvider key={job.id}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div
-                                className="p-2 rounded text-sm truncate hover:bg-accent/50 transition-colors"
-                                style={{
-                                  backgroundColor: `${job.color}20`,
-                                  color: job.color,
-                                }}
-                              >
-                                <div className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  <span>{format(new Date(job.start_time), "HH:mm")}</span>
-                                </div>
-                                <div className="truncate">{job.title}</div>
-                                {!department && (
-                                  <div className="flex gap-1 mt-1">
-                                    {job.job_departments.map((dept: any) => (
-                                      <div key={dept.department} className="text-xs">
-                                        {getDepartmentIcon(dept.department)}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent className="w-64 p-2">
-                              <div className="space-y-2">
-                                <h4 className="font-semibold">{job.title}</h4>
-                                {job.description && (
-                                  <p className="text-sm text-muted-foreground">{job.description}</p>
-                                )}
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Clock className="h-4 w-4" />
-                                  <span>
-                                    {format(new Date(job.start_time), "HH:mm")} - 
-                                    {format(new Date(job.end_time), "HH:mm")}
-                                  </span>
-                                </div>
-                                {job.location && job.location.name && (
-                                  <div className="flex items-center gap-2 text-sm">
-                                    <MapPin className="h-4 w-4" />
-                                    <span>{job.location.name}</span>
-                                  </div>
-                                )}
-                                <div className="space-y-1">
-                                  <div className="text-sm font-medium">Departments:</div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {job.job_departments.map((dept: any) => (
-                                      <Badge key={dept.department} variant="secondary" className="flex items-center gap-1">
-                                        {getDepartmentIcon(dept.department)}
-                                        <span className="capitalize">{dept.department}</span>
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Users className="h-4 w-4" />
-                                  <span>
-                                    {job.job_assignments?.length || 0} assigned
-                                  </span>
-                                </div>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ))}
+                      {dayJobs.slice(0, maxVisibleJobs).map((job: any) => renderJobCard(job, day))}
+                      {dayJobs.length > maxVisibleJobs && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          + {dayJobs.length - maxVisibleJobs} more
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
