@@ -80,7 +80,7 @@ export const ReportGenerator = () => {
 
     const addPageHeader = (pageNumber: number) => {
       // Purple header background
-      pdf.setFillColor(126, 105, 171); // #7E69AB
+      pdf.setFillColor(125, 1, 1); // #7E69AB
       pdf.rect(0, 0, pageWidth, 40, 'F');
 
       // White text for header
