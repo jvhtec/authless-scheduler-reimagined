@@ -172,10 +172,10 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [] }: 
                                     {format(new Date(job.end_time), "HH:mm")}
                                   </span>
                                 </div>
-                                {job.location && (
+                                {job.location?.name && (
                                   <div className="flex items-center gap-2 text-sm">
                                     <MapPin className="h-4 w-4" />
-                                    <span>{job.location}</span>
+                                    <span>{job.location.name}</span>
                                   </div>
                                 )}
                                 <div className="flex items-center gap-2 text-sm">
