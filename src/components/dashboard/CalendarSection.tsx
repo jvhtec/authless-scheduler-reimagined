@@ -51,8 +51,19 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
       const startDate = new Date(job.start_time);
       const endDate = new Date(job.end_time);
       
-      // Check if the date falls within the job's duration
-      const isWithinDuration = !isBefore(date, startDate) && !isAfter(date, endDate);
+      // Format dates to compare only year, month, and day
+      const compareDate = format(date, 'yyyy-MM-dd');
+      const jobStartDate = format(startDate, 'yyyy-MM-dd');
+      const jobEndDate = format(endDate, 'yyyy-MM-dd');
+      
+      // Check if it's a single-day job or a multi-day job
+      const isSingleDayJob = jobStartDate === jobEndDate;
+      
+      // For single-day jobs, check exact date match
+      // For multi-day jobs, check if date falls within range
+      const isWithinDuration = isSingleDayJob 
+        ? compareDate === jobStartDate
+        : compareDate >= jobStartDate && compareDate <= jobEndDate;
       
       // If department is specified, filter by department
       if (department) {
