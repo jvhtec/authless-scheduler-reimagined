@@ -4,294 +4,249 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, ArrowLeft } from 'lucide-react';
-import { exportToPDF } from '@/utils/pdfExport';
-import { useJobSelection } from '@/hooks/useJobSelection';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useNavigate } from 'react-router-dom';
-import { format } from "date-fns";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
 import { jsPDF } from "jspdf";
-import type { JobSelection } from '@/hooks/useJobSelection';
+import { useJobSelection, JobSelection } from "@/hooks/useJobSelection";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { format } from "date-fns";
 
-const soundComponentDatabase = [
-  { id: 1, name: ' K1 ', weight: 106 },
-  { id: 2, name: ' K2 ', weight: 56 },
-  { id: 3, name: ' K3 ', weight: 43 },
-  { id: 4, name: ' KARA II ', weight: 25 },
-  { id: 5, name: ' KIVA ', weight: 14 },
-  { id: 6, name: ' KS28 ', weight: 79 },
-  { id: 7, name: ' K1-SB ', weight: 83 },
-  { id: 8, name: ' BUMPER K1 ', weight: 108 },
-  { id: 9, name: ' BUMPER K2 ', weight: 60 },
-  { id: 10, name: ' BUMPER K3 ', weight: 50 },
-  { id: 11, name: ' BUMPER KARA ', weight: 20 },
-  { id: 12, name: ' BUMPER KIVA ', weight: 13 },
-  { id: 13, name: ' BUMPER KS28 ', weight: 15 },
-  { id: 14, name: ' KARADOWNK1 ', weight: 15 },
-  { id: 15, name: ' KARADOWNK2 ', weight: 15 },
-  { id: 16, name: ' MOTOR 2T ', weight: 90 },
-  { id: 17, name: ' MOTOR 1T ', weight: 70 },
-  { id: 18, name: ' MOTOR 750Kg ', weight: 60 },
-  { id: 19, name: ' MOTOR 500Kg ', weight: 50 },
-  { id: 20, name: ' POLIPASTO 1T ', weight: 10.4 },
-  { id: 21, name: ' TFS900H ', weight: 102 },
-  { id: 22, name: ' TFA600 ', weight: 41 },
-  { id: 23, name: ' TFS550H ', weight: 13.4 },
-  { id: 24, name: ' TFS550L ', weight: 27 },
-  { id: 25, name: ' BUMPER TFS900 ', weight: 20 },
-  { id: 26, name: ' TFS900>TFA600 ', weight: 14 },
-  { id: 27, name: ' TFS900>TFS550 ', weight: 14 },
-  { id: 28, name: ' CABLEADO L ', weight: 100 },
-  { id: 29, name: ' CABLEADO H ', weight: 250 },
+const reportSections = [
+  {
+    pageNumber: 1,
+    title: "EQUIPAMIENTO",
+    type: "text"
+  },
+  {
+    pageNumber: 2,
+    title: "SPL(A) Broadband",
+    hasIsoView: true
+  },
+  {
+    pageNumber: 3,
+    title: "SPL(Z) 250-16k",
+    hasIsoView: true
+  },
+  {
+    pageNumber: 4,
+    title: "SUBS SPL(Z) 32-80Hz",
+    hasIsoView: false
+  }
 ];
 
-let soundTableCounter = 0;
-
-interface TableRow {
-  quantity: string;
-  componentId: string;
-  weight: string;
-  componentName?: string;
-  totalWeight?: number;
-}
-
-interface Table {
-  name: string;
-  rows: TableRow[];
-  totalWeight?: number;
-  id?: number;
-  dualMotors?: boolean;
-}
-
-const PesosTool: React.FC = () => {
-  const navigate = useNavigate();
+export const ReportGenerator = () => {
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
-  const department = 'sound';
+  const [selectedJobId, setSelectedJobId] = useState<string>("");
+  const [equipamiento, setEquipamiento] = useState("");
+  const [images, setImages] = useState<{ [key: string]: File | null }>({});
+  const [isoViewEnabled, setIsoViewEnabled] = useState<{ [key: string]: boolean }>({});
 
-  const [selectedJobId, setSelectedJobId] = useState<string>('');
-  const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
-  const [tableName, setTableName] = useState('');
-  const [tables, setTables] = useState<Table[]>([]);
-  const [useDualMotors, setUseDualMotors] = useState(false);
-  const [equipmentViewImage, setEquipmentViewImage] = useState<File | null>(null);
+  const handleImageChange = (section: string, view: string, file: File | null) => {
+    const key = `${section}-${view}`;
+    setImages(prev => ({ ...prev, [key]: file }));
+  };
 
-  const [currentTable, setCurrentTable] = useState<Table>({
-    name: '',
-    rows: [{ quantity: '', componentId: '', weight: '' }],
-  });
-
-  const addRow = () => {
-    setCurrentTable((prev) => ({
+  const toggleIsoView = (section: string) => {
+    setIsoViewEnabled(prev => ({
       ...prev,
-      rows: [...prev.rows, { quantity: '', componentId: '', weight: '' }],
+      [section]: !prev[section]
     }));
   };
 
-  const updateInput = (index: number, field: keyof TableRow, value: string) => {
-    const newRows = [...currentTable.rows];
-    if (field === 'componentId') {
-      const component = soundComponentDatabase.find((c) => c.id.toString() === value);
-      newRows[index] = {
-        ...newRows[index],
-        [field]: value,
-        weight: component ? component.weight.toString() : '',
+  const addPageHeader = async (pdf: jsPDF, pageNumber: number, jobTitle: string, jobDate: string) => {
+    return new Promise<void>((resolve) => {
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const logoPath = '/lovable-uploads/a2246e0e-373b-4091-9471-1a7c00fe82ed.png';
+      
+      // Purple header background
+      pdf.setFillColor(125, 1, 1);
+      pdf.rect(0, 0, pageWidth, 40, 'F');
+
+      // White text for header
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(24);
+      pdf.text("SOUNDVISION REPORT", pageWidth / 2, 15, { align: 'center' });
+
+      // Job title and date
+      pdf.setFontSize(14);
+      pdf.text(jobTitle, pageWidth / 2, 25, { align: 'center' });
+      pdf.text(jobDate, pageWidth / 2, 33, { align: 'center' });
+
+      // Page number
+      pdf.setFontSize(12);
+      pdf.text(pageNumber.toString(), pageWidth - 10, 15, { align: 'right' });
+
+      // Add the logo
+      const logo = new Image();
+      logo.crossOrigin = 'anonymous';
+      logo.src = logoPath;
+
+      logo.onload = () => {
+        const logoWidth = 30;
+        const logoHeight = logoWidth * (logo.height / logo.width);
+        const logoX = pageWidth - logoWidth - 10;
+        const logoY = 5;
+
+        try {
+          pdf.addImage(logo, 'PNG', logoX, logoY, logoWidth, logoHeight);
+        } catch (error) {
+          console.error('Error adding header logo:', error);
+        }
+        resolve();
       };
-    } else {
-      newRows[index] = {
-        ...newRows[index],
-        [field]: value,
+
+      logo.onerror = () => {
+        console.error('Failed to load header logo');
+        resolve();
       };
-    }
-    setCurrentTable((prev) => ({
-      ...prev,
-      rows: newRows,
-    }));
+    });
   };
 
-  const handleJobSelect = (jobId: string) => {
-    setSelectedJobId(jobId);
-    const job = jobs?.find((j) => j.id === jobId) || null;
-    setSelectedJob(job);
-  };
-
-  const generateTable = () => {
-    if (!tableName) {
+  const generatePDF = async () => {
+    if (!selectedJobId) {
       toast({
-        title: 'Missing table name',
-        description: 'Please enter a name for the table',
-        variant: 'destructive',
+        title: "Error",
+        description: "Please select a job before generating the report.",
+        variant: "destructive",
       });
       return;
     }
 
-    const suffix = (() => {
-      if (department === 'sound') {
-        soundTableCounter++;
-        const suffixNumber = soundTableCounter.toString().padStart(2, '0');
-        if (useDualMotors) {
-          soundTableCounter++;
-          return `(SX${suffixNumber}, SX${soundTableCounter.toString().padStart(2, '0')})`;
-        }
-        return `(SX${suffixNumber})`;
-      }
-      return '';
-    })();
+    const selectedJob = jobs?.find((job: JobSelection) => job.id === selectedJobId);
+    const jobTitle = selectedJob?.title || "Unnamed_Job";
+    const jobDate = selectedJob?.start_time 
+      ? format(new Date(selectedJob.start_time), "MMMM dd, yyyy")
+      : format(new Date(), "MMMM dd, yyyy");
 
-    const calculatedRows = currentTable.rows.map((row) => {
-      const component = soundComponentDatabase.find((c) => c.id.toString() === row.componentId);
-      const totalWeight =
-        parseFloat(row.quantity) && parseFloat(row.weight)
-          ? parseFloat(row.quantity) * parseFloat(row.weight)
-          : 0;
-      return {
-        ...row,
-        componentName: component?.name || '',
-        totalWeight,
-      };
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4"
     });
 
-    const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
+    const margin = 20;
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const contentWidth = pageWidth - (2 * margin);
 
-    const newTable: Table = {
-      name: `${tableName} ${suffix}`,
-      rows: calculatedRows,
-      totalWeight,
-      id: Date.now(),
-      dualMotors: useDualMotors,
+    // Page 1: Equipment
+    await addPageHeader(pdf, 1, jobTitle, jobDate);
+    pdf.setFontSize(14);
+    pdf.setFont(undefined, 'bold');
+    pdf.text("EQUIPAMIENTO:", margin, margin + 45);
+    pdf.setFont(undefined, 'normal');
+    const equipLines = equipamiento.split('\n').filter(line => line.trim());
+    let yPos = margin + 55;
+    
+    equipLines.forEach(line => {
+      pdf.setFontSize(11);
+      pdf.text(line.trim(), margin, yPos);
+      yPos += 7;
+    });
+
+    pdf.setFontSize(9);
+    pdf.text("ALL PLOTS CALCULATED FOR 15º C / 70% REL HUMIDITY @ 0dbU INPUT LEVEL", margin, yPos + 10);
+
+    // Image pages
+    for (let i = 1; i < reportSections.length; i++) {
+      const section = reportSections[i];
+      pdf.addPage();
+      await addPageHeader(pdf, section.pageNumber, jobTitle, jobDate);
+      
+      // Bold section title
+      pdf.setFontSize(14);
+      pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(51, 51, 51);
+      pdf.text(section.title, margin, 50);
+      pdf.setFont(undefined, 'normal');
+      
+      const topViewKey = `${section.title}-Top View`;
+      if (images[topViewKey]) {
+        await addImageToPDF(pdf, images[topViewKey], "Top View", margin, 60, contentWidth);
+      }
+
+      if (section.hasIsoView && isoViewEnabled[section.title]) {
+        const isoViewKey = `${section.title}-ISO View`;
+        if (images[isoViewKey]) {
+          await addImageToPDF(pdf, images[isoViewKey], "ISO View", margin, 160, contentWidth);
+        }
+      }
+    }
+
+    // Add footer logo (Sector Pro)
+    const footerLogo = new Image();
+    footerLogo.crossOrigin = 'anonymous';
+    footerLogo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
+    
+    footerLogo.onload = () => {
+      pdf.setPage(pdf.getNumberOfPages());
+      const logoWidth = 50;
+      const logoHeight = logoWidth * (footerLogo.height / footerLogo.width);
+      const xPosition = (pageWidth - logoWidth) / 2;
+      const yPosition = pdf.internal.pageSize.getHeight() - 20;
+      
+      try {
+        pdf.addImage(footerLogo, 'PNG', xPosition, yPosition - logoHeight, logoWidth, logoHeight);
+        const blob = pdf.output('blob');
+        const filename = `SoundVision_Report_${jobTitle.replace(/\s+/g, "_")}.pdf`;
+        pdf.save(filename);
+        toast({
+          title: "Success",
+          description: "Report generated successfully",
+        });
+      } catch (error) {
+        console.error('Error adding footer logo:', error);
+        const blob = pdf.output('blob');
+        const filename = `SoundVision_Report_${jobTitle.replace(/\s+/g, "_")}.pdf`;
+        pdf.save(filename);
+        toast({
+          title: "Success",
+          description: "Report generated successfully (without logo)",
+        });
+      }
     };
 
-    setTables((prev) => [...prev, newTable]);
-    resetCurrentTable();
-    setUseDualMotors(false);
+    footerLogo.onerror = () => {
+      console.error('Failed to load footer logo');
+      const filename = `SoundVision_Report_${jobTitle.replace(/\s+/g, "_")}.pdf`;
+      pdf.save(filename);
+      toast({
+        title: "Success",
+        description: "Report generated successfully (without logo)",
+      });
+    };
   };
 
-  const resetCurrentTable = () => {
-    setCurrentTable({
-      name: '',
-      rows: [{ quantity: '', componentId: '', weight: '' }],
+  const addImageToPDF = async (pdf: jsPDF, file: File, viewType: string, x: number, y: number, width: number) => {
+    return new Promise<void>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imgData = e.target?.result as string;
+        const height = width * 0.6; // Maintain aspect ratio
+        pdf.addImage(imgData, "JPEG", x, y, width, height);
+        resolve();
+      };
+      reader.readAsDataURL(file);
     });
-    setTableName('');
-  };
-
-  const removeTable = (tableId: number) => {
-    setTables((prev) => prev.filter((table) => table.id !== tableId));
-  };
-
-  const handleExportPDF = async () => {
-    if (!selectedJobId || !selectedJob) {
-      toast({
-        title: 'No job selected',
-        description: 'Please select a job before exporting.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      const doc = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4"
-      });
-
-      const margin = 20;
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const contentWidth = pageWidth - (2 * margin);
-
-      // Add header
-      doc.setFillColor(125, 1, 1);
-      doc.rect(0, 0, 40, pageWidth, 'F');
-
-      doc.setFontSize(24);
-      doc.setTextColor(255, 255, 255);
-      doc.text("Weight Distribution Report", pageWidth / 2, 20, { align: 'center' });
-
-      doc.setFontSize(16);
-      doc.text(selectedJob.title, pageWidth / 2, 30, { align: 'center' });
-
-      let yPos = margin + 55;
-
-      // Add Equipment View image if available
-      if (equipmentViewImage) {
-        try {
-          const reader = new FileReader();
-          await new Promise<void>((resolve) => {
-            reader.onload = async (e) => {
-              const imgData = e.target?.result as string;
-              const imgHeight = 60;
-              doc.addImage(imgData, "JPEG", margin, yPos + 10, contentWidth, imgHeight);
-              yPos += imgHeight + 20;
-              resolve();
-            };
-            reader.readAsDataURL(equipmentViewImage);
-          });
-        } catch (error) {
-          console.error('Error adding equipment view image:', error);
-        }
-      }
-
-      const pdfBlob = await exportToPDF(
-        selectedJob.title,
-        tables.map((table) => ({ ...table, toolType: 'pesos' })),
-        'weight',
-        selectedJob.title
-      );
-
-      const fileName = `Pesos Report - ${selectedJob.title}.pdf`;
-      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-      const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
-
-      const { error: uploadError } = await supabase.storage.from('task_documents').upload(filePath, file);
-      if (uploadError) throw uploadError;
-
-      toast({
-        title: 'Success',
-        description: 'PDF has been generated and uploaded successfully.',
-      });
-
-      const url = window.URL.createObjectURL(pdfBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: 'Error',
-        description: 'Failed to generate or upload the PDF.',
-        variant: 'destructive',
-      });
-    }
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto my-6">
-      <CardHeader className="space-y-1">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/sound')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <CardTitle className="text-2xl font-bold">Weight Calculator</CardTitle>
-        </div>
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-xl">SoundVision Report Generator</CardTitle>
       </CardHeader>
       <ScrollArea className="h-[calc(100vh-12rem)]">
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="jobSelect">Select Job</Label>
-            <Select value={selectedJobId} onValueChange={handleJobSelect}>
-              <SelectTrigger>
+          <div>
+            <Label htmlFor="jobSelect">Job</Label>
+            <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a job" />
               </SelectTrigger>
               <SelectContent>
-                {jobs?.map((job) => (
+                {jobs?.map((job: JobSelection) => (
                   <SelectItem key={job.id} value={job.id}>
                     {job.title}
                   </SelectItem>
@@ -300,150 +255,68 @@ const PesosTool: React.FC = () => {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="tableName">Table Name</Label>
-            <Input
-              id="tableName"
-              value={tableName}
-              onChange={(e) => setTableName(e.target.value)}
-              placeholder="Enter table name"
-            />
-            <div className="flex items-center space-x-2 mt-2">
-              <Checkbox
-                id="dualMotors"
-                checked={useDualMotors}
-                onCheckedChange={(checked) => setUseDualMotors(checked as boolean)}
-              />
-              <Label htmlFor="dualMotors" className="text-sm font-medium">
-                Dual Motors Configuration
-              </Label>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="equipmentView">Equipment View</Label>
-            <Input
-              id="equipmentView"
-              type="file"
-              accept="image/*"
-              onChange={(e) => setEquipmentViewImage(e.target.files?.[0] || null)}
-              className="text-sm"
+          <div>
+            <Label htmlFor="equipamiento">Equipment List</Label>
+            <Textarea
+              id="equipamiento"
+              value={equipamiento}
+              onChange={(e) => setEquipamiento(e.target.value)}
+              placeholder="24 L'ACOUSTICS K1 (MAIN ARRAYS)&#10;06 L'ACOUSTICS KARA (DOWNFILLS)"
+              className="min-h-[96px] bg-background text-foreground"
             />
           </div>
 
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
-                  <th className="px-4 py-3 text-left font-medium">Component</th>
-                  <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentTable.rows.map((row, index) => (
-                  <tr key={index} className="border-t">
-                    <td className="p-4">
-                      <Input
-                        type="number"
-                        value={row.quantity}
-                        onChange={(e) => updateInput(index, 'quantity', e.target.value)}
-                        min="0"
-                        className="w-full"
-                      />
-                    </td>
-                    <td className="p-4">
-                      <Select
-                        value={row.componentId}
-                        onValueChange={(value) => updateInput(index, 'componentId', value)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select component" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {soundComponentDatabase.map((component) => (
-                            <SelectItem key={component.id} value={component.id.toString()}>
-                              {component.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="p-4">
-                      <Input type="number" value={row.weight} readOnly className="w-full bg-muted" />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex gap-2">
-            <Button onClick={addRow}>Add Row</Button>
-            <Button onClick={generateTable} variant="secondary">
-              Generate Table
-            </Button>
-            <Button onClick={resetCurrentTable} variant="destructive">
-              Reset
-            </Button>
-            {tables.length > 0 && (
-              <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
-                <FileText className="w-4 h-4" />
-                Export & Upload PDF
-              </Button>
-            )}
-          </div>
-
-          {tables.map((table) => (
-            <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
-              <div className="bg-muted px-4 py-3 flex justify-between items-center">
-                <h3 className="font-semibold">{table.name}</h3>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => table.id && removeTable(table.id)}
-                >
-                  Remove Table
-                </Button>
+          {reportSections.slice(1).map((section) => (
+            <div key={section.title} className="space-y-2 pb-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">{section.title}</Label>
+                {section.hasIsoView && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`iso-${section.title}`}
+                      checked={isoViewEnabled[section.title]}
+                      onCheckedChange={() => toggleIsoView(section.title)}
+                    />
+                    <Label htmlFor={`iso-${section.title}`} className="text-xs">
+                      Include ISO
+                    </Label>
+                  </div>
+                )}
               </div>
-              <table className="w-full">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium">Quantity</th>
-                    <th className="px-4 py-3 text-left font-medium">Component</th>
-                    <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
-                    <th className="px-4 py-3 text-left font-medium">Total Weight</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {table.rows.map((row, index) => (
-                    <tr key={index} className="border-t">
-                      <td className="px-4 py-3">{row.quantity}</td>
-                      <td className="px-4 py-3">{row.componentName}</td>
-                      <td className="px-4 py-3">{row.weight}</td>
-                      <td className="px-4 py-3">{row.totalWeight?.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                  <tr className="border-t bg-muted/50 font-medium">
-                    <td colSpan={3} className="px-4 py-3 text-right">
-                      Total Weight:
-                    </td>
-                    <td className="px-4 py-3">{table.totalWeight?.toFixed(2)}</td>
-                  </tr>
-                </tbody>
-              </table>
-              {table.dualMotors && (
-                <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
-                  *This configuration uses dual motors. Load is distributed between two motors for
-                  safety and redundancy.
+              
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Top View</Label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageChange(section.title, "Top View", e.target.files?.[0] || null)}
+                    className="text-sm"
+                  />
                 </div>
-              )}
+
+                {section.hasIsoView && isoViewEnabled[section.title] && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">ISO View</Label>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageChange(section.title, "ISO View", e.target.files?.[0] || null)}
+                      className="text-sm"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           ))}
+
+          <Button onClick={generatePDF} className="w-full mt-4">
+            Generate Report
+          </Button>
         </CardContent>
       </ScrollArea>
     </Card>
   );
 };
 
-export default PesosTool;
+export default ReportGenerator;
