@@ -17,6 +17,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ReportGenerator } from "@/components/sound/ReportGenerator";
+import { CalendarSection } from "@/components/dashboard/CalendarSection";
 
 const Sound = () => {
   const navigate = useNavigate();
@@ -189,7 +190,11 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
       />
 
       <div className="grid md:grid-cols-2 gap-6">
-        <LightsCalendar date={date} onSelect={setDate} />
+        <CalendarSection 
+          date={date} 
+          onDateSelect={setDate}
+          jobs={getDepartmentJobs()}
+        />
         <LightsSchedule
           date={date}
           jobs={getSelectedDateJobs()}
