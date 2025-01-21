@@ -35,7 +35,7 @@ const reportSections = [
   }
 ];
 
-const ReportGenerator = () => {
+export const ReportGenerator = () => {
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
   const [selectedJobId, setSelectedJobId] = useState<string>("");
@@ -321,5 +321,3 @@ const ReportGenerator = () => {
     </Card>
   );
 };
-
-export default ReportGenerator;
