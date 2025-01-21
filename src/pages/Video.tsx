@@ -162,36 +162,30 @@ const Video = () => {
   };
 
   return (
-    return (
-    <div className="max-w-7xl mx-auto space-y-6 relative">
+    <div className="max-w-7xl mx-auto space-y-6">
       <LightsHeader 
         onCreateJob={() => setIsJobDialogOpen(true)}
         onCreateTour={() => setIsTourDialogOpen(true)}
-        department="Sound"
+        department="Video"
       />
 
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-8">
-          <CalendarSection 
-            date={date} 
-            onDateSelect={setDate}
-            jobs={getDepartmentJobs()}
-          />
-        </div>
-        <div className="col-span-4">
-          <LightsSchedule
-            date={date}
-            jobs={getSelectedDateJobs()}
-            isLoading={isLoading}
-            onJobClick={handleJobClick}
-            onEditClick={handleEditClick}
-            onDeleteClick={handleDeleteClick}
-            department="sound"
-            userRole={userRole}
-          />
-        </div>
+      <div className="grid md:grid-cols-2 gap-6">
+        <VideoCalendar 
+          date={date} 
+          onSelect={setDate} 
+          jobs={getDepartmentJobs()}
+        />
+        <LightsSchedule
+          date={date}
+          jobs={getSelectedDateJobs()}
+          isLoading={isLoading}
+          onJobClick={handleJobClick}
+          onEditClick={handleEditClick}
+          onDeleteClick={handleDeleteClick}
+          department="video"
+          userRole={userRole}
+        />
       </div>
-
 
       <div className="flex gap-4 justify-end mt-4">
         <Link to="/video-pesos-tool">
