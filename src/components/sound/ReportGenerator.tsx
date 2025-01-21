@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { jsPDF } from "jspdf";
-import { useJobSelection, JobSelection } from "@/hooks/useJobSelection";
+import { useJobSelection } from "@/hooks/useJobSelection";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
@@ -35,7 +35,7 @@ const reportSections = [
   }
 ];
 
-export const ReportGenerator = () => {
+const ReportGenerator = () => {
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
   const [selectedJobId, setSelectedJobId] = useState<string>("");
@@ -114,7 +114,7 @@ export const ReportGenerator = () => {
       return;
     }
 
-    const selectedJob = jobs?.find((job: JobSelection) => job.id === selectedJobId);
+    const selectedJob = jobs?.find(job => job.id === selectedJobId);
     const jobTitle = selectedJob?.title || "Unnamed_Job";
     const jobDate = selectedJob?.start_time 
       ? format(new Date(selectedJob.start_time), "MMMM dd, yyyy")
@@ -134,9 +134,11 @@ export const ReportGenerator = () => {
     // Page 1: Equipment
     await addPageHeader(pdf, 1, jobTitle, jobDate);
     pdf.setFontSize(14);
+    pdf.setTextColor(51, 51, 51);
     pdf.setFont(undefined, 'bold');
     pdf.text("EQUIPAMIENTO:", margin, margin + 45);
     pdf.setFont(undefined, 'normal');
+    
     const equipLines = equipamiento.split('\n').filter(line => line.trim());
     let yPos = margin + 55;
     
@@ -146,6 +148,7 @@ export const ReportGenerator = () => {
       yPos += 7;
     });
 
+    // Add disclaimer text
     pdf.setFontSize(9);
     pdf.text("ALL PLOTS CALCULATED FOR 15º C / 70% REL HUMIDITY @ 0dbU INPUT LEVEL", margin, yPos + 10);
 
@@ -185,7 +188,7 @@ export const ReportGenerator = () => {
       const logoWidth = 50;
       const logoHeight = logoWidth * (footerLogo.height / footerLogo.width);
       const xPosition = (pageWidth - logoWidth) / 2;
-      const yPosition = pdf.internal.pageSize.getHeight() - 20;
+      const yPosition = pageHeight - 20;
       
       try {
         pdf.addImage(footerLogo, 'PNG', xPosition, yPosition - logoHeight, logoWidth, logoHeight);
@@ -246,7 +249,7 @@ export const ReportGenerator = () => {
                 <SelectValue placeholder="Select a job" />
               </SelectTrigger>
               <SelectContent>
-                {jobs?.map((job: JobSelection) => (
+                {jobs?.map(job => (
                   <SelectItem key={job.id} value={job.id}>
                     {job.title}
                   </SelectItem>
