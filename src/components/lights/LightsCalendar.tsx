@@ -15,7 +15,6 @@ export const LightsCalendar = ({ date, onSelect, jobs = [] }: LightsCalendarProp
           date={date} 
           onDateSelect={onSelect}
           jobs={jobs}
-          department="lights"
         />
       </CardContent>
     </Card>
