@@ -78,46 +78,22 @@ export const ReportGenerator = () => {
     const pageHeight = pdf.internal.pageSize.getHeight();
     const contentWidth = pageWidth - (2 * margin);
 
-  const addPageHeader = (pageNumber) => {
-  const logoPath = '/lovable-uploads/images.png'; // Relative path to the logo
-  const logoWidth = 30; // Desired logo width in mm
-  const logoHeight = 20; // Desired logo height in mm (aspect ratio maintained)
-  const padding = 10; // Padding from edges
+    const addPageHeader = (pageNumber: number) => {
+      // Purple header background
+      pdf.setFillColor(126, 105, 171); // #7E69AB
+      pdf.rect(0, 0, pageWidth, 40, 'F');
 
-  // Purple header background
-  pdf.setFillColor(125, 1, 1); // #7E69AB
-  pdf.rect(0, 0, pageWidth, 40, 'F');
-
-  // White text for header
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(24);
-  pdf.text("SOUNDVISION REPORT", pageWidth / 2, 20, { align: 'center' });
-
-  pdf.setFontSize(16);
-  pdf.text(pageNumber.toString(), pageWidth - padding, 15, { align: 'right' });
-
-  // Add the logo in the top-right corner
-  const logoX = pageWidth - logoWidth - padding; // Position based on padding
-  const logoY = padding; // Top padding
-  const logo = new Image();
-  logo.crossOrigin = 'anonymous';
-  logo.src = logoPath;
-
-  logo.onload = () => {
-    try {
-      pdf.addImage(logo, 'PNG', logoX, logoY, logoWidth, logoHeight);
-    } catch (error) {
-      console.error('Error adding logo:', error);
-    }
-  };
-
-  logo.onerror = () => {
-    console.error('Failed to load logo');
-  };
-
-  // Reset text color for content
-  pdf.setTextColor(51, 51, 51);
-};
+      // White text for header
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(24);
+      pdf.text("SOUNDVISION REPORT", pageWidth / 2, 20, { align: 'center' });
+      
+      pdf.setFontSize(16);
+      pdf.text(pageNumber.toString(), pageWidth - margin, 15, { align: 'right' });
+      
+      // Reset text color for content
+      pdf.setTextColor(51, 51, 51);
+    };
 
     // Page 1: Equipment
     addPageHeader(1);
