@@ -79,19 +79,33 @@ export const ReportGenerator = () => {
     const contentWidth = pageWidth - (2 * margin);
 
     const addPageHeader = (pageNumber: number) => {
-      pdf.setFontSize(14);
-      pdf.text("SOUNDVISION REPORT", margin, margin);
-      pdf.text(pageNumber.toString(), pageWidth - margin, margin, { align: "right" });
+      // Purple header background
+      pdf.setFillColor(126, 105, 171); // #7E69AB
+      pdf.rect(0, 0, pageWidth, 40, 'F');
+
+      // White text for header
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(24);
+      pdf.text("SOUNDVISION REPORT", pageWidth / 2, 20, { align: 'center' });
+      
+      pdf.setFontSize(16);
+      pdf.text(pageNumber.toString(), pageWidth - margin, 15, { align: 'right' });
+      
+      // Reset text color for content
+      pdf.setTextColor(51, 51, 51);
     };
 
     // Page 1: Equipment
     addPageHeader(1);
-    pdf.setFontSize(11);
-    pdf.text("EQUIPAMIENTO:", margin, margin + 15);
+    pdf.setFontSize(14);
+    pdf.setFont(undefined, 'bold');
+    pdf.text("EQUIPAMIENTO:", margin, margin + 45);
+    pdf.setFont(undefined, 'normal');
     const equipLines = equipamiento.split('\n').filter(line => line.trim());
-    let yPos = margin + 25;
+    let yPos = margin + 55;
     
     equipLines.forEach(line => {
+      pdf.setFontSize(11);
       pdf.text(line.trim(), margin, yPos);
       yPos += 7;
     });
@@ -105,25 +119,65 @@ export const ReportGenerator = () => {
       pdf.addPage();
       addPageHeader(section.pageNumber);
       
+      // Bold section title
+      pdf.setFontSize(14);
+      pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(51, 51, 51);
+      pdf.text(section.title, margin, 50);
+      pdf.setFont(undefined, 'normal');
+      
       const topViewKey = `${section.title}-Top View`;
       if (images[topViewKey]) {
-        await addImageToPDF(pdf, images[topViewKey], "Top View", margin, 40, contentWidth);
+        await addImageToPDF(pdf, images[topViewKey], "Top View", margin, 60, contentWidth);
       }
 
       if (section.hasIsoView && isoViewEnabled[section.title]) {
         const isoViewKey = `${section.title}-ISO View`;
         if (images[isoViewKey]) {
-          await addImageToPDF(pdf, images[isoViewKey], "ISO View", margin, 140, contentWidth);
+          await addImageToPDF(pdf, images[isoViewKey], "ISO View", margin, 160, contentWidth);
         }
       }
     }
 
-    const filename = `SoundVision_Report_${jobTitle.replace(/\s+/g, "_")}.pdf`;
-    pdf.save(filename);
-    toast({
-      title: "Success",
-      description: "Report generated successfully",
-    });
+    // Add logo at the bottom of the last page
+    const logo = new Image();
+    logo.crossOrigin = 'anonymous';
+    logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
+    
+    logo.onload = () => {
+      const logoWidth = 50;
+      const logoHeight = logoWidth * (logo.height / logo.width);
+      const xPosition = (pageWidth - logoWidth) / 2;
+      const yPosition = pageHeight - 20;
+      
+      try {
+        pdf.addImage(logo, 'PNG', xPosition, yPosition - logoHeight, logoWidth, logoHeight);
+        const filename = `SoundVision_Report_${jobTitle.replace(/\s+/g, "_")}.pdf`;
+        pdf.save(filename);
+        toast({
+          title: "Success",
+          description: "Report generated successfully",
+        });
+      } catch (error) {
+        console.error('Error adding logo:', error);
+        const filename = `SoundVision_Report_${jobTitle.replace(/\s+/g, "_")}.pdf`;
+        pdf.save(filename);
+        toast({
+          title: "Success",
+          description: "Report generated successfully (without logo)",
+        });
+      }
+    };
+
+    logo.onerror = () => {
+      console.error('Failed to load logo');
+      const filename = `SoundVision_Report_${jobTitle.replace(/\s+/g, "_")}.pdf`;
+      pdf.save(filename);
+      toast({
+        title: "Success",
+        description: "Report generated successfully (without logo)",
+      });
+    };
   };
 
   const addImageToPDF = async (pdf: jsPDF, file: File, viewType: string, x: number, y: number, width: number) => {
