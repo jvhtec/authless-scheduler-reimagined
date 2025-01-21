@@ -4,11 +4,9 @@ import { supabase } from "@/lib/supabase";
 import { useSessionRefresh } from "./session/useSessionRefresh";
 import { useProfileData } from "./session/useProfileData";
 import { useProfileChanges } from "./session/useProfileChanges";
-import { useQueryClient } from "@tanstack/react-query";
 
 export const useSessionManager = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [session, setSession] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userDepartment, setUserDepartment] = useState<string | null>(null);
@@ -25,7 +23,6 @@ export const useSessionManager = () => {
       setSession(null);
       setUserRole(null);
       setUserDepartment(null);
-      queryClient.clear(); // Clear query cache when session is lost
       setIsLoading(false);
       return;
     }
@@ -39,17 +36,6 @@ export const useSessionManager = () => {
       if (profileData) {
         setUserRole(profileData.role);
         setUserDepartment(profileData.department);
-        // Prefetch critical data
-        queryClient.prefetchQuery({
-          queryKey: ['jobs'],
-          queryFn: async () => {
-            const { data, error } = await supabase
-              .from('jobs')
-              .select('*');
-            if (error) throw error;
-            return data;
-          },
-        });
       } else {
         console.log("No profile data found for user");
         setUserRole(null);
@@ -57,33 +43,13 @@ export const useSessionManager = () => {
       }
     } catch (error) {
       console.error("Error in session update:", error);
+      // Don't clear session on profile fetch error
       setUserRole(null);
       setUserDepartment(null);
     } finally {
       setIsLoading(false);
     }
-  }, [fetchUserProfile, queryClient]);
-
-  // Handle visibility changes
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('Tab became visible, refreshing session and queries');
-        refreshSession().then((currentSession) => {
-          if (currentSession) {
-            handleSessionUpdate(currentSession);
-            // Refetch active queries
-            queryClient.invalidateQueries();
-          }
-        });
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [refreshSession, handleSessionUpdate, queryClient]);
+  }, [fetchUserProfile]);
 
   useEffect(() => {
     let mounted = true;
