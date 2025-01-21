@@ -20,6 +20,7 @@ import { AboutCard } from "./layout/AboutCard";
 import { NotificationBadge } from "./layout/NotificationBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionManager } from "@/hooks/useSessionManager";
+import { useQueryInvalidation } from "@/hooks/useQueryInvalidation";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -35,6 +36,9 @@ const Layout = () => {
     setUserRole,
     setUserDepartment
   } = useSessionManager();
+
+  // Add query invalidation on route changes
+  useQueryInvalidation();
 
   const handleSignOut = async () => {
     if (isLoggingOut) return;
