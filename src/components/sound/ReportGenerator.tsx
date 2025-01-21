@@ -10,6 +10,7 @@ import { jsPDF } from "jspdf";
 import { useJobSelection, JobSelection } from "@/hooks/useJobSelection";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { format } from "date-fns";
 
 const reportSections = [
   {
@@ -54,7 +55,7 @@ export const ReportGenerator = () => {
     }));
   };
 
-  const addPageHeader = async (pdf: jsPDF, pageNumber: number) => {
+  const addPageHeader = async (pdf: jsPDF, pageNumber: number, jobTitle: string, jobDate: string) => {
     return new Promise<void>((resolve) => {
       const pageWidth = pdf.internal.pageSize.getWidth();
       const logoPath = '/lovable-uploads/a2246e0e-373b-4091-9471-1a7c00fe82ed.png';
@@ -66,9 +67,15 @@ export const ReportGenerator = () => {
       // White text for header
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(24);
-      pdf.text("SOUNDVISION REPORT", pageWidth / 2, 20, { align: 'center' });
+      pdf.text("SOUNDVISION REPORT", pageWidth / 2, 15, { align: 'center' });
 
-      pdf.setFontSize(16);
+      // Job title and date
+      pdf.setFontSize(14);
+      pdf.text(jobTitle, pageWidth / 2, 25, { align: 'center' });
+      pdf.text(jobDate, pageWidth / 2, 33, { align: 'center' });
+
+      // Page number
+      pdf.setFontSize(12);
       pdf.text(pageNumber.toString(), pageWidth - 10, 15, { align: 'right' });
 
       // Add the logo
@@ -109,6 +116,9 @@ export const ReportGenerator = () => {
 
     const selectedJob = jobs?.find((job: JobSelection) => job.id === selectedJobId);
     const jobTitle = selectedJob?.title || "Unnamed_Job";
+    const jobDate = selectedJob?.start_time 
+      ? format(new Date(selectedJob.start_time), "MMMM dd, yyyy")
+      : format(new Date(), "MMMM dd, yyyy");
 
     const pdf = new jsPDF({
       orientation: "portrait",
@@ -122,7 +132,7 @@ export const ReportGenerator = () => {
     const contentWidth = pageWidth - (2 * margin);
 
     // Page 1: Equipment
-    await addPageHeader(pdf, 1);
+    await addPageHeader(pdf, 1, jobTitle, jobDate);
     pdf.setFontSize(14);
     pdf.setFont(undefined, 'bold');
     pdf.text("EQUIPAMIENTO:", margin, margin + 45);
@@ -143,7 +153,7 @@ export const ReportGenerator = () => {
     for (let i = 1; i < reportSections.length; i++) {
       const section = reportSections[i];
       pdf.addPage();
-      await addPageHeader(pdf, section.pageNumber);
+      await addPageHeader(pdf, section.pageNumber, jobTitle, jobDate);
       
       // Bold section title
       pdf.setFontSize(14);
@@ -165,17 +175,17 @@ export const ReportGenerator = () => {
       }
     }
 
-    // Add footer logo
+    // Add footer logo (Sector Pro)
     const footerLogo = new Image();
     footerLogo.crossOrigin = 'anonymous';
-    footerLogo.src = '/lovable-uploads/a2246e0e-373b-4091-9471-1a7c00fe82ed.png';
+    footerLogo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
     
     footerLogo.onload = () => {
       pdf.setPage(pdf.getNumberOfPages());
       const logoWidth = 50;
       const logoHeight = logoWidth * (footerLogo.height / footerLogo.width);
       const xPosition = (pageWidth - logoWidth) / 2;
-      const yPosition = pageHeight - 20;
+      const yPosition = pdf.internal.pageSize.getHeight() - 20;
       
       try {
         pdf.addImage(footerLogo, 'PNG', xPosition, yPosition - logoHeight, logoWidth, logoHeight);
