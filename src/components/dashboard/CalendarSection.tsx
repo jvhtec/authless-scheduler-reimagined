@@ -1,8 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface CalendarSectionProps {
   date: Date | undefined;
@@ -11,6 +12,7 @@ interface CalendarSectionProps {
 }
 
 export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [] }: CalendarSectionProps) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const currentMonth = date || new Date();
   const firstDayOfMonth = startOfMonth(currentMonth);
   const lastDayOfMonth = endOfMonth(currentMonth);
@@ -95,50 +97,63 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [] }: 
             >
               Today
             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+            >
+              {isCollapsed ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronUp className="h-4 w-4" />
+              )}
+            </Button>
           </div>
         </div>
 
         {/* Calendar Grid */}
-        <div className="border rounded-lg">
-          <div className="grid grid-cols-7 gap-px bg-muted">
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-              <div key={day} className="bg-background p-2 text-center text-sm text-muted-foreground font-medium">
-                {day}
-              </div>
-            ))}
-            {allDays.map((day, i) => {
-              const dayJobs = getJobsForDate(day);
-              const isCurrentMonth = isSameMonth(day, currentMonth);
-              
-              return (
-                <div
-                  key={i}
-                  className={cn(
-                    "bg-background p-2 min-h-[120px] border-t relative cursor-pointer hover:bg-accent/50 transition-colors",
-                    !isCurrentMonth && "text-muted-foreground/50"
-                  )}
-                  onClick={() => onDateSelect(day)}
-                >
-                  <span className="text-sm">{format(day, "d")}</span>
-                  <div className="space-y-1 mt-1">
-                    {dayJobs.map((job: any) => (
-                      <div
-                        key={job.id}
-                        className="p-1 rounded text-sm truncate"
-                        style={{
-                          backgroundColor: `${job.color}20`,
-                          color: job.color,
-                        }}
-                      >
-                        {format(new Date(job.start_time), "HH:mm")} {job.title}
-                      </div>
-                    ))}
-                  </div>
+        {!isCollapsed && (
+          <div className="border rounded-lg">
+            <div className="grid grid-cols-7 gap-px bg-muted">
+              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                <div key={day} className="bg-background p-2 text-center text-sm text-muted-foreground font-medium">
+                  {day}
                 </div>
-              );
-            })}
+              ))}
+              {allDays.map((day, i) => {
+                const dayJobs = getJobsForDate(day);
+                const isCurrentMonth = isSameMonth(day, currentMonth);
+                
+                return (
+                  <div
+                    key={i}
+                    className={cn(
+                      "bg-background p-2 min-h-[120px] border-t relative cursor-pointer hover:bg-accent/50 transition-colors",
+                      !isCurrentMonth && "text-muted-foreground/50"
+                    )}
+                    onClick={() => onDateSelect(day)}
+                  >
+                    <span className="text-sm">{format(day, "d")}</span>
+                    <div className="space-y-1 mt-1">
+                      {dayJobs.map((job: any) => (
+                        <div
+                          key={job.id}
+                          className="p-1 rounded text-sm truncate"
+                          style={{
+                            backgroundColor: `${job.color}20`,
+                            color: job.color,
+                          }}
+                        >
+                          {format(new Date(job.start_time), "HH:mm")} {job.title}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
