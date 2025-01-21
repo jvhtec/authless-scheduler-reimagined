@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { LightsHeader } from "@/components/lights/LightsHeader";
-import { LightsCalendar } from "@/components/lights/LightsCalendar";
+import { VideoCalendar } from "@/components/video/VideoCalendar";
 import { LightsSchedule } from "@/components/lights/LightsSchedule";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
 import { Link } from "react-router-dom";
@@ -70,12 +70,10 @@ const Video = () => {
       console.log("Video page: No jobs data available");
       return [];
     }
-    // Filter out jobs that are related to deleted tours
     return jobs.filter(job => {
       const isInDepartment = job.job_departments.some(dept => 
         dept.department === currentDepartment
       );
-      // If it's a tour job, make sure the tour_date_id exists and is valid
       if (job.tour_date_id) {
         return isInDepartment && job.tour_date;
       }
@@ -172,7 +170,11 @@ const Video = () => {
       />
 
       <div className="grid md:grid-cols-2 gap-6">
-        <LightsCalendar date={date} onSelect={setDate} />
+        <VideoCalendar 
+          date={date} 
+          onSelect={setDate} 
+          jobs={getDepartmentJobs()}
+        />
         <LightsSchedule
           date={date}
           jobs={getSelectedDateJobs()}

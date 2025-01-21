@@ -167,7 +167,11 @@ const Lights = () => {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <LightsCalendar date={date} onSelect={setDate} />
+        <LightsCalendar 
+          date={date} 
+          onSelect={setDate} 
+          jobs={getDepartmentJobs()}
+        />
         <LightsSchedule
           date={date}
           jobs={getSelectedDateJobs()}
