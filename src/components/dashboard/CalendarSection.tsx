@@ -47,7 +47,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const getJobsForDate = (date: Date) => {
     if (!jobs) return [];
     
-    // If department is specified, filter jobs for that department
+    // If we're in a department-specific view, filter for that department
     if (department) {
       return jobs.filter(job => {
         const jobDate = new Date(job.start_time);
@@ -56,7 +56,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
       });
     }
     
-    // For dashboard view, show each job once with all its departments
+    // For dashboard view, show all jobs for the date
     return jobs.filter(job => {
       const jobDate = new Date(job.start_time);
       return isSameDay(jobDate, date);
