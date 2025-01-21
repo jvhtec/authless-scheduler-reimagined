@@ -193,7 +193,6 @@ const Video = () => {
       </div>
 
 
-
       <div className="flex gap-4 justify-end mt-4">
         <Link to="/video-pesos-tool">
           <Button variant="outline" className="gap-2">

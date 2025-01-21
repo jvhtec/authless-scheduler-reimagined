@@ -156,36 +156,33 @@ const Lights = () => {
     }
   };
 
- return (
-    <div className="max-w-7xl mx-auto space-y-6 relative">
-      <LightsHeader 
-        onCreateJob={() => setIsJobDialogOpen(true)}
-        onCreateTour={() => setIsTourDialogOpen(true)}
-        department="Sound"
-      />
-
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-8">
-          <CalendarSection 
-            date={date} 
-            onDateSelect={setDate}
-            jobs={getDepartmentJobs()}
-          />
-        </div>
-        <div className="col-span-4">
-          <LightsSchedule
-            date={date}
-            jobs={getSelectedDateJobs()}
-            isLoading={isLoading}
-            onJobClick={handleJobClick}
-            onEditClick={handleEditClick}
-            onDeleteClick={handleDeleteClick}
-            department="sound"
-            userRole={userRole}
-          />
-        </div>
+  return (
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex justify-between items-center">
+        <LightsHeader 
+          onCreateJob={() => setIsJobDialogOpen(true)}
+          onCreateTour={() => setIsTourDialogOpen(true)}
+          department="Lights"
+        />
       </div>
 
+      <div className="grid md:grid-cols-2 gap-6">
+        <LightsCalendar 
+          date={date} 
+          onSelect={setDate} 
+          jobs={getDepartmentJobs()}
+        />
+        <LightsSchedule
+          date={date}
+          jobs={getSelectedDateJobs()}
+          isLoading={isLoading}
+          onJobClick={handleJobClick}
+          onEditClick={handleEditClick}
+          onDeleteClick={handleDeleteClick}
+          department="lights"
+          userRole={userRole}
+        />
+      </div>
 
       <div className="flex gap-4 justify-end">
         <Button 
