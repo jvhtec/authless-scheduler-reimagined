@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -10,49 +10,70 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface CalendarSectionProps {
   date: Date | undefined;
   onDateSelect: (date: Date | undefined) => void;
   jobs?: any[];
+  department?: string;
 }
 
-export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [] }: CalendarSectionProps) => {
+export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], department }: CalendarSectionProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const currentMonth = date || new Date();
   const firstDayOfMonth = startOfMonth(currentMonth);
   const lastDayOfMonth = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth });
 
-  // Get the day of week for the first day (0 = Sunday, 1 = Monday, etc.)
   const startDay = firstDayOfMonth.getDay();
-  
-  // Calculate padding days for the start of the month
   const paddingDays = startDay === 0 ? 6 : startDay - 1;
   
-  // Create array for padding days
   const prefixDays = Array.from({ length: paddingDays }).map((_, i) => {
     const day = new Date(firstDayOfMonth);
     day.setDate(day.getDate() - (paddingDays - i));
     return day;
   });
 
-  // Calculate padding days for the end of the month to complete the grid
-  const totalDaysNeeded = 42; // 6 rows × 7 days
+  const totalDaysNeeded = 42;
   const suffixDays = Array.from({ length: totalDaysNeeded - (prefixDays.length + daysInMonth.length) }).map((_, i) => {
     const day = new Date(lastDayOfMonth);
     day.setDate(day.getDate() + (i + 1));
     return day;
   });
 
-  // Combine all days
   const allDays = [...prefixDays, ...daysInMonth, ...suffixDays];
 
   const getJobsForDate = (date: Date) => {
-    return jobs?.filter(job => {
+    if (!jobs) return [];
+    
+    // If department is specified, filter jobs for that department
+    if (department) {
+      return jobs.filter(job => {
+        const jobDate = new Date(job.start_time);
+        return isSameDay(jobDate, date) && 
+               job.job_departments.some((dept: any) => dept.department === department);
+      });
+    }
+    
+    // For dashboard view, show each job once with all its departments
+    return jobs.filter(job => {
       const jobDate = new Date(job.start_time);
       return isSameDay(jobDate, date);
-    }) || [];
+    });
+  };
+
+  const getDepartmentIcon = (dept: string) => {
+    switch (dept) {
+      case 'sound':
+        return <Music2 className="h-3 w-3" />;
+      case 'lights':
+        return <Lightbulb className="h-3 w-3" />;
+      case 'video':
+        return <Video className="h-3 w-3" />;
+      default:
+        return null;
+    }
   };
 
   const handlePreviousMonth = () => {
@@ -74,7 +95,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [] }: 
   return (
     <Card className="h-full flex flex-col">
       <CardContent className="flex-grow p-4">
-        {/* Calendar Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
             <h2 className="text-xl font-semibold">
@@ -82,42 +102,21 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [] }: 
             </h2>
           </div>
           <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handlePreviousMonth}
-            >
+            <Button variant="ghost" size="icon" onClick={handlePreviousMonth}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleNextMonth}
-            >
+            <Button variant="ghost" size="icon" onClick={handleNextMonth}>
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleTodayClick}
-            >
+            <Button variant="ghost" size="sm" onClick={handleTodayClick}>
               Today
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-            >
-              {isCollapsed ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronUp className="h-4 w-4" />
-              )}
+            <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(!isCollapsed)}>
+              {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
             </Button>
           </div>
         </div>
 
-        {/* Calendar Grid */}
         {!isCollapsed && (
           <div className="border rounded-lg">
             <div className="grid grid-cols-7 gap-px bg-muted">
@@ -157,6 +156,15 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [] }: 
                                   <span>{format(new Date(job.start_time), "HH:mm")}</span>
                                 </div>
                                 <div className="truncate">{job.title}</div>
+                                {!department && (
+                                  <div className="flex gap-1 mt-1">
+                                    {job.job_departments.map((dept: any) => (
+                                      <div key={dept.department} className="text-xs">
+                                        {getDepartmentIcon(dept.department)}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </TooltipTrigger>
                             <TooltipContent className="w-64 p-2">
@@ -176,6 +184,19 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [] }: 
                                   <div className="flex items-center gap-2 text-sm">
                                     <MapPin className="h-4 w-4" />
                                     <span>{job.location.name}</span>
+                                  </div>
+                                )}
+                                {!department && (
+                                  <div className="space-y-1">
+                                    <div className="text-sm font-medium">Departments:</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {job.job_departments.map((dept: any) => (
+                                        <Badge key={dept.department} variant="secondary" className="flex items-center gap-1">
+                                          {getDepartmentIcon(dept.department)}
+                                          <span className="capitalize">{dept.department}</span>
+                                        </Badge>
+                                      ))}
+                                    </div>
                                   </div>
                                 )}
                                 <div className="flex items-center gap-2 text-sm">

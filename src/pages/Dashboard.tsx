@@ -1,5 +1,3 @@
-// src/pages/Dashboard.tsx
-
 import { useState, useEffect } from "react";
 import { Department } from "@/types/department";
 import { useJobs } from "@/hooks/useJobs";
@@ -156,10 +154,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleNewMessage = () => {
-    setNewMessageDialogOpen(true);
-  };
-
   return (
     <div className="container mx-auto px-4 py-6 space-y-8">
       <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
@@ -175,7 +169,7 @@ const Dashboard = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleNewMessage}
+                onClick={() => setNewMessageDialogOpen(true)}
                 className="gap-2"
               >
                 <Send className="h-4 w-4" />
@@ -223,7 +217,11 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="w-full">
-          <LightsCalendar date={date} onSelect={setDate} />
+          <LightsCalendar 
+            date={date} 
+            onSelect={setDate} 
+            jobs={jobs} // Pass all jobs to calendar
+          />
         </div>
         <Card className="w-full">
           <CardHeader>
