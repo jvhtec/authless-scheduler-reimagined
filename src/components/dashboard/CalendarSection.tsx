@@ -1,9 +1,15 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface CalendarSectionProps {
   date: Date | undefined;
@@ -136,16 +142,52 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [] }: 
                     <span className="text-sm">{format(day, "d")}</span>
                     <div className="space-y-1 mt-1">
                       {dayJobs.map((job: any) => (
-                        <div
-                          key={job.id}
-                          className="p-1 rounded text-sm truncate"
-                          style={{
-                            backgroundColor: `${job.color}20`,
-                            color: job.color,
-                          }}
-                        >
-                          {format(new Date(job.start_time), "HH:mm")} {job.title}
-                        </div>
+                        <TooltipProvider key={job.id}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div
+                                className="p-2 rounded text-sm truncate hover:bg-accent/50 transition-colors"
+                                style={{
+                                  backgroundColor: `${job.color}20`,
+                                  color: job.color,
+                                }}
+                              >
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  <span>{format(new Date(job.start_time), "HH:mm")}</span>
+                                </div>
+                                <div className="truncate">{job.title}</div>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="w-64 p-2">
+                              <div className="space-y-2">
+                                <h4 className="font-semibold">{job.title}</h4>
+                                {job.description && (
+                                  <p className="text-sm text-muted-foreground">{job.description}</p>
+                                )}
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Clock className="h-4 w-4" />
+                                  <span>
+                                    {format(new Date(job.start_time), "HH:mm")} - 
+                                    {format(new Date(job.end_time), "HH:mm")}
+                                  </span>
+                                </div>
+                                {job.location && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <MapPin className="h-4 w-4" />
+                                    <span>{job.location}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Users className="h-4 w-4" />
+                                  <span>
+                                    {job.job_assignments?.length || 0} assigned
+                                  </span>
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       ))}
                     </div>
                   </div>
