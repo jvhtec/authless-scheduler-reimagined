@@ -16,7 +16,7 @@ import { Calculator, PieChart, FileText, Sparkles } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ReportGenerator } from "@/components/sound/ReportGenerator";
+import ReportGenerator from "@/components/sound/ReportGenerator";
 import { CalendarSection } from "@/components/dashboard/CalendarSection";
 
 const Sound = () => {

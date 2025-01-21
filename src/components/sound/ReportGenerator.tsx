@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, ArrowLeft } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
-import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
+import { useJobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -445,4 +445,4 @@ const PesosTool: React.FC = () => {
   );
 };
 
-export default PesosTool;
+export default ReportGenerator;
