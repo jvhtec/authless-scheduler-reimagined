@@ -3,16 +3,16 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Profile } from "@/components/users/types";
 import { Department } from "@/types/department";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Save } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ManageMilestonesDialogProps {
   open: boolean;
@@ -24,6 +24,7 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
   const queryClient = useQueryClient();
   const [editingMilestone, setEditingMilestone] = useState<any | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([]);
 
   const { data: definitions } = useQuery({
     queryKey: ["milestone-definitions"],
@@ -43,7 +44,7 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
     mutationFn: async (milestone: Omit<any, 'id'>) => {
       const { data, error } = await supabase
         .from("milestone_definitions")
-        .insert(milestone)
+        .insert({ ...milestone, department: selectedDepartments })
         .select()
         .single();
 
@@ -58,6 +59,7 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
       });
       setIsEditing(false);
       setEditingMilestone(null);
+      setSelectedDepartments([]);
     },
   });
 
@@ -66,7 +68,7 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
     mutationFn: async (milestone: any) => {
       const { data, error } = await supabase
         .from("milestone_definitions")
-        .update(milestone)
+        .update({ ...milestone, department: selectedDepartments })
         .eq("id", milestone.id)
         .select()
         .single();
@@ -82,21 +84,13 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
       });
       setIsEditing(false);
       setEditingMilestone(null);
+      setSelectedDepartments([]);
     },
   });
 
-  // Delete mutation with cascade
+  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // First delete related job_milestones
-      const { error: jobMilestonesError } = await supabase
-        .from("job_milestones")
-        .delete()
-        .eq("definition_id", id);
-
-      if (jobMilestonesError) throw jobMilestonesError;
-
-      // Then delete the milestone definition
       const { error } = await supabase
         .from("milestone_definitions")
         .delete()
@@ -111,14 +105,6 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
         description: "Milestone definition deleted successfully",
       });
     },
-    onError: (error: any) => {
-      console.error("Error deleting milestone:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete milestone definition",
-        variant: "destructive",
-      });
-    },
   });
 
   const handleSave = () => {
@@ -130,6 +116,16 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
       const { id, ...newMilestone } = editingMilestone;
       createMutation.mutate(newMilestone);
     }
+  };
+
+  const availableDepartments: Department[] = ["sound", "lights", "video"];
+
+  const handleDepartmentToggle = (dept: Department) => {
+    setSelectedDepartments(prev => 
+      prev.includes(dept) 
+        ? prev.filter(d => d !== dept)
+        : [...prev, dept]
+    );
   };
 
   return (
@@ -147,11 +143,11 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
                   id: '',
                   name: '',
                   default_offset: 0,
-                  department: null,
                   category: 'planning',
                   priority: 1,
                   description: '',
                 });
+                setSelectedDepartments([]);
                 setIsEditing(true);
               }}
               className="mb-4"
@@ -180,28 +176,23 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
                     })
                   }
                 />
-                <Select
-                  value={editingMilestone.department || "all"}
-                  onValueChange={(value) =>
-                    setEditingMilestone({
-                      ...editingMilestone,
-                      department: value === "all" ? null : value as Department,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Departments</SelectItem>
-                    <SelectItem value="sound">Sound</SelectItem>
-                    <SelectItem value="lights">Lights</SelectItem>
-                    <SelectItem value="video">Video</SelectItem>
-                    <SelectItem value="production">Production</SelectItem>
-                    <SelectItem value="logistics">Logistics</SelectItem>
-                    <SelectItem value="administrative">Administrative</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <Label>Departments</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {availableDepartments.map((dept) => (
+                      <div key={dept} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`dept-${dept}`}
+                          checked={selectedDepartments.includes(dept)}
+                          onCheckedChange={() => handleDepartmentToggle(dept)}
+                        />
+                        <Label htmlFor={`dept-${dept}`}>
+                          {dept.charAt(0).toUpperCase() + dept.slice(1)}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <Select
                   value={editingMilestone.category}
                   onValueChange={(value: any) =>
@@ -249,6 +240,7 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
                     onClick={() => {
                       setIsEditing(false);
                       setEditingMilestone(null);
+                      setSelectedDepartments([]);
                     }}
                   >
                     Cancel
@@ -262,7 +254,7 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Department</TableHead>
+                  <TableHead>Departments</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Offset Days</TableHead>
                   <TableHead>Priority</TableHead>
@@ -273,7 +265,7 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
                 {definitions?.map((definition) => (
                   <TableRow key={definition.id}>
                     <TableCell>{definition.name}</TableCell>
-                    <TableCell>{definition.department || 'All'}</TableCell>
+                    <TableCell>{definition.department?.join(', ') || 'All'}</TableCell>
                     <TableCell>{definition.category}</TableCell>
                     <TableCell>{definition.default_offset}</TableCell>
                     <TableCell>{definition.priority}</TableCell>
@@ -284,6 +276,7 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
                           size="icon"
                           onClick={() => {
                             setEditingMilestone(definition);
+                            setSelectedDepartments(definition.department || []);
                             setIsEditing(true);
                           }}
                         >
