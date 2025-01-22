@@ -47,16 +47,31 @@ export const ManageMilestonesDialog = ({ open, onOpenChange, jobId }: ManageMile
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      console.log("Deleting milestone:", id);
-      const { error } = await supabase
+      console.log("Starting deletion process for milestone definition:", id);
+      
+      // First, delete any job_milestones that reference this definition
+      const { error: milestonesError } = await supabase
+        .from("job_milestones")
+        .delete()
+        .eq("definition_id", id);
+
+      if (milestonesError) {
+        console.error("Error deleting related job milestones:", milestonesError);
+        throw milestonesError;
+      }
+
+      // Then delete the milestone definition
+      const { error: definitionError } = await supabase
         .from("milestone_definitions")
         .delete()
         .eq("id", id);
 
-      if (error) {
-        console.error("Error deleting milestone:", error);
-        throw error;
+      if (definitionError) {
+        console.error("Error deleting milestone definition:", definitionError);
+        throw definitionError;
       }
+      
+      console.log("Successfully deleted milestone definition and related records");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["milestone-definitions"] });
