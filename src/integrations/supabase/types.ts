@@ -1052,7 +1052,13 @@ export type Database = {
     }
     Enums: {
       assignment_status: "invited" | "confirmed" | "declined"
-      department: "sound" | "lights" | "video"
+      department:
+        | "sound"
+        | "lights"
+        | "video"
+        | "logistics"
+        | "production"
+        | "administrative"
       direct_message_status: "unread" | "read"
       job_date_type: "travel" | "setup" | "show" | "off"
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
