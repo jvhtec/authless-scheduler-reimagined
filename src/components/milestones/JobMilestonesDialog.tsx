@@ -203,6 +203,7 @@ export function JobMilestonesDialog({
       <ManageMilestonesDialog
         open={manageMilestonesOpen}
         onOpenChange={setManageMilestonesOpen}
+        jobId={jobId}
       />
     </>
   );

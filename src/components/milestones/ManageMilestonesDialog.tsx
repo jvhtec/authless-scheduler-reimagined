@@ -17,9 +17,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 interface ManageMilestonesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  jobId?: string;
 }
 
-export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesDialogProps) => {
+export const ManageMilestonesDialog = ({ open, onOpenChange, jobId }: ManageMilestonesDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingMilestone, setEditingMilestone] = useState<any | null>(null);
@@ -107,6 +108,45 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
     },
   });
 
+  // Save as Default mutation
+  const saveAsDefaultMutation = useMutation({
+    mutationFn: async () => {
+      if (!jobId) throw new Error("No job ID provided");
+      
+      // First, get all milestones for the current job
+      const { data: jobMilestones, error: fetchError } = await supabase
+        .from("job_milestones")
+        .select("*")
+        .eq("job_id", jobId);
+
+      if (fetchError) throw fetchError;
+      if (!jobMilestones?.length) throw new Error("No milestones found for this job");
+
+      // Update milestone definitions with the job's milestones
+      const updates = jobMilestones.map(milestone => ({
+        name: milestone.name,
+        default_offset: milestone.offset_days,
+        department: milestone.department,
+        category: milestone.category || 'planning',
+        priority: milestone.priority || 1,
+        description: milestone.description || ''
+      }));
+
+      const { error: updateError } = await supabase
+        .from("milestone_definitions")
+        .insert(updates);
+
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["milestone-definitions"] });
+      toast({
+        title: "Success",
+        description: "Current milestones saved as default templates",
+      });
+    },
+  });
+
   const handleSave = () => {
     if (!editingMilestone) return;
 
@@ -118,7 +158,7 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
     }
   };
 
-  const availableDepartments: Department[] = ["sound", "lights", "video"];
+  const availableDepartments: Department[] = ["sound", "lights", "video", "logistics", "production", "administrative"];
 
   const handleDepartmentToggle = (dept: Department) => {
     setSelectedDepartments(prev => 
@@ -137,24 +177,35 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
 
         <ScrollArea className="flex-1 px-6">
           <div className="space-y-4 pb-6">
-            <Button
-              onClick={() => {
-                setEditingMilestone({
-                  id: '',
-                  name: '',
-                  default_offset: 0,
-                  category: 'planning',
-                  priority: 1,
-                  description: '',
-                });
-                setSelectedDepartments([]);
-                setIsEditing(true);
-              }}
-              className="mb-4"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Milestone
-            </Button>
+            <div className="flex justify-between items-center">
+              <Button
+                onClick={() => {
+                  setEditingMilestone({
+                    id: '',
+                    name: '',
+                    default_offset: 0,
+                    category: 'planning',
+                    priority: 1,
+                    description: '',
+                  });
+                  setSelectedDepartments([]);
+                  setIsEditing(true);
+                }}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Milestone
+              </Button>
+
+              {jobId && (
+                <Button 
+                  variant="outline"
+                  onClick={() => saveAsDefaultMutation.mutate()}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save as Default
+                </Button>
+              )}
+            </div>
 
             {isEditing && editingMilestone && (
               <div className="space-y-4 p-4 border rounded-lg">
