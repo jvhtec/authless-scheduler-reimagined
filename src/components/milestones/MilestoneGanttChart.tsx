@@ -1,9 +1,10 @@
-import { format, isAfter, isBefore, addDays, differenceInDays } from "date-fns";
+import { format, isAfter, isBefore, addDays, differenceInDays, isToday } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Department } from "@/types/department";
+import { useEffect, useRef } from "react";
 
 interface Milestone {
   id: string;
@@ -26,6 +27,8 @@ interface MilestoneGanttChartProps {
 export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttChartProps) {
   console.log("Rendering Gantt chart with milestones:", milestones);
   console.log("Start date:", startDate);
+  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   // Find the last milestone date to determine chart end date
   const lastMilestoneDate = milestones.reduce((latest, milestone) => {
@@ -71,12 +74,22 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
     );
   };
 
+  // Scroll to today's date when component mounts
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      const today = new Date();
+      const daysFromStart = differenceInDays(today, startDate);
+      const scrollPosition = daysFromStart * 96; // 96px per day
+      scrollContainerRef.current.scrollLeft = Math.max(0, scrollPosition - 300); // 300px offset to show some context
+    }
+  }, [startDate]);
+
   return (
-    <ScrollArea className="w-full border rounded-lg">
-      <div style={{ width: `${totalWidth}px`, minWidth: '100%' }}>
+    <ScrollArea className="w-full border rounded-lg" ref={scrollContainerRef}>
+      <div style={{ width: `${totalWidth}px`, minWidth: '100%' }} className="relative">
         {/* Timeline header */}
-        <div className="flex border-b sticky top-0 bg-background z-10">
-          <div className="w-48 shrink-0 p-2 font-medium border-r">Department</div>
+        <div className="flex border-b sticky top-0 bg-background z-20">
+          <div className="w-48 shrink-0 p-2 font-medium border-r sticky left-0 bg-background z-30">Department</div>
           <div className="flex-1 flex">
             {Array.from({ length: totalDays + 1 }).map((_, index) => {
               const date = addDays(startDate, index);
@@ -93,6 +106,15 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
           </div>
         </div>
 
+        {/* Current date marker */}
+        <div 
+          className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-10"
+          style={{ 
+            left: `${(differenceInDays(new Date(), startDate) * 96) + 192}px`,
+            height: `${departments.length * 100 + 40}px`
+          }}
+        />
+
         {/* Departments and Milestones */}
         <div>
           {departments.map((department) => {
@@ -102,7 +124,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
             return (
               <div key={department} className="border-b last:border-b-0">
                 <div className="flex">
-                  <div className="w-48 shrink-0 p-4 border-r">
+                  <div className="w-48 shrink-0 p-4 border-r sticky left-0 bg-background z-10">
                     <Badge 
                       variant="secondary"
                       className={cn(
@@ -117,7 +139,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
                     {departmentMilestones.map((milestone) => {
                       const dueDate = new Date(milestone.due_date);
                       const dayOffset = differenceInDays(dueDate, startDate);
-                      const position = dayOffset * 96; // 96px = width of day column
+                      const position = (dayOffset * 96) + 48; // 96px = width of day column, +48 to center in column
                       
                       console.log(`Milestone position for ${milestone.name}:`, {
                         dayOffset,
@@ -136,7 +158,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
                                   "h-6 w-6 rounded-full",
                                   getCategoryColor(milestone.definition?.category || ''),
                                   milestone.completed ? "opacity-50" : "opacity-100",
-                                  "border-2 border-white cursor-pointer transition-all"
+                                  "border-2 border-white cursor-pointer transition-all hover:scale-110"
                                 )}
                                 style={{ left: `${position}px` }}
                               />
