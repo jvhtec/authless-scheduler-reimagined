@@ -243,6 +243,53 @@ export type Database = {
           },
         ]
       }
+      job_milestone_definitions: {
+        Row: {
+          category: Database["public"]["Enums"]["milestone_category"]
+          created_at: string
+          departments: Database["public"]["Enums"]["department"][]
+          description: string | null
+          id: string
+          is_preset: boolean | null
+          job_id: string | null
+          name: string
+          offset_days: number
+          priority: number | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["milestone_category"]
+          created_at?: string
+          departments: Database["public"]["Enums"]["department"][]
+          description?: string | null
+          id?: string
+          is_preset?: boolean | null
+          job_id?: string | null
+          name: string
+          offset_days: number
+          priority?: number | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["milestone_category"]
+          created_at?: string
+          departments?: Database["public"]["Enums"]["department"][]
+          description?: string | null
+          id?: string
+          is_preset?: boolean | null
+          job_id?: string | null
+          name?: string
+          offset_days?: number
+          priority?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_milestone_definitions_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_milestones: {
         Row: {
           completed: boolean | null
@@ -514,7 +561,7 @@ export type Database = {
           category: Database["public"]["Enums"]["milestone_category"]
           created_at: string
           default_offset: number
-          department: Database["public"]["Enums"]["department"] | null
+          department: Database["public"]["Enums"]["department"][] | null
           description: string | null
           id: string
           name: string
@@ -524,7 +571,7 @@ export type Database = {
           category: Database["public"]["Enums"]["milestone_category"]
           created_at?: string
           default_offset: number
-          department?: Database["public"]["Enums"]["department"] | null
+          department?: Database["public"]["Enums"]["department"][] | null
           description?: string | null
           id?: string
           name: string
@@ -534,7 +581,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["milestone_category"]
           created_at?: string
           default_offset?: number
-          department?: Database["public"]["Enums"]["department"] | null
+          department?: Database["public"]["Enums"]["department"][] | null
           description?: string | null
           id?: string
           name?: string
