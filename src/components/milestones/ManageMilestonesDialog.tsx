@@ -180,11 +180,10 @@ export const ManageMilestonesDialog = ({ open, onOpenChange, jobId }: ManageMile
 
       console.log("Creating new milestone definitions:", updates);
       
-      // Delete existing milestone definitions first
+      // Delete existing milestone definitions first - FIXED THIS PART
       const { error: deleteError } = await supabase
         .from("milestone_definitions")
-        .delete()
-        .neq("id", "placeholder"); // Delete all records
+        .delete();
 
       if (deleteError) {
         console.error("Error deleting existing milestones:", deleteError);
