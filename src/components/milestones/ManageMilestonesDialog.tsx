@@ -30,12 +30,17 @@ export const ManageMilestonesDialog = ({ open, onOpenChange, jobId }: ManageMile
   const { data: definitions } = useQuery({
     queryKey: ["milestone-definitions"],
     queryFn: async () => {
+      console.log("Fetching milestone definitions...");
       const { data, error } = await supabase
         .from("milestone_definitions")
         .select("*")
         .order("priority", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching milestone definitions:", error);
+        throw error;
+      }
+      console.log("Fetched milestone definitions:", data);
       return data;
     },
   });
@@ -43,13 +48,17 @@ export const ManageMilestonesDialog = ({ open, onOpenChange, jobId }: ManageMile
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (milestone: Omit<any, 'id'>) => {
+      console.log("Creating milestone:", milestone);
       const { data, error } = await supabase
         .from("milestone_definitions")
         .insert({ ...milestone, department: selectedDepartments })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error creating milestone:", error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
@@ -67,6 +76,7 @@ export const ManageMilestonesDialog = ({ open, onOpenChange, jobId }: ManageMile
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async (milestone: any) => {
+      console.log("Updating milestone:", milestone);
       const { data, error } = await supabase
         .from("milestone_definitions")
         .update({ ...milestone, department: selectedDepartments })
@@ -74,7 +84,10 @@ export const ManageMilestonesDialog = ({ open, onOpenChange, jobId }: ManageMile
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating milestone:", error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
@@ -92,12 +105,16 @@ export const ManageMilestonesDialog = ({ open, onOpenChange, jobId }: ManageMile
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      console.log("Deleting milestone:", id);
       const { error } = await supabase
         .from("milestone_definitions")
         .delete()
         .eq("id", id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error deleting milestone:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["milestone-definitions"] });
@@ -112,31 +129,39 @@ export const ManageMilestonesDialog = ({ open, onOpenChange, jobId }: ManageMile
   const saveAsDefaultMutation = useMutation({
     mutationFn: async () => {
       if (!jobId) throw new Error("No job ID provided");
+      console.log("Saving milestones as default for job:", jobId);
       
       // First, get all milestones for the current job
       const { data: jobMilestones, error: fetchError } = await supabase
         .from("job_milestones")
-        .select("*")
+        .select("*, definition:milestone_definitions(*)")
         .eq("job_id", jobId);
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error("Error fetching job milestones:", fetchError);
+        throw fetchError;
+      }
       if (!jobMilestones?.length) throw new Error("No milestones found for this job");
 
       // Update milestone definitions with the job's milestones
       const updates = jobMilestones.map(milestone => ({
         name: milestone.name,
         default_offset: milestone.offset_days,
-        department: milestone.department,
-        category: milestone.category || 'planning',
-        priority: milestone.priority || 1,
-        description: milestone.description || ''
+        department: milestone.definition?.department || [],
+        category: milestone.definition?.category || 'planning',
+        priority: milestone.definition?.priority || 1,
+        description: milestone.definition?.description || ''
       }));
 
+      console.log("Creating new milestone definitions:", updates);
       const { error: updateError } = await supabase
         .from("milestone_definitions")
         .insert(updates);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Error saving default milestones:", updateError);
+        throw updateError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["milestone-definitions"] });
