@@ -1,6 +1,6 @@
 import { format, isAfter, isBefore, addDays, differenceInDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Department } from "@/types/department";
@@ -65,7 +65,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
   return (
     <div className="border rounded-lg">
       <ScrollArea className="h-[500px] w-full">
-        <div className="min-w-[800px]">
+        <div className="min-w-[1200px]">
           {/* Timeline header */}
           <div className="flex border-b sticky top-0 bg-background z-10">
             <div className="w-48 shrink-0 p-2 font-medium border-r">Department</div>
@@ -75,7 +75,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
                 return (
                   <div 
                     key={index} 
-                    className="w-12 shrink-0 text-center text-xs p-2 border-r last:border-r-0"
+                    className="w-16 shrink-0 text-center text-xs p-2 border-r last:border-r-0"
                   >
                     <div className="font-medium">{format(date, 'd')}</div>
                     <div className="text-muted-foreground">{format(date, 'MMM')}</div>
@@ -89,7 +89,6 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
           <div>
             {departments.map((department) => {
               const departmentMilestones = getMilestonesByDepartment(department);
-              if (departmentMilestones.length === 0) return null;
 
               return (
                 <div key={department} className="border-b last:border-b-0">
@@ -150,6 +149,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
             })}
           </div>
         </div>
+        <ScrollBar orientation="horizontal" />
       </ScrollArea>
     </div>
   );
