@@ -197,6 +197,9 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
                     <SelectItem value="sound">Sound</SelectItem>
                     <SelectItem value="lights">Lights</SelectItem>
                     <SelectItem value="video">Video</SelectItem>
+                    <SelectItem value="production">Production</SelectItem>
+                    <SelectItem value="logistics">Logistics</SelectItem>
+                    <SelectItem value="administrative">Administrative</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select

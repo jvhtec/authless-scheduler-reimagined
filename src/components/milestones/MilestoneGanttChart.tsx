@@ -30,17 +30,13 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
-  // Find the last milestone date to determine chart end date
   const lastMilestoneDate = milestones.reduce((latest, milestone) => {
     const date = new Date(milestone.due_date);
     return date > latest ? date : latest;
   }, startDate);
 
-  // Add buffer days to ensure all milestones are visible
   const endDate = addDays(lastMilestoneDate, 14);
   const totalDays = differenceInDays(endDate, startDate);
-  
-  // Calculate total width based on number of days (96px per day)
   const totalWidth = Math.max(1200, (totalDays + 1) * 96);
 
   const departments: Department[] = ["sound", "lights", "video", "production", "logistics", "administrative"];
@@ -70,24 +66,22 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
 
   const getMilestonesByDepartment = (department: Department) => {
     return milestones.filter(milestone => 
-      milestone.definition?.department === department
+      milestone.definition?.department === department || milestone.definition?.department === null
     );
   };
 
-  // Scroll to today's date when component mounts
   useEffect(() => {
     if (scrollContainerRef.current) {
       const today = new Date();
       const daysFromStart = differenceInDays(today, startDate);
-      const scrollPosition = daysFromStart * 96; // 96px per day
-      scrollContainerRef.current.scrollLeft = Math.max(0, scrollPosition - 300); // 300px offset to show some context
+      const scrollPosition = daysFromStart * 96;
+      scrollContainerRef.current.scrollLeft = Math.max(0, scrollPosition - 300);
     }
   }, [startDate]);
 
   return (
     <ScrollArea className="w-full border rounded-lg" ref={scrollContainerRef}>
       <div style={{ width: `${totalWidth}px`, minWidth: '100%' }} className="relative">
-        {/* Timeline header */}
         <div className="flex border-b sticky top-0 bg-background z-20">
           <div className="w-48 shrink-0 p-2 font-medium border-r sticky left-0 bg-background z-30">Department</div>
           <div className="flex-1 flex">
@@ -106,7 +100,6 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
           </div>
         </div>
 
-        {/* Current date marker */}
         <div 
           className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-10"
           style={{ 
@@ -115,7 +108,6 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
           }}
         />
 
-        {/* Departments and Milestones */}
         <div>
           {departments.map((department) => {
             const departmentMilestones = getMilestonesByDepartment(department);
@@ -139,7 +131,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
                     {departmentMilestones.map((milestone) => {
                       const dueDate = new Date(milestone.due_date);
                       const dayOffset = differenceInDays(dueDate, startDate);
-                      const position = (dayOffset * 96) + 48; // 96px = width of day column, +48 to center in column
+                      const position = (dayOffset * 96) + 48;
                       
                       console.log(`Milestone position for ${milestone.name}:`, {
                         dayOffset,
