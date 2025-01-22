@@ -85,9 +85,18 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
     },
   });
 
-  // Delete mutation
+  // Delete mutation with cascade
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // First delete related job_milestones
+      const { error: jobMilestonesError } = await supabase
+        .from("job_milestones")
+        .delete()
+        .eq("definition_id", id);
+
+      if (jobMilestonesError) throw jobMilestonesError;
+
+      // Then delete the milestone definition
       const { error } = await supabase
         .from("milestone_definitions")
         .delete()
@@ -100,6 +109,14 @@ export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesD
       toast({
         title: "Success",
         description: "Milestone definition deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Error deleting milestone:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete milestone definition",
+        variant: "destructive",
       });
     },
   });
