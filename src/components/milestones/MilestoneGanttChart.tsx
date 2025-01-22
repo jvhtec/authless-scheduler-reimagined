@@ -34,7 +34,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
   const endDate = addDays(lastMilestoneDate, 7);
   const totalDays = differenceInDays(endDate, startDate);
 
-  const departments: Department[] = ["sound", "lights", "video"];
+  const departments: Department[] = ["sound", "lights", "video", "production", "logistics", "administrative"];
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -52,6 +52,9 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
       case 'sound': return 'bg-blue-100 text-blue-800';
       case 'lights': return 'bg-yellow-100 text-yellow-800';
       case 'video': return 'bg-purple-100 text-purple-800';
+      case 'production': return 'bg-green-100 text-green-800';
+      case 'logistics': return 'bg-orange-100 text-orange-800';
+      case 'administrative': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -64,7 +67,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
 
   return (
     <div className="border rounded-lg">
-      <ScrollArea className="h-[500px]">
+      <ScrollArea className="h-[500px] overflow-x-auto">
         <div className="min-w-[1200px]">
           {/* Timeline header */}
           <div className="flex border-b sticky top-0 bg-background z-10">
@@ -75,7 +78,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
                 return (
                   <div 
                     key={index} 
-                    className="w-16 shrink-0 text-center text-xs p-2 border-r last:border-r-0"
+                    className="w-24 shrink-0 text-center text-xs p-2 border-r last:border-r-0"
                   >
                     <div className="font-medium">{format(date, 'd')}</div>
                     <div className="text-muted-foreground">{format(date, 'MMM')}</div>
@@ -108,7 +111,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
                       {departmentMilestones.map((milestone) => {
                         const dueDate = new Date(milestone.due_date);
                         const dayOffset = differenceInDays(dueDate, startDate);
-                        const position = `${(dayOffset / totalDays) * 100}%`;
+                        const position = `${(dayOffset * 96)}px`; // 96px = width of day column (24px * 4)
 
                         return (
                           <TooltipProvider key={milestone.id}>
@@ -122,7 +125,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
                                     milestone.completed ? "opacity-50" : "opacity-100",
                                     "border-2 border-white cursor-pointer transition-all"
                                   )}
-                                  style={{ left: `calc(${position} - 12px)` }}
+                                  style={{ left: position }}
                                 />
                               </TooltipTrigger>
                               <TooltipContent>
