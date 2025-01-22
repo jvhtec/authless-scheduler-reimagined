@@ -96,6 +96,39 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     }
   };
 
+  const getTotalRequiredPersonnel = (job: any) => {
+    let total = 0;
+    
+    // Sum up sound personnel if exists
+    if (job.sound_job_personnel?.length > 0) {
+      const sound = job.sound_job_personnel[0];
+      total += (sound.foh_engineers || 0) + 
+               (sound.mon_engineers || 0) + 
+               (sound.pa_techs || 0) + 
+               (sound.rf_techs || 0);
+    }
+    
+    // Sum up lights personnel if exists
+    if (job.lights_job_personnel?.length > 0) {
+      const lights = job.lights_job_personnel[0];
+      total += (lights.lighting_designers || 0) + 
+               (lights.lighting_techs || 0) + 
+               (lights.spot_ops || 0) + 
+               (lights.riggers || 0);
+    }
+    
+    // Sum up video personnel if exists
+    if (job.video_job_personnel?.length > 0) {
+      const video = job.video_job_personnel[0];
+      total += (video.video_directors || 0) + 
+               (video.camera_ops || 0) + 
+               (video.playback_techs || 0) + 
+               (video.video_techs || 0);
+    }
+    
+    return total;
+  };
+
   const renderJobCard = (job: any, date: Date) => {
     const isStart = isJobStart(job, date);
     const isEnd = isJobEnd(job, date);
@@ -103,6 +136,8 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const endDate = new Date(job.end_time);
     const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const currentDay = Math.ceil((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const totalRequired = getTotalRequiredPersonnel(job);
+    const currentlyAssigned = job.job_assignments?.length || 0;
 
     return (
       <TooltipProvider key={job.id}>
@@ -150,7 +185,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Users className="h-4 w-4" />
-                <span>{job.job_assignments?.length || 0} assigned</span>
+                <span>{currentlyAssigned}/{totalRequired} assigned</span>
               </div>
             </div>
           </TooltipContent>
