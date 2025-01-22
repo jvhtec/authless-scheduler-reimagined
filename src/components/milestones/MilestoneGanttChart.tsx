@@ -19,7 +19,7 @@ interface Milestone {
   completed_by: { first_name: string; last_name: string } | null;
   definition: {
     category: string;
-    department: string | null;
+    department: string[] | null;
   } | null;
 }
 
@@ -112,7 +112,9 @@ export function MilestoneGanttChart({ milestones, startDate, jobId }: MilestoneG
 
   const getMilestonesByDepartment = (department: Department) => {
     return milestones.filter(milestone => 
-      milestone.definition?.department === department || milestone.definition?.department === null
+      milestone.definition?.department?.includes(department) || 
+      milestone.definition?.department === null || 
+      milestone.definition?.department?.length === 0
     );
   };
 
@@ -217,7 +219,7 @@ export function MilestoneGanttChart({ milestones, startDate, jobId }: MilestoneG
                                     style={{ left: `${position}px` }}
                                   >
                                     {milestone.completed && (
-                                      <Check className="h-3 w-3 text-white" />
+                                      <Check className="h-3 w-3 text-white absolute inset-0 m-auto" />
                                     )}
                                   </div>
                                 </TooltipTrigger>
