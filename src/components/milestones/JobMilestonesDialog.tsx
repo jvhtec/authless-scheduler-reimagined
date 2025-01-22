@@ -2,10 +2,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { format, addDays } from "date-fns";
-import { Settings } from "lucide-react";
+import { format, addDays, subDays, min } from "date-fns";
+import { Settings, Calendar, MapPin, Clock } from "lucide-react";
 import { MilestoneGanttChart } from "./MilestoneGanttChart";
 import { useEffect } from "react";
+import { Separator } from "@/components/ui/separator";
 
 interface JobMilestonesDialogProps {
   open: boolean;
@@ -20,6 +21,24 @@ export function JobMilestonesDialog({
   jobId,
   jobStartDate,
 }: JobMilestonesDialogProps) {
+  // Fetch job details
+  const { data: job } = useQuery({
+    queryKey: ["job-details", jobId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("jobs")
+        .select(`
+          *,
+          location:locations(name)
+        `)
+        .eq("id", jobId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Fetch milestone definitions
   const { data: definitions } = useQuery({
     queryKey: ["milestone-definitions"],
@@ -111,6 +130,17 @@ export function JobMilestonesDialog({
     }
   }, [definitions, milestones, dateTypes]);
 
+  // Calculate the earliest milestone date to determine chart start date
+  const chartStartDate = milestones?.length
+    ? min([
+        jobStartDate,
+        ...milestones.map((m) => new Date(m.due_date)),
+      ])
+    : jobStartDate;
+
+  // Ensure we show at least 2 weeks before the earliest date
+  const adjustedStartDate = subDays(chartStartDate, 14);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] w-full">
@@ -122,6 +152,30 @@ export function JobMilestonesDialog({
               Manage Milestones
             </Button>
           </div>
+          {job && (
+            <>
+              <div className="mt-4 space-y-2">
+                <h2 className="text-xl font-semibold">{job.title}</h2>
+                <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>{format(new Date(job.start_time), 'MMM d, yyyy')}</span>
+                  </div>
+                  {job.location && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      <span>{job.location.name}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span>{format(new Date(job.start_time), 'HH:mm')}</span>
+                  </div>
+                </div>
+              </div>
+              <Separator className="my-4" />
+            </>
+          )}
         </DialogHeader>
         
         {isLoading ? (
@@ -132,7 +186,7 @@ export function JobMilestonesDialog({
           <div className="relative w-full overflow-hidden">
             <MilestoneGanttChart 
               milestones={milestones || []} 
-              startDate={jobStartDate}
+              startDate={adjustedStartDate}
             />
           </div>
         )}

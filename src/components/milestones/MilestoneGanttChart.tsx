@@ -25,6 +25,7 @@ interface MilestoneGanttChartProps {
 
 export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttChartProps) {
   console.log("Rendering Gantt chart with milestones:", milestones);
+  console.log("Start date:", startDate);
   
   // Find the last milestone date to determine chart end date
   const lastMilestoneDate = milestones.reduce((latest, milestone) => {
@@ -33,7 +34,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
   }, startDate);
 
   // Add buffer days to ensure all milestones are visible
-  const endDate = addDays(lastMilestoneDate, 7);
+  const endDate = addDays(lastMilestoneDate, 14);
   const totalDays = differenceInDays(endDate, startDate);
   
   // Calculate total width based on number of days (96px per day)
@@ -71,8 +72,8 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
   };
 
   return (
-    <ScrollArea className="w-full border rounded-lg" style={{ maxWidth: '100%' }}>
-      <div style={{ width: `${totalWidth}px`, maxWidth: '100%' }}>
+    <ScrollArea className="w-full border rounded-lg">
+      <div style={{ width: `${totalWidth}px`, minWidth: '100%' }}>
         {/* Timeline header */}
         <div className="flex border-b sticky top-0 bg-background z-10">
           <div className="w-48 shrink-0 p-2 font-medium border-r">Department</div>
@@ -121,7 +122,8 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
                       console.log(`Milestone position for ${milestone.name}:`, {
                         dayOffset,
                         position,
-                        dueDate: milestone.due_date
+                        dueDate: milestone.due_date,
+                        startDate: startDate
                       });
 
                       return (
