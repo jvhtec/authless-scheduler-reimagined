@@ -243,6 +243,73 @@ export type Database = {
           },
         ]
       }
+      job_milestones: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          definition_id: string | null
+          due_date: string
+          id: string
+          job_id: string
+          name: string
+          notes: string | null
+          offset_days: number
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          definition_id?: string | null
+          due_date: string
+          id?: string
+          job_id: string
+          name: string
+          notes?: string | null
+          offset_days: number
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          definition_id?: string | null
+          due_date?: string
+          id?: string
+          job_id?: string
+          name?: string
+          notes?: string | null
+          offset_days?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_milestones_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_milestones_definition_id_fkey"
+            columns: ["definition_id"]
+            isOneToOne: false
+            referencedRelation: "milestone_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_milestones_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           color: string | null
@@ -441,6 +508,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      milestone_definitions: {
+        Row: {
+          category: Database["public"]["Enums"]["milestone_category"]
+          created_at: string
+          default_offset: number
+          department: Database["public"]["Enums"]["department"] | null
+          description: string | null
+          id: string
+          name: string
+          priority: number | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["milestone_category"]
+          created_at?: string
+          default_offset: number
+          department?: Database["public"]["Enums"]["department"] | null
+          description?: string | null
+          id?: string
+          name: string
+          priority?: number | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["milestone_category"]
+          created_at?: string
+          default_offset?: number
+          department?: Database["public"]["Enums"]["department"] | null
+          description?: string | null
+          id?: string
+          name?: string
+          priority?: number | null
+        }
+        Relationships: []
       }
       power_requirement_tables: {
         Row: {
@@ -911,6 +1011,12 @@ export type Database = {
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
       job_type: "single" | "tour"
       message_status: "unread" | "read"
+      milestone_category:
+        | "planning"
+        | "technical"
+        | "logistics"
+        | "administrative"
+        | "production"
       project_status: "pending" | "in_progress" | "completed" | "cancelled"
       task_status: "not_started" | "in_progress" | "completed"
       user_role: "admin" | "user" | "management" | "logistics" | "technician"
