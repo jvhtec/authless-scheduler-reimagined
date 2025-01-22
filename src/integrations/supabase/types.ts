@@ -144,6 +144,41 @@ export type Database = {
           },
         ]
       }
+      job_date_types: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          job_id: string
+          type: Database["public"]["Enums"]["job_date_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          job_id: string
+          type: Database["public"]["Enums"]["job_date_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          job_id?: string
+          type?: Database["public"]["Enums"]["job_date_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_date_types_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_departments: {
         Row: {
           department: Database["public"]["Enums"]["department"]
@@ -872,6 +907,7 @@ export type Database = {
       assignment_status: "invited" | "confirmed" | "declined"
       department: "sound" | "lights" | "video"
       direct_message_status: "unread" | "read"
+      job_date_type: "travel" | "setup" | "show" | "off"
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
       job_type: "single" | "tour"
       message_status: "unread" | "read"

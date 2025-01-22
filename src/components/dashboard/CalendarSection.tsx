@@ -1,9 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, ArrowRight, ArrowLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isAfter, isBefore, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { DateTypeContextMenu } from "./DateTypeContextMenu";
 import {
   Tooltip,
   TooltipContent,
@@ -11,6 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/lib/supabase";
 
 interface CalendarSectionProps {
   date: Date | undefined;
@@ -21,6 +23,7 @@ interface CalendarSectionProps {
 
 export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], department }: CalendarSectionProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [dateTypes, setDateTypes] = useState<Record<string, any>>({});
   const currentMonth = date || new Date();
   const firstDayOfMonth = startOfMonth(currentMonth);
   const lastDayOfMonth = endOfMonth(currentMonth);
@@ -43,6 +46,51 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   });
 
   const allDays = [...prefixDays, ...daysInMonth, ...suffixDays];
+
+  useEffect(() => {
+    const fetchDateTypes = async () => {
+      if (!jobs?.length) return;
+      
+      const jobIds = jobs.map(job => job.id);
+      const { data, error } = await supabase
+        .from('job_date_types')
+        .select('*')
+        .in('job_id', jobIds);
+        
+      if (error) {
+        console.error('Error fetching date types:', error);
+        return;
+      }
+
+      const types = data.reduce((acc: Record<string, any>, curr) => {
+        const key = `${curr.job_id}-${curr.date}`;
+        acc[key] = curr;
+        return acc;
+      }, {});
+
+      setDateTypes(types);
+    };
+
+    fetchDateTypes();
+  }, [jobs]);
+
+  const getDateTypeIcon = (jobId: string, date: Date) => {
+    const key = `${jobId}-${format(date, 'yyyy-MM-dd')}`;
+    const dateType = dateTypes[key]?.type;
+
+    switch (dateType) {
+      case 'travel':
+        return <Plane className="h-3 w-3 text-blue-500" />;
+      case 'setup':
+        return <Wrench className="h-3 w-3 text-yellow-500" />;
+      case 'show':
+        return <Star className="h-3 w-3 text-green-500" />;
+      case 'off':
+        return <Moon className="h-3 w-3 text-gray-500" />;
+      default:
+        return null;
+    }
+  };
 
   const getJobsForDate = (date: Date) => {
     if (!jobs) return [];
@@ -99,7 +147,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const getTotalRequiredPersonnel = (job: any) => {
     let total = 0;
     
-    // Sum up sound personnel if exists
     if (job.sound_job_personnel?.length > 0) {
       const sound = job.sound_job_personnel[0];
       total += (sound.foh_engineers || 0) + 
@@ -108,7 +155,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
                (sound.rf_techs || 0);
     }
     
-    // Sum up lights personnel if exists
     if (job.lights_job_personnel?.length > 0) {
       const lights = job.lights_job_personnel[0];
       total += (lights.lighting_designers || 0) + 
@@ -117,7 +163,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
                (lights.riggers || 0);
     }
     
-    // Sum up video personnel if exists
     if (job.video_job_personnel?.length > 0) {
       const video = job.video_job_personnel[0];
       total += (video.video_directors || 0) + 
@@ -132,6 +177,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const renderJobCard = (job: any, date: Date) => {
     const isStart = isJobStart(job, date);
     const isEnd = isJobEnd(job, date);
+    const dateTypeIcon = getDateTypeIcon(job.id, date);
     const startDate = new Date(job.start_time);
     const endDate = new Date(job.end_time);
     const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -140,57 +186,87 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const currentlyAssigned = job.job_assignments?.length || 0;
 
     return (
-      <TooltipProvider key={job.id}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div
-              className="px-1.5 py-0.5 rounded text-xs truncate hover:bg-accent/50 transition-colors"
-              style={{
-                backgroundColor: `${job.color}20`,
-                color: job.color,
-              }}
-            >
-              {job.title}
-            </div>
-          </TooltipTrigger>
-          <TooltipContent className="w-64 p-2">
-            <div className="space-y-2">
-              <h4 className="font-semibold">{job.title}</h4>
-              {job.description && (
-                <p className="text-sm text-muted-foreground">{job.description}</p>
-              )}
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4" />
-                <span>
-                  {format(new Date(job.start_time), "MMM d, HH:mm")} - 
-                  {format(new Date(job.end_time), "MMM d, HH:mm")}
-                </span>
+      <DateTypeContextMenu 
+        key={job.id} 
+        jobId={job.id} 
+        date={date}
+        onTypeChange={() => {
+          const fetchDateTypes = async () => {
+            const { data, error } = await supabase
+              .from('job_date_types')
+              .select('*')
+              .eq('job_id', job.id);
+              
+            if (error) {
+              console.error('Error fetching date types:', error);
+              return;
+            }
+
+            const types = data.reduce((acc: Record<string, any>, curr) => {
+              const key = `${curr.job_id}-${curr.date}`;
+              acc[key] = curr;
+              return acc;
+            }, {});
+
+            setDateTypes(prev => ({ ...prev, ...types }));
+          };
+
+          fetchDateTypes();
+        }}
+      >
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="px-1.5 py-0.5 rounded text-xs truncate hover:bg-accent/50 transition-colors flex items-center gap-1"
+                style={{
+                  backgroundColor: `${job.color}20`,
+                  color: job.color,
+                }}
+              >
+                {dateTypeIcon}
+                <span>{job.title}</span>
               </div>
-              {job.location && job.location.name && (
+            </TooltipTrigger>
+            <TooltipContent className="w-64 p-2">
+              <div className="space-y-2">
+                <h4 className="font-semibold">{job.title}</h4>
+                {job.description && (
+                  <p className="text-sm text-muted-foreground">{job.description}</p>
+                )}
                 <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="h-4 w-4" />
-                  <span>{job.location.name}</span>
+                  <Clock className="h-4 w-4" />
+                  <span>
+                    {format(new Date(job.start_time), "MMM d, HH:mm")} - 
+                    {format(new Date(job.end_time), "MMM d, HH:mm")}
+                  </span>
                 </div>
-              )}
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Departments:</div>
-                <div className="flex flex-wrap gap-1">
-                  {job.job_departments.map((dept: any) => (
-                    <Badge key={dept.department} variant="secondary" className="flex items-center gap-1">
-                      {getDepartmentIcon(dept.department)}
-                      <span className="capitalize">{dept.department}</span>
-                    </Badge>
-                  ))}
+                {job.location && job.location.name && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="h-4 w-4" />
+                    <span>{job.location.name}</span>
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <div className="text-sm font-medium">Departments:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {job.job_departments.map((dept: any) => (
+                      <Badge key={dept.department} variant="secondary" className="flex items-center gap-1">
+                        {getDepartmentIcon(dept.department)}
+                        <span className="capitalize">{dept.department}</span>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Users className="h-4 w-4" />
+                  <span>{currentlyAssigned}/{totalRequired} assigned</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Users className="h-4 w-4" />
-                <span>{currentlyAssigned}/{totalRequired} assigned</span>
-              </div>
-            </div>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </DateTypeContextMenu>
     );
   };
 
