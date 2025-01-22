@@ -64,7 +64,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
 
   return (
     <div className="border rounded-lg">
-      <ScrollArea className="h-[500px] w-full">
+      <ScrollArea className="h-[500px]">
         <div className="min-w-[1200px]">
           {/* Timeline header */}
           <div className="flex border-b sticky top-0 bg-background z-10">
