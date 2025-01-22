@@ -37,7 +37,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
   const totalDays = differenceInDays(endDate, startDate);
   
   // Calculate total width based on number of days (96px per day)
-  const totalWidth = (totalDays + 1) * 96;
+  const totalWidth = Math.max(1200, (totalDays + 1) * 96);
 
   const departments: Department[] = ["sound", "lights", "video", "production", "logistics", "administrative"];
 
@@ -71,101 +71,99 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
   };
 
   return (
-    <div className="border rounded-lg">
-      <ScrollArea className="h-[500px]">
-        <div style={{ width: `${Math.max(1200, totalWidth)}px` }}>
-          {/* Timeline header */}
-          <div className="flex border-b sticky top-0 bg-background z-10">
-            <div className="w-48 shrink-0 p-2 font-medium border-r">Department</div>
-            <div className="flex-1 flex">
-              {Array.from({ length: totalDays + 1 }).map((_, index) => {
-                const date = addDays(startDate, index);
-                return (
-                  <div 
-                    key={index} 
-                    className="w-24 shrink-0 text-center text-xs p-2 border-r last:border-r-0"
-                  >
-                    <div className="font-medium">{format(date, 'd')}</div>
-                    <div className="text-muted-foreground">{format(date, 'MMM')}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Departments and Milestones */}
-          <div>
-            {departments.map((department) => {
-              const departmentMilestones = getMilestonesByDepartment(department);
-              console.log(`Milestones for ${department}:`, departmentMilestones);
-
+    <ScrollArea className="w-full border rounded-lg" style={{ maxWidth: '100%' }}>
+      <div style={{ width: `${totalWidth}px`, maxWidth: '100%' }}>
+        {/* Timeline header */}
+        <div className="flex border-b sticky top-0 bg-background z-10">
+          <div className="w-48 shrink-0 p-2 font-medium border-r">Department</div>
+          <div className="flex-1 flex">
+            {Array.from({ length: totalDays + 1 }).map((_, index) => {
+              const date = addDays(startDate, index);
               return (
-                <div key={department} className="border-b last:border-b-0">
-                  <div className="flex">
-                    <div className="w-48 shrink-0 p-4 border-r">
-                      <Badge 
-                        variant="secondary"
-                        className={cn(
-                          "text-xs capitalize",
-                          getDepartmentBadgeColor(department)
-                        )}
-                      >
-                        {department}
-                      </Badge>
-                    </div>
-                    <div className="flex-1 relative min-h-[100px]">
-                      {departmentMilestones.map((milestone) => {
-                        const dueDate = new Date(milestone.due_date);
-                        const dayOffset = differenceInDays(dueDate, startDate);
-                        const position = dayOffset * 96; // 96px = width of day column (24px * 4)
-                        
-                        console.log(`Milestone position for ${milestone.name}:`, {
-                          dayOffset,
-                          position,
-                          dueDate: milestone.due_date
-                        });
-
-                        return (
-                          <TooltipProvider key={milestone.id}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div 
-                                  className={cn(
-                                    "absolute top-1/2 -translate-y-1/2",
-                                    "h-6 w-6 rounded-full",
-                                    getCategoryColor(milestone.definition?.category || ''),
-                                    milestone.completed ? "opacity-50" : "opacity-100",
-                                    "border-2 border-white cursor-pointer transition-all"
-                                  )}
-                                  style={{ left: `${position}px` }}
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="space-y-2">
-                                  <div className="font-medium">{milestone.name}</div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Due: {format(dueDate, 'MMM d, yyyy')}
-                                  </div>
-                                  {milestone.completed && milestone.completed_by && (
-                                    <div className="text-xs text-muted-foreground">
-                                      Completed by: {milestone.completed_by.first_name} {milestone.completed_by.last_name}
-                                    </div>
-                                  )}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        );
-                      })}
-                    </div>
-                  </div>
+                <div 
+                  key={index} 
+                  className="w-24 shrink-0 text-center text-xs p-2 border-r last:border-r-0"
+                >
+                  <div className="font-medium">{format(date, 'd')}</div>
+                  <div className="text-muted-foreground">{format(date, 'MMM')}</div>
                 </div>
               );
             })}
           </div>
         </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
-    </div>
+
+        {/* Departments and Milestones */}
+        <div>
+          {departments.map((department) => {
+            const departmentMilestones = getMilestonesByDepartment(department);
+            console.log(`Milestones for ${department}:`, departmentMilestones);
+
+            return (
+              <div key={department} className="border-b last:border-b-0">
+                <div className="flex">
+                  <div className="w-48 shrink-0 p-4 border-r">
+                    <Badge 
+                      variant="secondary"
+                      className={cn(
+                        "text-xs capitalize",
+                        getDepartmentBadgeColor(department)
+                      )}
+                    >
+                      {department}
+                    </Badge>
+                  </div>
+                  <div className="flex-1 relative min-h-[100px]">
+                    {departmentMilestones.map((milestone) => {
+                      const dueDate = new Date(milestone.due_date);
+                      const dayOffset = differenceInDays(dueDate, startDate);
+                      const position = dayOffset * 96; // 96px = width of day column
+                      
+                      console.log(`Milestone position for ${milestone.name}:`, {
+                        dayOffset,
+                        position,
+                        dueDate: milestone.due_date
+                      });
+
+                      return (
+                        <TooltipProvider key={milestone.id}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div 
+                                className={cn(
+                                  "absolute top-1/2 -translate-y-1/2",
+                                  "h-6 w-6 rounded-full",
+                                  getCategoryColor(milestone.definition?.category || ''),
+                                  milestone.completed ? "opacity-50" : "opacity-100",
+                                  "border-2 border-white cursor-pointer transition-all"
+                                )}
+                                style={{ left: `${position}px` }}
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="space-y-2">
+                                <div className="font-medium">{milestone.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  Due: {format(dueDate, 'MMM d, yyyy')}
+                                </div>
+                                {milestone.completed && milestone.completed_by && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Completed by: {milestone.completed_by.first_name} {milestone.completed_by.last_name}
+                                  </div>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <ScrollBar orientation="horizontal" />
+    </ScrollArea>
   );
 }

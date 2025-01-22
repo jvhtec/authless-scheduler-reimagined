@@ -113,7 +113,7 @@ export function JobMilestonesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-[95vw] w-full">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Job Milestones</DialogTitle>
@@ -129,10 +129,12 @@ export function JobMilestonesDialog({
             Loading milestones...
           </div>
         ) : (
-          <MilestoneGanttChart 
-            milestones={milestones || []} 
-            startDate={jobStartDate}
-          />
+          <div className="relative w-full overflow-hidden">
+            <MilestoneGanttChart 
+              milestones={milestones || []} 
+              startDate={jobStartDate}
+            />
+          </div>
         )}
       </DialogContent>
     </Dialog>
