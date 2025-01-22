@@ -9,6 +9,7 @@ import { Department } from "@/types/department";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ManageMilestonesDialogProps {
   open: boolean;
@@ -127,171 +128,173 @@ export function ManageMilestonesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[800px]">
-        <DialogHeader>
+      <DialogContent className="max-w-[800px] h-[80vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-2">
           <DialogTitle>Manage Milestone Definitions</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <Button
-            onClick={() => {
-              setEditingMilestone({
-                id: '',
-                name: '',
-                default_offset: 0,
-                department: null,
-                category: 'planning',
-                priority: 1,
-                description: '',
-              });
-              setIsEditing(true);
-            }}
-            className="mb-4"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add New Milestone
-          </Button>
+        <ScrollArea className="flex-1 px-6">
+          <div className="space-y-4 pb-6">
+            <Button
+              onClick={() => {
+                setEditingMilestone({
+                  id: '',
+                  name: '',
+                  default_offset: 0,
+                  department: null,
+                  category: 'planning',
+                  priority: 1,
+                  description: '',
+                });
+                setIsEditing(true);
+              }}
+              className="mb-4"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Milestone
+            </Button>
 
-          {isEditing && editingMilestone && (
-            <div className="space-y-4 p-4 border rounded-lg">
-              <Input
-                placeholder="Milestone name"
-                value={editingMilestone.name}
-                onChange={(e) =>
-                  setEditingMilestone({ ...editingMilestone, name: e.target.value })
-                }
-              />
-              <Input
-                type="number"
-                placeholder="Default offset (days)"
-                value={editingMilestone.default_offset}
-                onChange={(e) =>
-                  setEditingMilestone({
-                    ...editingMilestone,
-                    default_offset: parseInt(e.target.value),
-                  })
-                }
-              />
-              <Select
-                value={editingMilestone.department || ''}
-                onValueChange={(value) =>
-                  setEditingMilestone({
-                    ...editingMilestone,
-                    department: value as Department,
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">No department</SelectItem>
-                  <SelectItem value="sound">Sound</SelectItem>
-                  <SelectItem value="lights">Lights</SelectItem>
-                  <SelectItem value="video">Video</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
-                value={editingMilestone.category}
-                onValueChange={(value: any) =>
-                  setEditingMilestone({
-                    ...editingMilestone,
-                    category: value,
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="planning">Planning</SelectItem>
-                  <SelectItem value="technical">Technical</SelectItem>
-                  <SelectItem value="logistics">Logistics</SelectItem>
-                  <SelectItem value="administrative">Administrative</SelectItem>
-                  <SelectItem value="production">Production</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                type="number"
-                placeholder="Priority"
-                value={editingMilestone.priority}
-                onChange={(e) =>
-                  setEditingMilestone({
-                    ...editingMilestone,
-                    priority: parseInt(e.target.value),
-                  })
-                }
-              />
-              <Input
-                placeholder="Description"
-                value={editingMilestone.description || ''}
-                onChange={(e) =>
-                  setEditingMilestone({
-                    ...editingMilestone,
-                    description: e.target.value,
-                  })
-                }
-              />
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setEditingMilestone(null);
-                  }}
+            {isEditing && editingMilestone && (
+              <div className="space-y-4 p-4 border rounded-lg">
+                <Input
+                  placeholder="Milestone name"
+                  value={editingMilestone.name}
+                  onChange={(e) =>
+                    setEditingMilestone({ ...editingMilestone, name: e.target.value })
+                  }
+                />
+                <Input
+                  type="number"
+                  placeholder="Default offset (days)"
+                  value={editingMilestone.default_offset}
+                  onChange={(e) =>
+                    setEditingMilestone({
+                      ...editingMilestone,
+                      default_offset: parseInt(e.target.value),
+                    })
+                  }
+                />
+                <Select
+                  value={editingMilestone.department || ''}
+                  onValueChange={(value) =>
+                    setEditingMilestone({
+                      ...editingMilestone,
+                      department: value as Department,
+                    })
+                  }
                 >
-                  Cancel
-                </Button>
-                <Button onClick={handleSave}>Save</Button>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No department</SelectItem>
+                    <SelectItem value="sound">Sound</SelectItem>
+                    <SelectItem value="lights">Lights</SelectItem>
+                    <SelectItem value="video">Video</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={editingMilestone.category}
+                  onValueChange={(value: any) =>
+                    setEditingMilestone({
+                      ...editingMilestone,
+                      category: value,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="planning">Planning</SelectItem>
+                    <SelectItem value="technical">Technical</SelectItem>
+                    <SelectItem value="logistics">Logistics</SelectItem>
+                    <SelectItem value="administrative">Administrative</SelectItem>
+                    <SelectItem value="production">Production</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  placeholder="Priority"
+                  value={editingMilestone.priority}
+                  onChange={(e) =>
+                    setEditingMilestone({
+                      ...editingMilestone,
+                      priority: parseInt(e.target.value),
+                    })
+                  }
+                />
+                <Input
+                  placeholder="Description"
+                  value={editingMilestone.description || ''}
+                  onChange={(e) =>
+                    setEditingMilestone({
+                      ...editingMilestone,
+                      description: e.target.value,
+                    })
+                  }
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditingMilestone(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSave}>Save</Button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Offset Days</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {definitions?.map((definition) => (
-                <TableRow key={definition.id}>
-                  <TableCell>{definition.name}</TableCell>
-                  <TableCell>{definition.department || 'All'}</TableCell>
-                  <TableCell>{definition.category}</TableCell>
-                  <TableCell>{definition.default_offset}</TableCell>
-                  <TableCell>{definition.priority}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditingMilestone(definition);
-                          setIsEditing(true);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteMutation.mutate(definition.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Offset Days</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {definitions?.map((definition) => (
+                  <TableRow key={definition.id}>
+                    <TableCell>{definition.name}</TableCell>
+                    <TableCell>{definition.department || 'All'}</TableCell>
+                    <TableCell>{definition.category}</TableCell>
+                    <TableCell>{definition.default_offset}</TableCell>
+                    <TableCell>{definition.priority}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingMilestone(definition);
+                            setIsEditing(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteMutation.mutate(definition.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
