@@ -5,8 +5,9 @@ import { supabase } from "@/lib/supabase";
 import { format, addDays, subDays, min } from "date-fns";
 import { Settings, Calendar, MapPin, Clock } from "lucide-react";
 import { MilestoneGanttChart } from "./MilestoneGanttChart";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
+import { ManageMilestonesDialog } from "./ManageMilestonesDialog";
 
 interface JobMilestonesDialogProps {
   open: boolean;
@@ -21,7 +22,8 @@ export function JobMilestonesDialog({
   jobId,
   jobStartDate,
 }: JobMilestonesDialogProps) {
-  // Fetch job details
+  const [manageMilestonesOpen, setManageMilestonesOpen] = useState(false);
+
   const { data: job } = useQuery({
     queryKey: ["job-details", jobId],
     queryFn: async () => {
@@ -142,55 +144,67 @@ export function JobMilestonesDialog({
   const adjustedStartDate = subDays(chartStartDate, 14);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-full">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Job Milestones</DialogTitle>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Settings className="h-4 w-4" />
-              Manage Milestones
-            </Button>
-          </div>
-          {job && (
-            <>
-              <div className="mt-4 space-y-2">
-                <h2 className="text-xl font-semibold">{job.title}</h2>
-                <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>{format(new Date(job.start_time), 'MMM d, yyyy')}</span>
-                  </div>
-                  {job.location && (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-[95vw] w-full">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Job Milestones</DialogTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2"
+                onClick={() => setManageMilestonesOpen(true)}
+              >
+                <Settings className="h-4 w-4" />
+                Manage Milestones
+              </Button>
+            </div>
+            {job && (
+              <>
+                <div className="mt-4 space-y-2">
+                  <h2 className="text-xl font-semibold">{job.title}</h2>
+                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      <span>{job.location.name}</span>
+                      <Calendar className="h-4 w-4" />
+                      <span>{format(new Date(job.start_time), 'MMM d, yyyy')}</span>
                     </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    <span>{format(new Date(job.start_time), 'HH:mm')}</span>
+                    {job.location && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        <span>{job.location.name}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      <span>{format(new Date(job.start_time), 'HH:mm')}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <Separator className="my-4" />
-            </>
+                <Separator className="my-4" />
+              </>
+            )}
+          </DialogHeader>
+          
+          {isLoading ? (
+            <div className="h-[400px] flex items-center justify-center">
+              Loading milestones...
+            </div>
+          ) : (
+            <div className="relative w-full overflow-hidden">
+              <MilestoneGanttChart 
+                milestones={milestones || []} 
+                startDate={adjustedStartDate}
+              />
+            </div>
           )}
-        </DialogHeader>
-        
-        {isLoading ? (
-          <div className="h-[400px] flex items-center justify-center">
-            Loading milestones...
-          </div>
-        ) : (
-          <div className="relative w-full overflow-hidden">
-            <MilestoneGanttChart 
-              milestones={milestones || []} 
-              startDate={adjustedStartDate}
-            />
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <ManageMilestonesDialog
+        open={manageMilestonesOpen}
+        onOpenChange={setManageMilestonesOpen}
+      />
+    </>
   );
 }
