@@ -1,41 +1,30 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Profile } from "@/components/users/types";
+import { Department } from "@/types/department";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Department } from "@/types/department";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ManageMilestonesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-interface MilestoneDefinition {
-  id: string;
-  name: string;
-  default_offset: number;
-  department: Department | null;
-  category: 'planning' | 'technical' | 'logistics' | 'administrative' | 'production';
-  priority: number;
-  description: string | null;
-}
-
-export function ManageMilestonesDialog({
-  open,
-  onOpenChange,
-}: ManageMilestonesDialogProps) {
+export const ManageMilestonesDialog = ({ open, onOpenChange }: ManageMilestonesDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [editingMilestone, setEditingMilestone] = useState<MilestoneDefinition | null>(null);
+  const [editingMilestone, setEditingMilestone] = useState<any | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Fetch milestone definitions
   const { data: definitions } = useQuery({
     queryKey: ["milestone-definitions"],
     queryFn: async () => {
@@ -45,13 +34,13 @@ export function ManageMilestonesDialog({
         .order("priority", { ascending: true });
 
       if (error) throw error;
-      return data as MilestoneDefinition[];
+      return data;
     },
   });
 
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: async (milestone: Omit<MilestoneDefinition, 'id'>) => {
+    mutationFn: async (milestone: Omit<any, 'id'>) => {
       const { data, error } = await supabase
         .from("milestone_definitions")
         .insert(milestone)
@@ -74,7 +63,7 @@ export function ManageMilestonesDialog({
 
   // Update mutation
   const updateMutation = useMutation({
-    mutationFn: async (milestone: MilestoneDefinition) => {
+    mutationFn: async (milestone: any) => {
       const { data, error } = await supabase
         .from("milestone_definitions")
         .update(milestone)
@@ -175,11 +164,11 @@ export function ManageMilestonesDialog({
                   }
                 />
                 <Select
-                  value={editingMilestone.department || ''}
+                  value={editingMilestone.department || "all"}
                   onValueChange={(value) =>
                     setEditingMilestone({
                       ...editingMilestone,
-                      department: value as Department,
+                      department: value === "all" ? null : value as Department,
                     })
                   }
                 >
@@ -187,7 +176,7 @@ export function ManageMilestonesDialog({
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No department</SelectItem>
+                    <SelectItem value="all">All Departments</SelectItem>
                     <SelectItem value="sound">Sound</SelectItem>
                     <SelectItem value="lights">Lights</SelectItem>
                     <SelectItem value="video">Video</SelectItem>
@@ -298,4 +287,4 @@ export function ManageMilestonesDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
