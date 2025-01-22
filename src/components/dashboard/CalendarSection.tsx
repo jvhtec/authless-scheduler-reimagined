@@ -51,17 +51,18 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const fetchDateTypes = async () => {
       if (!jobs?.length) return;
       
-      const jobIds = jobs.map(job => job.id);
+      console.log('Fetching date types for jobs:', jobs.map(job => job.id));
       const { data, error } = await supabase
         .from('job_date_types')
         .select('*')
-        .in('job_id', jobIds);
+        .in('job_id', jobs.map(job => job.id));
         
       if (error) {
         console.error('Error fetching date types:', error);
         return;
       }
 
+      console.log('Received date types:', data);
       const types = data.reduce((acc: Record<string, any>, curr) => {
         const key = `${curr.job_id}-${curr.date}`;
         acc[key] = curr;
@@ -77,6 +78,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const getDateTypeIcon = (jobId: string, date: Date) => {
     const key = `${jobId}-${format(date, 'yyyy-MM-dd')}`;
     const dateType = dateTypes[key]?.type;
+    console.log('Getting date type icon for:', { jobId, date, key, dateType });
 
     switch (dateType) {
       case 'travel':
@@ -123,68 +125,9 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     });
   };
 
-  const isJobStart = (job: any, date: Date) => {
-    return isSameDay(new Date(job.start_time), date);
-  };
-
-  const isJobEnd = (job: any, date: Date) => {
-    return isSameDay(new Date(job.end_time), date);
-  };
-
-  const getDepartmentIcon = (dept: string) => {
-    switch (dept) {
-      case 'sound':
-        return <Music2 className="h-3 w-3" />;
-      case 'lights':
-        return <Lightbulb className="h-3 w-3" />;
-      case 'video':
-        return <Video className="h-3 w-3" />;
-      default:
-        return null;
-    }
-  };
-
-  const getTotalRequiredPersonnel = (job: any) => {
-    let total = 0;
-    
-    if (job.sound_job_personnel?.length > 0) {
-      const sound = job.sound_job_personnel[0];
-      total += (sound.foh_engineers || 0) + 
-               (sound.mon_engineers || 0) + 
-               (sound.pa_techs || 0) + 
-               (sound.rf_techs || 0);
-    }
-    
-    if (job.lights_job_personnel?.length > 0) {
-      const lights = job.lights_job_personnel[0];
-      total += (lights.lighting_designers || 0) + 
-               (lights.lighting_techs || 0) + 
-               (lights.spot_ops || 0) + 
-               (lights.riggers || 0);
-    }
-    
-    if (job.video_job_personnel?.length > 0) {
-      const video = job.video_job_personnel[0];
-      total += (video.video_directors || 0) + 
-               (video.camera_ops || 0) + 
-               (video.playback_techs || 0) + 
-               (video.video_techs || 0);
-    }
-    
-    return total;
-  };
-
   const renderJobCard = (job: any, date: Date) => {
-    const isStart = isJobStart(job, date);
-    const isEnd = isJobEnd(job, date);
     const dateTypeIcon = getDateTypeIcon(job.id, date);
-    const startDate = new Date(job.start_time);
-    const endDate = new Date(job.end_time);
-    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    const currentDay = Math.ceil((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    const totalRequired = getTotalRequiredPersonnel(job);
-    const currentlyAssigned = job.job_assignments?.length || 0;
-
+    
     return (
       <DateTypeContextMenu 
         key={job.id} 
@@ -192,6 +135,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         date={date}
         onTypeChange={() => {
           const fetchDateTypes = async () => {
+            console.log('Refreshing date types after change for job:', job.id);
             const { data, error } = await supabase
               .from('job_date_types')
               .select('*')
@@ -202,6 +146,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
               return;
             }
 
+            console.log('Updated date types:', data);
             const types = data.reduce((acc: Record<string, any>, curr) => {
               const key = `${curr.job_id}-${curr.date}`;
               acc[key] = curr;
