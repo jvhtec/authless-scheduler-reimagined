@@ -83,35 +83,33 @@ export function JobMilestonesDialog({
     },
   });
 
-  // If no milestones exist and we have definitions, create them
-  const { data: dateTypes } = useQuery({
-    queryKey: ["job-date-types", jobId],
+  // Fetch show dates to properly align milestones
+  const { data: showDates } = useQuery({
+    queryKey: ["job-show-dates", jobId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("job_date_types")
         .select("*")
         .eq("job_id", jobId)
         .eq("type", "show")
-        .order("date")
-        .limit(1);
+        .order("date");
 
       if (error) throw error;
       return data;
     },
-    enabled: !milestones?.length && !!definitions?.length,
   });
 
   // Create initial milestones if none exist
   const createInitialMilestones = async () => {
-    if (!definitions || !dateTypes?.[0]) return;
+    if (!definitions || !showDates?.[0]) return;
 
-    const showDate = new Date(dateTypes[0].date);
+    const firstShowDate = new Date(showDates[0].date);
     const milestonesToCreate = definitions.map((def) => ({
       job_id: jobId,
       definition_id: def.id,
       name: def.name,
       offset_days: def.default_offset,
-      due_date: addDays(showDate, def.default_offset),
+      due_date: addDays(firstShowDate, def.default_offset),
     }));
 
     console.log("Creating initial milestones:", milestonesToCreate);
@@ -127,10 +125,10 @@ export function JobMilestonesDialog({
 
   // Create initial milestones if needed
   useEffect(() => {
-    if (definitions?.length && !milestones?.length && dateTypes?.length) {
+    if (definitions?.length && !milestones?.length && showDates?.length) {
       createInitialMilestones();
     }
-  }, [definitions, milestones, dateTypes]);
+  }, [definitions, milestones, showDates]);
 
   // Calculate the earliest milestone date to determine chart start date
   const chartStartDate = milestones?.length
@@ -195,6 +193,7 @@ export function JobMilestonesDialog({
               <MilestoneGanttChart 
                 milestones={milestones || []} 
                 startDate={adjustedStartDate}
+                jobId={jobId}
               />
             </div>
           )}

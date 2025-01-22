@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Department } from "@/types/department";
 import { useEffect, useRef, useState } from "react";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { Check } from "lucide-react";
+import { Check, Star, Plane, Wrench, Moon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -23,14 +23,21 @@ interface Milestone {
   } | null;
 }
 
+interface DateType {
+  date: string;
+  type: 'travel' | 'setup' | 'show' | 'off';
+}
+
 interface MilestoneGanttChartProps {
   milestones: Milestone[];
   startDate: Date;
+  jobId: string;
 }
 
-export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttChartProps) {
+export function MilestoneGanttChart({ milestones, startDate, jobId }: MilestoneGanttChartProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const [dateTypes, setDateTypes] = useState<DateType[]>([]);
   
   const lastMilestoneDate = milestones.reduce((latest, milestone) => {
     const date = new Date(milestone.due_date);
@@ -42,6 +49,43 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
   const totalWidth = Math.max(1200, (totalDays + 1) * 96);
 
   const departments: Department[] = ["sound", "lights", "video", "production", "logistics", "administrative"];
+
+  useEffect(() => {
+    const fetchDateTypes = async () => {
+      const { data, error } = await supabase
+        .from('job_date_types')
+        .select('*')
+        .eq('job_id', jobId)
+        .order('date');
+
+      if (error) {
+        console.error('Error fetching date types:', error);
+        return;
+      }
+
+      setDateTypes(data);
+    };
+
+    fetchDateTypes();
+  }, [jobId]);
+
+  const getDateTypeIcon = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const dateType = dateTypes.find(dt => dt.date === dateStr);
+
+    switch (dateType?.type) {
+      case 'travel':
+        return <Plane className="h-3 w-3 text-blue-500" />;
+      case 'setup':
+        return <Wrench className="h-3 w-3 text-yellow-500" />;
+      case 'show':
+        return <Star className="h-3 w-3 text-green-500" />;
+      case 'off':
+        return <Moon className="h-3 w-3 text-gray-500" />;
+      default:
+        return null;
+    }
+  };
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -99,16 +143,6 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
     }
   };
 
-  const getShowDays = () => {
-    return milestones.reduce((days: Date[], milestone) => {
-      const date = new Date(milestone.due_date);
-      if (milestone.definition?.category === 'production') {
-        days.push(date);
-      }
-      return days;
-    }, []);
-  };
-
   useEffect(() => {
     if (scrollContainerRef.current) {
       const today = new Date();
@@ -117,8 +151,6 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
       scrollContainerRef.current.scrollLeft = Math.max(0, scrollPosition - 300);
     }
   }, [startDate]);
-
-  const showDays = getShowDays();
 
   return (
     <ScrollArea className="w-full border rounded-lg" ref={scrollContainerRef}>
@@ -135,32 +167,14 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
                 >
                   <div className="font-medium">{format(date, 'd')}</div>
                   <div className="text-muted-foreground">{format(date, 'MMM')}</div>
+                  <div className="mt-1">
+                    {getDateTypeIcon(date)}
+                  </div>
                 </div>
               );
             })}
           </div>
         </div>
-
-        {/* Current date marker */}
-        <div 
-          className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-10"
-          style={{ 
-            left: `${(differenceInDays(new Date(), startDate) * 96) + 192}px`,
-            height: `${departments.length * 100 + 40}px`
-          }}
-        />
-
-        {/* Show day markers */}
-        {showDays.map((showDate, index) => (
-          <div 
-            key={index}
-            className="absolute top-0 bottom-0 w-[2px] bg-green-500 opacity-50 z-5"
-            style={{ 
-              left: `${(differenceInDays(showDate, startDate) * 96) + 192}px`,
-              height: `${departments.length * 100 + 40}px`
-            }}
-          />
-        ))}
 
         <div>
           {departments.map((department) => {
@@ -198,7 +212,6 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
                                       "h-6 w-6 rounded-full",
                                       getCategoryColor(milestone.definition?.category || ''),
                                       "border-2 border-white cursor-pointer transition-all hover:scale-110",
-                                      "flex items-center justify-center",
                                       milestone.completed ? "opacity-50" : "opacity-100"
                                     )}
                                     style={{ left: `${position}px` }}
