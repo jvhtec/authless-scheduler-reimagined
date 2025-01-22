@@ -94,6 +94,49 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     }
   };
 
+  const getDepartmentIcon = (dept: string) => {
+    switch (dept) {
+      case 'sound':
+        return <Music2 className="h-3 w-3" />;
+      case 'lights':
+        return <Lightbulb className="h-3 w-3" />;
+      case 'video':
+        return <Video className="h-3 w-3" />;
+      default:
+        return null;
+    }
+  };
+
+  const getTotalRequiredPersonnel = (job: any) => {
+    let total = 0;
+    
+    if (job.sound_job_personnel?.length > 0) {
+      const sound = job.sound_job_personnel[0];
+      total += (sound.foh_engineers || 0) + 
+               (sound.mon_engineers || 0) + 
+               (sound.pa_techs || 0) + 
+               (sound.rf_techs || 0);
+    }
+    
+    if (job.lights_job_personnel?.length > 0) {
+      const lights = job.lights_job_personnel[0];
+      total += (lights.lighting_designers || 0) + 
+               (lights.lighting_techs || 0) + 
+               (lights.spot_ops || 0) + 
+               (lights.riggers || 0);
+    }
+    
+    if (job.video_job_personnel?.length > 0) {
+      const video = job.video_job_personnel[0];
+      total += (video.video_directors || 0) + 
+               (video.camera_ops || 0) + 
+               (video.playback_techs || 0) + 
+               (video.video_techs || 0);
+    }
+    
+    return total;
+  };
+
   const getJobsForDate = (date: Date) => {
     if (!jobs) return [];
     
@@ -101,21 +144,16 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
       const startDate = new Date(job.start_time);
       const endDate = new Date(job.end_time);
       
-      // Format dates to compare only year, month, and day
       const compareDate = format(date, 'yyyy-MM-dd');
       const jobStartDate = format(startDate, 'yyyy-MM-dd');
       const jobEndDate = format(endDate, 'yyyy-MM-dd');
       
-      // Check if it's a single-day job or a multi-day job
       const isSingleDayJob = jobStartDate === jobEndDate;
       
-      // For single-day jobs, check exact date match
-      // For multi-day jobs, check if date falls within range
       const isWithinDuration = isSingleDayJob 
         ? compareDate === jobStartDate
         : compareDate >= jobStartDate && compareDate <= jobEndDate;
       
-      // If department is specified, filter by department
       if (department) {
         return isWithinDuration && 
                job.job_departments.some((dept: any) => dept.department === department);
@@ -127,6 +165,8 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
 
   const renderJobCard = (job: any, date: Date) => {
     const dateTypeIcon = getDateTypeIcon(job.id, date);
+    const totalRequired = getTotalRequiredPersonnel(job);
+    const currentlyAssigned = job.job_assignments?.length || 0;
     
     return (
       <DateTypeContextMenu 
