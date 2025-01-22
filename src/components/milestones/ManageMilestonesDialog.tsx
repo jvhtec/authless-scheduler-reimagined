@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Department } from "@/types/department";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Pencil, Trash2, Save } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -45,13 +44,44 @@ export const ManageMilestonesDialog = ({ open, onOpenChange, jobId }: ManageMile
     },
   });
 
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      console.log("Deleting milestone:", id);
+      const { error } = await supabase
+        .from("milestone_definitions")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error("Error deleting milestone:", error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["milestone-definitions"] });
+      toast({
+        title: "Success",
+        description: "Milestone definition deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Delete mutation error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete milestone definition",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (milestone: Omit<any, 'id'>) => {
       console.log("Creating milestone:", milestone);
       const { data, error } = await supabase
         .from("milestone_definitions")
-        .insert({ ...milestone, department: selectedDepartments })
+        .insert([{ ...milestone, department: selectedDepartments }])
         .select()
         .single();
 
@@ -102,29 +132,6 @@ export const ManageMilestonesDialog = ({ open, onOpenChange, jobId }: ManageMile
     },
   });
 
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      console.log("Deleting milestone:", id);
-      const { error } = await supabase
-        .from("milestone_definitions")
-        .delete()
-        .eq("id", id);
-
-      if (error) {
-        console.error("Error deleting milestone:", error);
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["milestone-definitions"] });
-      toast({
-        title: "Success",
-        description: "Milestone definition deleted successfully",
-      });
-    },
-  });
-
   // Save as Default mutation
   const saveAsDefaultMutation = useMutation({
     mutationFn: async () => {
@@ -134,7 +141,10 @@ export const ManageMilestonesDialog = ({ open, onOpenChange, jobId }: ManageMile
       // First, get all milestones for the current job
       const { data: jobMilestones, error: fetchError } = await supabase
         .from("job_milestones")
-        .select("*, definition:milestone_definitions(*)")
+        .select(`
+          *,
+          definition:milestone_definitions(*)
+        `)
         .eq("job_id", jobId);
 
       if (fetchError) {
@@ -143,7 +153,7 @@ export const ManageMilestonesDialog = ({ open, onOpenChange, jobId }: ManageMile
       }
       if (!jobMilestones?.length) throw new Error("No milestones found for this job");
 
-      // Update milestone definitions with the job's milestones
+      // Create new milestone definitions from the job's milestones
       const updates = jobMilestones.map(milestone => ({
         name: milestone.name,
         default_offset: milestone.offset_days,
@@ -154,13 +164,26 @@ export const ManageMilestonesDialog = ({ open, onOpenChange, jobId }: ManageMile
       }));
 
       console.log("Creating new milestone definitions:", updates);
-      const { error: updateError } = await supabase
+      
+      // Delete existing milestone definitions first
+      const { error: deleteError } = await supabase
+        .from("milestone_definitions")
+        .delete()
+        .neq("id", "placeholder"); // Delete all records
+
+      if (deleteError) {
+        console.error("Error deleting existing milestones:", deleteError);
+        throw deleteError;
+      }
+
+      // Insert new milestone definitions
+      const { error: insertError } = await supabase
         .from("milestone_definitions")
         .insert(updates);
 
-      if (updateError) {
-        console.error("Error saving default milestones:", updateError);
-        throw updateError;
+      if (insertError) {
+        console.error("Error saving default milestones:", insertError);
+        throw insertError;
       }
     },
     onSuccess: () => {
