@@ -24,6 +24,8 @@ interface MilestoneGanttChartProps {
 }
 
 export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttChartProps) {
+  console.log("Rendering Gantt chart with milestones:", milestones);
+  
   // Find the last milestone date to determine chart end date
   const lastMilestoneDate = milestones.reduce((latest, milestone) => {
     const date = new Date(milestone.due_date);
@@ -33,6 +35,9 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
   // Add buffer days to ensure all milestones are visible
   const endDate = addDays(lastMilestoneDate, 7);
   const totalDays = differenceInDays(endDate, startDate);
+  
+  // Calculate total width based on number of days (96px per day)
+  const totalWidth = (totalDays + 1) * 96;
 
   const departments: Department[] = ["sound", "lights", "video", "production", "logistics", "administrative"];
 
@@ -67,13 +72,13 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
 
   return (
     <div className="border rounded-lg">
-      <ScrollArea className="h-[500px] overflow-x-auto">
-        <div className="min-w-[1200px]">
+      <ScrollArea className="h-[500px]">
+        <div style={{ width: `${Math.max(1200, totalWidth)}px` }}>
           {/* Timeline header */}
           <div className="flex border-b sticky top-0 bg-background z-10">
             <div className="w-48 shrink-0 p-2 font-medium border-r">Department</div>
             <div className="flex-1 flex">
-              {Array.from({ length: totalDays }).map((_, index) => {
+              {Array.from({ length: totalDays + 1 }).map((_, index) => {
                 const date = addDays(startDate, index);
                 return (
                   <div 
@@ -92,6 +97,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
           <div>
             {departments.map((department) => {
               const departmentMilestones = getMilestonesByDepartment(department);
+              console.log(`Milestones for ${department}:`, departmentMilestones);
 
               return (
                 <div key={department} className="border-b last:border-b-0">
@@ -111,7 +117,13 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
                       {departmentMilestones.map((milestone) => {
                         const dueDate = new Date(milestone.due_date);
                         const dayOffset = differenceInDays(dueDate, startDate);
-                        const position = `${(dayOffset * 96)}px`; // 96px = width of day column (24px * 4)
+                        const position = dayOffset * 96; // 96px = width of day column (24px * 4)
+                        
+                        console.log(`Milestone position for ${milestone.name}:`, {
+                          dayOffset,
+                          position,
+                          dueDate: milestone.due_date
+                        });
 
                         return (
                           <TooltipProvider key={milestone.id}>
@@ -125,7 +137,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
                                     milestone.completed ? "opacity-50" : "opacity-100",
                                     "border-2 border-white cursor-pointer transition-all"
                                   )}
-                                  style={{ left: position }}
+                                  style={{ left: `${position}px` }}
                                 />
                               </TooltipTrigger>
                               <TooltipContent>
