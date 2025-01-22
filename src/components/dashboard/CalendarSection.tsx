@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { DateTypeContextMenu } from "./DateTypeContextMenu";
+import { JobMilestonesDialog } from "@/components/milestones/JobMilestonesDialog";
 import {
   Tooltip,
   TooltipContent,
@@ -24,6 +25,9 @@ interface CalendarSectionProps {
 export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], department }: CalendarSectionProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [dateTypes, setDateTypes] = useState<Record<string, any>>({});
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [showMilestones, setShowMilestones] = useState(false);
+  
   const currentMonth = date || new Date();
   const firstDayOfMonth = startOfMonth(currentMonth);
   const lastDayOfMonth = endOfMonth(currentMonth);
@@ -203,10 +207,15 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
           <Tooltip>
             <TooltipTrigger asChild>
               <div
-                className="px-1.5 py-0.5 rounded text-xs truncate hover:bg-accent/50 transition-colors flex items-center gap-1"
+                className="px-1.5 py-0.5 rounded text-xs truncate hover:bg-accent/50 transition-colors flex items-center gap-1 cursor-pointer"
                 style={{
                   backgroundColor: `${job.color}20`,
                   color: job.color,
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedJob(job);
+                  setShowMilestones(true);
                 }}
               >
                 {dateTypeIcon}
@@ -332,6 +341,15 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
               })}
             </div>
           </div>
+        )}
+        
+        {selectedJob && (
+          <JobMilestonesDialog
+            open={showMilestones}
+            onOpenChange={setShowMilestones}
+            jobId={selectedJob.id}
+            jobStartDate={new Date(selectedJob.start_time)}
+          />
         )}
       </CardContent>
     </Card>
