@@ -4,7 +4,11 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Department } from "@/types/department";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { Check } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Milestone {
   id: string;
@@ -25,10 +29,8 @@ interface MilestoneGanttChartProps {
 }
 
 export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttChartProps) {
-  console.log("Rendering Gantt chart with milestones:", milestones);
-  console.log("Start date:", startDate);
-  
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
   
   const lastMilestoneDate = milestones.reduce((latest, milestone) => {
     const date = new Date(milestone.due_date);
@@ -70,6 +72,43 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
     );
   };
 
+  const handleCompleteMilestone = async (milestoneId: string) => {
+    try {
+      const { error } = await supabase
+        .from('job_milestones')
+        .update({
+          completed: true,
+          completed_at: new Date().toISOString(),
+          completed_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .eq('id', milestoneId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Milestone completed",
+        description: "The milestone has been marked as completed.",
+      });
+    } catch (error) {
+      console.error('Error completing milestone:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete the milestone. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getShowDays = () => {
+    return milestones.reduce((days: Date[], milestone) => {
+      const date = new Date(milestone.due_date);
+      if (milestone.definition?.category === 'production') {
+        days.push(date);
+      }
+      return days;
+    }, []);
+  };
+
   useEffect(() => {
     if (scrollContainerRef.current) {
       const today = new Date();
@@ -78,6 +117,8 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
       scrollContainerRef.current.scrollLeft = Math.max(0, scrollPosition - 300);
     }
   }, [startDate]);
+
+  const showDays = getShowDays();
 
   return (
     <ScrollArea className="w-full border rounded-lg" ref={scrollContainerRef}>
@@ -100,6 +141,7 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
           </div>
         </div>
 
+        {/* Current date marker */}
         <div 
           className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-10"
           style={{ 
@@ -108,10 +150,21 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
           }}
         />
 
+        {/* Show day markers */}
+        {showDays.map((showDate, index) => (
+          <div 
+            key={index}
+            className="absolute top-0 bottom-0 w-[2px] bg-green-500 opacity-50 z-5"
+            style={{ 
+              left: `${(differenceInDays(showDate, startDate) * 96) + 192}px`,
+              height: `${departments.length * 100 + 40}px`
+            }}
+          />
+        ))}
+
         <div>
           {departments.map((department) => {
             const departmentMilestones = getMilestonesByDepartment(department);
-            console.log(`Milestones for ${department}:`, departmentMilestones);
 
             return (
               <div key={department} className="border-b last:border-b-0">
@@ -132,44 +185,54 @@ export function MilestoneGanttChart({ milestones, startDate }: MilestoneGanttCha
                       const dueDate = new Date(milestone.due_date);
                       const dayOffset = differenceInDays(dueDate, startDate);
                       const position = (dayOffset * 96) + 48;
-                      
-                      console.log(`Milestone position for ${milestone.name}:`, {
-                        dayOffset,
-                        position,
-                        dueDate: milestone.due_date,
-                        startDate: startDate
-                      });
 
                       return (
-                        <TooltipProvider key={milestone.id}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div 
-                                className={cn(
-                                  "absolute top-1/2 -translate-y-1/2",
-                                  "h-6 w-6 rounded-full",
-                                  getCategoryColor(milestone.definition?.category || ''),
-                                  milestone.completed ? "opacity-50" : "opacity-100",
-                                  "border-2 border-white cursor-pointer transition-all hover:scale-110"
-                                )}
-                                style={{ left: `${position}px` }}
-                              />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="space-y-2">
-                                <div className="font-medium">{milestone.name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  Due: {format(dueDate, 'MMM d, yyyy')}
-                                </div>
-                                {milestone.completed && milestone.completed_by && (
-                                  <div className="text-xs text-muted-foreground">
-                                    Completed by: {milestone.completed_by.first_name} {milestone.completed_by.last_name}
+                        <ContextMenu key={milestone.id}>
+                          <ContextMenuTrigger>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div 
+                                    className={cn(
+                                      "absolute top-1/2 -translate-y-1/2",
+                                      "h-6 w-6 rounded-full",
+                                      getCategoryColor(milestone.definition?.category || ''),
+                                      "border-2 border-white cursor-pointer transition-all hover:scale-110",
+                                      "flex items-center justify-center",
+                                      milestone.completed ? "opacity-50" : "opacity-100"
+                                    )}
+                                    style={{ left: `${position}px` }}
+                                  >
+                                    {milestone.completed && (
+                                      <Check className="h-3 w-3 text-white" />
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="space-y-2">
+                                    <div className="font-medium">{milestone.name}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      Due: {format(dueDate, 'MMM d, yyyy')}
+                                    </div>
+                                    {milestone.completed && milestone.completed_by && (
+                                      <div className="text-xs text-muted-foreground">
+                                        Completed by: {milestone.completed_by.first_name} {milestone.completed_by.last_name}
+                                      </div>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </ContextMenuTrigger>
+                          <ContextMenuContent>
+                            <ContextMenuItem
+                              onClick={() => handleCompleteMilestone(milestone.id)}
+                              disabled={milestone.completed}
+                            >
+                              Mark as Complete
+                            </ContextMenuItem>
+                          </ContextMenuContent>
+                        </ContextMenu>
                       );
                     })}
                   </div>
