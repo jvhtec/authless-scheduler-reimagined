@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { format, addDays } from "date-fns";
 import { Settings } from "lucide-react";
 import { MilestoneGanttChart } from "./MilestoneGanttChart";
+import { useEffect } from "react";
 
 interface JobMilestonesDialogProps {
   open: boolean;
@@ -104,7 +105,7 @@ export function JobMilestonesDialog({
   };
 
   // Create initial milestones if needed
-  React.useEffect(() => {
+  useEffect(() => {
     if (definitions?.length && !milestones?.length && dateTypes?.length) {
       createInitialMilestones();
     }
