@@ -100,7 +100,8 @@ export const AssignmentsList = ({ assignments, loading }: AssignmentsListProps) 
             onEditClick={() => {}}
             onDeleteClick={() => {}}
             onJobClick={() => {}}
-            showAssignments={false}
+            department="sound"
+            userRole="technician"
           />
           {assignment.jobs.job_documents?.length > 0 && (
             <div className="ml-4 space-y-2">

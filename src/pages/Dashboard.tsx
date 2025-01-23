@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Department } from "@/types/department";
 import { useJobs } from "@/hooks/useJobs";
-import { format, isWithinInterval } from "date-fns";
+import { format, isWithinInterval, addWeeks, addMonths, isAfter, isBefore } from "date-fns";
 import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
 import { EditJobDialog } from "@/components/jobs/EditJobDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -92,13 +92,11 @@ const Dashboard = () => {
     const selectedDate = new Date(format(date, 'yyyy-MM-dd'));
     
     return jobs.filter(job => {
-      // Skip tour jobs
       if (job.job_type === 'tour') return false;
       
       const jobStartDate = new Date(job.start_time);
       const jobEndDate = new Date(job.end_time);
       
-      // Check if selected date falls within job duration
       return isWithinInterval(selectedDate, {
         start: new Date(format(jobStartDate, 'yyyy-MM-dd')),
         end: new Date(format(jobEndDate, 'yyyy-MM-dd'))
