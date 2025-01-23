@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Department } from "@/types/department";
 import { useJobs } from "@/hooks/useJobs";
-import { format, isWithinInterval, addWeeks, addMonths, isAfter, isBefore } from "date-fns";
+import { format, isWithinInterval, addWeeks, addMonths, isAfter, isBefore, startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
 import { EditJobDialog } from "@/components/jobs/EditJobDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -79,27 +79,49 @@ const Dashboard = () => {
   const getDepartmentJobs = (department: Department) => {
     if (!jobs) return [];
     const endDate = getTimeSpanEndDate();
+    const now = new Date();
+    
     return jobs.filter(job => 
       job.job_departments.some((dept: any) => dept.department === department) &&
-      isAfter(new Date(job.start_time), new Date()) &&
-      isBefore(new Date(job.start_time), endDate) &&
-      job.job_type !== 'tour'
+      job.job_type !== 'tour' &&
+      isWithinInterval(new Date(job.start_time), {
+        start: startOfDay(now),
+        end: endOfDay(endDate)
+      })
     );
   };
 
   const getSelectedDateJobs = () => {
     if (!date || !jobs) return [];
-    const selectedDate = new Date(format(date, 'yyyy-MM-dd'));
+    
+    const selectedDate = startOfDay(new Date(format(date, 'yyyy-MM-dd')));
+    const selectedMonthStart = startOfMonth(selectedDate);
+    const selectedMonthEnd = endOfMonth(selectedDate);
     
     return jobs.filter(job => {
       if (job.job_type === 'tour') return false;
       
-      const jobStartDate = new Date(job.start_time);
-      const jobEndDate = new Date(job.end_time);
+      const jobStartDate = startOfDay(new Date(job.start_time));
+      const jobEndDate = endOfDay(new Date(job.end_time));
       
+      // Check if job falls within the selected month
+      const isInSelectedMonth = isWithinInterval(jobStartDate, {
+        start: selectedMonthStart,
+        end: selectedMonthEnd
+      }) || isWithinInterval(jobEndDate, {
+        start: selectedMonthStart,
+        end: selectedMonthEnd
+      }) || (
+        isBefore(jobStartDate, selectedMonthStart) && 
+        isAfter(jobEndDate, selectedMonthEnd)
+      );
+      
+      if (!isInSelectedMonth) return false;
+      
+      // Check if job is active on the selected date
       return isWithinInterval(selectedDate, {
-        start: new Date(format(jobStartDate, 'yyyy-MM-dd')),
-        end: new Date(format(jobEndDate, 'yyyy-MM-dd'))
+        start: jobStartDate,
+        end: jobEndDate
       });
     });
   };
