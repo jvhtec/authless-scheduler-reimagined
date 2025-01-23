@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ReportGenerator } from "../components/sound/ReportGenerator";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const Sound = () => {
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
@@ -222,9 +223,11 @@ const Sound = () => {
         />
       )}
       
-      {showReportGenerator && (
-        <ReportGenerator />
-      )}
+      <Dialog open={showReportGenerator} onOpenChange={setShowReportGenerator}>
+        <DialogContent className="max-w-4xl">
+          <ReportGenerator />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
