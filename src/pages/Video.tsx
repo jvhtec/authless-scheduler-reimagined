@@ -10,11 +10,11 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { LightsHeader } from "@/components/lights/LightsHeader";
-import { VideoCalendar } from "@/components/video/VideoCalendar";
-import { LightsSchedule } from "@/components/lights/LightsSchedule";
 import { useTabVisibility } from "@/hooks/useTabVisibility";
 import { Link } from "react-router-dom";
 import { Scale, Zap } from "lucide-react";
+import { CalendarSection } from "@/components/dashboard/CalendarSection";
+import { TodaySchedule } from "@/components/dashboard/TodaySchedule";
 
 const Video = () => {
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
@@ -30,10 +30,8 @@ const Video = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  // Use the tab visibility hook to handle tab switching
   useTabVisibility(['jobs']);
 
-  // Remove the options object since useJobs no longer accepts parameters
   const { data: jobs, isLoading } = useJobs();
 
   useEffect(() => {
@@ -71,7 +69,7 @@ const Video = () => {
       return [];
     }
     return jobs.filter(job => {
-      const isInDepartment = job.job_departments.some(dept => 
+      const isInDepartment = job.job_departments?.some(dept => 
         dept.department === currentDepartment
       );
       if (job.tour_date_id) {
@@ -106,53 +104,19 @@ const Video = () => {
     if (!window.confirm("Are you sure you want to delete this job?")) return;
 
     try {
-      console.log("Starting deletion process for job:", jobId);
-
-      // Delete job assignments
-      console.log("Deleting job assignments...");
-      const { error: assignmentsError } = await supabase
-        .from("job_assignments")
+      const { error } = await supabase
+        .from('jobs')
         .delete()
-        .eq("job_id", jobId);
+        .eq('id', jobId);
 
-      if (assignmentsError) {
-        console.error("Error deleting job assignments:", assignmentsError);
-        throw assignmentsError;
-      }
+      if (error) throw error;
 
-      // Delete job departments
-      console.log("Deleting job departments...");
-      const { error: departmentsError } = await supabase
-        .from("job_departments")
-        .delete()
-        .eq("job_id", jobId);
-
-      if (departmentsError) {
-        console.error("Error deleting job departments:", departmentsError);
-        throw departmentsError;
-      }
-
-      // Delete the job
-      console.log("Deleting the job...");
-      const { error: jobError } = await supabase
-        .from("jobs")
-        .delete()
-        .eq("id", jobId);
-
-      if (jobError) {
-        console.error("Error deleting job:", jobError);
-        throw jobError;
-      }
-
-      console.log("Job deletion completed successfully");
       toast({
-        title: "Job deleted successfully",
-        description: "The job and all related records have been removed.",
+        title: "Job deleted",
+        description: "The job has been successfully deleted.",
       });
-      
-      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      await queryClient.invalidateQueries({ queryKey: ['jobs'] });
     } catch (error: any) {
-      console.error("Error in deletion process:", error);
       toast({
         title: "Error deleting job",
         description: error.message,
@@ -169,24 +133,23 @@ const Video = () => {
         department="Video"
       />
 
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-8">
-          <VideoCalendar 
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-8">
+          <CalendarSection 
             date={date} 
-            onSelect={setDate} 
+            onDateSelect={setDate}
             jobs={getDepartmentJobs()}
+            department={currentDepartment}
           />
         </div>
-        <div className="col-span-4">
-          <LightsSchedule
-            date={date}
+        <div className="lg:col-span-4">
+          <TodaySchedule
             jobs={getSelectedDateJobs()}
-            isLoading={isLoading}
-            onJobClick={handleJobClick}
             onEditClick={handleEditClick}
             onDeleteClick={handleDeleteClick}
-            department="video"
+            onJobClick={handleJobClick}
             userRole={userRole}
+            selectedDate={date}
           />
         </div>
       </div>

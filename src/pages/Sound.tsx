@@ -1,5 +1,4 @@
-import { useState, useEffect, ChangeEvent, FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import CreateJobDialog from "@/components/jobs/CreateJobDialog";
 import CreateTourDialog from "@/components/tours/CreateTourDialog";
 import { useJobs } from "@/hooks/useJobs";
@@ -10,17 +9,14 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { LightsHeader } from "@/components/lights/LightsHeader";
-import { LightsCalendar } from "@/components/lights/LightsCalendar";
-import { LightsSchedule } from "@/components/lights/LightsSchedule";
+import { TodaySchedule } from "@/components/dashboard/TodaySchedule";
+import { CalendarSection } from "@/components/dashboard/CalendarSection";
 import { Calculator, PieChart, FileText, Sparkles } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ReportGenerator } from "@/components/sound/ReportGenerator";
-import { CalendarSection } from "@/components/dashboard/CalendarSection";
 
 const Sound = () => {
-  const navigate = useNavigate();
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
   const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
@@ -29,10 +25,6 @@ const Sound = () => {
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [showAnalysisForm, setShowAnalysisForm] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
-  const [showReportGenerator, setShowReportGenerator] = useState(false);
   const currentDepartment = "sound";
 
   const { data: jobs, isLoading } = useJobs();
@@ -66,7 +58,7 @@ const Sound = () => {
   const getDepartmentJobs = () => {
     if (!jobs) return [];
     return jobs.filter(job => {
-      const isInDepartment = job.job_departments.some(dept => 
+      const isInDepartment = job.job_departments?.some(dept => 
         dept.department === currentDepartment
       );
       if (job.tour_date_id) {
@@ -120,97 +112,34 @@ const Sound = () => {
     }
   };
 
-  const handleAnalysisButtonClick = () => {
-    setShowAnalysisForm(true);
-  };
-
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    setSelectedFiles(Array.from(e.target.files));
-  };
-
-  const handleAnalysisSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-
-    const fileContents: string[] = await Promise.all(
-      selectedFiles.map(file => {
-        return new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = () => reject(reader.error);
-          reader.readAsText(file); 
-        });
-      })
-    );
-
-    const prompt = `Read carefully these documents and summarize in a table:
-- Microphone models with quantities broken down by document name
-- Microphone stands type and quantities broken down by document name
-- Riser quantities, leg count (4 by riser) and height
-(Note: The word for riser in Spanish is "tarima")
-
-Here are the document contents:
-${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join("\n\n")}
-    `;
-
-    try {
-      console.log("Calling analyze-documents function...");
-      const { data, error } = await supabase.functions.invoke('analyze-documents', {
-        body: { prompt }
-      });
-
-      if (error) {
-        console.error("Function error:", error);
-        throw error;
-      }
-
-      console.log("Analysis result:", data);
-      setAnalysisResult(data.result);
-      toast({
-        title: "Analysis complete",
-        description: "The documents have been summarized.",
-      });
-      setShowAnalysisForm(false);
-    } catch (error: any) {
-      console.error("Error during analysis:", error);
-      toast({
-        title: "Error",
-        description: error.message || "There was an error processing the analysis.",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
-    <div className="max-w-7xl mx-auto space-y-6 relative">
+    <div className="max-w-7xl mx-auto space-y-6">
       <LightsHeader 
         onCreateJob={() => setIsJobDialogOpen(true)}
         onCreateTour={() => setIsTourDialogOpen(true)}
         department="Sound"
       />
 
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-8">
           <CalendarSection 
             date={date} 
             onDateSelect={setDate}
             jobs={getDepartmentJobs()}
+            department={currentDepartment}
           />
         </div>
-        <div className="col-span-4">
-          <LightsSchedule
-            date={date}
+        <div className="lg:col-span-4">
+          <TodaySchedule
             jobs={getSelectedDateJobs()}
-            isLoading={isLoading}
-            onJobClick={handleJobClick}
             onEditClick={handleEditClick}
             onDeleteClick={handleDeleteClick}
-            department="sound"
+            onJobClick={handleJobClick}
             userRole={userRole}
+            selectedDate={date}
           />
         </div>
       </div>
-
 
       <Card className="mt-8">
         <div className="p-6">
@@ -221,7 +150,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
               variant="outline"
               size="lg"
               className="w-full h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => navigate('/pesos-tool')}
+              onClick={() => window.location.href = '/pesos-tool'}
             >
               <Calculator className="h-6 w-6" />
               <span>Weight Calculator</span>
@@ -231,7 +160,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
               variant="outline"
               size="lg"
               className="w-full h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => navigate('/consumos-tool')}
+              onClick={() => window.location.href = '/consumos-tool'}
             >
               <PieChart className="h-6 w-6" />
               <span>Power Calculator</span>
@@ -251,7 +180,7 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
               variant="outline"
               size="lg"
               className="w-full h-auto py-4 flex flex-col items-center gap-2"
-              onClick={handleAnalysisButtonClick}
+              onClick={() => setShowAnalysisForm(true)}
             >
               <Sparkles className="h-6 w-6" />
               <span>AI Rider Analysis</span>
@@ -260,90 +189,25 @@ ${fileContents.map((content, index) => `Document ${index + 1}: ${content}`).join
         </div>
       </Card>
 
-      {showReportGenerator && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-background rounded-lg w-full max-w-2xl">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-semibold">SV Report Generator</h2>
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowReportGenerator(false)}
-                >
-                  ×
-                </Button>
-              </div>
-              <ReportGenerator />
-            </div>
-          </div>
-        </div>
+      {isJobDialogOpen && (
+        <CreateJobDialog open={isJobDialogOpen} onOpenChange={setIsJobDialogOpen} />
       )}
-
-      <CreateJobDialog
-        open={isJobDialogOpen}
-        onOpenChange={setIsJobDialogOpen}
-        currentDepartment={currentDepartment}
-      />
-      
-      <CreateTourDialog
-        open={isTourDialogOpen}
-        onOpenChange={setIsTourDialogOpen}
-        currentDepartment={currentDepartment}
-      />
-
+      {isTourDialogOpen && (
+        <CreateTourDialog open={isTourDialogOpen} onOpenChange={setIsTourDialogOpen} />
+      )}
       {selectedJobId && (
         <JobAssignmentDialog
           open={isAssignmentDialogOpen}
           onOpenChange={setIsAssignmentDialogOpen}
           jobId={selectedJobId}
-          department={currentDepartment}
         />
       )}
-
       {selectedJob && (
         <EditJobDialog
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           job={selectedJob}
         />
-      )}
-
-      {showAnalysisForm && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
-            <h2 className="text-2xl font-semibold mb-4">Upload PDF Documents</h2>
-            <form onSubmit={handleAnalysisSubmit} className="flex flex-col space-y-4">
-              <input
-                type="file"
-                accept="application/pdf"
-                multiple
-                onChange={handleFileChange}
-                className="border border-gray-300 p-2 rounded"
-              />
-              <div className="flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAnalysisForm(false)}
-                  className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                >
-                  Submit for Analysis
-                </button>
-              </div>
-            </form>
-            {analysisResult && (
-              <div className="mt-4 p-4 bg-gray-100 rounded">
-                <h3 className="font-semibold mb-2">Analysis Result:</h3>
-                <pre className="whitespace-pre-wrap">{analysisResult}</pre>
-              </div>
-            )}
-          </div>
-        </div>
       )}
     </div>
   );
