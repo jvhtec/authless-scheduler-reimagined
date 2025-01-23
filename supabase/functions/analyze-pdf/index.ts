@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { pipeline } from '@huggingface/transformers';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,53 +36,65 @@ serve(async (req) => {
     const pdfContent = await response.text();
     console.log('PDF content retrieved, length:', pdfContent.length);
 
-    // Extract equipment information using pattern matching
-    // This is more reliable than sending large payloads to Hugging Face
-    const micRegex = /(\d+)\s*x\s*([\w\s-]+)(?=microphone|mic)/gi;
-    const standRegex = /(\d+)\s*x\s*([\w\s-]+)(?=stand)/gi;
+    // Initialize the document analysis pipeline
+    const analyzer = await pipeline('document-question-answering', 'impira/layoutlm-document-qa');
 
+    // Questions to extract information
+    const questions = [
+      "What microphones are listed and their quantities?",
+      "What microphone stands are listed and their quantities?"
+    ];
+
+    // Process each question
+    const results = await Promise.all(questions.map(async (question) => {
+      const result = await analyzer({
+        text: pdfContent,
+        question: question
+      });
+      return { question, answer: result.answer };
+    }));
+
+    console.log('Analysis results:', results);
+
+    // Parse the results into the expected format
     const microphones = [];
     const stands = [];
 
-    let match;
-    while ((match = micRegex.exec(pdfContent)) !== null) {
-      microphones.push({
-        model: match[2].trim(),
-        quantity: parseInt(match[1], 10)
-      });
-    }
+    // Process microphone results
+    const micAnswer = results[0].answer;
+    const micMatches = micAnswer.match(/(\d+)\s*x?\s*([\w\s-]+?)(?=\d|$)/g) || [];
+    micMatches.forEach(match => {
+      const [_, quantity, model] = match.match(/(\d+)\s*x?\s*([\w\s-]+)/) || [];
+      if (quantity && model) {
+        microphones.push({
+          model: model.trim(),
+          quantity: parseInt(quantity, 10)
+        });
+      }
+    });
 
-    while ((match = standRegex.exec(pdfContent)) !== null) {
-      stands.push({
-        type: match[2].trim(),
-        quantity: parseInt(match[1], 10)
-      });
-    }
+    // Process stand results
+    const standAnswer = results[1].answer;
+    const standMatches = standAnswer.match(/(\d+)\s*x?\s*([\w\s-]+?)(?=\d|$)/g) || [];
+    standMatches.forEach(match => {
+      const [_, quantity, type] = match.match(/(\d+)\s*x?\s*([\w\s-]+)/) || [];
+      if (quantity && type) {
+        stands.push({
+          type: type.trim(),
+          quantity: parseInt(quantity, 10)
+        });
+      }
+    });
 
-    // If no matches found, provide sample data
-    if (microphones.length === 0) {
-      microphones.push(
-        { model: "Shure SM58", quantity: 4 },
-        { model: "Sennheiser e935", quantity: 2 }
-      );
-    }
-
-    if (stands.length === 0) {
-      stands.push(
-        { type: "Tall Boom", quantity: 3 },
-        { type: "Short", quantity: 2 }
-      );
-    }
-
-    const results = {
-      microphones,
-      stands
+    const finalResults = {
+      microphones: microphones.length > 0 ? microphones : [],
+      stands: stands.length > 0 ? stands : []
     };
 
-    console.log('Sending final results:', results);
+    console.log('Sending final results:', finalResults);
 
     return new Response(
-      JSON.stringify(results),
+      JSON.stringify(finalResults),
       { 
         headers: { 
           ...corsHeaders, 
