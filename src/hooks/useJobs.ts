@@ -7,7 +7,7 @@ export const useJobs = () => {
     queryFn: async () => {
       console.log("Fetching jobs...");
       
-      // Add retry logic and timeout
+      // Add retry logic
       const fetchWithRetry = async (retries = 3) => {
         try {
           const { data: jobs, error } = await supabase
@@ -29,8 +29,7 @@ export const useJobs = () => {
               job_documents(*),
               tour_date:tour_dates(*)
             `)
-            .order("start_time", { ascending: true })
-            .timeout(10000); // 10 second timeout
+            .order("start_time", { ascending: true });
 
           if (error) {
             console.error("Error fetching jobs:", error);
