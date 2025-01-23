@@ -181,15 +181,12 @@ export type Database = {
       }
       job_departments: {
         Row: {
-          department: Database["public"]["Enums"]["department"]
           job_id: string
         }
         Insert: {
-          department: Database["public"]["Enums"]["department"]
           job_id: string
         }
         Update: {
-          department?: Database["public"]["Enums"]["department"]
           job_id?: string
         }
         Relationships: [
@@ -247,7 +244,6 @@ export type Database = {
         Row: {
           category: Database["public"]["Enums"]["milestone_category"]
           created_at: string
-          departments: Database["public"]["Enums"]["department"][]
           description: string | null
           id: string
           is_preset: boolean | null
@@ -259,7 +255,6 @@ export type Database = {
         Insert: {
           category: Database["public"]["Enums"]["milestone_category"]
           created_at?: string
-          departments: Database["public"]["Enums"]["department"][]
           description?: string | null
           id?: string
           is_preset?: boolean | null
@@ -271,7 +266,6 @@ export type Database = {
         Update: {
           category?: Database["public"]["Enums"]["milestone_category"]
           created_at?: string
-          departments?: Database["public"]["Enums"]["department"][]
           description?: string | null
           id?: string
           is_preset?: boolean | null
@@ -525,7 +519,6 @@ export type Database = {
         Row: {
           content: string
           created_at: string
-          department: Database["public"]["Enums"]["department"]
           id: string
           sender_id: string
           status: Database["public"]["Enums"]["message_status"]
@@ -533,7 +526,6 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string
-          department: Database["public"]["Enums"]["department"]
           id?: string
           sender_id: string
           status?: Database["public"]["Enums"]["message_status"]
@@ -541,7 +533,6 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string
-          department?: Database["public"]["Enums"]["department"]
           id?: string
           sender_id?: string
           status?: Database["public"]["Enums"]["message_status"]
@@ -561,7 +552,6 @@ export type Database = {
           category: Database["public"]["Enums"]["milestone_category"]
           created_at: string
           default_offset: number
-          department: Database["public"]["Enums"]["department"][] | null
           description: string | null
           id: string
           name: string
@@ -571,7 +561,6 @@ export type Database = {
           category: Database["public"]["Enums"]["milestone_category"]
           created_at?: string
           default_offset: number
-          department?: Database["public"]["Enums"]["department"][] | null
           description?: string | null
           id?: string
           name: string
@@ -581,7 +570,6 @@ export type Database = {
           category?: Database["public"]["Enums"]["milestone_category"]
           created_at?: string
           default_offset?: number
-          department?: Database["public"]["Enums"]["department"][] | null
           description?: string | null
           id?: string
           name?: string
@@ -593,7 +581,6 @@ export type Database = {
         Row: {
           created_at: string | null
           current_per_phase: number
-          department: Database["public"]["Enums"]["department"]
           id: string
           job_id: string | null
           pdu_type: string
@@ -603,7 +590,6 @@ export type Database = {
         Insert: {
           created_at?: string | null
           current_per_phase: number
-          department: Database["public"]["Enums"]["department"]
           id?: string
           job_id?: string | null
           pdu_type: string
@@ -613,7 +599,6 @@ export type Database = {
         Update: {
           created_at?: string | null
           current_per_phase?: number
-          department?: Database["public"]["Enums"]["department"]
           id?: string
           job_id?: string | null
           pdu_type?: string
@@ -825,15 +810,12 @@ export type Database = {
       }
       technician_departments: {
         Row: {
-          department: Database["public"]["Enums"]["department"]
           technician_id: string
         }
         Insert: {
-          department: Database["public"]["Enums"]["department"]
           technician_id: string
         }
         Update: {
-          department?: Database["public"]["Enums"]["department"]
           technician_id?: string
         }
         Relationships: [
