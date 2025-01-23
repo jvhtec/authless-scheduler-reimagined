@@ -62,7 +62,7 @@ const lightComponentDatabase = [
   { id: 48, name: 'ROBERT JULIAT MERLIN', watts: 2500 },
   { id: 49, name: 'ROBERT JULIAT CYRANO', watts: 2500 },
   { id: 50, name: 'ROBERT JULIAT LANCELOT', watts: 4000 },
-  { id: 51, name: 'ROBERT JULIAT KORRIGAN', watts: 1200 },  
+  { id: 51, name: 'ROBERT JULIAT KORRIGAN', watts: 1200 }
 ];
 
 const VOLTAGE_3PHASE = 400;
