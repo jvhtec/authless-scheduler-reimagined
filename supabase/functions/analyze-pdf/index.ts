@@ -35,46 +35,8 @@ serve(async (req) => {
     const pdfContent = await response.text();
     console.log('PDF content retrieved, length:', pdfContent.length);
 
-    // Get Hugging Face API key
-    const hfApiKey = Deno.env.get('HUGGING_FACE_API_KEY');
-    if (!hfApiKey) {
-      console.error('Missing Hugging Face API key');
-      throw new Error('Missing Hugging Face API key');
-    }
-
-    console.log('Calling Hugging Face API for analysis...');
-    const hfResponse = await fetch(
-      "https://api-inference.huggingface.co/models/facebook/bart-large-mnli",
-      {
-        headers: {
-          Authorization: `Bearer ${hfApiKey}`,
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-        body: JSON.stringify({
-          inputs: pdfContent,
-          parameters: {
-            candidate_labels: [
-              "microphone specification",
-              "stand specification",
-              "other equipment"
-            ]
-          }
-        }),
-      }
-    );
-
-    if (!hfResponse.ok) {
-      const errorText = await hfResponse.text();
-      console.error('Hugging Face API error:', errorText);
-      throw new Error(`Hugging Face API error: ${errorText}`);
-    }
-
-    const analysisResult = await hfResponse.json();
-    console.log('Analysis result from Hugging Face:', analysisResult);
-
-    // Extract equipment information using simple pattern matching
-    // This is a basic implementation - could be enhanced with more sophisticated parsing
+    // Extract equipment information using pattern matching
+    // This is more reliable than sending large payloads to Hugging Face
     const micRegex = /(\d+)\s*x\s*([\w\s-]+)(?=microphone|mic)/gi;
     const standRegex = /(\d+)\s*x\s*([\w\s-]+)(?=stand)/gi;
 
@@ -113,8 +75,7 @@ serve(async (req) => {
 
     const results = {
       microphones,
-      stands,
-      rawAnalysis: analysisResult // Include the raw analysis for debugging
+      stands
     };
 
     console.log('Sending final results:', results);
