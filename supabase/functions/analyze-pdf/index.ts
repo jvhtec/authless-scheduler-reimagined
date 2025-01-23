@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
-import { pipeline } from '@huggingface/transformers';
+import { HfInference } from 'https://esm.sh/@huggingface/inference@2.6.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,10 +36,10 @@ serve(async (req) => {
     const pdfContent = await response.text();
     console.log('PDF content retrieved, length:', pdfContent.length);
 
-    // Initialize the document analysis pipeline
-    const analyzer = await pipeline('document-question-answering', 'impira/layoutlm-document-qa');
+    // Initialize Hugging Face client
+    const hf = new HfInference(Deno.env.get('HUGGING_FACE_API_KEY'));
 
-    // Questions to extract information
+    // Use Question-Answering model to extract information
     const questions = [
       "What microphones are listed and their quantities?",
       "What microphone stands are listed and their quantities?"
@@ -47,9 +47,12 @@ serve(async (req) => {
 
     // Process each question
     const results = await Promise.all(questions.map(async (question) => {
-      const result = await analyzer({
-        text: pdfContent,
-        question: question
+      const result = await hf.questionAnswering({
+        model: 'deepset/roberta-base-squad2',
+        inputs: {
+          question: question,
+          context: pdfContent
+        }
       });
       return { question, answer: result.answer };
     }));
