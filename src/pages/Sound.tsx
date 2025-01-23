@@ -15,6 +15,7 @@ import { Calculator, PieChart, FileText, Sparkles } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { ReportGenerator } from "../components/sound/ReportGenerator";
 
 const Sound = () => {
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
@@ -25,6 +26,8 @@ const Sound = () => {
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [showReportGenerator, setShowReportGenerator] = useState(false);
+  const [showAnalysisForm, setShowAnalysisForm] = useState(false);
   const currentDepartment = "sound";
 
   const { data: jobs, isLoading } = useJobs();
@@ -190,16 +193,25 @@ const Sound = () => {
       </Card>
 
       {isJobDialogOpen && (
-        <CreateJobDialog open={isJobDialogOpen} onOpenChange={setIsJobDialogOpen} />
+        <CreateJobDialog 
+          open={isJobDialogOpen} 
+          onOpenChange={setIsJobDialogOpen}
+          currentDepartment={currentDepartment}
+        />
       )}
       {isTourDialogOpen && (
-        <CreateTourDialog open={isTourDialogOpen} onOpenChange={setIsTourDialogOpen} />
+        <CreateTourDialog 
+          open={isTourDialogOpen} 
+          onOpenChange={setIsTourDialogOpen}
+          currentDepartment={currentDepartment}
+        />
       )}
       {selectedJobId && (
         <JobAssignmentDialog
           open={isAssignmentDialogOpen}
           onOpenChange={setIsAssignmentDialogOpen}
           jobId={selectedJobId}
+          department={currentDepartment}
         />
       )}
       {selectedJob && (
@@ -208,6 +220,10 @@ const Sound = () => {
           onOpenChange={setIsEditDialogOpen}
           job={selectedJob}
         />
+      )}
+      
+      {showReportGenerator && (
+        <ReportGenerator />
       )}
     </div>
   );
