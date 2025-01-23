@@ -17,13 +17,21 @@ interface DashboardContentProps {
 export const DashboardContent = ({
   date,
   setDate,
-  jobs,
+  jobs = [], // Provide default empty array
   selectedDateJobs,
   onEditClick,
   onDeleteClick,
   onJobClick,
   userRole,
 }: DashboardContentProps) => {
+  // Filter functions with null safety
+  const filterJobsByDepartment = (department: string) => {
+    if (!Array.isArray(jobs)) return [];
+    return jobs.filter(job => 
+      job?.job_departments?.some((dept: any) => dept.department === department)
+    );
+  };
+
   return (
     <div className="space-y-8">
       {/* Calendar and Today's Schedule section - stacks on mobile */}
@@ -53,9 +61,7 @@ export const DashboardContent = ({
           name="sound"
           icon={Music2}
           color="text-blue-500"
-          jobs={jobs.filter(job => 
-            job.job_departments.some((dept: any) => dept.department === "sound")
-          )}
+          jobs={filterJobsByDepartment("sound")}
           onEditClick={onEditClick}
           onDeleteClick={onDeleteClick}
           onJobClick={onJobClick}
@@ -65,9 +71,7 @@ export const DashboardContent = ({
           name="lights"
           icon={Lightbulb}
           color="text-yellow-500"
-          jobs={jobs.filter(job => 
-            job.job_departments.some((dept: any) => dept.department === "lights")
-          )}
+          jobs={filterJobsByDepartment("lights")}
           onEditClick={onEditClick}
           onDeleteClick={onDeleteClick}
           onJobClick={onJobClick}
@@ -77,9 +81,7 @@ export const DashboardContent = ({
           name="video"
           icon={Video}
           color="text-green-500"
-          jobs={jobs.filter(job => 
-            job.job_departments.some((dept: any) => dept.department === "video")
-          )}
+          jobs={filterJobsByDepartment("video")}
           onEditClick={onEditClick}
           onDeleteClick={onDeleteClick}
           onJobClick={onJobClick}
