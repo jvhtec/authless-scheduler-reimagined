@@ -1,4 +1,3 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 import { HfInference } from 'https://esm.sh/@huggingface/inference@2.6.4';
@@ -17,57 +16,58 @@ serve(async (req) => {
     const { fileUrl } = await req.json();
     console.log('Starting PDF analysis for URL:', fileUrl);
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
+    // First download the PDF content
     console.log('Downloading PDF from URL...');
     const response = await fetch(fileUrl);
     if (!response.ok) {
       throw new Error(`Failed to download PDF: ${response.statusText}`);
     }
 
-    const pdfContent = await response.text();
-    console.log('PDF content retrieved, length:', pdfContent.length);
+    // Get the PDF content as an ArrayBuffer
+    const pdfContent = await response.arrayBuffer();
+    console.log('PDF content retrieved, size:', pdfContent.byteLength);
+
+    // Convert ArrayBuffer to Base64
+    const base64Content = btoa(String.fromCharCode(...new Uint8Array(pdfContent)));
+    console.log('PDF content converted to base64');
 
     const hf = new HfInference(Deno.env.get('HUGGING_FACE_API_KEY'));
 
-    // First, let's analyze the overall content to identify sections
-    const sectionAnalysis = await hf.questionAnswering({
-      model: 'deepset/roberta-base-squad2',
+    // First analyze the content to identify sections
+    const documentAnalysis = await hf.documentQuestionAnswering({
+      model: 'impira/layoutlm-document-qa',
       inputs: {
-        question: "What sections or categories of equipment are listed in this document?",
-        context: pdfContent
+        question: "What equipment is listed in this document?",
+        image: base64Content
       }
     });
 
-    console.log('Section analysis:', sectionAnalysis);
+    console.log('Document analysis:', documentAnalysis);
 
-    // Now let's analyze microphones with more specific questions
-    const micAnalysis = await hf.questionAnswering({
-      model: 'deepset/roberta-base-squad2',
+    // Now analyze microphones specifically
+    const micAnalysis = await hf.documentQuestionAnswering({
+      model: 'impira/layoutlm-document-qa',
       inputs: {
-        question: "List all microphones with their exact quantities, including specific models and numbers.",
-        context: pdfContent
+        question: "List all microphones with their quantities",
+        image: base64Content
       }
     });
 
     console.log('Microphone analysis:', micAnalysis);
 
     // Analyze stands separately
-    const standAnalysis = await hf.questionAnswering({
-      model: 'deepset/roberta-base-squad2',
+    const standAnalysis = await hf.documentQuestionAnswering({
+      model: 'impira/layoutlm-document-qa',
       inputs: {
-        question: "List all microphone stands and their quantities, including types (straight, boom, etc).",
-        context: pdfContent
+        question: "List all microphone stands and their quantities",
+        image: base64Content
       }
     });
 
     console.log('Stand analysis:', standAnalysis);
 
-    // Parse microphone results
-    const micResults = micAnalysis.answer.split(',').map(item => {
+    // Parse microphone results - looking for patterns like "2x SM58" or "3 Beta58"
+    const micResults = (micAnalysis.answer || '').split(/[,\n]/).map(item => {
       const match = item.trim().match(/(\d+)\s*x?\s*([\w\s-]+)/i);
       if (match) {
         return {
@@ -79,7 +79,7 @@ serve(async (req) => {
     }).filter(Boolean);
 
     // Parse stand results
-    const standResults = standAnalysis.answer.split(',').map(item => {
+    const standResults = (standAnalysis.answer || '').split(/[,\n]/).map(item => {
       const match = item.trim().match(/(\d+)\s*x?\s*([\w\s-]+)/i);
       if (match) {
         return {
@@ -91,10 +91,10 @@ serve(async (req) => {
     }).filter(Boolean);
 
     const results = {
-      microphones: micResults,
-      stands: standResults,
+      microphones: micResults.length > 0 ? micResults : [],
+      stands: standResults.length > 0 ? standResults : [],
       rawAnalysis: {
-        sections: sectionAnalysis.answer,
+        document: documentAnalysis.answer,
         microphones: micAnalysis.answer,
         stands: standAnalysis.answer
       }
