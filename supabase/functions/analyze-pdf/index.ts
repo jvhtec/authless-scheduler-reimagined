@@ -9,7 +9,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -18,86 +17,93 @@ serve(async (req) => {
     const { fileUrl } = await req.json();
     console.log('Starting PDF analysis for URL:', fileUrl);
 
-    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Download the PDF content
     console.log('Downloading PDF from URL...');
     const response = await fetch(fileUrl);
     if (!response.ok) {
-      console.error('Failed to download PDF:', response.status, response.statusText);
       throw new Error(`Failed to download PDF: ${response.statusText}`);
     }
 
-    // Get the PDF content as text
     const pdfContent = await response.text();
     console.log('PDF content retrieved, length:', pdfContent.length);
 
-    // Initialize Hugging Face client
     const hf = new HfInference(Deno.env.get('HUGGING_FACE_API_KEY'));
 
-    // Use Question-Answering model to extract information
-    const questions = [
-      "What microphones are listed and their quantities?",
-      "What microphone stands are listed and their quantities?"
-    ];
-
-    // Process each question
-    const results = await Promise.all(questions.map(async (question) => {
-      const result = await hf.questionAnswering({
-        model: 'deepset/roberta-base-squad2',
-        inputs: {
-          question: question,
-          context: pdfContent
-        }
-      });
-      return { question, answer: result.answer };
-    }));
-
-    console.log('Analysis results:', results);
-
-    // Parse the results into the expected format
-    const microphones = [];
-    const stands = [];
-
-    // Process microphone results
-    const micAnswer = results[0].answer;
-    const micMatches = micAnswer.match(/(\d+)\s*x?\s*([\w\s-]+?)(?=\d|$)/g) || [];
-    micMatches.forEach(match => {
-      const [_, quantity, model] = match.match(/(\d+)\s*x?\s*([\w\s-]+)/) || [];
-      if (quantity && model) {
-        microphones.push({
-          model: model.trim(),
-          quantity: parseInt(quantity, 10)
-        });
+    // First, let's analyze the overall content to identify sections
+    const sectionAnalysis = await hf.questionAnswering({
+      model: 'deepset/roberta-base-squad2',
+      inputs: {
+        question: "What sections or categories of equipment are listed in this document?",
+        context: pdfContent
       }
     });
 
-    // Process stand results
-    const standAnswer = results[1].answer;
-    const standMatches = standAnswer.match(/(\d+)\s*x?\s*([\w\s-]+?)(?=\d|$)/g) || [];
-    standMatches.forEach(match => {
-      const [_, quantity, type] = match.match(/(\d+)\s*x?\s*([\w\s-]+)/) || [];
-      if (quantity && type) {
-        stands.push({
-          type: type.trim(),
-          quantity: parseInt(quantity, 10)
-        });
+    console.log('Section analysis:', sectionAnalysis);
+
+    // Now let's analyze microphones with more specific questions
+    const micAnalysis = await hf.questionAnswering({
+      model: 'deepset/roberta-base-squad2',
+      inputs: {
+        question: "List all microphones with their exact quantities, including specific models and numbers.",
+        context: pdfContent
       }
     });
 
-    const finalResults = {
-      microphones: microphones.length > 0 ? microphones : [],
-      stands: stands.length > 0 ? stands : []
+    console.log('Microphone analysis:', micAnalysis);
+
+    // Analyze stands separately
+    const standAnalysis = await hf.questionAnswering({
+      model: 'deepset/roberta-base-squad2',
+      inputs: {
+        question: "List all microphone stands and their quantities, including types (straight, boom, etc).",
+        context: pdfContent
+      }
+    });
+
+    console.log('Stand analysis:', standAnalysis);
+
+    // Parse microphone results
+    const micResults = micAnalysis.answer.split(',').map(item => {
+      const match = item.trim().match(/(\d+)\s*x?\s*([\w\s-]+)/i);
+      if (match) {
+        return {
+          quantity: parseInt(match[1]),
+          model: match[2].trim()
+        };
+      }
+      return null;
+    }).filter(Boolean);
+
+    // Parse stand results
+    const standResults = standAnalysis.answer.split(',').map(item => {
+      const match = item.trim().match(/(\d+)\s*x?\s*([\w\s-]+)/i);
+      if (match) {
+        return {
+          quantity: parseInt(match[1]),
+          type: match[2].trim()
+        };
+      }
+      return null;
+    }).filter(Boolean);
+
+    const results = {
+      microphones: micResults,
+      stands: standResults,
+      rawAnalysis: {
+        sections: sectionAnalysis.answer,
+        microphones: micAnalysis.answer,
+        stands: standAnalysis.answer
+      }
     };
 
-    console.log('Sending final results:', finalResults);
+    console.log('Final analysis results:', results);
 
     return new Response(
-      JSON.stringify(finalResults),
+      JSON.stringify(results),
       { 
         headers: { 
           ...corsHeaders, 
