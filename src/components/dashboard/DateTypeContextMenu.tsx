@@ -2,7 +2,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } 
 import { Plane, Wrench, Star, Moon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 
 interface DateTypeContextMenuProps {
   children: React.ReactNode;
@@ -14,9 +14,17 @@ interface DateTypeContextMenuProps {
 export const DateTypeContextMenu = ({ children, jobId, date, onTypeChange }: DateTypeContextMenuProps) => {
   const handleSetDateType = async (type: 'travel' | 'setup' | 'show' | 'off') => {
     try {
-      // Format date to YYYY-MM-DD in local timezone
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      console.log(`Setting date type ${type} for job ${jobId} on date ${formattedDate}`);
+      // Convert to start of day to ensure consistent date handling
+      const localDate = startOfDay(date);
+      const formattedDate = format(localDate, 'yyyy-MM-dd');
+      
+      console.log('Setting date type:', {
+        type,
+        jobId,
+        date: localDate,
+        formattedDate,
+        originalDate: date
+      });
       
       const { error } = await supabase
         .from('job_date_types')
