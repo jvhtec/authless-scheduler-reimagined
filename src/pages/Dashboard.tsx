@@ -16,6 +16,7 @@ import { DirectMessagesList } from "@/components/messages/DirectMessagesList";
 import { Button } from "@/components/ui/button";
 import { DirectMessageDialog } from "@/components/messages/DirectMessageDialog";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
+import { PdfAnalysis } from "@/components/dashboard/PdfAnalysis";
 
 const getSelectedDateJobs = (date: Date | undefined, jobs: any[]) => {
   if (!date || !jobs) return [];
@@ -143,42 +144,46 @@ const Dashboard = () => {
       <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
       
       {userRole === 'management' && (
-        <Card className="w-full">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="w-6 h-6" />
-              Messages
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setNewMessageDialogOpen(true)}
-                className="gap-2"
-              >
-                <Send className="h-4 w-4" />
-                New Message
-              </Button>
-              <button
-                onClick={() => setShowMessages(!showMessages)}
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                {showMessages ? 'Hide' : 'Show'}
-              </button>
-            </div>
-          </CardHeader>
-          {showMessages && (
-            <CardContent>
-              <div className="space-y-6">
-                <MessagesList />
-                <div className="border-t pt-6">
-                  <h3 className="text-lg font-medium mb-4">Direct Messages</h3>
-                  <DirectMessagesList />
-                </div>
+        <>
+          <Card className="w-full">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="w-6 h-6" />
+                Messages
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setNewMessageDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Send className="h-4 w-4" />
+                  New Message
+                </Button>
+                <button
+                  onClick={() => setShowMessages(!showMessages)}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  {showMessages ? 'Hide' : 'Show'}
+                </button>
               </div>
-            </CardContent>
-          )}
-        </Card>
+            </CardHeader>
+            {showMessages && (
+              <CardContent>
+                <div className="space-y-6">
+                  <MessagesList />
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-medium mb-4">Direct Messages</h3>
+                    <DirectMessagesList />
+                  </div>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+
+          <PdfAnalysis />
+        </>
       )}
 
       <Card className="w-full bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30">
