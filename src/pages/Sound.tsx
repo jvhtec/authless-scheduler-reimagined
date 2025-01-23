@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import CreateJobDialog from "@/components/jobs/CreateJobDialog";
 import CreateTourDialog from "@/components/tours/CreateTourDialog";
 import { useJobs } from "@/hooks/useJobs";
-import { format } from "date-fns";
+import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
 import { EditJobDialog } from "@/components/jobs/EditJobDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -75,10 +75,15 @@ const Sound = () => {
 
   const getSelectedDateJobs = () => {
     if (!date || !jobs) return [];
-    const selectedDate = format(date, 'yyyy-MM-dd');
+    const selectedDate = startOfDay(date);
     return getDepartmentJobs().filter(job => {
-      const jobDate = format(new Date(job.start_time), 'yyyy-MM-dd');
-      return jobDate === selectedDate;
+      const jobStartDate = startOfDay(new Date(job.start_time));
+      const jobEndDate = endOfDay(new Date(job.end_time));
+      
+      return isWithinInterval(selectedDate, {
+        start: jobStartDate,
+        end: jobEndDate
+      });
     });
   };
 
