@@ -56,7 +56,7 @@ const VOLTAGE_3PHASE = 400;
 const POWER_FACTOR = 0.85;
 const PHASES = 3;
 
-const PDU_TYPES = ['CEE32A 3P+N+G', 'CEE63A 3P+N+G', 'CEE125A 3P+N+G'];
+const PDU_TYPES = ['CEE32A 3P+N+G', 'CEE63A 3P+N+G', 'CEE125A 3P+N+G','Powerlock 400A 3P+N+G'];
 
 interface TableRow {
   quantity: string;
@@ -132,11 +132,13 @@ const LightsConsumosTool: React.FC = () => {
     return { wattsPerPhase, currentPerPhase };
   };
 
-  const recommendPDU = (current: number) => {
-    if (current < 32) return PDU_TYPES[0];
-    if (current < 63) return PDU_TYPES[1];
-    return PDU_TYPES[2];
-  };
+  // Update the recommendPDU function
+const recommendPDU = (current: number) => {
+  if (current < 32) return PDU_TYPES[0];
+  if (current < 63) return PDU_TYPES[1];
+  if (current < 125) return PDU_TYPES[2];
+  return PDU_TYPES[3]; // Suggest Powerlock 400A for current >= 125A
+};
 
   const savePowerRequirementTable = async (table: Table) => {
     try {
