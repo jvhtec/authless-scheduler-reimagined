@@ -1,17 +1,11 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Clock, MapPin, Users, Edit, Trash2, Plane, Wrench, Star, Moon } from "lucide-react";
 import { format } from "date-fns";
-import { Pencil, Trash2, MapPin, Calendar, ChevronDown, ChevronUp, Download, Eye } from "lucide-react";
-import { Department } from "@/types/department";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-
-interface JobDocument {
-  id: string;
-  file_name: string;
-  file_path: string;
-  uploaded_at: string;
-}
+import { Department } from "@/types/department";
 
 interface JobCardProps {
   job: any;
@@ -20,212 +14,120 @@ interface JobCardProps {
   onJobClick: (jobId: string) => void;
   department?: Department;
   userRole?: string | null;
-  showAssignments?: boolean;
+  selectedDate?: Date;
 }
 
-export const JobCard = ({
-  job,
-  onEditClick,
-  onDeleteClick,
+export const JobCard = ({ 
+  job, 
+  onEditClick, 
+  onDeleteClick, 
   onJobClick,
-  department,
+  department = "sound",
   userRole,
-  showAssignments = true
+  selectedDate
 }: JobCardProps) => {
-  const { toast } = useToast();
-  const [collapsed, setCollapsed] = useState(true);
-  const [assignments] = useState(job.job_assignments || []);
+  // Fetch date type for the selected date
+  const { data: dateType } = useQuery({
+    queryKey: ['job-date-type', job.id, selectedDate],
+    queryFn: async () => {
+      if (!selectedDate) return null;
+      
+      console.log('Fetching date type for job:', job.id, 'date:', format(selectedDate, 'yyyy-MM-dd'));
+      
+      const { data, error } = await supabase
+        .from('job_date_types')
+        .select('type')
+        .eq('job_id', job.id)
+        .eq('date', format(selectedDate, 'yyyy-MM-dd'))
+        .maybeSingle();
 
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onEditClick(job);
-  };
+      if (error) {
+        console.error('Error fetching date type:', error);
+        throw error;
+      }
 
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDeleteClick(job.id);
-  };
+      console.log('Date type result:', data);
+      return data?.type || null;
+    },
+    enabled: !!selectedDate
+  });
 
-  const toggleCollapse = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCollapsed(!collapsed);
-  };
+  const getDateTypeIcon = () => {
+    if (!dateType) return null;
 
-  const handleViewDocument = async (doc: JobDocument) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from('job_documents')
-        .createSignedUrl(doc.file_path, 60);
-
-      if (error) throw error;
-
-      window.open(data.signedUrl, '_blank');
-    } catch (error: any) {
-      toast({
-        title: "Error viewing document",
-        description: error.message,
-        variant: "destructive",
-      });
+    switch (dateType) {
+      case 'travel':
+        return <Plane className="h-4 w-4 text-blue-500" />;
+      case 'setup':
+        return <Wrench className="h-4 w-4 text-yellow-500" />;
+      case 'show':
+        return <Star className="h-4 w-4 text-green-500" />;
+      case 'off':
+        return <Moon className="h-4 w-4 text-gray-500" />;
+      default:
+        return null;
     }
   };
-
-  const handleDownloadDocument = async (doc: JobDocument) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from('job_documents')
-        .download(doc.file_path);
-
-      if (error) throw error;
-
-      // Create a download link using the global document object
-      const downloadUrl = URL.createObjectURL(data);
-      const downloadLink = window.document.createElement('a');
-      downloadLink.href = downloadUrl;
-      downloadLink.download = doc.file_name;
-      window.document.body.appendChild(downloadLink);
-      downloadLink.click();
-      window.document.body.removeChild(downloadLink);
-      URL.revokeObjectURL(downloadUrl);
-
-      toast({
-        title: "Download started",
-        description: `Downloading ${doc.file_name}`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Download failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const canEdit = userRole !== 'logistics';
-  const isTourJob = job.job_type === 'tour' || !!job.tour_date_id;
-
-  // Summarize assigned technicians' names
-  const assignedTechnicians = assignments
-    .map((assignment: any) => {
-      let role = null;
-      if (department === 'sound') role = assignment.sound_role;
-      else if (department === 'lights') role = assignment.lights_role;
-      else if (department === 'video') role = assignment.video_role;
-      else role = assignment.sound_role || assignment.lights_role || assignment.video_role;
-      if (!role) return null;
-      return `${assignment.profiles?.first_name || ''} ${assignment.profiles?.last_name || ''}`.trim();
-    })
-    .filter((name: string | null) => name && name !== '');
 
   return (
-    <div 
-      className="flex flex-col border rounded cursor-pointer hover:bg-accent/50 transition-colors group overflow-hidden"
-      style={{ 
-        borderColor: job.color || '#7E69AB',
-        backgroundColor: `${job.color}15` || '#7E69AB15'
+    <Card 
+      className="hover:shadow-md transition-shadow cursor-pointer"
+      onClick={() => userRole !== "logistics" && onJobClick(job.id)}
+      style={{
+        borderColor: `${job.color}30` || "#7E69AB30",
+        backgroundColor: `${job.color}05` || "#7E69AB05"
       }}
-      onClick={() => canEdit && onJobClick(job.id)}
     >
-      {/* Header Area with Always Visible Toggle Button */}
-      <div 
-        className={`flex justify-between items-center p-2 ${isTourJob ? 'bg-accent/20' : ''}`}
-        style={{ 
-          borderBottom: `1px solid ${job.color || '#7E69AB'}30`
-        }}
-      >
-        <div className="flex items-center flex-1">
-          <p className="font-medium">{job.title}</p>
-          {isTourJob && (
-            <span className="text-xs bg-primary/10 px-2 py-0.5 rounded-full ml-2">
-              {job.tour_date_id ? 'Tour Date' : 'Tour'}
-            </span>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{job.title}</span>
+            {getDateTypeIcon()}
+            {job.job_type === "tour" && (
+              <Badge variant="secondary">Tour</Badge>
+            )}
+          </div>
+          {userRole !== "logistics" && (
+            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onEditClick(job)}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onDeleteClick(job.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           )}
         </div>
-        {/* Toggle Button */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={toggleCollapse}
-          className="ml-2"
-        >
-          {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-        </Button>
-        {canEdit && !collapsed && (
-          <div 
-            className="flex gap-1 ml-2"
-            onClick={e => e.stopPropagation()}
-          >
-            <Button variant="ghost" size="icon" onClick={handleEditClick}>
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleDeleteClick}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </div>
 
-      {/* Always Visible Summary */}
-      <div className="p-2 space-y-2">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4" />
-          <span>
-            {format(new Date(job.start_time), 'MMM d, yyyy')}
-            {job.start_time !== job.end_time && 
-              ` - ${format(new Date(job.end_time), 'MMM d, yyyy')}`
-            }
-          </span>
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span>
+              {format(new Date(job.start_time), "MMM d, yyyy HH:mm")}
+            </span>
+          </div>
+          {job.location?.name && (
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span>{job.location.name}</span>
+            </div>
+          )}
+          {job.job_assignments?.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span>{job.job_assignments.length} assigned</span>
+            </div>
+          )}
         </div>
-        
-        {job.location?.name && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4" />
-            <span>{job.location.name}</span>
-          </div>
-        )}
-
-        {showAssignments && assignedTechnicians.length > 0 && (
-          <div className="flex flex-col text-sm text-muted-foreground">
-            <div>Assigned Personnel:</div>
-            <div>{assignedTechnicians.join(', ')}</div>
-          </div>
-        )}
-      </div>
-
-      {/* Documents Section */}
-      {!collapsed && job.job_documents && job.job_documents.length > 0 && (
-        <div className="p-2 border-t">
-          <h3 className="text-sm font-medium mb-2">Documents</h3>
-          <div className="space-y-2">
-            {job.job_documents.map((doc: JobDocument) => (
-              <div 
-                key={doc.id}
-                className="flex items-center justify-between p-2 rounded bg-accent/10"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span className="text-sm truncate flex-1">{doc.file_name}</span>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleViewDocument(doc)}
-                    title="View"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDownloadDocument(doc)}
-                    title="Download"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 };
