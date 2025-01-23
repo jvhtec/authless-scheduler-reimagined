@@ -49,14 +49,14 @@ const lightComponentDatabase = [
   { id: 35, name: 'ELATION SIXBAR 1000', watts: 150 },
   { id: 36, name: 'MARTIN ATOMIC 3000', watts: 3000 },
   { id: 37, name: 'SGM Q7', watts: 500 },
-  { id: 38, name: 'ELATION SIXBAR 500', watts: 80 }
+  { id: 38, name: 'ELATION SIXBAR 500', watts: 80 },
   { id: 39, name: 'SMOKE FACTORY TOUR HAZERII', watts: 1500 },
   { id: 40, name: 'ROBE 500 FT-PRO', watts: 1200 },
-  { id: 41, name: 'SAHARA TURBO DRYER', watts: 1500 }
+  { id: 41, name: 'SAHARA TURBO DRYER', watts: 1500 },
   { id: 42, name: 'ROBE SPIIDER', watts: 660 },
   { id: 43, name: 'GLP JDC1', watts: 1200 },
-  { id: 44, name: 'CAMEO W3', watts: 325 }
-  { id: 45, name: 'CHAUVET COLOR STRIKE M', watts: 750},
+  { id: 44, name: 'CAMEO W3', watts: 325 },
+  { id: 45, name: 'CHAUVET COLOR STRIKE M', watts: 750 },
   { id: 46, name: 'GLP X4 BAR 20', watts: 500 },
   { id: 47, name: 'ROBERT JULIAT ARAMIS', watts: 2500 },
   { id: 48, name: 'ROBERT JULIAT MERLIN', watts: 2500 },
