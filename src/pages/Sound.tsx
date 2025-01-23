@@ -31,6 +31,10 @@ const Sound = () => {
   const [showReportGenerator, setShowReportGenerator] = useState(false);
   const [showAnalysisForm, setShowAnalysisForm] = useState(false);
   const currentDepartment = "sound";
+  
+  const { data: jobs } = useJobs();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const fetchUserRole = async () => {
