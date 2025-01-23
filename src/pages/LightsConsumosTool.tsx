@@ -12,7 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
 const lightComponentDatabase = [
-  { id: 1, name: 'CAMEO OPS S5', watts: 650 },
+  { id: 1, name: 'CAMEO OPUS S5', watts: 650 },
   { id: 2, name: 'CLAY PAKY A-LEDA K20', watts: 650 },
   { id: 3, name: 'CLAY PAKY A-LEDA K25', watts: 1100 },
   { id: 4, name: 'CLAY PAKY STORMY CC', watts: 800 },
@@ -50,6 +50,19 @@ const lightComponentDatabase = [
   { id: 36, name: 'MARTIN ATOMIC 3000', watts: 3000 },
   { id: 37, name: 'SGM Q7', watts: 500 },
   { id: 38, name: 'ELATION SIXBAR 500', watts: 80 }
+  { id: 39, name: 'SMOKE FACTORY TOUR HAZERII', watts: 1500 },
+  { id: 40, name: 'ROBE 500 FT-PRO', watts: 1200 },
+  { id: 41, name: 'SAHARA TURBO DRYER', watts: 1500 }
+  { id: 42, name: 'ROBE SPIIDER', watts: 660 },
+  { id: 43, name: 'GLP JDC1', watts: 1200 },
+  { id: 44, name: 'CAMEO W3', watts: 325 }
+  { id: 45, name: 'CHAUVET COLOR STRIKE M', watts: 750},
+  { id: 46, name: 'GLP X4 BAR 20', watts: 500 },
+  { id: 47, name: 'ROBERT JULIAT ARAMIS', watts: 2500 },
+  { id: 48, name: 'ROBERT JULIAT MERLIN', watts: 2500 },
+  { id: 49, name: 'ROBERT JULIAT CYRANO', watts: 2500 },
+  { id: 50, name: 'ROBERT JULIAT LANCELOT', watts: 4000 },
+  { id: 51, name: 'ROBERT JULIAT KORRIGAN', watts: 1200 },  
 ];
 
 const VOLTAGE_3PHASE = 400;
