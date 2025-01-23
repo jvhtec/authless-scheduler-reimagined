@@ -66,8 +66,7 @@ export function JobMilestonesDialog({
           *,
           definition:milestone_definitions(
             name,
-            category,
-            department
+            category
           ),
           completed_by:profiles(
             first_name,
