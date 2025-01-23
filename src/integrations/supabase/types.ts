@@ -181,12 +181,15 @@ export type Database = {
       }
       job_departments: {
         Row: {
+          department: string
           job_id: string
         }
         Insert: {
+          department: string
           job_id: string
         }
         Update: {
+          department?: string
           job_id?: string
         }
         Relationships: [
@@ -519,6 +522,7 @@ export type Database = {
         Row: {
           content: string
           created_at: string
+          department: string
           id: string
           sender_id: string
           status: Database["public"]["Enums"]["message_status"]
@@ -526,6 +530,7 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string
+          department: string
           id?: string
           sender_id: string
           status?: Database["public"]["Enums"]["message_status"]
@@ -533,6 +538,7 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string
+          department?: string
           id?: string
           sender_id?: string
           status?: Database["public"]["Enums"]["message_status"]
