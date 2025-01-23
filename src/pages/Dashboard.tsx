@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Department } from "@/types/department";
 import { useJobs } from "@/hooks/useJobs";
-import { format, isWithinInterval, addWeeks, addMonths, isAfter, isBefore, startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
+import { format, isWithinInterval, addWeeks, addMonths, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { JobAssignmentDialog } from "@/components/jobs/JobAssignmentDialog";
 import { EditJobDialog } from "@/components/jobs/EditJobDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -10,15 +10,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { TourChips } from "@/components/dashboard/TourChips";
-import { useNavigate } from "react-router-dom";
-import { CalendarDays, Music, Video, Lightbulb, MessageSquare, Send } from "lucide-react";
-import { DepartmentSchedule } from "@/components/dashboard/DepartmentSchedule";
-import { JobCard } from "@/components/jobs/JobCard"; 
+import { MessageSquare, Send } from "lucide-react";
 import { MessagesList } from "@/components/messages/MessagesList";
 import { DirectMessagesList } from "@/components/messages/DirectMessagesList";
 import { Button } from "@/components/ui/button";
 import { DirectMessageDialog } from "@/components/messages/DirectMessageDialog";
-import { CalendarSection } from "@/components/dashboard/CalendarSection";
+import { DashboardContent } from "@/components/dashboard/DashboardContent";
 
 const getSelectedDateJobs = (date: Date | undefined, jobs: any[]) => {
   if (!date || !jobs) return [];
@@ -31,38 +28,11 @@ const getSelectedDateJobs = (date: Date | undefined, jobs: any[]) => {
     const jobStartDate = startOfDay(new Date(job.start_time));
     const jobEndDate = endOfDay(new Date(job.end_time));
     
-    // Check if job falls within the selected date
     return isWithinInterval(selectedDate, {
       start: jobStartDate,
       end: jobEndDate
     });
   });
-};
-
-const getDepartmentJobs = (jobs: any[], department: Department, timeSpan: string) => {
-  if (!jobs) return [];
-  const endDate = getTimeSpanEndDate(timeSpan);
-  const now = new Date();
-  
-  return jobs.filter(job => 
-    job.job_departments.some((dept: any) => dept.department === department) &&
-    job.job_type !== 'tour' &&
-    isWithinInterval(new Date(job.start_time), {
-      start: startOfDay(now),
-      end: endOfDay(endDate)
-    })
-  );
-};
-
-const getTimeSpanEndDate = (timeSpan: string) => {
-  const today = new Date();
-  switch (timeSpan) {
-    case "1week": return addWeeks(today, 1);
-    case "2weeks": return addWeeks(today, 2);
-    case "1month": return addMonths(today, 1);
-    case "3months": return addMonths(today, 3);
-    default: return addWeeks(today, 1);
-  }
 };
 
 const Dashboard = () => {
@@ -80,7 +50,6 @@ const Dashboard = () => {
   const { data: jobs, isLoading } = useJobs();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -110,10 +79,9 @@ const Dashboard = () => {
     fetchUserRole();
   }, []);
 
-  const handleJobClick = (jobId: string, department: Department) => {
+  const handleJobClick = (jobId: string) => {
     if (userRole === 'logistics') return;
     setSelectedJobId(jobId);
-    setSelectedDepartment(department);
     setIsAssignmentDialogOpen(true);
   };
 
@@ -168,6 +136,8 @@ const Dashboard = () => {
     }
   };
 
+  const selectedDateJobs = getSelectedDateJobs(date, jobs);
+
   return (
     <div className="container mx-auto px-4 py-6 space-y-8">
       <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
@@ -214,7 +184,6 @@ const Dashboard = () => {
       <Card className="w-full bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CalendarDays className="w-6 h-6" />
             Tours {new Date().getFullYear()}
           </CardTitle>
         </CardHeader>
@@ -229,56 +198,16 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-12 gap-8">
-        <div className="col-span-8">
-          <CalendarSection 
-            date={date} 
-            onDateSelect={setDate} 
-            jobs={jobs} 
-          />
-        </div>
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>Today's Schedule</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4">
-            <div className="space-y-4">
-              {getSelectedDateJobs(date, jobs).map(job => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  onEditClick={handleEditClick}
-                  onDeleteClick={handleDeleteClick}
-                  onJobClick={(jobId) => handleJobClick(jobId, "sound")}
-                  userRole={userRole}
-                  department="sound"
-                  selectedDate={date}
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[
-          { name: "sound" as Department, icon: Music, color: "text-blue-500" },
-          { name: "lights" as Department, icon: Lightbulb, color: "text-yellow-500" },
-          { name: "video" as Department, icon: Video, color: "text-purple-500" }
-        ].map(({ name, icon, color }) => (
-          <DepartmentSchedule
-            key={name}
-            name={name}
-            icon={icon}
-            color={color}
-            jobs={getDepartmentJobs(jobs, name, timeSpan)}
-            onEditClick={handleEditClick}
-            onDeleteClick={handleDeleteClick}
-            onJobClick={(jobId) => handleJobClick(jobId, name)}
-            userRole={userRole}
-          />
-        ))}
-      </div>
+      <DashboardContent
+        date={date}
+        setDate={setDate}
+        jobs={jobs}
+        selectedDateJobs={selectedDateJobs}
+        onEditClick={handleEditClick}
+        onDeleteClick={handleDeleteClick}
+        onJobClick={handleJobClick}
+        userRole={userRole}
+      />
 
       {selectedJobId && (
         <JobAssignmentDialog
