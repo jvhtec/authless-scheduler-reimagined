@@ -150,15 +150,6 @@ const LightsPesosTool: React.FC = () => {
       return;
     }
 
-    const suffix = (() => {
-      const tableCount = tables.length + 1;
-      const suffixNumber = tableCount.toString().padStart(2, '0');
-      if (useDualMotors) {
-        return `(LX${suffixNumber}, LX${(tableCount + 1).toString().padStart(2, '0')})`;
-      }
-      return `(LX${suffixNumber})`;
-    })();
-
     const calculatedRows = currentTable.rows.map((row) => {
       const component = lightsComponentDatabase.find((c) => c.id.toString() === row.componentId);
       const totalWeight =
@@ -175,7 +166,7 @@ const LightsPesosTool: React.FC = () => {
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
 
     const newTable: Table = {
-      name: `${tableName} ${suffix}`,
+      name: `${tableName}
       rows: calculatedRows,
       totalWeight,
       id: Date.now(),
