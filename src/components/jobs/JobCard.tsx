@@ -69,6 +69,8 @@ export const JobCard = ({
     }
   };
 
+  const isMultiDay = new Date(job.end_time).getDate() !== new Date(job.start_time).getDate();
+
   return (
     <Card 
       className="hover:shadow-md transition-shadow cursor-pointer"
@@ -85,6 +87,9 @@ export const JobCard = ({
             {getDateTypeIcon()}
             {job.job_type === "tour" && (
               <Badge variant="secondary">Tour</Badge>
+            )}
+            {isMultiDay && (
+              <Badge variant="outline" className="text-xs">Multi-day</Badge>
             )}
           </div>
           {userRole !== "logistics" && (
@@ -112,6 +117,7 @@ export const JobCard = ({
             <Clock className="h-4 w-4 text-muted-foreground" />
             <span>
               {format(new Date(job.start_time), "MMM d, yyyy HH:mm")}
+              {isMultiDay && ` - ${format(new Date(job.end_time), "MMM d, yyyy HH:mm")}`}
             </span>
           </div>
           {job.location?.name && (

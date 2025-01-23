@@ -20,6 +20,51 @@ import { Button } from "@/components/ui/button";
 import { DirectMessageDialog } from "@/components/messages/DirectMessageDialog";
 import { CalendarSection } from "@/components/dashboard/CalendarSection";
 
+const getSelectedDateJobs = (date: Date | undefined, jobs: any[]) => {
+  if (!date || !jobs) return [];
+  
+  const selectedDate = startOfDay(date);
+  
+  return jobs.filter(job => {
+    if (job.job_type === 'tour') return false;
+    
+    const jobStartDate = startOfDay(new Date(job.start_time));
+    const jobEndDate = endOfDay(new Date(job.end_time));
+    
+    // Check if job falls within the selected date
+    return isWithinInterval(selectedDate, {
+      start: jobStartDate,
+      end: jobEndDate
+    });
+  });
+};
+
+const getDepartmentJobs = (jobs: any[], department: Department, timeSpan: string) => {
+  if (!jobs) return [];
+  const endDate = getTimeSpanEndDate(timeSpan);
+  const now = new Date();
+  
+  return jobs.filter(job => 
+    job.job_departments.some((dept: any) => dept.department === department) &&
+    job.job_type !== 'tour' &&
+    isWithinInterval(new Date(job.start_time), {
+      start: startOfDay(now),
+      end: endOfDay(endDate)
+    })
+  );
+};
+
+const getTimeSpanEndDate = (timeSpan: string) => {
+  const today = new Date();
+  switch (timeSpan) {
+    case "1week": return addWeeks(today, 1);
+    case "2weeks": return addWeeks(today, 2);
+    case "1month": return addMonths(today, 1);
+    case "3months": return addMonths(today, 3);
+    default: return addWeeks(today, 1);
+  }
+};
+
 const Dashboard = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [timeSpan, setTimeSpan] = useState<string>("1week");
@@ -64,67 +109,6 @@ const Dashboard = () => {
 
     fetchUserRole();
   }, []);
-
-  const getTimeSpanEndDate = () => {
-    const today = new Date();
-    switch (timeSpan) {
-      case "1week": return addWeeks(today, 1);
-      case "2weeks": return addWeeks(today, 2);
-      case "1month": return addMonths(today, 1);
-      case "3months": return addMonths(today, 3);
-      default: return addWeeks(today, 1);
-    }
-  };
-
-  const getDepartmentJobs = (department: Department) => {
-    if (!jobs) return [];
-    const endDate = getTimeSpanEndDate();
-    const now = new Date();
-    
-    return jobs.filter(job => 
-      job.job_departments.some((dept: any) => dept.department === department) &&
-      job.job_type !== 'tour' &&
-      isWithinInterval(new Date(job.start_time), {
-        start: startOfDay(now),
-        end: endOfDay(endDate)
-      })
-    );
-  };
-
-  const getSelectedDateJobs = () => {
-    if (!date || !jobs) return [];
-    
-    const selectedDate = startOfDay(new Date(format(date, 'yyyy-MM-dd')));
-    const selectedMonthStart = startOfMonth(selectedDate);
-    const selectedMonthEnd = endOfMonth(selectedDate);
-    
-    return jobs.filter(job => {
-      if (job.job_type === 'tour') return false;
-      
-      const jobStartDate = startOfDay(new Date(job.start_time));
-      const jobEndDate = endOfDay(new Date(job.end_time));
-      
-      // Check if job falls within the selected month
-      const isInSelectedMonth = isWithinInterval(jobStartDate, {
-        start: selectedMonthStart,
-        end: selectedMonthEnd
-      }) || isWithinInterval(jobEndDate, {
-        start: selectedMonthStart,
-        end: selectedMonthEnd
-      }) || (
-        isBefore(jobStartDate, selectedMonthStart) && 
-        isAfter(jobEndDate, selectedMonthEnd)
-      );
-      
-      if (!isInSelectedMonth) return false;
-      
-      // Check if job is active on the selected date
-      return isWithinInterval(selectedDate, {
-        start: jobStartDate,
-        end: jobEndDate
-      });
-    });
-  };
 
   const handleJobClick = (jobId: string, department: Department) => {
     if (userRole === 'logistics') return;
@@ -259,7 +243,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="p-4">
             <div className="space-y-4">
-              {getSelectedDateJobs().map(job => (
+              {getSelectedDateJobs(date, jobs).map(job => (
                 <JobCard
                   key={job.id}
                   job={job}
@@ -287,7 +271,7 @@ const Dashboard = () => {
             name={name}
             icon={icon}
             color={color}
-            jobs={getDepartmentJobs(name)}
+            jobs={getDepartmentJobs(jobs, name, timeSpan)}
             onEditClick={handleEditClick}
             onDeleteClick={handleDeleteClick}
             onJobClick={(jobId) => handleJobClick(jobId, name)}
