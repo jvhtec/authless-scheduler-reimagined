@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ReportGenerator } from "../components/sound/ReportGenerator";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { PdfAnalysis } from "@/components/sound/PdfAnalysis";
 
 const Sound = () => {
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
@@ -30,10 +31,6 @@ const Sound = () => {
   const [showReportGenerator, setShowReportGenerator] = useState(false);
   const [showAnalysisForm, setShowAnalysisForm] = useState(false);
   const currentDepartment = "sound";
-
-  const { data: jobs, isLoading } = useJobs();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -226,6 +223,12 @@ const Sound = () => {
       <Dialog open={showReportGenerator} onOpenChange={setShowReportGenerator}>
         <DialogContent className="max-w-4xl">
           <ReportGenerator />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAnalysisForm} onOpenChange={setShowAnalysisForm}>
+        <DialogContent className="max-w-4xl">
+          <PdfAnalysis />
         </DialogContent>
       </Dialog>
     </div>
