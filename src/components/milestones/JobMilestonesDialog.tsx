@@ -27,6 +27,7 @@ export function JobMilestonesDialog({
   const { data: job } = useQuery({
     queryKey: ["job-details", jobId],
     queryFn: async () => {
+      console.log("Fetching job details for:", jobId);
       const { data, error } = await supabase
         .from("jobs")
         .select(`
@@ -36,7 +37,11 @@ export function JobMilestonesDialog({
         .eq("id", jobId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching job:", error);
+        throw error;
+      }
+      console.log("Job details:", data);
       return data;
     },
   });
@@ -45,17 +50,22 @@ export function JobMilestonesDialog({
   const { data: definitions } = useQuery({
     queryKey: ["milestone-definitions"],
     queryFn: async () => {
+      console.log("Fetching milestone definitions");
       const { data, error } = await supabase
         .from("milestone_definitions")
         .select("*")
         .order("default_offset");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching definitions:", error);
+        throw error;
+      }
+      console.log("Milestone definitions:", data);
       return data;
     },
   });
 
-  // Fetch existing job milestones
+  // Fetch existing job milestones with department information
   const { data: milestones, isLoading } = useQuery({
     queryKey: ["job-milestones", jobId],
     queryFn: async () => {
@@ -66,7 +76,8 @@ export function JobMilestonesDialog({
           *,
           definition:milestone_definitions(
             name,
-            category
+            category,
+            department
           ),
           completed_by:profiles(
             first_name,
@@ -76,7 +87,10 @@ export function JobMilestonesDialog({
         .eq("job_id", jobId)
         .order("due_date");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching milestones:", error);
+        throw error;
+      }
       console.log("Fetched milestones:", data);
       return data;
     },

@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Check, Star, Plane, Wrench, Moon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface Milestone {
   id: string;
@@ -35,6 +35,8 @@ interface MilestoneGanttChartProps {
 }
 
 export function MilestoneGanttChart({ milestones, startDate, jobId }: MilestoneGanttChartProps) {
+  console.log("MilestoneGanttChart props:", { milestones, startDate, jobId });
+  
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [dateTypes, setDateTypes] = useState<DateType[]>([]);
@@ -111,11 +113,22 @@ export function MilestoneGanttChart({ milestones, startDate, jobId }: MilestoneG
   };
 
   const getMilestonesByDepartment = (department: Department) => {
-    return milestones.filter(milestone => 
-      milestone.definition?.department?.includes(department) || 
-      milestone.definition?.department === null || 
-      milestone.definition?.department?.length === 0
-    );
+    console.log("Filtering milestones for department:", department);
+    return milestones.filter(milestone => {
+      const deptArray = milestone.definition?.department;
+      console.log("Milestone definition departments:", deptArray);
+      
+      // If no department specified, show in all departments
+      if (!deptArray || deptArray.length === 0) {
+        console.log("No department specified, showing in all");
+        return true;
+      }
+      
+      // Check if the milestone belongs to this department
+      const belongs = deptArray.includes(department);
+      console.log("Belongs to department:", belongs);
+      return belongs;
+    });
   };
 
   const handleCompleteMilestone = async (milestoneId: string) => {
@@ -181,6 +194,7 @@ export function MilestoneGanttChart({ milestones, startDate, jobId }: MilestoneG
         <div>
           {departments.map((department) => {
             const departmentMilestones = getMilestonesByDepartment(department);
+            console.log(`${department} milestones:`, departmentMilestones);
 
             return (
               <div key={department} className="border-b last:border-b-0">
@@ -201,6 +215,7 @@ export function MilestoneGanttChart({ milestones, startDate, jobId }: MilestoneG
                       const dueDate = new Date(milestone.due_date);
                       const dayOffset = differenceInDays(dueDate, startDate);
                       const position = (dayOffset * 96) + 48;
+                      console.log(`Milestone ${milestone.name} position:`, position);
 
                       return (
                         <ContextMenu key={milestone.id}>
