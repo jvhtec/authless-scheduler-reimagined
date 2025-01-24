@@ -10,8 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Department } from "@/types/department";
 
 interface EditJobDialogProps {
   open: boolean;
@@ -25,8 +27,41 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
   const [startTime, setStartTime] = useState(job.start_time?.slice(0, 16) || "");
   const [endTime, setEndTime] = useState(job.end_time?.slice(0, 16) || "");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch current departments when dialog opens
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      console.log("Fetching departments for job:", job.id);
+      const { data, error } = await supabase
+        .from("job_departments")
+        .select("department")
+        .eq("job_id", job.id);
+
+      if (error) {
+        console.error("Error fetching departments:", error);
+        return;
+      }
+
+      const departments = data.map(d => d.department as Department);
+      console.log("Current departments:", departments);
+      setSelectedDepartments(departments);
+    };
+
+    if (open && job.id) {
+      fetchDepartments();
+    }
+  }, [open, job.id]);
+
+  const handleDepartmentToggle = (department: Department) => {
+    setSelectedDepartments(prev => 
+      prev.includes(department)
+        ? prev.filter(d => d !== department)
+        : [...prev, department]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +69,8 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
     console.log("Updating job:", job.id);
 
     try {
-      const { error } = await supabase
+      // Update job details
+      const { error: jobError } = await supabase
         .from("jobs")
         .update({
           title,
@@ -44,7 +80,50 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
         })
         .eq("id", job.id);
 
-      if (error) throw error;
+      if (jobError) throw jobError;
+
+      // Fetch current departments
+      const { data: currentDepts, error: fetchError } = await supabase
+        .from("job_departments")
+        .select("department")
+        .eq("job_id", job.id);
+
+      if (fetchError) throw fetchError;
+
+      const currentDepartments = currentDepts.map(d => d.department);
+
+      // Remove departments that are no longer selected
+      const departsToRemove = currentDepartments.filter(
+        dept => !selectedDepartments.includes(dept as Department)
+      );
+
+      if (departsToRemove.length > 0) {
+        const { error: removeError } = await supabase
+          .from("job_departments")
+          .delete()
+          .eq("job_id", job.id)
+          .in("department", departsToRemove);
+
+        if (removeError) throw removeError;
+      }
+
+      // Add new departments
+      const departsToAdd = selectedDepartments.filter(
+        dept => !currentDepartments.includes(dept)
+      );
+
+      if (departsToAdd.length > 0) {
+        const { error: addError } = await supabase
+          .from("job_departments")
+          .insert(
+            departsToAdd.map(department => ({
+              job_id: job.id,
+              department
+            }))
+          );
+
+        if (addError) throw addError;
+      }
 
       toast({
         title: "Job updated successfully",
@@ -64,6 +143,8 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
       setIsLoading(false);
     }
   };
+
+  const departments: Department[] = ["sound", "lights", "video"];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -109,6 +190,23 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
               onChange={(e) => setEndTime(e.target.value)}
               required
             />
+          </div>
+          <div className="space-y-2">
+            <Label>Departments</Label>
+            <div className="flex flex-col gap-2">
+              {departments.map((department) => (
+                <div key={department} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`department-${department}`}
+                    checked={selectedDepartments.includes(department)}
+                    onCheckedChange={() => handleDepartmentToggle(department)}
+                  />
+                  <Label htmlFor={`department-${department}`} className="capitalize">
+                    {department}
+                  </Label>
+                </div>
+              ))}
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <Button
