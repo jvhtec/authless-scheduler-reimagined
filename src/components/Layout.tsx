@@ -10,7 +10,7 @@ import {
   SidebarTrigger
 } from "@/components/ui/sidebar";
 import { LogOut } from "lucide-react";
-import { useNavigate, Outlet, Navigate } from "react-router-dom";
+import { useNavigate, Outlet } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { ThemeToggle } from "./layout/ThemeToggle";
@@ -73,10 +73,10 @@ const Layout = () => {
     );
   }
 
-  // Instead of programmatic navigation, use Navigate component
   if (!session && !isLoading) {
     console.log("No session found in Layout, redirecting to auth");
-    return <Navigate to="/auth" replace />;
+    navigate('/auth');
+    return null;
   }
 
   return (
