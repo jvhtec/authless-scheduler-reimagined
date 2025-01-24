@@ -197,7 +197,11 @@ export const TourDateManagementDialog = ({
 
   const handleAddDate = async (date: string, location: string) => {
     try {
-      console.log("Adding new tour date:", { date, location });
+      if (!tourId) {
+        throw new Error("Tour ID is required");
+      }
+
+      console.log("Adding new tour date:", { date, location, tourId });
 
       const locationId = await getOrCreateLocation(location);
       console.log("Location ID:", locationId);
@@ -294,6 +298,12 @@ export const TourDateManagementDialog = ({
         title: "Success", 
         description: "Tour date and job created successfully" 
       });
+
+      // Reset form
+      const form = document.querySelector('form') as HTMLFormElement;
+      if (form) {
+        form.reset();
+      }
     } catch (error: any) {
       console.error("Error adding date:", error);
       toast({
@@ -451,11 +461,19 @@ export const TourDateManagementDialog = ({
             onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
-              handleAddDate(
-                formData.get("date") as string,
-                formData.get("location") as string
-              );
-              (e.target as HTMLFormElement).reset();
+              const date = formData.get("date") as string;
+              const location = formData.get("location") as string;
+              
+              if (!date || !location) {
+                toast({
+                  title: "Error",
+                  description: "Please fill in all fields",
+                  variant: "destructive",
+                });
+                return;
+              }
+              
+              handleAddDate(date, location);
             }}
             className="space-y-4"
           >
