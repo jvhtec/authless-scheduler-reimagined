@@ -558,6 +558,7 @@ export type Database = {
           category: Database["public"]["Enums"]["milestone_category"]
           created_at: string
           default_offset: number
+          department: string[] | null
           description: string | null
           id: string
           name: string
@@ -567,6 +568,7 @@ export type Database = {
           category: Database["public"]["Enums"]["milestone_category"]
           created_at?: string
           default_offset: number
+          department?: string[] | null
           description?: string | null
           id?: string
           name: string
@@ -576,6 +578,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["milestone_category"]
           created_at?: string
           default_offset?: number
+          department?: string[] | null
           description?: string | null
           id?: string
           name?: string
