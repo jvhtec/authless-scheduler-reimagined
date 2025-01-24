@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { SignUpForm } from "@/components/auth/SignUpForm";
@@ -7,10 +7,10 @@ import { supabase } from "@/lib/supabase";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Auth = () => {
-  const navigate = useNavigate();
   const [session, setSession] = useState<any>(null);
   const [showSignUp, setShowSignUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Remove dark mode class when entering auth page
   useEffect(() => {
@@ -28,18 +28,16 @@ const Auth = () => {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) throw sessionError;
         
-        console.log("Auth: Current session status:", !!session);
-        setSession(session);
-        
-        if (session) {
-          navigate("/dashboard");
-        }
+        console.log("Auth: Current session status:", !!currentSession);
+        setSession(currentSession);
       } catch (error: any) {
         console.error("Auth: Session check error:", error);
         setError(error.message);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -47,16 +45,26 @@ const Auth = () => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
       console.log("Auth: Auth state changed:", _event);
-      setSession(session);
-      if (session) {
-        navigate("/dashboard");
-      }
+      setSession(currentSession);
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+      </div>
+    );
+  }
+
+  // Use Navigate component for redirection
+  if (session) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col px-4 py-8 md:py-12">
