@@ -1,6 +1,7 @@
+
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isAfter, isBefore, addDays } from "date-fns";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Printer } from "lucide-react";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isAfter, isBefore, addDays, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -14,6 +15,15 @@ import {
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface CalendarSectionProps {
   date: Date | undefined;
@@ -27,6 +37,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const [dateTypes, setDateTypes] = useState<Record<string, any>>({});
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [showMilestones, setShowMilestones] = useState(false);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
   
   const currentMonth = date || new Date();
   const firstDayOfMonth = startOfMonth(currentMonth);
@@ -55,18 +66,16 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const fetchDateTypes = async () => {
       if (!jobs?.length) return;
       
-      console.log('Fetching date types for jobs:', jobs.map(job => job.id));
       const { data, error } = await supabase
         .from('job_date_types')
         .select('*')
-        .in('job_id', jobs.map(job => job.id));
+        .in('job_id', jobs.map((job: any) => job.id));
         
       if (error) {
         console.error('Error fetching date types:', error);
         return;
       }
 
-      console.log('Received date types:', data);
       const types = data.reduce((acc: Record<string, any>, curr) => {
         const key = `${curr.job_id}-${curr.date}`;
         acc[key] = curr;
@@ -82,32 +91,32 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const getDateTypeIcon = (jobId: string, date: Date) => {
     const key = `${jobId}-${format(date, 'yyyy-MM-dd')}`;
     const dateType = dateTypes[key]?.type;
-    console.log('Getting date type icon for:', { jobId, date, key, dateType });
 
     switch (dateType) {
-      case 'travel':
-        return <Plane className="h-3 w-3 text-blue-500" />;
-      case 'setup':
-        return <Wrench className="h-3 w-3 text-yellow-500" />;
-      case 'show':
-        return <Star className="h-3 w-3 text-green-500" />;
-      case 'off':
-        return <Moon className="h-3 w-3 text-gray-500" />;
-      default:
-        return null;
+      case 'travel': return <Plane className="h-3 w-3 text-blue-500" />;
+      case 'setup': return <Wrench className="h-3 w-3 text-yellow-500" />;
+      case 'show': return <Star className="h-3 w-3 text-green-500" />;
+      case 'off': return <Moon className="h-3 w-3 text-gray-500" />;
+      default: return null;
+    }
+  };
+
+  const getDateTypeSymbol = (type: string) => {
+    switch (type) {
+      case 'travel': return '✈️';
+      case 'setup': return '🔧';
+      case 'show': return '⭐';
+      case 'off': return '🌙';
+      default: return '';
     }
   };
 
   const getDepartmentIcon = (dept: string) => {
     switch (dept) {
-      case 'sound':
-        return <Music2 className="h-3 w-3" />;
-      case 'lights':
-        return <Lightbulb className="h-3 w-3" />;
-      case 'video':
-        return <Video className="h-3 w-3" />;
-      default:
-        return null;
+      case 'sound': return <Music2 className="h-3 w-3" />;
+      case 'lights': return <Lightbulb className="h-3 w-3" />;
+      case 'video': return <Video className="h-3 w-3" />;
+      default: return null;
     }
   };
 
@@ -147,13 +156,10 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     return jobs.filter(job => {
       const startDate = new Date(job.start_time);
       const endDate = new Date(job.end_time);
-      
       const compareDate = format(date, 'yyyy-MM-dd');
       const jobStartDate = format(startDate, 'yyyy-MM-dd');
       const jobEndDate = format(endDate, 'yyyy-MM-dd');
-      
       const isSingleDayJob = jobStartDate === jobEndDate;
-      
       const isWithinDuration = isSingleDayJob 
         ? compareDate === jobStartDate
         : compareDate >= jobStartDate && compareDate <= jobEndDate;
@@ -167,6 +173,116 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     });
   };
 
+  const generatePDF = async (range: 'month' | 'quarter' | 'year') => {
+    const doc = new jsPDF('landscape');
+    const currentDate = date || new Date();
+    let startDate: Date, endDate: Date;
+
+    switch (range) {
+      case 'month':
+        startDate = startOfMonth(currentDate);
+        endDate = endOfMonth(currentDate);
+        break;
+      case 'quarter':
+        startDate = startOfQuarter(addMonths(currentDate, 1));
+        endDate = endOfQuarter(addMonths(currentDate, 3));
+        break;
+      case 'year':
+        startDate = startOfYear(currentDate);
+        endDate = endOfYear(currentDate);
+        break;
+      default:
+        startDate = startOfMonth(currentDate);
+        endDate = endOfMonth(currentDate);
+    }
+
+    const allDays = eachDayOfInterval({ start: startDate, end: endDate });
+    
+    const tableData = allDays.map(day => {
+      const dayJobs = getJobsForDate(day);
+      return {
+        date: format(day, 'yyyy-MM-dd'),
+        day: format(day, 'EEEE'),
+        jobs: dayJobs.map(job => {
+          const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
+          const dateType = dateTypes[key]?.type;
+          return {
+            title: job.title,
+            department: job.job_departments.map((d: any) => d.department).join(', '),
+            time: `${format(new Date(job.start_time), 'HH:mm')} - ${format(new Date(job.end_time), 'HH:mm')}`,
+            type: dateType
+          };
+        })
+      };
+    });
+
+    const pdfData = tableData.map(d => [
+      d.date,
+      d.day,
+      d.jobs.map(j => 
+        `${getDateTypeSymbol(j.type)} ${j.title} (${j.department})\n${j.time}`
+      ).join('\n\n')
+    ]);
+
+    const legend = [
+      { symbol: '✈️', meaning: 'Travel Day' },
+      { symbol: '🔧', meaning: 'Setup Day' },
+      { symbol: '⭐', meaning: 'Show Day' },
+      { symbol: '🌙', meaning: 'Day Off' },
+    ];
+
+    doc.setFontSize(12);
+    doc.text(`Calendar - ${format(startDate, 'MMM yyyy')} to ${format(endDate, 'MMM yyyy')}`, 14, 15);
+    
+    doc.setFontSize(10);
+    legend.forEach((item, index) => {
+      doc.text(`${item.symbol} ${item.meaning}`, 14 + (index * 50), 25);
+    });
+
+    (doc as any).autoTable({
+      startY: 30,
+      head: [['Date', 'Day', 'Jobs']],
+      body: pdfData,
+      theme: 'grid',
+      styles: { fontSize: 10, cellPadding: 3 },
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 230 }
+      }
+    });
+
+    doc.save(`calendar-${range}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    setShowPrintDialog(false);
+  };
+
+  const PrintDialog = () => (
+    <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <Printer className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Select Print Range</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4 mt-4">
+          <Button onClick={() => generatePDF('month')}>
+            Current Month ({format(date || new Date(), 'MMMM yyyy')})
+          </Button>
+          <Button onClick={() => generatePDF('quarter')}>
+            Next Quarter ({format(addMonths(startOfQuarter(addMonths(date || new Date(), 1)), 1), 'Q')} Quarter)
+          </Button>
+          <Button onClick={() => generatePDF('year')}>
+            Whole Year ({format(date || new Date(), 'yyyy')})
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   const renderJobCard = (job: any, date: Date) => {
     const dateTypeIcon = getDateTypeIcon(job.id, date);
     const totalRequired = getTotalRequiredPersonnel(job);
@@ -177,30 +293,20 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         key={job.id} 
         jobId={job.id} 
         date={date}
-        onTypeChange={() => {
-          const fetchDateTypes = async () => {
-            console.log('Refreshing date types after change for job:', job.id);
-            const { data, error } = await supabase
-              .from('job_date_types')
-              .select('*')
-              .eq('job_id', job.id);
-              
-            if (error) {
-              console.error('Error fetching date types:', error);
-              return;
-            }
-
-            console.log('Updated date types:', data);
+        onTypeChange={async () => {
+          const { data, error } = await supabase
+            .from('job_date_types')
+            .select('*')
+            .eq('job_id', job.id);
+            
+          if (!error) {
             const types = data.reduce((acc: Record<string, any>, curr) => {
               const key = `${curr.job_id}-${curr.date}`;
               acc[key] = curr;
               return acc;
             }, {});
-
             setDateTypes(prev => ({ ...prev, ...types }));
-          };
-
-          fetchDateTypes();
+          }
         }}
       >
         <TooltipProvider>
@@ -235,7 +341,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
                     {format(new Date(job.end_time), "MMM d, HH:mm")}
                   </span>
                 </div>
-                {job.location && job.location.name && (
+                {job.location?.name && (
                   <div className="flex items-center gap-2 text-sm">
                     <MapPin className="h-4 w-4" />
                     <span>{job.location.name}</span>
@@ -290,6 +396,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
             </h2>
           </div>
           <div className="flex items-center space-x-2">
+            <PrintDialog />
             <Button variant="ghost" size="icon" onClick={handlePreviousMonth}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -355,3 +462,37 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     </Card>
   );
 };
+```
+
+To use this code:
+
+1. Install required dependencies:
+```bash
+npm install jspdf jspdf-autotable
+```
+
+2. Make sure you have the required Lucide icons imported.
+
+3. The PDF export feature will:
+   - Show Unicode symbols for different date types (✈️, 🔧, ⭐, 🌙)
+   - Include a legend explaining the symbols
+   - Generate landscape-oriented tables
+   - Support three ranges: current month, next quarter, and whole year
+   - Show job times and departments
+   - Automatically download the PDF when generated
+
+4. The calendar maintains all original functionality including:
+   - Date type context menus
+   - Job tooltips
+   - Department filtering
+   - Collapsing/expanding
+   - Job milestones dialog
+
+Test the PDF generation by:
+1. Clicking the printer icon in the calendar toolbar
+2. Selecting a date range option
+3. Checking the downloaded PDF for:
+   - Correct date range
+   - Job entries with symbols
+   - Proper formatting and layout
+   - Legend at the top of the document
