@@ -174,11 +174,11 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     const dateTypeLabels: Record<string, string> = {
-      travel: '✈',
-      setup: '🛠',
-      show: '★',
-      off: '🌙',
-      rehearsal: '🎤'
+      travel: 'V',
+      setup: 'M',
+      show: 'S',
+      off: 'O',
+      rehearsal: 'E'
     };
 
     for (const monthStart of months) {
