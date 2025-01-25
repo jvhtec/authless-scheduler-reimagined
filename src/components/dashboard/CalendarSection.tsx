@@ -177,9 +177,10 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const startX = 10;
     const startY = 30;
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const colors = ['#FFCDD2', '#F8BBD0', '#E1BEE7', '#D1C4E9', '#C5CAE9', '#BBDEFB', '#B3E5FC', '#B2EBF2'];
 
-    for (const monthStart of months) {
-      if (months.indexOf(monthStart) > 0) doc.addPage('landscape');
+    months.forEach((monthStart, pageIndex) => {
+      if (pageIndex > 0) doc.addPage('landscape');
       
       const monthEnd = endOfMonth(monthStart);
       const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -210,8 +211,8 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
       });
 
       let yPos = startY + 10;
-      for (const week of weeks) {
-        for (const [dayIndex, day] of week.entries()) {
+      weeks.forEach(week => {
+        week.forEach((day, dayIndex) => {
           const x = startX + (dayIndex * cellWidth);
           const y = yPos;
           
@@ -225,7 +226,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
           const dayJobs = getJobsForDate(day);
           let eventY = y + 8;
           
-          for (const [index, job] of dayJobs.slice(0, 8).entries()) {
+          dayJobs.slice(0, 8).forEach(async (job, index) => {
             const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
             const dateType = dateTypes[key]?.type;
             
@@ -234,54 +235,38 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
               doc.addImage(iconDataUrl, 'PNG', x + 2, eventY + (index * 5), 3, 3);
             }
 
-            // Use job's color with transparency
-            const jobColor = job.color || '#000000';
-            const backgroundColor = hexToRgba(jobColor, 0.2);
-            doc.setFillColor(backgroundColor);
+            doc.setFillColor(colors[index % colors.length]);
             doc.rect(x + 1, eventY + (index * 5), cellWidth - 2, 4, 'F');
 
-            // Ensure text is readable
-            const textColor = getContrastColor(jobColor);
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(7);
-            doc.setTextColor(textColor);
+            doc.setTextColor(0);
             doc.text(job.title.substring(0, 18), x + 6, eventY + (index * 5) + 3);
-          }
-        }
+          });
+        });
         yPos += cellHeight;
-      }
+      });
 
-      if (months.indexOf(monthStart) === 0) {
+      if (pageIndex === 0) {
         const legendY = yPos + 10;
-        const iconTypes = ['travel', 'setup', 'show', 'off'] as const;
-        
-        for (const [index, type] of iconTypes.entries()) {
-          const component = await getDateTypeIconComponent(type);
-          if (component) {
-            doc.addImage(component, 'PNG', 10 + (index * 30), legendY, 5, 5);
-            doc.text(type, 17 + (index * 30), legendY + 5);
+        const icons = [
+          { type: 'travel', component: await getDateTypeIconComponent('travel') },
+          { type: 'setup', component: await getDateTypeIconComponent('setup') },
+          { type: 'show', component: await getDateTypeIconComponent('show') },
+          { type: 'off', component: await getDateTypeIconComponent('off') },
+        ];
+
+        icons.forEach((icon, index) => {
+          if (icon.component) {
+            doc.addImage(icon.component, 'PNG', 10 + (index * 30), legendY, 5, 5);
+            doc.text(icon.type, 17 + (index * 30), legendY + 5);
           }
-        }
+        });
       }
-    }
+    });
 
     doc.save(`calendar-${range}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
     setShowPrintDialog(false);
-  };
-
-  const hexToRgba = (hex: string, alpha: number) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return [r, g, b, alpha * 255];
-  };
-
-  const getContrastColor = (hex: string) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.5 ? '#000000' : '#FFFFFF';
   };
 
   const getDateTypeIconComponent = async (type: string) => {
