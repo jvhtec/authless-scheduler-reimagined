@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
@@ -70,169 +69,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     fetchDateTypes();
   }, [jobs]);
 
-  // PDF Generation Logic
-  const generatePDF = async (range: 'month' | 'quarter' | 'year') => {
-    const doc = new jsPDF('landscape');
-    const currentDate = date || new Date();
-    let startDate: Date, endDate: Date;
-
-    switch (range) {
-      case 'month':
-        startDate = startOfMonth(currentDate);
-        endDate = endOfMonth(currentDate);
-        break;
-      case 'quarter':
-        startDate = startOfQuarter(addMonths(currentDate, 1));
-        endDate = endOfQuarter(addMonths(currentDate, 3));
-        break;
-      case 'year':
-        startDate = startOfYear(currentDate);
-        endDate = endOfYear(currentDate);
-        break;
-      default:
-        startDate = startOfMonth(currentDate);
-        endDate = endOfMonth(currentDate);
-    }
-
-    const allDays = eachDayOfInterval({ start: startDate, end: endDate });
-    const weeks: Date[][] = [];
-    let currentWeek: Date[] = [];
-    
-    allDays.forEach((day, index) => {
-      currentWeek.push(day);
-      if ((index + 1) % 7 === 0) {
-        weeks.push([...currentWeek]);
-        currentWeek = [];
-      }
-    });
-
-    // PDF Styling Constants
-    const cellWidth = 40;
-    const cellHeight = 40;
-    const startX = 10;
-    const startY = 30;
-    const pageHeight = doc.internal.pageSize.height;
-    const daysOfWeek = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'];
-    const colorPalette = ['#FFEBEE', '#F3E5F5', '#E8EAF6', '#E3F2FD', '#E0F2F1', '#F1F8E9', '#FFF3E0', '#EFEBE9'];
-
-    // Header
-    doc.setFontSize(16);
-    doc.text(format(startDate, 'MMMM yyyy'), startX + 100, 20, { align: 'center' });
-    
-    // Day headers
-    daysOfWeek.forEach((day, index) => {
-      doc.setFillColor(41, 128, 185);
-      doc.rect(startX + (index * cellWidth), startY, cellWidth, 10, 'F');
-      doc.setTextColor(255);
-      doc.setFontSize(10);
-      doc.text(day, startX + (index * cellWidth) + 15, startY + 7);
-    });
-
-    // Calendar grid
-    let yPos = startY + 10;
-    weeks.forEach((week, weekIndex) => {
-      // Check page overflow
-      if (yPos + cellHeight > pageHeight - 20) {
-        doc.addPage('landscape');
-        yPos = startY;
-      }
-
-      week.forEach((day, dayIndex) => {
-        const x = startX + (dayIndex * cellWidth);
-        const y = yPos;
-        
-        // Cell background
-        doc.setDrawColor(200);
-        doc.rect(x, y, cellWidth, cellHeight);
-
-        // Date number
-        doc.setTextColor(0);
-        doc.setFontSize(12);
-        doc.text(format(day, 'd'), x + 2, y + 5);
-
-        // Events
-        const dayJobs = getJobsForDate(day);
-        let eventY = y + 8;
-        
-        dayJobs.slice(0, 8).forEach((job, index) => {
-          const color = colorPalette[index % colorPalette.length];
-          
-          // Event background
-          doc.setFillColor(color);
-          doc.rect(x + 1, eventY + (index * 5), cellWidth - 2, 4, 'F');
-
-          // Icon
-          const icon = getDateTypeIconComponent(job.type);
-          if (icon) {
-            doc.addImage(icon, 'PNG', x + 3, eventY + (index * 5) + 0.5, 3, 3);
-          }
-
-          // Bold text
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(7);
-          doc.setTextColor(0);
-          doc.text(job.title.substring(0, 18), x + 7, eventY + (index * 5) + 3);
-        });
-
-        if (dayJobs.length > 8) {
-          doc.setFontSize(7);
-          doc.text(`+${dayJobs.length - 8} more`, x + 2, y + 38);
-        }
-      });
-
-      yPos += cellHeight;
-    });
-
-    // Legend
-    const legendY = yPos + 10;
-    const icons = [
-      { type: 'travel', component: getDateTypeIconComponent('travel') },
-      { type: 'setup', component: getDateTypeIconComponent('setup') },
-      { type: 'show', component: getDateTypeIconComponent('show') },
-      { type: 'off', component: getDateTypeIconComponent('off') },
-    ];
-
-    icons.forEach((icon, index) => {
-      if (icon.component) {
-        doc.addImage(icon.component, 'PNG', 10 + (index * 30), legendY, 5, 5);
-        doc.text(icon.type, 17 + (index * 30), legendY + 5);
-      }
-    });
-
-    doc.save(`calendar-${range}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-    setShowPrintDialog(false);
-  };
-
-  // Icon rendering helpers
-  const getDateTypeIconComponent = (type: string) => {
-    const iconSize = 16;
-    const canvas = document.createElement('canvas');
-    canvas.width = iconSize;
-    canvas.height = iconSize;
-    const ctx = canvas.getContext('2d')!;
-    
-    const icons: Record<string, string> = {
-      travel: '<path d="M17.8 19.1a.75.75 0 1 0-1.2-.9l-1.5-2a.75.75 0 0 0-.6-.3h-3v-2h1a.75.75 0 0 0 .75-.75v-3.5a.75.75 0 0 0-.75-.75h-3a.75.75 0 0 0-.75.75v3.5c0 .414.336.75.75.75h1v2h-3a.75.75 0 0 0-.6.3l-1.5 2a.75.75 0 1 0 1.2.9l1.2-1.6h9.6l1.2 1.6Z"/>',
-      setup: '<path d="M14.25 6.75a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Zm-2.655 4.805a.75.75 0 0 1-.345.635l-2.25 1.5a.75.75 0 0 1-.787-1.28l1.38-.92V9.75a.75.75 0 0 1 1.5 0v2.58l1.38.92a.75.75 0 0 1-.338 1.355Z"/>',
-      show: '<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 0 0 .95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 0 0-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 0 0-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 0 0-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 0 0 .951-.69l1.07-3.292Z"/>',
-      off: '<path d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z"/>'
-    };
-
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="currentColor">
-        ${icons[type] || ''}
-      </svg>
-    `;
-
-    const img = new Image();
-    img.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
-    
-    ctx.clearRect(0, 0, iconSize, iconSize);
-    ctx.drawImage(img, 0, 0, iconSize, iconSize);
-    return canvas.toDataURL();
-  };
-
-  // Existing component logic
   const getDateTypeIcon = (jobId: string, date: Date) => {
     const key = `${jobId}-${format(date, 'yyyy-MM-dd')}`;
     const dateType = dateTypes[key]?.type;
@@ -257,18 +93,49 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
 
   const getTotalRequiredPersonnel = (job: any) => {
     let total = 0;
-    // ... existing personnel calculation logic
+    // Calculate total personnel required for the job
+    total += job.job_assignments?.length || 0;
     return total;
   };
 
   const getJobsForDate = (date: Date) => {
-    // ... existing job filtering logic
-    return filteredJobs;
+    if (!jobs) return [];
+    
+    const jobsForDate = jobs.filter(job => {
+      const startDate = new Date(job.start_time);
+      const endDate = new Date(job.end_time);
+      const compareDate = format(date, 'yyyy-MM-dd');
+      const jobStartDate = format(startDate, 'yyyy-MM-dd');
+      const jobEndDate = format(endDate, 'yyyy-MM-dd');
+      const isSingleDayJob = jobStartDate === jobEndDate;
+      const isWithinDuration = isSingleDayJob 
+        ? compareDate === jobStartDate
+        : compareDate >= jobStartDate && compareDate <= jobEndDate;
+      
+      if (department) {
+        return isWithinDuration && 
+               job.job_departments.some((dept: any) => dept.department === department);
+      }
+      
+      return isWithinDuration;
+    });
+
+    return jobsForDate;
   };
 
   const renderJobCard = (job: any, date: Date) => {
-    // ... existing job card rendering logic
-    return jobCard;
+    return (
+      <div className="border p-2 rounded-md">
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">{job.title}</span>
+          <span className="text-sm">{format(new Date(job.start_time), 'HH:mm')}</span>
+        </div>
+        <div className="flex items-center">
+          {getDepartmentIcon(job.job_departments[0]?.department)}
+          <span className="ml-2 text-sm">{getTotalRequiredPersonnel(job)} Personnel Required</span>
+        </div>
+      </div>
+    );
   };
 
   // Navigation handlers
