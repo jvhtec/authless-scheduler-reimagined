@@ -1051,7 +1051,7 @@ export type Database = {
         | "production"
         | "administrative"
       direct_message_status: "unread" | "read"
-      job_date_type: "travel" | "setup" | "show" | "off"
+      job_date_type: "travel" | "setup" | "show" | "off" | "rehearsal"
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
       job_type: "single" | "tour"
       message_status: "unread" | "read"
