@@ -1,5 +1,5 @@
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { Plane, Wrench, Star, Moon } from "lucide-react";
+import { Plane, Wrench, Star, Moon, Mic } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { format, startOfDay } from "date-fns";
@@ -12,9 +12,8 @@ interface DateTypeContextMenuProps {
 }
 
 export const DateTypeContextMenu = ({ children, jobId, date, onTypeChange }: DateTypeContextMenuProps) => {
-  const handleSetDateType = async (type: 'travel' | 'setup' | 'show' | 'off') => {
+  const handleSetDateType = async (type: 'travel' | 'setup' | 'show' | 'off' | 'rehearsal') => {
     try {
-      // Convert to start of day to ensure consistent date handling
       const localDate = startOfDay(date);
       const formattedDate = format(localDate, 'yyyy-MM-dd');
       
@@ -58,6 +57,9 @@ export const DateTypeContextMenu = ({ children, jobId, date, onTypeChange }: Dat
         </ContextMenuItem>
         <ContextMenuItem onClick={() => handleSetDateType('show')} className="flex items-center gap-2">
           <Star className="h-4 w-4" /> Show
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => handleSetDateType('rehearsal')} className="flex items-center gap-2">
+          <Mic className="h-4 w-4" /> Rehearsal
         </ContextMenuItem>
         <ContextMenuItem onClick={() => handleSetDateType('off')} className="flex items-center gap-2">
           <Moon className="h-4 w-4" /> Off
