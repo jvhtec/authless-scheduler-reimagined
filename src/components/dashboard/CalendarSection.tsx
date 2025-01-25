@@ -177,7 +177,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const startX = 10;
     const startY = 30;
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const colors = ['#FFCDD2', '#F8BBD0', '#E1BEE7', '#D1C4E9', '#C5CAE9', '#BBDEFB', '#B3E5FC', '#B2EBF2'];
 
     for (const monthStart of months) {
       if (months.indexOf(monthStart) > 0) doc.addPage('landscape');
@@ -235,12 +234,17 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
               doc.addImage(iconDataUrl, 'PNG', x + 2, eventY + (index * 5), 3, 3);
             }
 
-            doc.setFillColor(colors[index % colors.length]);
+            // Use job's color with transparency
+            const jobColor = job.color || '#000000';
+            const backgroundColor = hexToRgba(jobColor, 0.2);
+            doc.setFillColor(backgroundColor);
             doc.rect(x + 1, eventY + (index * 5), cellWidth - 2, 4, 'F');
 
+            // Ensure text is readable
+            const textColor = getContrastColor(jobColor);
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(7);
-            doc.setTextColor(0);
+            doc.setTextColor(textColor);
             doc.text(job.title.substring(0, 18), x + 6, eventY + (index * 5) + 3);
           }
         }
@@ -263,6 +267,21 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
 
     doc.save(`calendar-${range}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
     setShowPrintDialog(false);
+  };
+
+  const hexToRgba = (hex: string, alpha: number) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return [r, g, b, alpha * 255];
+  };
+
+  const getContrastColor = (hex: string) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5 ? '#000000' : '#FFFFFF';
   };
 
   const getDateTypeIconComponent = async (type: string) => {
