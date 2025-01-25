@@ -1,28 +1,17 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Printer } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isAfter, isBefore, addDays, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { DateTypeContextMenu } from "./DateTypeContextMenu";
 import { JobMilestonesDialog } from "@/components/milestones/JobMilestonesDialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface CalendarSectionProps {
   date: Date | undefined;
@@ -42,7 +31,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const firstDayOfMonth = startOfMonth(currentMonth);
   const lastDayOfMonth = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth });
-
   const startDay = firstDayOfMonth.getDay();
   const paddingDays = startDay === 0 ? 6 : startDay - 1;
   
@@ -70,18 +58,12 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         .select('*')
         .in('job_id', jobs.map((job: any) => job.id));
         
-      if (error) {
-        console.error('Error fetching date types:', error);
-        return;
-      }
+      if (error) return;
 
-      const types = data.reduce((acc: Record<string, any>, curr) => {
-        const key = `${curr.job_id}-${curr.date}`;
-        acc[key] = curr;
-        return acc;
-      }, {});
-
-      setDateTypes(types);
+      setDateTypes(data.reduce((acc: Record<string, any>, curr) => ({
+        ...acc,
+        [`${curr.job_id}-${curr.date}`]: curr
+      }), {}));
     };
 
     fetchDateTypes();
@@ -100,16 +82,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     }
   };
 
-  const getDateTypeSymbol = (type: string) => {
-    switch (type) {
-      case 'travel': return '✈️';
-      case 'setup': return '🔧';
-      case 'show': return '⭐';
-      case 'off': return '🌙';
-      default: return '';
-    }
-  };
-
   const getDepartmentIcon = (dept: string) => {
     switch (dept) {
       case 'sound': return <Music2 className="h-3 w-3" />;
@@ -123,27 +95,24 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     let total = 0;
     
     if (job.sound_job_personnel?.length > 0) {
-      const sound = job.sound_job_personnel[0];
-      total += (sound.foh_engineers || 0) + 
-               (sound.mon_engineers || 0) + 
-               (sound.pa_techs || 0) + 
-               (sound.rf_techs || 0);
+      total += (job.sound_job_personnel[0].foh_engineers || 0) + 
+               (job.sound_job_personnel[0].mon_engineers || 0) + 
+               (job.sound_job_personnel[0].pa_techs || 0) + 
+               (job.sound_job_personnel[0].rf_techs || 0);
     }
     
     if (job.lights_job_personnel?.length > 0) {
-      const lights = job.lights_job_personnel[0];
-      total += (lights.lighting_designers || 0) + 
-               (lights.lighting_techs || 0) + 
-               (lights.spot_ops || 0) + 
-               (lights.riggers || 0);
+      total += (job.lights_job_personnel[0].lighting_designers || 0) + 
+               (job.lights_job_personnel[0].lighting_techs || 0) + 
+               (job.lights_job_personnel[0].spot_ops || 0) + 
+               (job.lights_job_personnel[0].riggers || 0);
     }
     
     if (job.video_job_personnel?.length > 0) {
-      const video = job.video_job_personnel[0];
-      total += (video.video_directors || 0) + 
-               (video.camera_ops || 0) + 
-               (video.playback_techs || 0) + 
-               (video.video_techs || 0);
+      total += (job.video_job_personnel[0].video_directors || 0) + 
+               (job.video_job_personnel[0].camera_ops || 0) + 
+               (job.video_job_personnel[0].playback_techs || 0) + 
+               (job.video_job_personnel[0].video_techs || 0);
     }
     
     return total;
@@ -163,12 +132,9 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         ? compareDate === jobStartDate
         : compareDate >= jobStartDate && compareDate <= jobEndDate;
       
-      if (department) {
-        return isWithinDuration && 
-               job.job_departments.some((dept: any) => dept.department === department);
-      }
-      
-      return isWithinDuration;
+      return department 
+        ? isWithinDuration && job.job_departments.some((d: any) => d.department === department)
+        : isWithinDuration;
     });
   };
 
@@ -196,59 +162,81 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     }
 
     const allDays = eachDayOfInterval({ start: startDate, end: endDate });
+    const weeks: Date[][] = [];
+    let currentWeek: Date[] = [];
     
-    const tableData = allDays.map(day => {
-      const dayJobs = getJobsForDate(day);
-      return {
-        date: format(day, 'yyyy-MM-dd'),
-        day: format(day, 'EEEE'),
-        jobs: dayJobs.map(job => {
+    allDays.forEach((day, index) => {
+      currentWeek.push(day);
+      if ((index + 1) % 7 === 0) {
+        weeks.push([...currentWeek]);
+        currentWeek = [];
+      }
+    });
+
+    const cellWidth = 40;
+    const cellHeight = 50;
+    const startX = 10;
+    const startY = 30;
+    const daysOfWeek = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'];
+
+    doc.setFontSize(16);
+    doc.text(format(startDate, 'MMMM yyyy'), startX + 100, 20, { align: 'center' });
+    
+    daysOfWeek.forEach((day, index) => {
+      doc.setFillColor(41, 128, 185);
+      doc.rect(startX + (index * cellWidth), startY, cellWidth, 10, 'F');
+      doc.setTextColor(255);
+      doc.setFontSize(10);
+      doc.text(day, startX + (index * cellWidth) + 2, startY + 7);
+    });
+
+    weeks.forEach((week, weekIndex) => {
+      week.forEach((day, dayIndex) => {
+        const x = startX + (dayIndex * cellWidth);
+        const y = startY + 10 + (weekIndex * cellHeight);
+        
+        doc.setDrawColor(200);
+        doc.rect(x, y, cellWidth, cellHeight);
+
+        doc.setTextColor(0);
+        doc.setFontSize(12);
+        doc.text(format(day, 'd'), x + 2, y + 5);
+
+        const dayJobs = getJobsForDate(day);
+        let yOffset = y + 10;
+        
+        dayJobs.slice(0, 8).forEach((job, index) => {
           const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
           const dateType = dateTypes[key]?.type;
-          return {
-            title: job.title,
-            department: job.job_departments.map((d: any) => d.department).join(', '),
-            time: `${format(new Date(job.start_time), 'HH:mm')} - ${format(new Date(job.end_time), 'HH:mm')}`,
-            type: dateType
-          };
-        })
-      };
+          const icon = getDateTypeIconComponent(dateType);
+          
+          if (icon) {
+            doc.addImage(icon, 'PNG', x + 2, yOffset + (index * 5), 3, 3);
+          }
+
+          doc.setFontSize(7);
+          doc.text(job.title.substring(0, 18), x + 7, yOffset + (index * 5) + 3);
+        });
+
+        if (dayJobs.length > 8) {
+          doc.setFontSize(7);
+          doc.text(`+${dayJobs.length - 8} more`, x + 2, y + (8 * 5) + 5);
+        }
+      });
     });
 
-    const pdfData = tableData.map(d => [
-      d.date,
-      d.day,
-      d.jobs.map(j => 
-        `${getDateTypeSymbol(j.type)} ${j.title} (${j.department})\n${j.time}`
-      ).join('\n\n')
-    ]);
-
-    const legend = [
-      { symbol: '✈️', meaning: 'Travel Day' },
-      { symbol: '🔧', meaning: 'Setup Day' },
-      { symbol: '⭐', meaning: 'Show Day' },
-      { symbol: '🌙', meaning: 'Day Off' },
+    const legendY = startY + (weeks.length * cellHeight) + 20;
+    const icons = [
+      { type: 'travel', component: getDateTypeIconComponent('travel') },
+      { type: 'setup', component: getDateTypeIconComponent('setup') },
+      { type: 'show', component: getDateTypeIconComponent('show') },
+      { type: 'off', component: getDateTypeIconComponent('off') },
     ];
 
-    doc.setFontSize(12);
-    doc.text(`Calendar - ${format(startDate, 'MMM yyyy')} to ${format(endDate, 'MMM yyyy')}`, 14, 15);
-    
-    doc.setFontSize(10);
-    legend.forEach((item, index) => {
-      doc.text(`${item.symbol} ${item.meaning}`, 14 + (index * 50), 25);
-    });
-
-    (doc as any).autoTable({
-      startY: 30,
-      head: [['Date', 'Day', 'Jobs']],
-      body: pdfData,
-      theme: 'grid',
-      styles: { fontSize: 10, cellPadding: 3 },
-      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-      columnStyles: {
-        0: { cellWidth: 25 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 230 }
+    icons.forEach((icon, index) => {
+      if (icon.component) {
+        doc.addImage(icon.component, 'PNG', 10 + (index * 30), legendY, 5, 5);
+        doc.text(icon.type, 17 + (index * 30), legendY + 5);
       }
     });
 
@@ -256,31 +244,42 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     setShowPrintDialog(false);
   };
 
-  const PrintDialog = () => (
-    <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Printer className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Select Print Range</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4 mt-4">
-          <Button onClick={() => generatePDF('month')}>
-            Current Month ({format(date || new Date(), 'MMMM yyyy')})
-          </Button>
-          <Button onClick={() => generatePDF('quarter')}>
-            Next Quarter ({format(addMonths(startOfQuarter(addMonths(date || new Date(), 1)), 1), 'Q')} Quarter)
-          </Button>
-          <Button onClick={() => generatePDF('year')}>
-            Whole Year ({format(date || new Date(), 'yyyy')})
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  const getDateTypeIconComponent = (type: string) => {
+    const iconSize = 16;
+    const canvas = document.createElement('canvas');
+    canvas.width = iconSize;
+    canvas.height = iconSize;
+    const ctx = canvas.getContext('2d')!;
+    
+    switch(type) {
+      case 'travel':
+        return iconToDataURI(<Plane size={iconSize} color="#2563eb" />, canvas, ctx);
+      case 'setup':
+        return iconToDataURI(<Wrench size={iconSize} color="#ca8a04" />, canvas, ctx);
+      case 'show':
+        return iconToDataURI(<Star size={iconSize} color="#16a34a" />, canvas, ctx);
+      case 'off':
+        return iconToDataURI(<Moon size={iconSize} color="#525252" />, canvas, ctx);
+      default:
+        return null;
+    }
+  };
+
+  const iconToDataURI = (icon: JSX.Element, canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => {
+    const parser = new DOMParser();
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}">
+        ${icon.props.children}
+      </svg>
+    `;
+    
+    const img = new Image();
+    img.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+    return canvas.toDataURL();
+  };
 
   const renderJobCard = (job: any, date: Date) => {
     const dateTypeIcon = getDateTypeIcon(job.id, date);
@@ -293,19 +292,18 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         jobId={job.id} 
         date={date}
         onTypeChange={async () => {
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from('job_date_types')
             .select('*')
             .eq('job_id', job.id);
             
-          if (!error) {
-            const types = data.reduce((acc: Record<string, any>, curr) => {
-              const key = `${curr.job_id}-${curr.date}`;
-              acc[key] = curr;
-              return acc;
-            }, {});
-            setDateTypes(prev => ({ ...prev, ...types }));
-          }
+          setDateTypes(prev => ({
+            ...prev,
+            ...data?.reduce((acc: Record<string, any>, curr) => ({
+              ...acc,
+              [`${curr.job_id}-${curr.date}`]: curr
+            }), {})
+          }));
         }}
       >
         <TooltipProvider>
@@ -330,9 +328,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
             <TooltipContent className="w-64 p-2">
               <div className="space-y-2">
                 <h4 className="font-semibold">{job.title}</h4>
-                {job.description && (
-                  <p className="text-sm text-muted-foreground">{job.description}</p>
-                )}
+                {job.description && <p className="text-sm text-muted-foreground">{job.description}</p>}
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="h-4 w-4" />
                   <span>
@@ -395,7 +391,29 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
             </h2>
           </div>
           <div className="flex items-center space-x-2">
-            <PrintDialog />
+            <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Printer className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Select Print Range</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col gap-4 mt-4">
+                  <Button onClick={() => generatePDF('month')}>
+                    Current Month ({format(date || new Date(), 'MMMM yyyy')})
+                  </Button>
+                  <Button onClick={() => generatePDF('quarter')}>
+                    Next Quarter ({format(addMonths(startOfQuarter(addMonths(date || new Date(), 1)), 1), 'Q')} Quarter)
+                  </Button>
+                  <Button onClick={() => generatePDF('year')}>
+                    Whole Year ({format(date || new Date(), 'yyyy')})
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Button variant="ghost" size="icon" onClick={handlePreviousMonth}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
