@@ -20,6 +20,7 @@ interface Milestone {
   definition: {
     category: string;
     department: string[] | null;
+    priority: number;
   } | null;
 }
 
@@ -89,14 +90,26 @@ export function MilestoneGanttChart({ milestones, startDate, jobId }: MilestoneG
     }
   };
 
+  const getPriorityColor = (priority: number) => {
+    switch (priority) {
+      case 3:
+        return 'bg-red-500 hover:bg-red-600';
+      case 2:
+        return 'bg-orange-500 hover:bg-orange-600';
+      case 1:
+      default:
+        return 'bg-purple-500 hover:bg-purple-600';
+    }
+  };
+
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'planning': return 'bg-blue-500';
-      case 'technical': return 'bg-purple-500';
-      case 'logistics': return 'bg-orange-500';
-      case 'administrative': return 'bg-gray-500';
-      case 'production': return 'bg-green-500';
-      default: return 'bg-slate-500';
+      case 'planning': return 'border-blue-500';
+      case 'technical': return 'border-purple-500';
+      case 'logistics': return 'border-orange-500';
+      case 'administrative': return 'border-gray-500';
+      case 'production': return 'border-green-500';
+      default: return 'border-slate-500';
     }
   };
 
@@ -118,13 +131,11 @@ export function MilestoneGanttChart({ milestones, startDate, jobId }: MilestoneG
       const deptArray = milestone.definition?.department;
       console.log("Milestone definition departments:", deptArray);
       
-      // If no department specified, show in all departments
       if (!deptArray || deptArray.length === 0) {
         console.log("No department specified, showing in all");
         return true;
       }
       
-      // Check if the milestone belongs to this department
       const belongs = deptArray.includes(department);
       console.log("Belongs to department:", belongs);
       return belongs;
@@ -215,7 +226,7 @@ export function MilestoneGanttChart({ milestones, startDate, jobId }: MilestoneG
                       const dueDate = new Date(milestone.due_date);
                       const dayOffset = differenceInDays(dueDate, startDate);
                       const position = (dayOffset * 96) + 48;
-                      console.log(`Milestone ${milestone.name} position:`, position);
+                      const priority = milestone.definition?.priority || 1;
 
                       return (
                         <ContextMenu key={milestone.id}>
@@ -226,15 +237,25 @@ export function MilestoneGanttChart({ milestones, startDate, jobId }: MilestoneG
                                   <div 
                                     className={cn(
                                       "absolute top-1/2 -translate-y-1/2",
-                                      "h-6 w-6 rounded-full",
-                                      getCategoryColor(milestone.definition?.category || ''),
-                                      "border-2 border-white cursor-pointer transition-all hover:scale-110",
-                                      milestone.completed ? "opacity-50" : "opacity-100"
+                                      "transition-all duration-300",
+                                      milestone.completed ? [
+                                        "w-4 h-4 border-2 border-dashed animate-pulse opacity-50",
+                                        getCategoryColor(milestone.definition?.category || '')
+                                      ] : [
+                                        "w-6 h-6 cursor-pointer hover:scale-110",
+                                        getPriorityColor(priority)
+                                      ],
+                                      "rounded-full"
                                     )}
                                     style={{ left: `${position}px` }}
                                   >
                                     {milestone.completed && (
-                                      <Check className="h-3 w-3 text-white absolute inset-0 m-auto" />
+                                      <Check 
+                                        className={cn(
+                                          "h-2 w-2 text-foreground absolute inset-0 m-auto",
+                                          "animate-in zoom-in duration-300"
+                                        )}
+                                      />
                                     )}
                                   </div>
                                 </TooltipTrigger>
@@ -243,6 +264,9 @@ export function MilestoneGanttChart({ milestones, startDate, jobId }: MilestoneG
                                     <div className="font-medium">{milestone.name}</div>
                                     <div className="text-xs text-muted-foreground">
                                       Due: {format(dueDate, 'MMM d, yyyy')}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      Priority: {priority === 3 ? 'High' : priority === 2 ? 'Medium' : 'Low'}
                                     </div>
                                     {milestone.completed && milestone.completed_by && (
                                       <div className="text-xs text-muted-foreground">
