@@ -143,10 +143,25 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     });
   };
 
-  const generatePDF = async (range: 'month' | 'quarter' | 'year') => {
+   const generatePDF = async (range: 'month' | 'quarter' | 'year') => {
     const doc = new jsPDF('landscape');
     const currentDate = date || new Date();
     let startDate: Date, endDate: Date;
+
+    // Load logo first
+    const logo = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
+      img.onload = () => resolve(img);
+      img.onerror = (err) => reject(err);
+    }).catch(() => null);
+
+    // Calculate logo dimensions
+    const logoWidth = 50;
+    const logoHeight = logo ? logoWidth * (logo.height / logo.width) : 0;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const logoX = logo ? (pageWidth - logoWidth) / 2 : 0;
 
     switch (range) {
       case 'month':
@@ -170,7 +185,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const cellWidth = 40;
     const cellHeight = 30;
     const startX = 10;
-    const startY = 30;
+    const startY = 30 + (logo ? logoHeight + 10 : 0); // Adjust start position for logo
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     const dateTypeLabels: Record<string, string> = {
@@ -181,9 +196,14 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
       rehearsal: 'E'
     };
 
-    for (const monthStart of months) {
-      if (months.indexOf(monthStart) > 0) doc.addPage('landscape');
-      
+    for (const [pageIndex, monthStart] of months.entries()) {
+      if (pageIndex > 0) doc.addPage('landscape');
+
+      // Add logo to top center
+      if (logo) {
+        doc.addImage(logo, 'PNG', logoX, 10, logoWidth, logoHeight);
+      }
+
       const monthEnd = endOfMonth(monthStart);
       const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
       const weeks: Date[][] = [];
@@ -201,9 +221,16 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         weeks.push([...currentWeek]);
       }
 
+      // Add month title below logo
       doc.setFontSize(16);
-      doc.text(format(monthStart, 'MMMM yyyy'), 105, 20, { align: 'center' });
+      doc.text(
+        format(monthStart, 'MMMM yyyy'), 
+        pageWidth / 2, 
+        logo ? 10 + logoHeight + 5 : 20, 
+        { align: 'center' }
+      );
 
+      // Days of week headers
       daysOfWeek.forEach((day, index) => {
         doc.setFillColor(41, 128, 185);
         doc.rect(startX + (index * cellWidth), startY, cellWidth, 10, 'F');
@@ -259,7 +286,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         yPos += cellHeight;
       }
 
-      if (months.indexOf(monthStart) === 0) {
+      if (pageIndex === 0) {
         const legendY = yPos + 10;
         doc.setFontSize(8);
         doc.setTextColor(0);
@@ -273,7 +300,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     setShowPrintDialog(false);
   };
 
-  // Color utilities
+  // Color utilities (keep these the same)
   const hexToRgb = (hex: string): [number, number, number] => {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
