@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -85,6 +86,9 @@ export const EditUserDialog = ({ user, onOpenChange, onSave }: EditUserDialogPro
                 <SelectItem value="sound">Sound</SelectItem>
                 <SelectItem value="lights">Lights</SelectItem>
                 <SelectItem value="video">Video</SelectItem>
+                <SelectItem value="production">Production</SelectItem>
+                <SelectItem value="logistics">Logistics</SelectItem>
+                <SelectItem value="administrative">Administrative</SelectItem>
               </SelectContent>
             </Select>
           </div>
