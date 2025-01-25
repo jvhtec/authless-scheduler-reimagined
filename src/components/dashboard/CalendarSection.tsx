@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
@@ -180,23 +179,23 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const pageHeight = doc.internal.pageSize.height;
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const colors = ['#FFCDD2', '#F8BBD0', '#E1BEE7', '#D1C4E9', '#C5CAE9', '#BBDEFB', '#B3E5FC', '#B2EBF2'];
-
-    doc.setFontSize(16);
-    doc.text(format(startDate, 'MMMM yyyy'), 105, 20, { align: 'center' });
     
-    daysOfWeek.forEach((day, index) => {
-      doc.setFillColor(41, 128, 185);
-      doc.rect(startX + (index * cellWidth), startY, cellWidth, 10, 'F');
-      doc.setTextColor(255);
-      doc.setFontSize(10);
-      doc.text(day, startX + (index * cellWidth) + 15, startY + 7);
-    });
-
+    let currentMonthHeader = '';
     let yPos = startY + 10;
+
     weeks.forEach((week) => {
       if (yPos + cellHeight > pageHeight - 20) {
         doc.addPage('landscape');
         yPos = startY;
+        currentMonthHeader = '';
+      }
+
+      const firstDayOfWeek = week[0];
+      const weekMonth = format(firstDayOfWeek, 'MMMM yyyy');
+      if (weekMonth !== currentMonthHeader) {
+        currentMonthHeader = weekMonth;
+        doc.setFontSize(16);
+        doc.text(currentMonthHeader, 105, 20, { align: 'center' });
       }
 
       week.forEach((day, dayIndex) => {
@@ -217,17 +216,14 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
           const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
           const dateType = dateTypes[key]?.type;
           
-          // Colored background
           doc.setFillColor(colors[index % colors.length]);
           doc.rect(x + 1, eventY + (index * 5), cellWidth - 2, 4, 'F');
 
-          // Icon
           const icon = getDateTypeIconComponent(dateType);
           if (icon) {
             doc.addImage(icon, 'PNG', x + 2, eventY + (index * 5) + 0.5, 3, 3);
           }
 
-          // Bold text
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(7);
           doc.setTextColor(0);
@@ -270,18 +266,21 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const ctx = canvas.getContext('2d')!;
     
     const icons: Record<string, string> = {
-      travel: '<path d="M17.8 19.1a.75.75 0 1 0-1.2-.9l-1.5-2a.75.75 0 0 0-.6-.3h-3v-2h1a.75.75 0 0 0 .75-.75v-3.5a.75.75 0 0 0-.75-.75h-3a.75.75 0 0 0-.75.75v3.5c0 .414.336.75.75.75h1v2h-3a.75.75 0 0 0-.6.3l-1.5 2a.75.75 0 1 0 1.2.9l1.2-1.6h9.6l1.2 1.6Z" fill="#2563eb"/>',
-      setup: '<path d="M14.25 6.75a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Zm-2.655 4.805a.75.75 0 0 1-.345.635l-2.25 1.5a.75.75 0 0 1-.787-1.28l1.38-.92V9.75a.75.75 0 0 1 1.5 0v2.58l1.38.92a.75.75 0 0 1-.338 1.355Z" fill="#ca8a04"/>',
-      show: '<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 0 0 .95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 0 0-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 0 0-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 0 0-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 0 0 .951-.69l1.07-3.292Z" fill="#16a34a"/>',
-      off: '<path d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" fill="#525252"/>'
+      travel: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.8 19.1a.75.75 0 1 0-1.2-.9l-1.5-2a.75.75 0 0 0-.6-.3h-3v-2h1a.75.75 0 0 0 .75-.75v-3.5a.75.75 0 0 0-.75-.75h-3a.75.75 0 0 0-.75.75v3.5c0 .414.336.75.75.75h1v2h-3a.75.75 0 0 0-.6.3l-1.5 2a.75.75 0 1 0 1.2.9l1.2-1.6h9.6l1.2 1.6Z"/>
+              </svg>`,
+      setup: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+               <path d="M14.25 6.75a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Zm-2.655 4.805a.75.75 0 0 1-.345.635l-2.25 1.5a.75.75 0 0 1-.787-1.28l1.38-.92V9.75a.75.75 0 0 1 1.5 0v2.58l1.38.92a.75.75 0 0 1-.338 1.355Z"/>
+             </svg>`,
+      show: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 0 0 .95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 0 0-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 0 0-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 0 0-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 0 0 .951-.69l1.07-3.292Z"/>
+            </svg>`,
+      off: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+             <path d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z"/>
+           </svg>`
     };
 
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24">
-        ${icons[type] || ''}
-      </svg>
-    `;
-
+    const svg = icons[type] || '';
     const img = new Image();
     img.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
     
