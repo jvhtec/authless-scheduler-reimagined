@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Mic, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear, eachMonthOfInterval, isSameDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,14 +25,14 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [showMilestones, setShowMilestones] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
-  
+
   const currentMonth = date || new Date();
   const firstDayOfMonth = startOfMonth(currentMonth);
   const lastDayOfMonth = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth });
   const startDay = firstDayOfMonth.getDay();
   const paddingDays = startDay === 0 ? 6 : startDay - 1;
-  
+
   const prefixDays = Array.from({ length: paddingDays }).map((_, i) => {
     const day = new Date(firstDayOfMonth);
     day.setDate(day.getDate() - (paddingDays - i));
@@ -57,12 +57,20 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         .select('*')
         .in('job_id', jobs.map((job: any) => job.id));
         
-      if (error) return;
+      if (error) {
+        console.error('Error fetching date types:', error);
+        return;
+      }
 
-      setDateTypes(data.reduce((acc: Record<string, any>, curr) => ({
+      console.log('Date types fetched:', data);
+
+      const typesMap = data.reduce((acc: Record<string, any>, curr) => ({
         ...acc,
         [`${curr.job_id}-${curr.date}`]: curr
-      }), {}));
+      }), {});
+
+      console.log('Date types map:', typesMap);
+      setDateTypes(typesMap);
     };
 
     fetchDateTypes();
@@ -71,12 +79,15 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const getDateTypeIcon = (jobId: string, date: Date) => {
     const key = `${jobId}-${format(date, 'yyyy-MM-dd')}`;
     const dateType = dateTypes[key]?.type;
+    
+    console.log('Getting icon for:', { jobId, date, key, dateType });
 
     switch (dateType) {
       case 'travel': return <Plane className="h-3 w-3 text-blue-500" />;
       case 'setup': return <Wrench className="h-3 w-3 text-yellow-500" />;
       case 'show': return <Star className="h-3 w-3 text-green-500" />;
       case 'off': return <Moon className="h-3 w-3 text-gray-500" />;
+      case 'rehearsal': return <Mic className="h-3 w-3 text-violet-500" />;
       default: return null;
     }
   };
@@ -300,11 +311,18 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         jobId={job.id} 
         date={date}
         onTypeChange={async () => {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('job_date_types')
             .select('*')
             .eq('job_id', job.id);
             
+          if (error) {
+            console.error('Error refreshing date types:', error);
+            return;
+          }
+
+          console.log('Refreshed date types:', data);
+          
           setDateTypes(prev => ({
             ...prev,
             ...data?.reduce((acc: Record<string, any>, curr) => ({
