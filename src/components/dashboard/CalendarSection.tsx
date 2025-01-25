@@ -150,7 +150,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         break;
       case 'quarter':
         startDate = startOfQuarter(addMonths(currentDate, 1));
-        endDate = endOfQuarter(addMonths(currentDate, 3));
+        endDate = endOfQuarter(addMonths(startDate, 2));
         break;
       case 'year':
         startDate = startOfYear(currentDate);
@@ -165,35 +165,43 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const weeks: Date[][] = [];
     let currentWeek: Date[] = [];
     
-    allDays.forEach((day, index) => {
+    allDays.forEach((day) => {
       currentWeek.push(day);
-      if ((index + 1) % 7 === 0) {
+      if (currentWeek.length === 7) {
         weeks.push([...currentWeek]);
         currentWeek = [];
       }
     });
 
     const cellWidth = 40;
-    const cellHeight = 50;
+    const cellHeight = 30;
     const startX = 10;
     const startY = 30;
-    const daysOfWeek = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'];
+    const pageHeight = doc.internal.pageSize.height;
+    const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const colors = ['#FFCDD2', '#F8BBD0', '#E1BEE7', '#D1C4E9', '#C5CAE9', '#BBDEFB', '#B3E5FC', '#B2EBF2'];
 
     doc.setFontSize(16);
-    doc.text(format(startDate, 'MMMM yyyy'), startX + 100, 20, { align: 'center' });
+    doc.text(format(startDate, 'MMMM yyyy'), 105, 20, { align: 'center' });
     
     daysOfWeek.forEach((day, index) => {
       doc.setFillColor(41, 128, 185);
       doc.rect(startX + (index * cellWidth), startY, cellWidth, 10, 'F');
       doc.setTextColor(255);
       doc.setFontSize(10);
-      doc.text(day, startX + (index * cellWidth) + 2, startY + 7);
+      doc.text(day, startX + (index * cellWidth) + 15, startY + 7);
     });
 
-    weeks.forEach((week, weekIndex) => {
+    let yPos = startY + 10;
+    weeks.forEach((week) => {
+      if (yPos + cellHeight > pageHeight - 20) {
+        doc.addPage('landscape');
+        yPos = startY;
+      }
+
       week.forEach((day, dayIndex) => {
         const x = startX + (dayIndex * cellWidth);
-        const y = startY + 10 + (weekIndex * cellHeight);
+        const y = yPos;
         
         doc.setDrawColor(200);
         doc.rect(x, y, cellWidth, cellHeight);
@@ -203,29 +211,39 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         doc.text(format(day, 'd'), x + 2, y + 5);
 
         const dayJobs = getJobsForDate(day);
-        let yOffset = y + 10;
+        let eventY = y + 8;
         
         dayJobs.slice(0, 8).forEach((job, index) => {
           const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
           const dateType = dateTypes[key]?.type;
-          const icon = getDateTypeIconComponent(dateType);
           
+          // Colored background
+          doc.setFillColor(colors[index % colors.length]);
+          doc.rect(x + 1, eventY + (index * 5), cellWidth - 2, 4, 'F');
+
+          // Icon
+          const icon = getDateTypeIconComponent(dateType);
           if (icon) {
-            doc.addImage(icon, 'PNG', x + 2, yOffset + (index * 5), 3, 3);
+            doc.addImage(icon, 'PNG', x + 2, eventY + (index * 5) + 0.5, 3, 3);
           }
 
+          // Bold text
+          doc.setFont('helvetica', 'bold');
           doc.setFontSize(7);
-          doc.text(job.title.substring(0, 18), x + 7, yOffset + (index * 5) + 3);
+          doc.setTextColor(0);
+          doc.text(job.title.substring(0, 18), x + 6, eventY + (index * 5) + 3);
         });
 
         if (dayJobs.length > 8) {
           doc.setFontSize(7);
-          doc.text(`+${dayJobs.length - 8} more`, x + 2, y + (8 * 5) + 5);
+          doc.text(`+${dayJobs.length - 8} more`, x + 2, y + 38);
         }
       });
+
+      yPos += cellHeight;
     });
 
-    const legendY = startY + (weeks.length * cellHeight) + 20;
+    const legendY = yPos + 10;
     const icons = [
       { type: 'travel', component: getDateTypeIconComponent('travel') },
       { type: 'setup', component: getDateTypeIconComponent('setup') },
@@ -251,33 +269,24 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     canvas.height = iconSize;
     const ctx = canvas.getContext('2d')!;
     
-    switch(type) {
-      case 'travel':
-        return iconToDataURI(<Plane size={iconSize} color="#2563eb" />, canvas, ctx);
-      case 'setup':
-        return iconToDataURI(<Wrench size={iconSize} color="#ca8a04" />, canvas, ctx);
-      case 'show':
-        return iconToDataURI(<Star size={iconSize} color="#16a34a" />, canvas, ctx);
-      case 'off':
-        return iconToDataURI(<Moon size={iconSize} color="#525252" />, canvas, ctx);
-      default:
-        return null;
-    }
-  };
+    const icons: Record<string, string> = {
+      travel: '<path d="M17.8 19.1a.75.75 0 1 0-1.2-.9l-1.5-2a.75.75 0 0 0-.6-.3h-3v-2h1a.75.75 0 0 0 .75-.75v-3.5a.75.75 0 0 0-.75-.75h-3a.75.75 0 0 0-.75.75v3.5c0 .414.336.75.75.75h1v2h-3a.75.75 0 0 0-.6.3l-1.5 2a.75.75 0 1 0 1.2.9l1.2-1.6h9.6l1.2 1.6Z" fill="#2563eb"/>',
+      setup: '<path d="M14.25 6.75a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Zm-2.655 4.805a.75.75 0 0 1-.345.635l-2.25 1.5a.75.75 0 0 1-.787-1.28l1.38-.92V9.75a.75.75 0 0 1 1.5 0v2.58l1.38.92a.75.75 0 0 1-.338 1.355Z" fill="#ca8a04"/>',
+      show: '<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 0 0 .95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 0 0-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 0 0-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 0 0-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 0 0 .951-.69l1.07-3.292Z" fill="#16a34a"/>',
+      off: '<path d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" fill="#525252"/>'
+    };
 
-  const iconToDataURI = (icon: JSX.Element, canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => {
-    const parser = new DOMParser();
     const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}">
-        ${icon.props.children}
+      <svg xmlns="http://www.w3.org/2000/svg" width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24">
+        ${icons[type] || ''}
       </svg>
     `;
-    
+
     const img = new Image();
     img.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
     
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
+    ctx.clearRect(0, 0, iconSize, iconSize);
+    ctx.drawImage(img, 0, 0, iconSize, iconSize);
     return canvas.toDataURL();
   };
 
@@ -403,13 +412,13 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
                 </DialogHeader>
                 <div className="flex flex-col gap-4 mt-4">
                   <Button onClick={() => generatePDF('month')}>
-                    Current Month ({format(date || new Date(), 'MMMM yyyy')})
+                    Current Month ({format(currentMonth, 'MMMM yyyy')})
                   </Button>
                   <Button onClick={() => generatePDF('quarter')}>
-                    Next Quarter ({format(addMonths(startOfQuarter(addMonths(date || new Date(), 1)), 1), 'Q')} Quarter)
+                    Next Quarter
                   </Button>
                   <Button onClick={() => generatePDF('year')}>
-                    Whole Year ({format(date || new Date(), 'yyyy')})
+                    Whole Year ({format(currentMonth, 'yyyy')})
                   </Button>
                 </div>
               </DialogContent>
