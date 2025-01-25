@@ -226,17 +226,17 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
           const dayJobs = getJobsForDate(day);
           let eventY = y + 8;
           
-          dayJobs.slice(0, 8).forEach((job, index) => {
+          dayJobs.slice(0, 8).forEach(async (job, index) => {
             const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
             const dateType = dateTypes[key]?.type;
             
+            const iconDataUrl = await getDateTypeIconComponent(dateType);
+            if (iconDataUrl) {
+              doc.addImage(iconDataUrl, 'PNG', x + 2, eventY + (index * 5), 3, 3);
+            }
+
             doc.setFillColor(colors[index % colors.length]);
             doc.rect(x + 1, eventY + (index * 5), cellWidth - 2, 4, 'F');
-
-            const icon = getDateTypeIconComponent(dateType);
-            if (icon) {
-              doc.addImage(icon, 'PNG', x + 2, eventY + (index * 5) + 0.5, 3, 3);
-            }
 
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(7);
@@ -250,10 +250,10 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
       if (pageIndex === 0) {
         const legendY = yPos + 10;
         const icons = [
-          { type: 'travel', component: getDateTypeIconComponent('travel') },
-          { type: 'setup', component: getDateTypeIconComponent('setup') },
-          { type: 'show', component: getDateTypeIconComponent('show') },
-          { type: 'off', component: getDateTypeIconComponent('off') },
+          { type: 'travel', component: await getDateTypeIconComponent('travel') },
+          { type: 'setup', component: await getDateTypeIconComponent('setup') },
+          { type: 'show', component: await getDateTypeIconComponent('show') },
+          { type: 'off', component: await getDateTypeIconComponent('off') },
         ];
 
         icons.forEach((icon, index) => {
@@ -269,7 +269,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     setShowPrintDialog(false);
   };
 
-  const getDateTypeIconComponent = (type: string) => {
+  const getDateTypeIconComponent = async (type: string) => {
     const iconSize = 16;
     const canvas = document.createElement('canvas');
     canvas.width = iconSize;
