@@ -173,29 +173,21 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const startY = 30;
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-    const dateTypeLabels: Record<string, string> = {
-      travel: 'V',
-      setup: 'M',
-      show: 'S',
-      off: 'O',
-      rehearsal: 'E'
-    };
-
-    for (const monthStart of months) {
-      if (months.indexOf(monthStart) > 0) doc.addPage('landscape');
+    for (const [pageIndex, monthStart] of months.entries()) {
+      if (pageIndex > 0) doc.addPage('landscape');
       
       const monthEnd = endOfMonth(monthStart);
       const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
       const weeks: Date[][] = [];
       let currentWeek: Date[] = [];
 
-      monthDays.forEach(day => {
+      for (const day of monthDays) {
         currentWeek.push(day);
         if (currentWeek.length === 7) {
           weeks.push([...currentWeek]);
           currentWeek = [];
         }
-      });
+      }
 
       if (currentWeek.length > 0) {
         weeks.push([...currentWeek]);
@@ -213,6 +205,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
       });
 
       let yPos = startY + 10;
+      
       for (const week of weeks) {
         for (const [dayIndex, day] of week.entries()) {
           const x = startX + (dayIndex * cellWidth);
@@ -231,88 +224,60 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
           for (const [index, job] of dayJobs.slice(0, 8).entries()) {
             const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
             const dateType = dateTypes[key]?.type;
-            const typeLabel = dateType ? dateTypeLabels[dateType] : '';
 
-            const baseColor = job.color || '#cccccc';
-            const [r, g, b] = hexToRgb(baseColor);
-            const textColor = getContrastColor(baseColor);
-
-            // Draw background with original job color
-            doc.setFillColor(r, g, b);
+            doc.setFillColor(job.color || '#cccccc');
             doc.rect(x + 1, eventY + (index * 5), cellWidth - 2, 4, 'F');
 
-            // Draw type label
-            if (typeLabel) {
-              doc.setFontSize(8);
-              doc.setTextColor(textColor);
-              doc.text(typeLabel, x + 3, eventY + (index * 5) + 3);
-            }
-
-            // Draw job title
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(7);
-            doc.setTextColor(textColor);
-            const titleX = typeLabel ? x + 8 : x + 3;
-            doc.text(job.title.substring(0, 18), titleX, eventY + (index * 5) + 3);
+            doc.setTextColor(0);
+            doc.text(job.title.substring(0, 18), x + 6, eventY + (index * 5) + 3);
           }
         }
         yPos += cellHeight;
       }
 
-      if (months.indexOf(monthStart) === 0) {
+      if (pageIndex === 0) {
         const legendY = yPos + 10;
         doc.setFontSize(8);
         doc.setTextColor(0);
-        Object.entries(dateTypeLabels).forEach(([type, label], index) => {
-          doc.text(`${label} = ${type}`, 10 + (index * 40), legendY);
-        });
+        doc.text('Legend:', 10, legendY);
       }
     }
 
-    doc.save(`calendar-${range}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-    setShowPrintDialog(false);
-  };
+    // Add logo at the end
+    return new Promise<void>((resolve) => {
+      const logo = new Image();
+      logo.crossOrigin = 'anonymous';
+      logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
+      
+      logo.onload = () => {
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const logoWidth = 50;
+        const logoHeight = logoWidth * (logo.height / logo.width);
+        const xPosition = (pageWidth - logoWidth) / 2;
+        const yPosition = pageHeight - 20;
+        
+        try {
+          doc.setPage(doc.getNumberOfPages());
+          doc.addImage(logo, 'PNG', xPosition, yPosition - logoHeight, logoWidth, logoHeight);
+        } catch (error) {
+          console.error('Error adding logo:', error);
+        } finally {
+          doc.save(`calendar-${range}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+          setShowPrintDialog(false);
+          resolve();
+        }
+      };
 
-  // Add logo
-    const logo = new Image();
-    logo.crossOrigin = 'anonymous';
-    logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
-    logo.onload = () => {
-      doc.setPage(doc.getNumberOfPages());
-      const logoWidth = 50;
-      const logoHeight = logoWidth * (logo.height / logo.width);
-      const xPosition = (pageWidth - logoWidth) / 2;
-      const yPosition = pageHeight - 20;
-      try {
-        doc.addImage(logo, 'PNG', xPosition, yPosition, logoWidth, logoHeight);
-        const blob = doc.output('blob');
-        resolve(blob);
-      } catch (error) {
-        console.error('Error adding logo:', error);
-        const blob = doc.output('blob');
-        resolve(blob);
-      }
-    };
-
-    // If the image fails to load, still resolve with the PDF without the logo
-    logo.onerror = () => {
-      console.error('Failed to load logo');
-      const blob = doc.output('blob');
-      resolve(blob);
-    };
-
-  // Color utilities
-  const hexToRgb = (hex: string): [number, number, number] => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return [r, g, b];
-  };
-
-  const getContrastColor = (hex: string): string => {
-    const [r, g, b] = hexToRgb(hex);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.6 ? '#000000' : '#ffffff';
+      logo.onerror = () => {
+        console.error('Failed to load logo');
+        doc.save(`calendar-${range}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+        setShowPrintDialog(false);
+        resolve();
+      };
+    });
   };
 
   const renderJobCard = (job: any, date: Date) => {
