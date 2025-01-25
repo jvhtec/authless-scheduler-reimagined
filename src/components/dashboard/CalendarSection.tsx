@@ -143,140 +143,154 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     });
   };
 
-  const generatePDF = async (range: 'month' | 'quarter' | 'year') => {
-    const doc = new jsPDF('landscape');
-    const currentDate = date || new Date();
-    let startDate: Date, endDate: Date;
+const generatePDF = async (range: 'month' | 'quarter' | 'year') => {
+  const doc = new jsPDF('landscape');
+  const currentDate = date || new Date();
+  let startDate: Date, endDate: Date;
 
-    switch (range) {
-      case 'month':
-        startDate = startOfMonth(currentDate);
-        endDate = endOfMonth(currentDate);
-        break;
-      case 'quarter':
-        startDate = startOfQuarter(addMonths(currentDate, 1));
-        endDate = endOfQuarter(addMonths(startDate, 2));
-        break;
-      case 'year':
-        startDate = startOfYear(currentDate);
-        endDate = endOfYear(currentDate);
-        break;
-      default:
-        startDate = startOfMonth(currentDate);
-        endDate = endOfMonth(currentDate);
-    }
+  // Load logo first
+  const logo = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
+    img.onload = () => resolve(img);
+    img.onerror = (err) => reject(err);
+  });
 
-    const months = eachMonthOfInterval({ start: startDate, end: endDate });
-    const cellWidth = 40;
-    const cellHeight = 30;
-    const startX = 10;
-    const startY = 30;
-    const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  // Calculate logo dimensions
+  const logoWidth = 50;
+  const logoHeight = logoWidth * (logo.height / logo.width);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const logoX = (pageWidth - logoWidth) / 2; // Center horizontally
 
-    for (const [pageIndex, monthStart] of months.entries()) {
-      if (pageIndex > 0) doc.addPage('landscape');
-      
-      const monthEnd = endOfMonth(monthStart);
-      const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
-      const weeks: Date[][] = [];
-      let currentWeek: Date[] = [];
+  switch (range) {
+    case 'month':
+      startDate = startOfMonth(currentDate);
+      endDate = endOfMonth(currentDate);
+      break;
+    case 'quarter':
+      startDate = startOfQuarter(addMonths(currentDate, 1));
+      endDate = endOfQuarter(addMonths(startDate, 2));
+      break;
+    case 'year':
+      startDate = startOfYear(currentDate);
+      endDate = endOfYear(currentDate);
+      break;
+    default:
+      startDate = startOfMonth(currentDate);
+      endDate = endOfMonth(currentDate);
+  }
 
-      for (const day of monthDays) {
-        currentWeek.push(day);
-        if (currentWeek.length === 7) {
-          weeks.push([...currentWeek]);
-          currentWeek = [];
-        }
-      }
+  const months = eachMonthOfInterval({ start: startDate, end: endDate });
+  const cellWidth = 40;
+  const cellHeight = 30;
+  const startX = 10;
+  const startY = 30 + logoHeight + 10; // Adjust start position for logo
+  const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-      if (currentWeek.length > 0) {
+  for (const [pageIndex, monthStart] of months.entries()) {
+    if (pageIndex > 0) doc.addPage('landscape');
+
+    // Add logo to top center
+    doc.addImage(logo, 'PNG', logoX, 10, logoWidth, logoHeight);
+
+    const monthEnd = endOfMonth(monthStart);
+    const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    const weeks: Date[][] = [];
+    let currentWeek: Date[] = [];
+
+    monthDays.forEach(day => {
+      currentWeek.push(day);
+      if (currentWeek.length === 7) {
         weeks.push([...currentWeek]);
+        currentWeek = [];
       }
+    });
 
-      doc.setFontSize(16);
-      doc.text(format(monthStart, 'MMMM yyyy'), 105, 20, { align: 'center' });
-
-      daysOfWeek.forEach((day, index) => {
-        doc.setFillColor(41, 128, 185);
-        doc.rect(startX + (index * cellWidth), startY, cellWidth, 10, 'F');
-        doc.setTextColor(255);
-        doc.setFontSize(10);
-        doc.text(day, startX + (index * cellWidth) + 15, startY + 7);
-      });
-
-      let yPos = startY + 10;
-      
-      for (const week of weeks) {
-        for (const [dayIndex, day] of week.entries()) {
-          const x = startX + (dayIndex * cellWidth);
-          const y = yPos;
-          
-          doc.setDrawColor(200);
-          doc.rect(x, y, cellWidth, cellHeight);
-
-          doc.setTextColor(isSameMonth(day, monthStart) ? 0 : 200);
-          doc.setFontSize(12);
-          doc.text(format(day, 'd'), x + 2, y + 5);
-
-          const dayJobs = getJobsForDate(day);
-          let eventY = y + 8;
-          
-          for (const [index, job] of dayJobs.slice(0, 8).entries()) {
-            const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
-            const dateType = dateTypes[key]?.type;
-
-            doc.setFillColor(job.color || '#cccccc');
-            doc.rect(x + 1, eventY + (index * 5), cellWidth - 2, 4, 'F');
-
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(7);
-            doc.setTextColor(0);
-            doc.text(job.title.substring(0, 18), x + 6, eventY + (index * 5) + 3);
-          }
-        }
-        yPos += cellHeight;
-      }
-
-      if (pageIndex === 0) {
-        const legendY = yPos + 10;
-        doc.setFontSize(8);
-        doc.setTextColor(0);
-        doc.text('Legend:', 10, legendY);
-      }
+    if (currentWeek.length > 0) {
+      weeks.push([...currentWeek]);
     }
 
-    // Add logo at the end
-    return new Promise<void>((resolve) => {
-      const logo = new Image();
-      logo.crossOrigin = 'anonymous';
-      logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
-      
-      logo.onload = () => {
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const logoWidth = 50;
-        const logoHeight = logoWidth * (logo.height / logo.width);
-        const xPosition = (pageWidth - logoWidth) / 2;
-        const yPosition = pageHeight - 20;
-        
-        try {
-          doc.setPage(doc.getNumberOfPages());
-          doc.addImage(logo, 'PNG', xPosition, yPosition - logoHeight, logoWidth, logoHeight);
-        } catch (error) {
-          console.error('Error adding logo:', error);
-        } finally {
-          doc.save(`calendar-${range}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-          setShowPrintDialog(false);
-          resolve();
-        }
-      };
+    // Add month title below logo
+    doc.setFontSize(16);
+    doc.text(format(monthStart, 'MMMM yyyy'), pageWidth / 2, 10 + logoHeight + 5, {
+      align: 'center'
+    });
 
-      logo.onerror = () => {
-        console.error('Failed to load logo');
-        doc.save(`calendar-${range}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-        setShowPrintDialog(false);
-        resolve();
-      };
+    // Days of week headers
+    daysOfWeek.forEach((day, index) => {
+      doc.setFillColor(41, 128, 185);
+      doc.rect(startX + (index * cellWidth), startY, cellWidth, 10, 'F');
+      doc.setTextColor(255);
+      doc.setFontSize(10);
+      doc.text(day, startX + (index * cellWidth) + 15, startY + 7);
+    });
+
+    let yPos = startY + 10;
+    for (const week of weeks) {
+      for (const [dayIndex, day] of week.entries()) {
+        const x = startX + (dayIndex * cellWidth);
+        const y = yPos;
+        
+        doc.setDrawColor(200);
+        doc.rect(x, y, cellWidth, cellHeight);
+
+        doc.setTextColor(isSameMonth(day, monthStart) ? 0 : 200);
+        doc.setFontSize(12);
+        doc.text(format(day, 'd'), x + 2, y + 5);
+
+        const dayJobs = getJobsForDate(day);
+        let eventY = y + 8;
+        
+        for (const [index, job] of dayJobs.slice(0, 8).entries()) {
+          const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
+          const dateType = dateTypes[key]?.type;
+
+          // Job color handling
+          const baseColor = job.color || '#cccccc';
+          const [r, g, b] = hexToRgb(baseColor);
+          const textColor = getContrastColor(baseColor);
+
+          // Draw background
+          doc.setFillColor(r, g, b);
+          doc.rect(x + 1, eventY + (index * 5), cellWidth - 2, 4, 'F');
+
+          // Draw job title
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(7);
+          doc.setTextColor(textColor);
+          doc.text(job.title.substring(0, 18), x + 6, eventY + (index * 5) + 3);
+        }
+      }
+      yPos += cellHeight;
+    }
+
+    // Add legend to first page
+    if (pageIndex === 0) {
+      const legendY = yPos + 10;
+      doc.setFontSize(8);
+      doc.setTextColor(0);
+      doc.text('Legend: Job colors correspond to their assigned colors in the system', 10, legendY);
+    }
+  }
+
+  doc.save(`calendar-${range}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  setShowPrintDialog(false);
+};
+
+// Add these helper functions outside generatePDF
+const hexToRgb = (hex: string): [number, number, number] => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return [r, g, b];
+};
+
+const getContrastColor = (hex: string): string => {
+  const [r, g, b] = hexToRgb(hex);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? '#000000' : '#ffffff';
+};
     });
   };
 
