@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Department } from "@/types/department";
+import { SimplifiedJobColorPicker } from "./SimplifiedJobColorPicker";
 
 interface EditJobDialogProps {
   open: boolean;
@@ -26,15 +27,26 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
   const [description, setDescription] = useState(job.description || "");
   const [startTime, setStartTime] = useState(job.start_time?.slice(0, 16) || "");
   const [endTime, setEndTime] = useState(job.end_time?.slice(0, 16) || "");
+  const [color, setColor] = useState(job.color || "#7E69AB");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Reset form when job changes
+  useEffect(() => {
+    if (job) {
+      setTitle(job.title);
+      setDescription(job.description || "");
+      setStartTime(job.start_time?.slice(0, 16) || "");
+      setEndTime(job.end_time?.slice(0, 16) || "");
+      setColor(job.color || "#7E69AB");
+    }
+  }, [job]);
+
   // Fetch current departments when dialog opens
   useEffect(() => {
     const fetchDepartments = async () => {
-      console.log("Fetching departments for job:", job.id);
       const { data, error } = await supabase
         .from("job_departments")
         .select("department")
@@ -46,7 +58,6 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
       }
 
       const departments = data.map(d => d.department as Department);
-      console.log("Current departments:", departments);
       setSelectedDepartments(departments);
     };
 
@@ -66,7 +77,6 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    console.log("Updating job:", job.id);
 
     try {
       // Update job details
@@ -77,52 +87,36 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
           description,
           start_time: startTime,
           end_time: endTime,
+          color
         })
         .eq("id", job.id);
 
       if (jobError) throw jobError;
 
-      // Fetch current departments
-      const { data: currentDepts, error: fetchError } = await supabase
+      // Update departments
+      const { data: currentDepts } = await supabase
         .from("job_departments")
         .select("department")
         .eq("job_id", job.id);
 
-      if (fetchError) throw fetchError;
-
-      const currentDepartments = currentDepts.map(d => d.department);
-
-      // Remove departments that are no longer selected
-      const departsToRemove = currentDepartments.filter(
-        dept => !selectedDepartments.includes(dept as Department)
-      );
-
-      if (departsToRemove.length > 0) {
-        const { error: removeError } = await supabase
+      const currentDepartments = currentDepts?.map(d => d.department) || [];
+      
+      // Remove deselected departments
+      const toRemove = currentDepartments.filter(dept => !selectedDepartments.includes(dept as Department));
+      if (toRemove.length > 0) {
+        await supabase
           .from("job_departments")
           .delete()
           .eq("job_id", job.id)
-          .in("department", departsToRemove);
-
-        if (removeError) throw removeError;
+          .in("department", toRemove);
       }
 
       // Add new departments
-      const departsToAdd = selectedDepartments.filter(
-        dept => !currentDepartments.includes(dept)
-      );
-
-      if (departsToAdd.length > 0) {
-        const { error: addError } = await supabase
+      const toAdd = selectedDepartments.filter(dept => !currentDepartments.includes(dept));
+      if (toAdd.length > 0) {
+        await supabase
           .from("job_departments")
-          .insert(
-            departsToAdd.map(department => ({
-              job_id: job.id,
-              department
-            }))
-          );
-
-        if (addError) throw addError;
+          .insert(toAdd.map(department => ({ job_id: job.id, department })));
       }
 
       toast({
@@ -171,25 +165,31 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
               rows={4}
             />
           </div>
-          <div>
-            <Label htmlFor="startTime">Start Time</Label>
-            <Input
-              id="startTime"
-              type="datetime-local"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="startTime">Start Time</Label>
+              <Input
+                id="startTime"
+                type="datetime-local"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="endTime">End Time</Label>
+              <Input
+                id="endTime"
+                type="datetime-local"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                required
+              />
+            </div>
           </div>
           <div>
-            <Label htmlFor="endTime">End Time</Label>
-            <Input
-              id="endTime"
-              type="datetime-local"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              required
-            />
+            <Label>Color</Label>
+            <SimplifiedJobColorPicker color={color} onChange={setColor} />
           </div>
           <div className="space-y-2">
             <Label>Departments</Label>
