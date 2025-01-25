@@ -1,17 +1,29 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Printer } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isAfter, isBefore, addDays, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { DateTypeContextMenu } from "./DateTypeContextMenu";
 import { JobMilestonesDialog } from "@/components/milestones/JobMilestonesDialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import "jspdf-autotable";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface CalendarSectionProps {
   date: Date | undefined;
@@ -27,11 +39,11 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const [showMilestones, setShowMilestones] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   
-  // Calendar configuration
   const currentMonth = date || new Date();
   const firstDayOfMonth = startOfMonth(currentMonth);
   const lastDayOfMonth = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth });
+
   const startDay = firstDayOfMonth.getDay();
   const paddingDays = startDay === 0 ? 6 : startDay - 1;
   
@@ -59,18 +71,108 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         .select('*')
         .in('job_id', jobs.map((job: any) => job.id));
         
-      if (error) return;
+      if (error) {
+        console.error('Error fetching date types:', error);
+        return;
+      }
 
-      setDateTypes(data.reduce((acc: Record<string, any>, curr) => ({
-        ...acc,
-        [`${curr.job_id}-${curr.date}`]: curr
-      }), {}));
+      const types = data.reduce((acc: Record<string, any>, curr) => {
+        const key = `${curr.job_id}-${curr.date}`;
+        acc[key] = curr;
+        return acc;
+      }, {});
+
+      setDateTypes(types);
     };
 
     fetchDateTypes();
   }, [jobs]);
 
-  // PDF Generation Logic
+  const getDateTypeIcon = (jobId: string, date: Date) => {
+    const key = `${jobId}-${format(date, 'yyyy-MM-dd')}`;
+    const dateType = dateTypes[key]?.type;
+
+    switch (dateType) {
+      case 'travel': return <Plane className="h-3 w-3 text-blue-500" />;
+      case 'setup': return <Wrench className="h-3 w-3 text-yellow-500" />;
+      case 'show': return <Star className="h-3 w-3 text-green-500" />;
+      case 'off': return <Moon className="h-3 w-3 text-gray-500" />;
+      default: return null;
+    }
+  };
+
+  const getDateTypeSymbol = (type: string) => {
+    switch (type) {
+      case 'travel': return '✈️';
+      case 'setup': return '🔧';
+      case 'show': return '⭐';
+      case 'off': return '🌙';
+      default: return '';
+    }
+  };
+
+  const getDepartmentIcon = (dept: string) => {
+    switch (dept) {
+      case 'sound': return <Music2 className="h-3 w-3" />;
+      case 'lights': return <Lightbulb className="h-3 w-3" />;
+      case 'video': return <Video className="h-3 w-3" />;
+      default: return null;
+    }
+  };
+
+  const getTotalRequiredPersonnel = (job: any) => {
+    let total = 0;
+    
+    if (job.sound_job_personnel?.length > 0) {
+      const sound = job.sound_job_personnel[0];
+      total += (sound.foh_engineers || 0) + 
+               (sound.mon_engineers || 0) + 
+               (sound.pa_techs || 0) + 
+               (sound.rf_techs || 0);
+    }
+    
+    if (job.lights_job_personnel?.length > 0) {
+      const lights = job.lights_job_personnel[0];
+      total += (lights.lighting_designers || 0) + 
+               (lights.lighting_techs || 0) + 
+               (lights.spot_ops || 0) + 
+               (lights.riggers || 0);
+    }
+    
+    if (job.video_job_personnel?.length > 0) {
+      const video = job.video_job_personnel[0];
+      total += (video.video_directors || 0) + 
+               (video.camera_ops || 0) + 
+               (video.playback_techs || 0) + 
+               (video.video_techs || 0);
+    }
+    
+    return total;
+  };
+
+  const getJobsForDate = (date: Date) => {
+    if (!jobs) return [];
+    
+    return jobs.filter(job => {
+      const startDate = new Date(job.start_time);
+      const endDate = new Date(job.end_time);
+      const compareDate = format(date, 'yyyy-MM-dd');
+      const jobStartDate = format(startDate, 'yyyy-MM-dd');
+      const jobEndDate = format(endDate, 'yyyy-MM-dd');
+      const isSingleDayJob = jobStartDate === jobEndDate;
+      const isWithinDuration = isSingleDayJob 
+        ? compareDate === jobStartDate
+        : compareDate >= jobStartDate && compareDate <= jobEndDate;
+      
+      if (department) {
+        return isWithinDuration && 
+               job.job_departments.some((dept: any) => dept.department === department);
+      }
+      
+      return isWithinDuration;
+    });
+  };
+
   const generatePDF = async (range: 'month' | 'quarter' | 'year') => {
     const doc = new jsPDF('landscape');
     const currentDate = date || new Date();
@@ -95,107 +197,59 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     }
 
     const allDays = eachDayOfInterval({ start: startDate, end: endDate });
-    const weeks: Date[][] = [];
-    let currentWeek: Date[] = [];
     
-    allDays.forEach((day, index) => {
-      currentWeek.push(day);
-      if ((index + 1) % 7 === 0) {
-        weeks.push([...currentWeek]);
-        currentWeek = [];
-      }
+    const tableData = allDays.map(day => {
+      const dayJobs = getJobsForDate(day);
+      return {
+        date: format(day, 'yyyy-MM-dd'),
+        day: format(day, 'EEEE'),
+        jobs: dayJobs.map(job => {
+          const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
+          const dateType = dateTypes[key]?.type;
+          return {
+            title: job.title,
+            department: job.job_departments.map((d: any) => d.department).join(', '),
+            time: `${format(new Date(job.start_time), 'HH:mm')} - ${format(new Date(job.end_time), 'HH:mm')}`,
+            type: dateType
+          };
+        })
+      };
     });
 
-    // PDF Styling Constants
-    const cellWidth = 40;
-    const cellHeight = 40;
-    const startX = 10;
-    const startY = 30;
-    const pageHeight = doc.internal.pageSize.height;
-    const daysOfWeek = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'];
-    const colorPalette = ['#FFEBEE', '#F3E5F5', '#E8EAF6', '#E3F2FD', '#E0F2F1', '#F1F8E9', '#FFF3E0', '#EFEBE9'];
+    const pdfData = tableData.map(d => [
+      d.date,
+      d.day,
+      d.jobs.map(j => 
+        `${getDateTypeSymbol(j.type)} ${j.title} (${j.department})\n${j.time}`
+      ).join('\n\n')
+    ]);
 
-    // Header
-    doc.setFontSize(16);
-    doc.text(format(startDate, 'MMMM yyyy'), startX + 100, 20, { align: 'center' });
-    
-    // Day headers
-    daysOfWeek.forEach((day, index) => {
-      doc.setFillColor(41, 128, 185);
-      doc.rect(startX + (index * cellWidth), startY, cellWidth, 10, 'F');
-      doc.setTextColor(255);
-      doc.setFontSize(10);
-      doc.text(day, startX + (index * cellWidth) + 15, startY + 7);
-    });
-
-    // Calendar grid
-    let yPos = startY + 10;
-    weeks.forEach((week, weekIndex) => {
-      // Check page overflow
-      if (yPos + cellHeight > pageHeight - 20) {
-        doc.addPage('landscape');
-        yPos = startY;
-      }
-
-      week.forEach((day, dayIndex) => {
-        const x = startX + (dayIndex * cellWidth);
-        const y = yPos;
-        
-        // Cell background
-        doc.setDrawColor(200);
-        doc.rect(x, y, cellWidth, cellHeight);
-
-        // Date number
-        doc.setTextColor(0);
-        doc.setFontSize(12);
-        doc.text(format(day, 'd'), x + 2, y + 5);
-
-        // Events
-        const dayJobs = getJobsForDate(day);
-        let eventY = y + 8;
-        
-        dayJobs.slice(0, 8).forEach((job, index) => {
-          const color = colorPalette[index % colorPalette.length];
-          
-          // Event background
-          doc.setFillColor(color);
-          doc.rect(x + 1, eventY + (index * 5), cellWidth - 2, 4, 'F');
-
-          // Icon
-          const icon = getDateTypeIconComponent(job.type);
-          if (icon) {
-            doc.addImage(icon, 'PNG', x + 3, eventY + (index * 5) + 0.5, 3, 3);
-          }
-
-          // Bold text
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(7);
-          doc.setTextColor(0);
-          doc.text(job.title.substring(0, 18), x + 7, eventY + (index * 5) + 3);
-        });
-
-        if (dayJobs.length > 8) {
-          doc.setFontSize(7);
-          doc.text(`+${dayJobs.length - 8} more`, x + 2, y + 38);
-        }
-      });
-
-      yPos += cellHeight;
-    });
-
-    // Legend
-    const legendY = yPos + 10;
-    const icons = [
-      { type: 'travel', component: getDateTypeIconComponent('travel') },
-      { type: 'setup', component: getDateTypeIconComponent('setup') },
-      { type: 'show', component: getDateTypeIconComponent('show') },
-      { type: 'off', component: getDateTypeIconComponent('off') },
+    const legend = [
+      { symbol: '✈️', meaning: 'Travel Day' },
+      { symbol: '🔧', meaning: 'Setup Day' },
+      { symbol: '⭐', meaning: 'Show Day' },
+      { symbol: '🌙', meaning: 'Day Off' },
     ];
 
-    icons.forEach((icon, index) => {
-      if (icon.component) {
-        doc.addImage(icon.component, 'PNG', 10 + (index * 30), legendY, 5, 5);
-        doc.text(icon.type, 17 + (index * 30), legendY + 5);
+    doc.setFontSize(12);
+    doc.text(`Calendar - ${format(startDate, 'MMM yyyy')} to ${format(endDate, 'MMM yyyy')}`, 14, 15);
+    
+    doc.setFontSize(10);
+    legend.forEach((item, index) => {
+      doc.text(`${item.symbol} ${item.meaning}`, 14 + (index * 50), 25);
+    });
+
+    (doc as any).autoTable({
+      startY: 30,
+      head: [['Date', 'Day', 'Jobs']],
+      body: pdfData,
+      theme: 'grid',
+      styles: { fontSize: 10, cellPadding: 3 },
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 230 }
       }
     });
 
@@ -203,110 +257,146 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     setShowPrintDialog(false);
   };
 
-  // Icon rendering helpers
-  const getDateTypeIconComponent = (type: string) => {
-    const iconSize = 16;
-    const canvas = document.createElement('canvas');
-    canvas.width = iconSize;
-    canvas.height = iconSize;
-    const ctx = canvas.getContext('2d')!;
-    
-    const icons: Record<string, string> = {
-      travel: '<path d="M17.8 19.1a.75.75 0 1 0-1.2-.9l-1.5-2a.75.75 0 0 0-.6-.3h-3v-2h1a.75.75 0 0 0 .75-.75v-3.5a.75.75 0 0 0-.75-.75h-3a.75.75 0 0 0-.75.75v3.5c0 .414.336.75.75.75h1v2h-3a.75.75 0 0 0-.6.3l-1.5 2a.75.75 0 1 0 1.2.9l1.2-1.6h9.6l1.2 1.6Z"/>',
-      setup: '<path d="M14.25 6.75a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Zm-2.655 4.805a.75.75 0 0 1-.345.635l-2.25 1.5a.75.75 0 0 1-.787-1.28l1.38-.92V9.75a.75.75 0 0 1 1.5 0v2.58l1.38.92a.75.75 0 0 1-.338 1.355Z"/>',
-      show: '<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 0 0 .95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 0 0-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 0 0-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 0 0-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 0 0 .951-.69l1.07-3.292Z"/>',
-      off: '<path d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.7-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z"/>'
-    };
-
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="currentColor">
-        ${icons[type] || ''}
-      </svg>
-    `;
-
-    const img = new Image();
-    img.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
-    
-    ctx.clearRect(0, 0, iconSize, iconSize);
-    ctx.drawImage(img, 0, 0, iconSize, iconSize);
-    return canvas.toDataURL();
-  };
-
-  // Existing component logic
-  const getDateTypeIcon = (jobId: string, date: Date) => {
-    const key = `${jobId}-${format(date, 'yyyy-MM-dd')}`;
-    const dateType = dateTypes[key]?.type;
-
-    switch (dateType) {
-      case 'travel': return <Plane className="h-3 w-3 text-blue-500" />;
-      case 'setup': return <Wrench className="h-3 w-3 text-yellow-500" />;
-      case 'show': return <Star className="h-3 w-3 text-green-500" />;
-      case 'off': return <Moon className="h-3 w-3 text-gray-500" />;
-      default: return null;
-    }
-  };
-
-  const getDepartmentIcon = (dept: string) => {
-    switch (dept) {
-      case 'sound': return <Music2 className="h-3 w-3" />;
-      case 'lights': return <Lightbulb className="h-3 w-3" />;
-      case 'video': return <Video className="h-3 w-3" />;
-      default: return null;
-    }
-  };
-
-  const getTotalRequiredPersonnel = (job: any) => {
-    let total = 0;
-    // ... existing personnel calculation logic
-    return total;
-  };
-
-  const getJobsForDate = (date: Date) => {
-    // ... existing job filtering logic
-    return filteredJobs;
-  };
+  const PrintDialog = () => (
+    <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <Printer className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Select Print Range</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4 mt-4">
+          <Button onClick={() => generatePDF('month')}>
+            Current Month ({format(date || new Date(), 'MMMM yyyy')})
+          </Button>
+          <Button onClick={() => generatePDF('quarter')}>
+            Next Quarter ({format(addMonths(startOfQuarter(addMonths(date || new Date(), 1)), 1), 'Q')} Quarter)
+          </Button>
+          <Button onClick={() => generatePDF('year')}>
+            Whole Year ({format(date || new Date(), 'yyyy')})
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 
   const renderJobCard = (job: any, date: Date) => {
-    // ... existing job card rendering logic
-    return jobCard;
+    const dateTypeIcon = getDateTypeIcon(job.id, date);
+    const totalRequired = getTotalRequiredPersonnel(job);
+    const currentlyAssigned = job.job_assignments?.length || 0;
+    
+    return (
+      <DateTypeContextMenu 
+        key={job.id} 
+        jobId={job.id} 
+        date={date}
+        onTypeChange={async () => {
+          const { data, error } = await supabase
+            .from('job_date_types')
+            .select('*')
+            .eq('job_id', job.id);
+            
+          if (!error) {
+            const types = data.reduce((acc: Record<string, any>, curr) => {
+              const key = `${curr.job_id}-${curr.date}`;
+              acc[key] = curr;
+              return acc;
+            }, {});
+            setDateTypes(prev => ({ ...prev, ...types }));
+          }
+        }}
+      >
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="px-1.5 py-0.5 rounded text-xs truncate hover:bg-accent/50 transition-colors flex items-center gap-1 cursor-pointer"
+                style={{
+                  backgroundColor: `${job.color}20`,
+                  color: job.color,
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedJob(job);
+                  setShowMilestones(true);
+                }}
+              >
+                {dateTypeIcon}
+                <span>{job.title}</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="w-64 p-2">
+              <div className="space-y-2">
+                <h4 className="font-semibold">{job.title}</h4>
+                {job.description && (
+                  <p className="text-sm text-muted-foreground">{job.description}</p>
+                )}
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4" />
+                  <span>
+                    {format(new Date(job.start_time), "MMM d, HH:mm")} - 
+                    {format(new Date(job.end_time), "MMM d, HH:mm")}
+                  </span>
+                </div>
+                {job.location?.name && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="h-4 w-4" />
+                    <span>{job.location.name}</span>
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <div className="text-sm font-medium">Departments:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {job.job_departments.map((dept: any) => (
+                      <Badge key={dept.department} variant="secondary" className="flex items-center gap-1">
+                        {getDepartmentIcon(dept.department)}
+                        <span className="capitalize">{dept.department}</span>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Users className="h-4 w-4" />
+                  <span>{currentlyAssigned}/{totalRequired} assigned</span>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </DateTypeContextMenu>
+    );
   };
 
-  // Navigation handlers
-  const handlePreviousMonth = () => onDateSelect(addMonths(currentMonth, -1));
-  const handleNextMonth = () => onDateSelect(addMonths(currentMonth, 1));
-  const handleTodayClick = () => onDateSelect(new Date());
+  const handlePreviousMonth = () => {
+    const newDate = new Date(currentMonth);
+    newDate.setMonth(newDate.getMonth() - 1);
+    onDateSelect(newDate);
+  };
+
+  const handleNextMonth = () => {
+    const newDate = new Date(currentMonth);
+    newDate.setMonth(newDate.getMonth() + 1);
+    onDateSelect(newDate);
+  };
+
+  const handleTodayClick = () => {
+    onDateSelect(new Date());
+  };
 
   return (
     <Card className="h-full flex flex-col">
       <CardContent className="flex-grow p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
-            <h2 className="text-xl font-semibold">{format(currentMonth, "MMMM yyyy")}</h2>
+            <h2 className="text-xl font-semibold">
+              {format(currentMonth, "MMMM yyyy")}
+            </h2>
           </div>
           <div className="flex items-center space-x-2">
-            <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Printer className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Select Print Range</DialogTitle>
-                </DialogHeader>
-                <div className="flex flex-col gap-4 mt-4">
-                  <Button onClick={() => generatePDF('month')}>
-                    Current Month ({format(currentMonth, 'MMMM yyyy')})
-                  </Button>
-                  <Button onClick={() => generatePDF('quarter')}>
-                    Next Quarter
-                  </Button>
-                  <Button onClick={() => generatePDF('year')}>
-                    Whole Year ({format(currentMonth, 'yyyy')})
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <PrintDialog />
             <Button variant="ghost" size="icon" onClick={handlePreviousMonth}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -333,6 +423,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
               {allDays.map((day, i) => {
                 const dayJobs = getJobsForDate(day);
                 const isCurrentMonth = isSameMonth(day, currentMonth);
+                const maxVisibleJobs = 3;
                 
                 return (
                   <div
@@ -345,10 +436,10 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
                   >
                     <span className="text-sm">{format(day, "d")}</span>
                     <div className="space-y-1 mt-1">
-                      {dayJobs.slice(0, 3).map((job: any) => renderJobCard(job, day))}
-                      {dayJobs.length > 3 && (
+                      {dayJobs.slice(0, maxVisibleJobs).map((job: any) => renderJobCard(job, day))}
+                      {dayJobs.length > maxVisibleJobs && (
                         <div className="text-xs text-muted-foreground mt-1">
-                          + {dayJobs.length - 3} more
+                          + {dayJobs.length - maxVisibleJobs} more
                         </div>
                       )}
                     </div>
@@ -371,3 +462,37 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     </Card>
   );
 };
+```
+
+To use this code:
+
+1. Install required dependencies:
+```bash
+npm install jspdf jspdf-autotable
+```
+
+2. Make sure you have the required Lucide icons imported.
+
+3. The PDF export feature will:
+   - Show Unicode symbols for different date types (✈️, 🔧, ⭐, 🌙)
+   - Include a legend explaining the symbols
+   - Generate landscape-oriented tables
+   - Support three ranges: current month, next quarter, and whole year
+   - Show job times and departments
+   - Automatically download the PDF when generated
+
+4. The calendar maintains all original functionality including:
+   - Date type context menus
+   - Job tooltips
+   - Department filtering
+   - Collapsing/expanding
+   - Job milestones dialog
+
+Test the PDF generation by:
+1. Clicking the printer icon in the calendar toolbar
+2. Selecting a date range option
+3. Checking the downloaded PDF for:
+   - Correct date range
+   - Job entries with symbols
+   - Proper formatting and layout
+   - Legend at the top of the document
