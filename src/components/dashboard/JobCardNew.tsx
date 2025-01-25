@@ -12,7 +12,12 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
-  Eye
+  Eye,
+  Plane,
+  Wrench,
+  Star,
+  Moon,
+  Mic
 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase";
@@ -94,6 +99,17 @@ interface JobCardNewProps {
   onDeleteDocument?: (jobId: string, document: JobDocument) => void;
   showUpload?: boolean;
 }
+
+const getDateTypeIcon = (type: string) => {
+  switch (type) {
+    case 'travel': return <Plane className="h-4 w-4 text-blue-500" />;
+    case 'setup': return <Wrench className="h-4 w-4 text-yellow-500" />;
+    case 'show': return <Star className="h-4 w-4 text-green-500" />;
+    case 'off': return <Moon className="h-4 w-4 text-gray-500" />;
+    case 'rehearsal': return <Mic className="h-4 w-4 text-violet-500" />;
+    default: return null;
+  }
+};
 
 /**
  * Create a folder in Flex. Returns the newly created folder object with .elementId
@@ -891,3 +907,4 @@ export const JobCardNew = ({
 };
 
 export default JobCardNew;
+
