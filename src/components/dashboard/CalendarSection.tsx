@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
@@ -26,7 +27,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const [showMilestones, setShowMilestones] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   
-  // Calendar configuration
   const currentMonth = date || new Date();
   const firstDayOfMonth = startOfMonth(currentMonth);
   const lastDayOfMonth = endOfMonth(currentMonth);
@@ -93,7 +93,28 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
 
   const getTotalRequiredPersonnel = (job: any) => {
     let total = 0;
-    total += job.job_assignments?.length || 0;
+    
+    if (job.sound_job_personnel?.length > 0) {
+      total += (job.sound_job_personnel[0].foh_engineers || 0) + 
+               (job.sound_job_personnel[0].mon_engineers || 0) + 
+               (job.sound_job_personnel[0].pa_techs || 0) + 
+               (job.sound_job_personnel[0].rf_techs || 0);
+    }
+    
+    if (job.lights_job_personnel?.length > 0) {
+      total += (job.lights_job_personnel[0].lighting_designers || 0) + 
+               (job.lights_job_personnel[0].lighting_techs || 0) + 
+               (job.lights_job_personnel[0].spot_ops || 0) + 
+               (job.lights_job_personnel[0].riggers || 0);
+    }
+    
+    if (job.video_job_personnel?.length > 0) {
+      total += (job.video_job_personnel[0].video_directors || 0) + 
+               (job.video_job_personnel[0].camera_ops || 0) + 
+               (job.video_job_personnel[0].playback_techs || 0) + 
+               (job.video_job_personnel[0].video_techs || 0);
+    }
+    
     return total;
   };
 
@@ -111,17 +132,14 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         ? compareDate === jobStartDate
         : compareDate >= jobStartDate && compareDate <= jobEndDate;
       
-      if (department) {
-        return isWithinDuration && 
-               job.job_departments.some((dept: any) => dept.department === department);
-      }
-      
-      return isWithinDuration;
+      return department 
+        ? isWithinDuration && job.job_departments.some((d: any) => d.department === department)
+        : isWithinDuration;
     });
   };
 
   const generatePDF = async (range: 'month' | 'quarter' | 'year') => {
-    const doc = new jsPDF();
+    const doc = new jsPDF('landscape');
     const currentDate = date || new Date();
     let startDate: Date, endDate: Date;
 
@@ -138,55 +156,239 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         startDate = startOfYear(currentDate);
         endDate = endOfYear(currentDate);
         break;
+      default:
+        startDate = startOfMonth(currentDate);
+        endDate = endOfMonth(currentDate);
     }
 
     const allDays = eachDayOfInterval({ start: startDate, end: endDate });
-    const tableData = allDays.map(day => {
-      const dayJobs = getJobsForDate(day);
-      return [
-        format(day, 'yyyy-MM-dd'),
-        format(day, 'EEEE'),
-        dayJobs.map(job => `${job.title} (${format(new Date(job.start_time), 'HH:mm')})`).join('\n')
-      ];
+    const weeks: Date[][] = [];
+    let currentWeek: Date[] = [];
+    
+    allDays.forEach((day, index) => {
+      currentWeek.push(day);
+      if ((index + 1) % 7 === 0) {
+        weeks.push([...currentWeek]);
+        currentWeek = [];
+      }
     });
 
-    doc.text(`Calendar - ${format(startDate, 'MMM yyyy')} to ${format(endDate, 'MMM yyyy')}`, 14, 15);
-    (doc as any).autoTable({
-      head: [['Date', 'Day', 'Jobs']],
-      body: tableData,
-      startY: 20,
+    const cellWidth = 40;
+    const cellHeight = 50;
+    const startX = 10;
+    const startY = 30;
+    const daysOfWeek = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'];
+
+    doc.setFontSize(16);
+    doc.text(format(startDate, 'MMMM yyyy'), startX + 100, 20, { align: 'center' });
+    
+    daysOfWeek.forEach((day, index) => {
+      doc.setFillColor(41, 128, 185);
+      doc.rect(startX + (index * cellWidth), startY, cellWidth, 10, 'F');
+      doc.setTextColor(255);
+      doc.setFontSize(10);
+      doc.text(day, startX + (index * cellWidth) + 2, startY + 7);
+    });
+
+    weeks.forEach((week, weekIndex) => {
+      week.forEach((day, dayIndex) => {
+        const x = startX + (dayIndex * cellWidth);
+        const y = startY + 10 + (weekIndex * cellHeight);
+        
+        doc.setDrawColor(200);
+        doc.rect(x, y, cellWidth, cellHeight);
+
+        doc.setTextColor(0);
+        doc.setFontSize(12);
+        doc.text(format(day, 'd'), x + 2, y + 5);
+
+        const dayJobs = getJobsForDate(day);
+        let yOffset = y + 10;
+        
+        dayJobs.slice(0, 8).forEach((job, index) => {
+          const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
+          const dateType = dateTypes[key]?.type;
+          const icon = getDateTypeIconComponent(dateType);
+          
+          if (icon) {
+            doc.addImage(icon, 'PNG', x + 2, yOffset + (index * 5), 3, 3);
+          }
+
+          doc.setFontSize(7);
+          doc.text(job.title.substring(0, 18), x + 7, yOffset + (index * 5) + 3);
+        });
+
+        if (dayJobs.length > 8) {
+          doc.setFontSize(7);
+          doc.text(`+${dayJobs.length - 8} more`, x + 2, y + (8 * 5) + 5);
+        }
+      });
+    });
+
+    const legendY = startY + (weeks.length * cellHeight) + 20;
+    const icons = [
+      { type: 'travel', component: getDateTypeIconComponent('travel') },
+      { type: 'setup', component: getDateTypeIconComponent('setup') },
+      { type: 'show', component: getDateTypeIconComponent('show') },
+      { type: 'off', component: getDateTypeIconComponent('off') },
+    ];
+
+    icons.forEach((icon, index) => {
+      if (icon.component) {
+        doc.addImage(icon.component, 'PNG', 10 + (index * 30), legendY, 5, 5);
+        doc.text(icon.type, 17 + (index * 30), legendY + 5);
+      }
     });
 
     doc.save(`calendar-${range}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
     setShowPrintDialog(false);
   };
 
+  const getDateTypeIconComponent = (type: string) => {
+    const iconSize = 16;
+    const canvas = document.createElement('canvas');
+    canvas.width = iconSize;
+    canvas.height = iconSize;
+    const ctx = canvas.getContext('2d')!;
+    
+    switch(type) {
+      case 'travel':
+        return iconToDataURI(<Plane size={iconSize} color="#2563eb" />, canvas, ctx);
+      case 'setup':
+        return iconToDataURI(<Wrench size={iconSize} color="#ca8a04" />, canvas, ctx);
+      case 'show':
+        return iconToDataURI(<Star size={iconSize} color="#16a34a" />, canvas, ctx);
+      case 'off':
+        return iconToDataURI(<Moon size={iconSize} color="#525252" />, canvas, ctx);
+      default:
+        return null;
+    }
+  };
+
+  const iconToDataURI = (icon: JSX.Element, canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => {
+    const parser = new DOMParser();
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}">
+        ${icon.props.children}
+      </svg>
+    `;
+    
+    const img = new Image();
+    img.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+    return canvas.toDataURL();
+  };
+
   const renderJobCard = (job: any, date: Date) => {
+    const dateTypeIcon = getDateTypeIcon(job.id, date);
+    const totalRequired = getTotalRequiredPersonnel(job);
+    const currentlyAssigned = job.job_assignments?.length || 0;
+    
     return (
-      <div className="border p-2 rounded-md">
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">{job.title}</span>
-          <span className="text-sm">{format(new Date(job.start_time), 'HH:mm')}</span>
-        </div>
-        <div className="flex items-center">
-          {getDepartmentIcon(job.job_departments[0]?.department)}
-          <span className="ml-2 text-sm">{getTotalRequiredPersonnel(job)} Personnel Required</span>
-        </div>
-      </div>
+      <DateTypeContextMenu 
+        key={job.id} 
+        jobId={job.id} 
+        date={date}
+        onTypeChange={async () => {
+          const { data } = await supabase
+            .from('job_date_types')
+            .select('*')
+            .eq('job_id', job.id);
+            
+          setDateTypes(prev => ({
+            ...prev,
+            ...data?.reduce((acc: Record<string, any>, curr) => ({
+              ...acc,
+              [`${curr.job_id}-${curr.date}`]: curr
+            }), {})
+          }));
+        }}
+      >
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="px-1.5 py-0.5 rounded text-xs truncate hover:bg-accent/50 transition-colors flex items-center gap-1 cursor-pointer"
+                style={{
+                  backgroundColor: `${job.color}20`,
+                  color: job.color,
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedJob(job);
+                  setShowMilestones(true);
+                }}
+              >
+                {dateTypeIcon}
+                <span>{job.title}</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="w-64 p-2">
+              <div className="space-y-2">
+                <h4 className="font-semibold">{job.title}</h4>
+                {job.description && <p className="text-sm text-muted-foreground">{job.description}</p>}
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4" />
+                  <span>
+                    {format(new Date(job.start_time), "MMM d, HH:mm")} - 
+                    {format(new Date(job.end_time), "MMM d, HH:mm")}
+                  </span>
+                </div>
+                {job.location?.name && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="h-4 w-4" />
+                    <span>{job.location.name}</span>
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <div className="text-sm font-medium">Departments:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {job.job_departments.map((dept: any) => (
+                      <Badge key={dept.department} variant="secondary" className="flex items-center gap-1">
+                        {getDepartmentIcon(dept.department)}
+                        <span className="capitalize">{dept.department}</span>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Users className="h-4 w-4" />
+                  <span>{currentlyAssigned}/{totalRequired} assigned</span>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </DateTypeContextMenu>
     );
   };
 
-  // Navigation handlers
-  const handlePreviousMonth = () => onDateSelect(addMonths(currentMonth, -1));
-  const handleNextMonth = () => onDateSelect(addMonths(currentMonth, 1));
-  const handleTodayClick = () => onDateSelect(new Date());
+  const handlePreviousMonth = () => {
+    const newDate = new Date(currentMonth);
+    newDate.setMonth(newDate.getMonth() - 1);
+    onDateSelect(newDate);
+  };
+
+  const handleNextMonth = () => {
+    const newDate = new Date(currentMonth);
+    newDate.setMonth(newDate.getMonth() + 1);
+    onDateSelect(newDate);
+  };
+
+  const handleTodayClick = () => {
+    onDateSelect(new Date());
+  };
 
   return (
     <Card className="h-full flex flex-col">
       <CardContent className="flex-grow p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
-            <h2 className="text-xl font-semibold">{format(currentMonth, "MMMM yyyy")}</h2>
+            <h2 className="text-xl font-semibold">
+              {format(currentMonth, "MMMM yyyy")}
+            </h2>
           </div>
           <div className="flex items-center space-x-2">
             <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
@@ -201,13 +403,13 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
                 </DialogHeader>
                 <div className="flex flex-col gap-4 mt-4">
                   <Button onClick={() => generatePDF('month')}>
-                    Current Month ({format(currentMonth, 'MMMM yyyy')})
+                    Current Month ({format(date || new Date(), 'MMMM yyyy')})
                   </Button>
                   <Button onClick={() => generatePDF('quarter')}>
-                    Next Quarter
+                    Next Quarter ({format(addMonths(startOfQuarter(addMonths(date || new Date(), 1)), 1), 'Q')} Quarter)
                   </Button>
                   <Button onClick={() => generatePDF('year')}>
-                    Whole Year ({format(currentMonth, 'yyyy')})
+                    Whole Year ({format(date || new Date(), 'yyyy')})
                   </Button>
                 </div>
               </DialogContent>
@@ -238,6 +440,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
               {allDays.map((day, i) => {
                 const dayJobs = getJobsForDate(day);
                 const isCurrentMonth = isSameMonth(day, currentMonth);
+                const maxVisibleJobs = 3;
                 
                 return (
                   <div
@@ -250,10 +453,10 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
                   >
                     <span className="text-sm">{format(day, "d")}</span>
                     <div className="space-y-1 mt-1">
-                      {dayJobs.slice(0, 3).map((job: any) => renderJobCard(job, day))}
-                      {dayJobs.length > 3 && (
+                      {dayJobs.slice(0, maxVisibleJobs).map((job: any) => renderJobCard(job, day))}
+                      {dayJobs.length > maxVisibleJobs && (
                         <div className="text-xs text-muted-foreground mt-1">
-                          + {dayJobs.length - 3} more
+                          + {dayJobs.length - maxVisibleJobs} more
                         </div>
                       )}
                     </div>
