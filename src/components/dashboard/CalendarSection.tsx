@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isAfter, isBefore, addDays, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
@@ -462,37 +461,3 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     </Card>
   );
 };
-```
-
-To use this code:
-
-1. Install required dependencies:
-```bash
-npm install jspdf jspdf-autotable
-```
-
-2. Make sure you have the required Lucide icons imported.
-
-3. The PDF export feature will:
-   - Show Unicode symbols for different date types (✈️, 🔧, ⭐, 🌙)
-   - Include a legend explaining the symbols
-   - Generate landscape-oriented tables
-   - Support three ranges: current month, next quarter, and whole year
-   - Show job times and departments
-   - Automatically download the PDF when generated
-
-4. The calendar maintains all original functionality including:
-   - Date type context menus
-   - Job tooltips
-   - Department filtering
-   - Collapsing/expanding
-   - Job milestones dialog
-
-Test the PDF generation by:
-1. Clicking the printer icon in the calendar toolbar
-2. Selecting a date range option
-3. Checking the downloaded PDF for:
-   - Correct date range
-   - Job entries with symbols
-   - Proper formatting and layout
-   - Legend at the top of the document
