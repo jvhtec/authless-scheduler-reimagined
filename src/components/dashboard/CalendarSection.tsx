@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Printer } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear, eachMonthOfInterval, isSameDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -160,97 +160,97 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         endDate = endOfMonth(currentDate);
     }
 
-    const allDays = eachDayOfInterval({ start: startDate, end: endDate });
-    const weeks: Date[][] = [];
-    let currentWeek: Date[] = [];
-    
-    allDays.forEach((day) => {
-      currentWeek.push(day);
-      if (currentWeek.length === 7) {
-        weeks.push([...currentWeek]);
-        currentWeek = [];
-      }
-    });
-
+    const months = eachMonthOfInterval({ start: startDate, end: endDate });
     const cellWidth = 40;
     const cellHeight = 30;
     const startX = 10;
     const startY = 30;
-    const pageHeight = doc.internal.pageSize.height;
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const colors = ['#FFCDD2', '#F8BBD0', '#E1BEE7', '#D1C4E9', '#C5CAE9', '#BBDEFB', '#B3E5FC', '#B2EBF2'];
-    
-    let currentMonthHeader = '';
-    let yPos = startY + 10;
 
-    weeks.forEach((week) => {
-      if (yPos + cellHeight > pageHeight - 20) {
-        doc.addPage('landscape');
-        yPos = startY;
-        currentMonthHeader = '';
-      }
+    months.forEach((monthStart, pageIndex) => {
+      if (pageIndex > 0) doc.addPage('landscape');
+      
+      const monthEnd = endOfMonth(monthStart);
+      const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+      const weeks: Date[][] = [];
+      let currentWeek: Date[] = [];
 
-      const firstDayOfWeek = week[0];
-      const weekMonth = format(firstDayOfWeek, 'MMMM yyyy');
-      if (weekMonth !== currentMonthHeader) {
-        currentMonthHeader = weekMonth;
-        doc.setFontSize(16);
-        doc.text(currentMonthHeader, 105, 20, { align: 'center' });
-      }
-
-      week.forEach((day, dayIndex) => {
-        const x = startX + (dayIndex * cellWidth);
-        const y = yPos;
-        
-        doc.setDrawColor(200);
-        doc.rect(x, y, cellWidth, cellHeight);
-
-        doc.setTextColor(0);
-        doc.setFontSize(12);
-        doc.text(format(day, 'd'), x + 2, y + 5);
-
-        const dayJobs = getJobsForDate(day);
-        let eventY = y + 8;
-        
-        dayJobs.slice(0, 8).forEach((job, index) => {
-          const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
-          const dateType = dateTypes[key]?.type;
-          
-          doc.setFillColor(colors[index % colors.length]);
-          doc.rect(x + 1, eventY + (index * 5), cellWidth - 2, 4, 'F');
-
-          const icon = getDateTypeIconComponent(dateType);
-          if (icon) {
-            doc.addImage(icon, 'PNG', x + 2, eventY + (index * 5) + 0.5, 3, 3);
-          }
-
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(7);
-          doc.setTextColor(0);
-          doc.text(job.title.substring(0, 18), x + 6, eventY + (index * 5) + 3);
-        });
-
-        if (dayJobs.length > 8) {
-          doc.setFontSize(7);
-          doc.text(`+${dayJobs.length - 8} more`, x + 2, y + 38);
+      monthDays.forEach(day => {
+        currentWeek.push(day);
+        if (currentWeek.length === 7) {
+          weeks.push([...currentWeek]);
+          currentWeek = [];
         }
       });
 
-      yPos += cellHeight;
-    });
+      if (currentWeek.length > 0) {
+        weeks.push([...currentWeek]);
+      }
 
-    const legendY = yPos + 10;
-    const icons = [
-      { type: 'travel', component: getDateTypeIconComponent('travel') },
-      { type: 'setup', component: getDateTypeIconComponent('setup') },
-      { type: 'show', component: getDateTypeIconComponent('show') },
-      { type: 'off', component: getDateTypeIconComponent('off') },
-    ];
+      doc.setFontSize(16);
+      doc.text(format(monthStart, 'MMMM yyyy'), 105, 20, { align: 'center' });
 
-    icons.forEach((icon, index) => {
-      if (icon.component) {
-        doc.addImage(icon.component, 'PNG', 10 + (index * 30), legendY, 5, 5);
-        doc.text(icon.type, 17 + (index * 30), legendY + 5);
+      daysOfWeek.forEach((day, index) => {
+        doc.setFillColor(41, 128, 185);
+        doc.rect(startX + (index * cellWidth), startY, cellWidth, 10, 'F');
+        doc.setTextColor(255);
+        doc.setFontSize(10);
+        doc.text(day, startX + (index * cellWidth) + 15, startY + 7);
+      });
+
+      let yPos = startY + 10;
+      weeks.forEach(week => {
+        week.forEach((day, dayIndex) => {
+          const x = startX + (dayIndex * cellWidth);
+          const y = yPos;
+          
+          doc.setDrawColor(200);
+          doc.rect(x, y, cellWidth, cellHeight);
+
+          doc.setTextColor(isSameMonth(day, monthStart) ? 0 : 200);
+          doc.setFontSize(12);
+          doc.text(format(day, 'd'), x + 2, y + 5);
+
+          const dayJobs = getJobsForDate(day);
+          let eventY = y + 8;
+          
+          dayJobs.slice(0, 8).forEach((job, index) => {
+            const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
+            const dateType = dateTypes[key]?.type;
+            
+            doc.setFillColor(colors[index % colors.length]);
+            doc.rect(x + 1, eventY + (index * 5), cellWidth - 2, 4, 'F');
+
+            const icon = getDateTypeIconComponent(dateType);
+            if (icon) {
+              doc.addImage(icon, 'PNG', x + 2, eventY + (index * 5) + 0.5, 3, 3);
+            }
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7);
+            doc.setTextColor(0);
+            doc.text(job.title.substring(0, 18), x + 6, eventY + (index * 5) + 3);
+          });
+        });
+        yPos += cellHeight;
+      });
+
+      if (pageIndex === 0) {
+        const legendY = yPos + 10;
+        const icons = [
+          { type: 'travel', component: getDateTypeIconComponent('travel') },
+          { type: 'setup', component: getDateTypeIconComponent('setup') },
+          { type: 'show', component: getDateTypeIconComponent('show') },
+          { type: 'off', component: getDateTypeIconComponent('off') },
+        ];
+
+        icons.forEach((icon, index) => {
+          if (icon.component) {
+            doc.addImage(icon.component, 'PNG', 10 + (index * 30), legendY, 5, 5);
+            doc.text(icon.type, 17 + (index * 30), legendY + 5);
+          }
+        });
       }
     });
 
