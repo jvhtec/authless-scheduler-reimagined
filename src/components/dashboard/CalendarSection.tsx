@@ -93,7 +93,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
 
   const getTotalRequiredPersonnel = (job: any) => {
     let total = 0;
-    // Calculate total personnel required for the job
     total += job.job_assignments?.length || 0;
     return total;
   };
@@ -101,7 +100,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const getJobsForDate = (date: Date) => {
     if (!jobs) return [];
     
-    const jobsForDate = jobs.filter(job => {
+    return jobs.filter(job => {
       const startDate = new Date(job.start_time);
       const endDate = new Date(job.end_time);
       const compareDate = format(date, 'yyyy-MM-dd');
@@ -119,8 +118,47 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
       
       return isWithinDuration;
     });
+  };
 
-    return jobsForDate;
+  const generatePDF = async (range: 'month' | 'quarter' | 'year') => {
+    const doc = new jsPDF();
+    const currentDate = date || new Date();
+    let startDate: Date, endDate: Date;
+
+    switch (range) {
+      case 'month':
+        startDate = startOfMonth(currentDate);
+        endDate = endOfMonth(currentDate);
+        break;
+      case 'quarter':
+        startDate = startOfQuarter(addMonths(currentDate, 1));
+        endDate = endOfQuarter(addMonths(currentDate, 3));
+        break;
+      case 'year':
+        startDate = startOfYear(currentDate);
+        endDate = endOfYear(currentDate);
+        break;
+    }
+
+    const allDays = eachDayOfInterval({ start: startDate, end: endDate });
+    const tableData = allDays.map(day => {
+      const dayJobs = getJobsForDate(day);
+      return [
+        format(day, 'yyyy-MM-dd'),
+        format(day, 'EEEE'),
+        dayJobs.map(job => `${job.title} (${format(new Date(job.start_time), 'HH:mm')})`).join('\n')
+      ];
+    });
+
+    doc.text(`Calendar - ${format(startDate, 'MMM yyyy')} to ${format(endDate, 'MMM yyyy')}`, 14, 15);
+    (doc as any).autoTable({
+      head: [['Date', 'Day', 'Jobs']],
+      body: tableData,
+      startY: 20,
+    });
+
+    doc.save(`calendar-${range}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    setShowPrintDialog(false);
   };
 
   const renderJobCard = (job: any, date: Date) => {
