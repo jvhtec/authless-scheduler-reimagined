@@ -62,14 +62,11 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         return;
       }
 
-      console.log('Date types fetched:', data);
-
       const typesMap = data.reduce((acc: Record<string, any>, curr) => ({
         ...acc,
         [`${curr.job_id}-${curr.date}`]: curr
       }), {});
 
-      console.log('Date types map:', typesMap);
       setDateTypes(typesMap);
     };
 
@@ -79,8 +76,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const getDateTypeIcon = (jobId: string, date: Date) => {
     const key = `${jobId}-${format(date, 'yyyy-MM-dd')}`;
     const dateType = dateTypes[key]?.type;
-    
-    console.log('Getting icon for:', { jobId, date, key, dateType });
 
     switch (dateType) {
       case 'travel': return <Plane className="h-3 w-3 text-blue-500" />;
@@ -229,36 +224,41 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
             const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
             const dateType = dateTypes[key]?.type;
             
-            const iconDataUrl = await getDateTypeIconComponent(dateType);
-            if (iconDataUrl) {
-              doc.addImage(iconDataUrl, 'PNG', x + 2, eventY + (index * 5), 3, 3);
-            }
-
-            // Use job's color with transparency
-            const jobColor = job.color || '#000000';
-            const backgroundColor = hexToRgba(jobColor, 0.2);
-            doc.setFillColor(backgroundColor);
+            // Use job's color with lightened background
+            const baseColor = job.color || '#cccccc';
+            const [r, g, b] = hexToRgb(lightenColor(baseColor, 40));
+            doc.setFillColor(r, g, b);
             doc.rect(x + 1, eventY + (index * 5), cellWidth - 2, 4, 'F');
 
-            // Ensure text is readable
-            const textColor = getContrastColor(jobColor);
+            // Set text color based on contrast
+            doc.setTextColor(getContrastColor(baseColor));
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(7);
-            doc.setTextColor(textColor);
             doc.text(job.title.substring(0, 18), x + 6, eventY + (index * 5) + 3);
+
+            // Add date type icon
+            if (dateType) {
+              const iconDataUrl = await getDateTypeIconComponent(dateType);
+              if (iconDataUrl) {
+                doc.addImage(iconDataUrl, 'PNG', x + 2, eventY + (index * 5), 3, 3);
+              }
+            }
           }
         }
         yPos += cellHeight;
       }
 
+      // Add legend for first page
       if (months.indexOf(monthStart) === 0) {
         const legendY = yPos + 10;
         const iconTypes = ['travel', 'setup', 'show', 'off'] as const;
         
         for (const [index, type] of iconTypes.entries()) {
-          const component = await getDateTypeIconComponent(type);
-          if (component) {
-            doc.addImage(component, 'PNG', 10 + (index * 30), legendY, 5, 5);
+          const iconDataUrl = await getDateTypeIconComponent(type);
+          if (iconDataUrl) {
+            doc.addImage(iconDataUrl, 'PNG', 10 + (index * 30), legendY, 5, 5);
+            doc.setTextColor(0);
+            doc.setFontSize(8);
             doc.text(type, 17 + (index * 30), legendY + 5);
           }
         }
@@ -269,28 +269,35 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     setShowPrintDialog(false);
   };
 
-  const hexToRgba = (hex: string, alpha: number) => {
+  // Color utility functions
+  const hexToRgb = (hex: string): [number, number, number] => {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
-    return [r, g, b, alpha * 255];
+    return [r, g, b];
   };
 
-  const getContrastColor = (hex: string) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
+  const lightenColor = (hex: string, percent: number): string => {
+    const [r, g, b] = hexToRgb(hex);
+    const newR = Math.min(255, r + (255 - r) * (percent / 100));
+    const newG = Math.min(255, g + (255 - g) * (percent / 100));
+    const newB = Math.min(255, b + (255 - b) * (percent / 100));
+    return `#${Math.round(newR).toString(16).padStart(2, '0')}${Math.round(newG).toString(16).padStart(2, '0')}${Math.round(newB).toString(16).padStart(2, '0')}`;
+  };
+
+  const getContrastColor = (hex: string): string => {
+    const [r, g, b] = hexToRgb(hex);
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.5 ? '#000000' : '#FFFFFF';
+    return luminance > 0.6 ? '#000000' : '#ffffff';
   };
 
-  const getDateTypeIconComponent = async (type: string) => {
+  const getDateTypeIconComponent = async (type: string): Promise<string> => {
     const iconSize = 16;
     const canvas = document.createElement('canvas');
     canvas.width = iconSize;
     canvas.height = iconSize;
     const ctx = canvas.getContext('2d')!;
-    
+
     const icons: Record<string, string> = {
       travel: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.8 19.1a.75.75 0 1 0-1.2-.9l-1.5-2a.75.75 0 0 0-.6-.3h-3v-2h1a.75.75 0 0 0 .75-.75v-3.5a.75.75 0 0 0-.75-.75h-3a.75.75 0 0 0-.75.75v3.5c0 .414.336.75.75.75h1v2h-3a.75.75 0 0 0-.6.3l-1.5 2a.75.75 0 1 0 1.2.9l1.2-1.6h9.6l1.2 1.6Z"/>
@@ -306,13 +313,15 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
            </svg>`
     };
 
-    const svg = icons[type] || '';
-    const img = new Image();
-    img.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
-    
-    ctx.clearRect(0, 0, iconSize, iconSize);
-    ctx.drawImage(img, 0, 0, iconSize, iconSize);
-    return canvas.toDataURL();
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(icons[type] || '');
+      img.onload = () => {
+        ctx.clearRect(0, 0, iconSize, iconSize);
+        ctx.drawImage(img, 0, 0, iconSize, iconSize);
+        resolve(canvas.toDataURL());
+      };
+    });
   };
 
   const renderJobCard = (job: any, date: Date) => {
@@ -326,18 +335,11 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         jobId={job.id} 
         date={date}
         onTypeChange={async () => {
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from('job_date_types')
             .select('*')
             .eq('job_id', job.id);
             
-          if (error) {
-            console.error('Error refreshing date types:', error);
-            return;
-          }
-
-          console.log('Refreshed date types:', data);
-          
           setDateTypes(prev => ({
             ...prev,
             ...data?.reduce((acc: Record<string, any>, curr) => ({
