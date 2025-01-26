@@ -185,7 +185,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const cellWidth = 40;
     const cellHeight = 30;
     const startX = 10;
-    const startY = 20 + (logo ? logoHeight + 10 : 0); // Adjust start position for logo
+    const startY = 10 + (logo ? logoHeight + 10 : 0); // Adjust start position for logo
     const daysOfWeek = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'];
 
     const dateTypeLabels: Record<string, string> = {
