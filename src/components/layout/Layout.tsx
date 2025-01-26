@@ -9,7 +9,7 @@ import {
   SidebarSeparator,
   SidebarTrigger
 } from "@/components/ui/sidebar";
-import { LogOut } from "lucide-react";
+import { LogOut, RefreshCw } from "lucide-react"; // Added RefreshCw icon
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -29,7 +29,7 @@ const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  
+
   const {
     session,
     userRole,
@@ -69,6 +69,10 @@ const Layout = ({ children }: LayoutProps) => {
     }
   };
 
+  const handleReload = () => {
+    window.location.reload(); // Reload the current page
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -77,7 +81,6 @@ const Layout = ({ children }: LayoutProps) => {
     );
   }
 
-  // Only redirect if we're certain there's no session
   if (!session && !isLoading) {
     console.log("No session found in Layout, redirecting to auth");
     navigate('/auth');
@@ -130,6 +133,15 @@ const Layout = ({ children }: LayoutProps) => {
             <div className="flex items-center gap-2">
               <SidebarTrigger />
             </div>
+            {/* Reload Button */}
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2"
+              onClick={handleReload}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Reload
+            </Button>
           </header>
           <main className="p-6">
             {children}
