@@ -192,8 +192,7 @@ export const LogisticsCalendar = () => {
                       <LogisticsEventCard
                         key={event.id}
                         event={event}
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={() => {
                           setSelectedEvent(event);
                           setShowEventDialog(true);
                         }}
