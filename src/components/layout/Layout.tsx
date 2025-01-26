@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { 
   SidebarProvider, 
   Sidebar, 
@@ -9,7 +8,7 @@ import {
   SidebarSeparator,
   SidebarTrigger
 } from "@/components/ui/sidebar";
-import { LogOut, RefreshCw } from "lucide-react"; // Added RefreshCw icon
+import { LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -20,6 +19,7 @@ import { AboutCard } from "@/components/layout/AboutCard";
 import { NotificationBadge } from "@/components/layout/NotificationBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionManager } from "@/hooks/useSessionManager";
+import { ReloadButton } from "@/components/ReloadButton"; // Import ReloadButton
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -42,7 +42,7 @@ const Layout = ({ children }: LayoutProps) => {
 
   const handleSignOut = async () => {
     if (isLoggingOut) return;
-    
+
     setIsLoggingOut(true);
     console.log("Starting sign out process");
 
@@ -67,10 +67,6 @@ const Layout = ({ children }: LayoutProps) => {
     } finally {
       setIsLoggingOut(false);
     }
-  };
-
-  const handleReload = () => {
-    window.location.reload(); // Reload the current page
   };
 
   if (isLoading) {
@@ -133,15 +129,8 @@ const Layout = ({ children }: LayoutProps) => {
             <div className="flex items-center gap-2">
               <SidebarTrigger />
             </div>
-            {/* Reload Button */}
-            <Button
-              variant="ghost"
-              className="flex items-center gap-2"
-              onClick={handleReload}
-            >
-              <RefreshCw className="h-4 w-4" />
-              Reload
-            </Button>
+            {/* Use ReloadButton */}
+            <ReloadButton />
           </header>
           <main className="p-6">
             {children}
