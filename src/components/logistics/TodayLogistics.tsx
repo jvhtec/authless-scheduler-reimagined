@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -13,13 +12,13 @@ interface TodayLogisticsProps {
 }
 
 export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
-  const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+  const formattedDate = format(selectedDate || new Date(), 'yyyy-MM-dd');
   const { toast } = useToast();
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
 
   const { data: events, isLoading } = useQuery({
-    queryKey: ['logistics-events', formattedDate], // Include date in query key
+    queryKey: ['logistics-events', formattedDate],
     queryFn: async () => {
       console.log('Fetching logistics events for:', formattedDate);
       const { data, error } = await supabase
