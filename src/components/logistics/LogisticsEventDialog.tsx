@@ -36,6 +36,7 @@ export const LogisticsEventDialog = ({
   const [eventType, setEventType] = useState<'load' | 'unload'>('load');
   const [transportType, setTransportType] = useState<string>('trailer');
   const [time, setTime] = useState('09:00');
+  const [date, setDate] = useState(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''); // New date field
   const [loadingBay, setLoadingBay] = useState('');
   const [selectedJob, setSelectedJob] = useState<string>('');
   const [licensePlate, setLicensePlate] = useState('');
@@ -51,37 +52,43 @@ export const LogisticsEventDialog = ({
       setEventType(selectedEvent.event_type);
       setTransportType(selectedEvent.transport_type);
       setTime(selectedEvent.event_time);
+      setDate(selectedEvent.event_date ? format(new Date(selectedEvent.event_date), 'yyyy-MM-dd') : ''); // Populate date
       setLoadingBay(selectedEvent.loading_bay || '');
       setSelectedJob(selectedEvent.job_id || '');
       setLicensePlate(selectedEvent.license_plate || '');
-      setSelectedDepartments(selectedEvent.departments.map(d => d.department));
+      setSelectedDepartments(selectedEvent.departments.map((d) => d.department));
     } else {
       // Reset form for new events
       setEventType('load');
       setTransportType('trailer');
       setTime('09:00');
+      setDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''); // Reset date
       setLoadingBay('');
       setSelectedJob('');
       setLicensePlate('');
       setSelectedDepartments([]);
     }
-  }, [selectedEvent]);
+  }, [selectedEvent, selectedDate]);
 
   const { data: jobs } = useQuery({
     queryKey: ['jobs'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('jobs')
-        .select('id, title');
-      
+      const { data, error } = await supabase.from('jobs').select('id, title');
       if (error) throw error;
       return data;
-    }
+    },
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDate && !selectedEvent) return;
+    if (!date || !time) {
+      toast({
+        title: "Error",
+        description: "Date and time are required.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       if (selectedEvent) {
@@ -91,28 +98,26 @@ export const LogisticsEventDialog = ({
           .update({
             event_type: eventType,
             transport_type: transportType,
+            event_date: date, // Include the updated date
             event_time: time,
             loading_bay: loadingBay || null,
             job_id: selectedJob || null,
-            license_plate: licensePlate || null
+            license_plate: licensePlate || null,
           })
           .eq('id', selectedEvent.id);
 
         if (updateError) throw updateError;
 
         // Update departments
-        await supabase
-          .from('logistics_event_departments')
-          .delete()
-          .eq('event_id', selectedEvent.id);
+        await supabase.from('logistics_event_departments').delete().eq('event_id', selectedEvent.id);
 
         if (selectedDepartments.length > 0) {
           const { error: deptError } = await supabase
             .from('logistics_event_departments')
             .insert(
-              selectedDepartments.map(dept => ({
+              selectedDepartments.map((dept) => ({
                 event_id: selectedEvent.id,
-                department: dept
+                department: dept,
               }))
             );
 
@@ -121,7 +126,7 @@ export const LogisticsEventDialog = ({
 
         toast({
           title: "Success",
-          description: "Logistics event updated successfully",
+          description: "Logistics event updated successfully.",
         });
       } else {
         // Create new event
@@ -130,11 +135,11 @@ export const LogisticsEventDialog = ({
           .insert({
             event_type: eventType,
             transport_type: transportType,
-            event_date: selectedDate,
+            event_date: date, // Include the selected date
             event_time: time,
             loading_bay: loadingBay || null,
             job_id: selectedJob || null,
-            license_plate: licensePlate || null
+            license_plate: licensePlate || null,
           })
           .select()
           .single();
@@ -145,9 +150,9 @@ export const LogisticsEventDialog = ({
           const { error: deptError } = await supabase
             .from('logistics_event_departments')
             .insert(
-              selectedDepartments.map(dept => ({
+              selectedDepartments.map((dept) => ({
                 event_id: newEvent.id,
-                department: dept
+                department: dept,
               }))
             );
 
@@ -156,10 +161,10 @@ export const LogisticsEventDialog = ({
 
         toast({
           title: "Success",
-          description: "Logistics event created successfully",
+          description: "Logistics event created successfully.",
         });
       }
-      
+
       queryClient.invalidateQueries({ queryKey: ['logistics-events'] });
       queryClient.invalidateQueries({ queryKey: ['today-logistics'] });
       onOpenChange(false);
@@ -177,21 +182,15 @@ export const LogisticsEventDialog = ({
 
     try {
       // Delete departments first due to foreign key constraint
-      await supabase
-        .from('logistics_event_departments')
-        .delete()
-        .eq('event_id', selectedEvent.id);
+      await supabase.from('logistics_event_departments').delete().eq('event_id', selectedEvent.id);
 
-      const { error } = await supabase
-        .from('logistics_events')
-        .delete()
-        .eq('id', selectedEvent.id);
+      const { error } = await supabase.from('logistics_events').delete().eq('id', selectedEvent.id);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Logistics event deleted successfully",
+        description: "Logistics event deleted successfully.",
       });
 
       queryClient.invalidateQueries({ queryKey: ['logistics-events'] });
@@ -211,17 +210,12 @@ export const LogisticsEventDialog = ({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {selectedEvent ? 'Edit Logistics Event' : 'Create Logistics Event'}
-            </DialogTitle>
+            <DialogTitle>{selectedEvent ? 'Edit Logistics Event' : 'Create Logistics Event'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label>Job</Label>
-              <Select
-                value={selectedJob}
-                onValueChange={setSelectedJob}
-              >
+              <Select value={selectedJob} onValueChange={setSelectedJob}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a job" />
                 </SelectTrigger>
@@ -236,27 +230,28 @@ export const LogisticsEventDialog = ({
             </div>
 
             <div className="space-y-2">
-              <Label>Event Type</Label>
-              <Select
-                value={eventType}
-                onValueChange={(value: 'load' | 'unload') => setEventType(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="load">Load</SelectItem>
-                  <SelectItem value="unload">Unload</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Time</Label>
+              <Input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <Label>Transport Type</Label>
-              <Select
-                value={transportType}
-                onValueChange={setTransportType}
-              >
+              <Select value={transportType} onValueChange={setTransportType}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -287,29 +282,17 @@ export const LogisticsEventDialog = ({
                   <Button
                     key={dept}
                     type="button"
-                    variant={selectedDepartments.includes(dept) ? "default" : "outline"}
+                    variant={selectedDepartments.includes(dept) ? 'default' : 'outline'}
                     onClick={() => {
-                      setSelectedDepartments(prev =>
-                        prev.includes(dept)
-                          ? prev.filter(d => d !== dept)
-                          : [...prev, dept]
+                      setSelectedDepartments((prev) =>
+                        prev.includes(dept) ? prev.filter((d) => d !== dept) : [...prev, dept]
                       );
                     }}
-                    className="h-8"
                   >
                     {dept}
                   </Button>
                 ))}
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Time</Label>
-              <Input
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-              />
             </div>
 
             <div className="space-y-2">
@@ -332,7 +315,7 @@ export const LogisticsEventDialog = ({
                   Delete
                 </Button>
               )}
-              <Button type="submit" className={selectedEvent ? "ml-auto" : "w-full"}>
+              <Button type="submit" className={selectedEvent ? 'ml-auto' : 'w-full'}>
                 {selectedEvent ? 'Update' : 'Create'} Event
               </Button>
             </div>
