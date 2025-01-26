@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -229,7 +228,6 @@ export const LogisticsCalendar = ({ onDateSelect }: LogisticsCalendarProps) => {
                               }}
                               compact
                               className="px-1.5 py-0.5 text-xs truncate hover:bg-accent/50"
-                              showFullContent={false}
                             />
                           </div>
                         </TooltipTrigger>

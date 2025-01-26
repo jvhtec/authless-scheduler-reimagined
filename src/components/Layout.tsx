@@ -6,10 +6,11 @@ import { Sidebar } from "@/components/ui/sidebar";
 import { SidebarNavigation } from "./layout/SidebarNavigation";
 import { UserInfo } from "./layout/UserInfo";
 import { AboutCard } from "./layout/AboutCard";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 const Layout = () => {
   const navigate = useNavigate();
-  const { session, isLoading } = useSessionManager();
+  const { session, isLoading, userRole } = useSessionManager();
 
   useEffect(() => {
     const checkSession = async () => {
@@ -43,24 +44,26 @@ const Layout = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar>
-        <div className="flex h-full flex-col">
-          <div className="flex-1 overflow-y-auto">
-            <div className="space-y-4 py-4">
-              <SidebarNavigation />
+    <SidebarProvider defaultOpen={true}>
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar>
+          <div className="flex h-full flex-col">
+            <div className="flex-1 overflow-y-auto">
+              <div className="space-y-4 py-4">
+                <SidebarNavigation userRole={userRole} />
+              </div>
+            </div>
+            <div className="mt-auto p-4">
+              <UserInfo />
+              <AboutCard />
             </div>
           </div>
-          <div className="mt-auto p-4">
-            <UserInfo />
-            <AboutCard />
-          </div>
-        </div>
-      </Sidebar>
-      <main className="flex-1 overflow-y-auto bg-background">
-        <Outlet />
-      </main>
-    </div>
+        </Sidebar>
+        <main className="flex-1 overflow-y-auto bg-background">
+          <Outlet />
+        </main>
+      </div>
+    </SidebarProvider>
   );
 };
 
