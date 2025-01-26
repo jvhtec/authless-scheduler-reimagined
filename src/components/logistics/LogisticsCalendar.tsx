@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -221,24 +222,21 @@ export const LogisticsCalendar = ({ onDateSelect }: LogisticsCalendarProps) => {
                           <div>
                             <LogisticsEventCard
                               event={event}
-                              onClick={(e: React.MouseEvent) => {
+                              onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedEvent(event);
                                 setShowEventDialog(true);
                               }}
                               compact
                               className="px-1.5 py-0.5 text-xs truncate hover:bg-accent/50"
+                              showFullContent={false}
                             />
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="top" align="start" className="w-64">
                           <LogisticsEventCard 
-                            event={event}
-                            onClick={(e: React.MouseEvent) => {
-                              e.stopPropagation();
-                              setSelectedEvent(event);
-                              setShowEventDialog(true);
-                            }}
+                            event={event} 
+                            showFullContent
                             className="border-0 shadow-none p-0"
                           />
                         </TooltipContent>

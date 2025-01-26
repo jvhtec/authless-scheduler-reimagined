@@ -1,67 +1,135 @@
-import { useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { 
+  SidebarProvider, 
+  Sidebar, 
+  SidebarContent, 
+  SidebarGroup, 
+  SidebarGroupContent, 
+  SidebarFooter,
+  SidebarSeparator,
+  SidebarTrigger
+} from "@/components/ui/sidebar";
+import { LogOut } from "lucide-react";
+import { useNavigate, Outlet } from "react-router-dom";
+import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { useSessionManager } from "@/hooks/useSessionManager";
-import { Sidebar } from "@/components/ui/sidebar";
-import { SidebarNavigation } from "./layout/SidebarNavigation";
+import { ThemeToggle } from "./layout/ThemeToggle";
 import { UserInfo } from "./layout/UserInfo";
+import { SidebarNavigation } from "./layout/SidebarNavigation";
 import { AboutCard } from "./layout/AboutCard";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { NotificationBadge } from "./layout/NotificationBadge";
+import { useToast } from "@/hooks/use-toast";
+import { useSessionManager } from "@/hooks/useSessionManager";
 
 const Layout = () => {
   const navigate = useNavigate();
-  const { session, isLoading, userRole } = useSessionManager();
+  const { toast } = useToast();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
+  const {
+    session,
+    userRole,
+    userDepartment,
+    isLoading,
+    setSession,
+    setUserRole,
+    setUserDepartment
+  } = useSessionManager();
 
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
-        if (!currentSession) {
-          console.info("No session found in Layout, redirecting to auth");
-          navigate("/", { replace: true });
-        }
-      } catch (error) {
-        console.error("Error checking session:", error);
-        navigate("/", { replace: true });
-      }
-    };
+  const handleSignOut = async () => {
+    if (isLoggingOut) return;
+    
+    setIsLoggingOut(true);
+    console.log("Starting sign out process");
 
-    // Only check session if we're not already loading
-    if (!isLoading) {
-      checkSession();
+    try {
+      setSession(null);
+      setUserRole(null);
+      setUserDepartment(null);
+      localStorage.clear();
+      await supabase.auth.signOut();
+      console.log("Sign out successful");
+      navigate('/auth');
+      toast({
+        title: "Success",
+        description: "You have been logged out successfully",
+      });
+    } catch (error) {
+      console.error("Error during sign out:", error);
+      toast({
+        title: "Notice",
+        description: "You have been logged out",
+      });
+    } finally {
+      setIsLoggingOut(false);
     }
-  }, [navigate, isLoading]);
+  };
 
-  // Show nothing while checking session
   if (isLoading) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white" />
+      </div>
+    );
   }
 
-  // If no session, render nothing (redirect will happen)
-  if (!session) {
+  if (!session && !isLoading) {
+    console.log("No session found in Layout, redirecting to auth");
+    navigate('/auth');
     return null;
   }
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex h-screen overflow-hidden">
+      <div className="min-h-screen flex w-full">
         <Sidebar>
-          <div className="flex h-full flex-col">
-            <div className="flex-1 overflow-y-auto">
-              <div className="space-y-4 py-4">
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupContent>
                 <SidebarNavigation userRole={userRole} />
-              </div>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter className="border-t border-sidebar-border">
+            <ThemeToggle />
+            <UserInfo />
+            {session?.user?.id && (
+              <NotificationBadge 
+                userId={session.user.id}
+                userRole={userRole}
+                userDepartment={userDepartment}
+              />
+            )}
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start gap-2" 
+              onClick={handleSignOut}
+              disabled={isLoggingOut}
+            >
+              <LogOut className="h-4 w-4" />
+              <span>{isLoggingOut ? 'Signing out...' : 'Sign Out'}</span>
+            </Button>
+            <AboutCard />
+            <SidebarSeparator />
+            <div className="px-2 py-4">
+              <img
+                src="/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png"
+                alt="Sector Pro Logo"
+                className="h-6 w-auto dark:invert"
+              />
             </div>
-            <div className="mt-auto p-4">
-              <UserInfo />
-              <AboutCard />
-            </div>
-          </div>
+          </SidebarFooter>
         </Sidebar>
-        <main className="flex-1 overflow-y-auto bg-background">
-          <Outlet />
-        </main>
+        <div className="flex-1">
+          <header className="border-b p-4 flex justify-between items-center bg-background">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger />
+            </div>
+          </header>
+          <main className="p-6">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </SidebarProvider>
   );
