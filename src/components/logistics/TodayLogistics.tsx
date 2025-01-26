@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -12,10 +13,10 @@ interface TodayLogisticsProps {
 }
 
 export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
-  const formattedDate = format(selectedDate || new Date(), 'yyyy-MM-dd');
   const { toast } = useToast();
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const formattedDate = format(selectedDate, 'yyyy-MM-dd');
 
   const { data: events, isLoading } = useQuery({
     queryKey: ['logistics-events', formattedDate],
@@ -28,10 +29,11 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
           job:jobs(title),
           departments:logistics_event_departments(department)
         `)
-        .eq('event_date', formattedDate);
+        .eq('event_date', formattedDate)
+        .order('start_time', { ascending: true });
 
       if (error) {
-        console.error('Error fetching logistics events:', error);
+        console.error('Error fetching events:', error);
         toast({
           title: "Error",
           description: "Failed to load events",
@@ -40,7 +42,6 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
         throw error;
       }
 
-      console.log('Fetched events:', data);
       return data;
     }
   });
@@ -53,7 +54,9 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Schedule for {format(selectedDate, 'MMM dd, yyyy')}</CardTitle>
+        <CardTitle>
+          Schedule for {format(selectedDate, 'MMMM do, yyyy')}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -64,7 +67,13 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
               onClick={() => handleEventClick(event)}
             />
           ))}
+          {events?.length === 0 && (
+            <div className="text-muted-foreground text-center py-4">
+              No logistics events scheduled for this day
+            </div>
+          )}
         </div>
+
         <LogisticsEventDialog
           open={showEventDialog}
           onOpenChange={setShowEventDialog}
