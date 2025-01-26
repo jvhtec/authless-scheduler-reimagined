@@ -221,7 +221,7 @@ export const LogisticsCalendar = ({ onDateSelect }: LogisticsCalendarProps) => {
                           <div>
                             <LogisticsEventCard
                               event={event}
-                              onClick={(e) => {
+                              onClick={(e: React.MouseEvent) => {
                                 e.stopPropagation();
                                 setSelectedEvent(event);
                                 setShowEventDialog(true);
@@ -233,8 +233,12 @@ export const LogisticsCalendar = ({ onDateSelect }: LogisticsCalendarProps) => {
                         </TooltipTrigger>
                         <TooltipContent side="top" align="start" className="w-64">
                           <LogisticsEventCard 
-                            event={event} 
-                            showFullContent
+                            event={event}
+                            onClick={(e: React.MouseEvent) => {
+                              e.stopPropagation();
+                              setSelectedEvent(event);
+                              setShowEventDialog(true);
+                            }}
                             className="border-0 shadow-none p-0"
                           />
                         </TooltipContent>

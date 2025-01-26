@@ -5,9 +5,9 @@ import { cn } from "@/lib/utils";
 
 interface LogisticsEventCardProps {
   event: any;
-  onClick: () => void;
+  onClick: (e: React.MouseEvent) => void;
   compact?: boolean;
-  className?: string; // Add className to props
+  className?: string;
 }
 
 export const LogisticsEventCard = ({ event, onClick, compact = false, className }: LogisticsEventCardProps) => {
