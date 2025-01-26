@@ -10,7 +10,7 @@ interface LogisticsEventCardProps {
   className?: string;
 }
 
-export const LogisticsEventCard = ({ event, onClick, compact = false, className }: LogisticsEventCardProps) => {
+export const LogisticsEventCard = ({ event, onClick, compact = true, className }: LogisticsEventCardProps) => {
   return (
     <div
       onClick={onClick}
