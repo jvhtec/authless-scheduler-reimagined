@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -11,6 +12,7 @@ import { LogisticsEventCard } from "./LogisticsEventCard";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import jsPDF from "jspdf";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface LogisticsCalendarProps {
   onDateSelect?: (date: Date) => void;
@@ -215,16 +217,30 @@ export const LogisticsCalendar = ({ onDateSelect }: LogisticsCalendarProps) => {
                   <span className="text-sm">{format(day, "d")}</span>
                   <div className="space-y-1 mt-1">
                     {dayEvents?.slice(0, maxVisibleEvents).map((event) => (
-                      <LogisticsEventCard
-                        key={event.id}
-                        event={event}
-                        onClick={() => {
-                          setSelectedEvent(event);
-                          setShowEventDialog(true);
-                        }}
-                        compact
-                        className="px-1.5 py-0.5 text-xs truncate hover:bg-accent/50"
-                      />
+                      <Tooltip key={event.id}>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <LogisticsEventCard
+                              event={event}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedEvent(event);
+                                setShowEventDialog(true);
+                              }}
+                              compact
+                              className="px-1.5 py-0.5 text-xs truncate hover:bg-accent/50"
+                              showFullContent={false}
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" align="start" className="w-64">
+                          <LogisticsEventCard 
+                            event={event} 
+                            showFullContent
+                            className="border-0 shadow-none p-0"
+                          />
+                        </TooltipContent>
+                      </Tooltip>
                     ))}
                     {dayEvents && dayEvents.length > maxVisibleEvents && (
                       <div className="text-xs text-muted-foreground mt-1">
