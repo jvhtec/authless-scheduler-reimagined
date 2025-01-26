@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Dispatch, SetStateAction } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -12,7 +12,11 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import jsPDF from "jspdf";
 
-export const LogisticsCalendar = () => {
+interface LogisticsCalendarProps {
+  onDateSelect?: (date: Date) => void;
+}
+
+export const LogisticsCalendar = ({ onDateSelect }: LogisticsCalendarProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -132,6 +136,11 @@ export const LogisticsCalendar = () => {
     setShowPrintDialog(false);
   };
 
+  const handleDayClick = (date: Date) => {
+    onDateSelect?.(date);
+    setCurrentMonth(date);
+  };
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -189,7 +198,7 @@ export const LogisticsCalendar = () => {
                     "bg-background p-2 min-h-[120px] border-t relative cursor-pointer hover:bg-accent/50 transition-colors",
                     !isCurrentMonth && "text-muted-foreground/50"
                   )}
-                  onClick={() => setCurrentMonth(day)}
+                  onClick={() => handleDayClick(day)}
                 >
                   <span className="text-sm">{format(day, "d")}</span>
                   <div className="space-y-1 mt-1">
