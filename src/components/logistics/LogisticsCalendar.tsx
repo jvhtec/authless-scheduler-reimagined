@@ -116,12 +116,16 @@ export const LogisticsCalendar = () => {
       doc.text(format(day, 'd'), x + 2, y + 5);
 
       const dayEvents = getDayEvents(day);
-      dayEvents?.forEach((event, index) => {
-        doc.setFontSize(8);
-        doc.setTextColor(0);
-        const eventText = event.job?.title || `${event.event_type} - ${event.transport_type}`;
-        doc.text(eventText.substring(0, 20), x + 5, y + 10 + (index * 5));
-      });
+      if (dayEvents) {
+        dayEvents.forEach((event, index) => {
+          doc.setFontSize(8);
+          doc.setTextColor(0);
+          const eventText = event.job?.title 
+            ? event.job.title 
+            : `${event.event_type} - ${event.transport_type}`;
+          doc.text(eventText.substring(0, 20), x + 5, y + 10 + (index * 5));
+        });
+      }
     });
 
     doc.save(`logistics-calendar-${format(currentMonth, 'yyyy-MM')}.pdf`);
