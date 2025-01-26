@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -7,16 +8,20 @@ import { LogisticsEventCard } from "./LogisticsEventCard";
 import { LogisticsEventDialog } from "./LogisticsEventDialog";
 import { useState } from "react";
 
-export const TodayLogistics = () => {
-  const today = format(new Date(), 'yyyy-MM-dd');
+interface TodayLogisticsProps {
+  selectedDate: Date;
+}
+
+export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
+  const formattedDate = format(selectedDate, 'yyyy-MM-dd');
   const { toast } = useToast();
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
 
-  const { data: todayEvents, isLoading } = useQuery({
-    queryKey: ['today-logistics'],
+  const { data: events, isLoading } = useQuery({
+    queryKey: ['logistics-events', formattedDate], // Include date in query key
     queryFn: async () => {
-      console.log('Fetching today\'s logistics events for:', today);
+      console.log('Fetching logistics events for:', formattedDate);
       const { data, error } = await supabase
         .from('logistics_events')
         .select(`
@@ -24,19 +29,19 @@ export const TodayLogistics = () => {
           job:jobs(title),
           departments:logistics_event_departments(department)
         `)
-        .eq('event_date', today);
+        .eq('event_date', formattedDate);
 
       if (error) {
-        console.error('Error fetching today\'s logistics events:', error);
+        console.error('Error fetching logistics events:', error);
         toast({
           title: "Error",
-          description: "Failed to load today's events",
+          description: "Failed to load events",
           variant: "destructive",
         });
         throw error;
       }
 
-      console.log('Fetched today\'s events:', data);
+      console.log('Fetched events:', data);
       return data;
     }
   });
@@ -49,11 +54,11 @@ export const TodayLogistics = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Today's Schedule</CardTitle>
+        <CardTitle>Schedule for {format(selectedDate, 'MMM dd, yyyy')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {todayEvents?.map((event) => (
+          {events?.map((event) => (
             <LogisticsEventCard
               key={event.id}
               event={event}
@@ -64,7 +69,7 @@ export const TodayLogistics = () => {
         <LogisticsEventDialog
           open={showEventDialog}
           onOpenChange={setShowEventDialog}
-          selectedDate={new Date()}
+          selectedDate={selectedDate}
           selectedEvent={selectedEvent}
         />
       </CardContent>
