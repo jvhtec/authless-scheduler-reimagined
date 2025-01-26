@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -73,8 +73,13 @@ export const LogisticsCalendar = ({ onDateSelect }: LogisticsCalendarProps) => {
     if (!events) return [];
     return events.filter(event => {
       if (!event.event_date) return false;
-      const eventDate = new Date(event.event_date);
-      return format(eventDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+      try {
+        const eventDate = new Date(event.event_date);
+        return isValid(eventDate) && format(eventDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+      } catch (e) {
+        console.error('Invalid date in event:', event);
+        return false;
+      }
     });
   };
 
@@ -124,7 +129,7 @@ export const LogisticsCalendar = ({ onDateSelect }: LogisticsCalendarProps) => {
       doc.text(format(day, 'd'), x + 2, y + 5);
 
       const dayEvents = getDayEvents(day);
-      if (dayEvents) {
+      if (dayEvents && dayEvents.length > 0) {
         dayEvents.forEach((event, index) => {
           if (event && event.job) {
             doc.setFontSize(8);
@@ -141,8 +146,10 @@ export const LogisticsCalendar = ({ onDateSelect }: LogisticsCalendarProps) => {
   };
 
   const handleDayClick = (date: Date) => {
-    onDateSelect?.(date);
-    setCurrentMonth(date);
+    if (onDateSelect && isValid(date)) {
+      onDateSelect(date);
+      setCurrentMonth(date);
+    }
   };
 
   return (
