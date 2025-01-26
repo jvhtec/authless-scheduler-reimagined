@@ -8,13 +8,15 @@ interface LogisticsEventCardProps {
   onClick: (e: React.MouseEvent) => void;
   variant?: "calendar" | "detailed";
   className?: string;
+  compact?: boolean; // Added this prop
 }
 
 export const LogisticsEventCard = ({ 
   event, 
   onClick, 
   variant = "detailed", 
-  className 
+  className,
+  compact = false // Added default value
 }: LogisticsEventCardProps) => {
   return (
     <div
@@ -22,15 +24,16 @@ export const LogisticsEventCard = ({
       className={cn(
         `p-2 bg-card border rounded-md cursor-pointer hover:shadow-md transition-shadow
         ${event.event_type === 'load' ? 'border-blue-200' : 'border-green-200'}`,
+        compact && 'p-1', // Apply compact styling if needed
         className
       )}
     >
-     {/* Render for calendar variant */}
-{variant === "calendar" ? (
-  <div className="flex items-center gap-2">
-    <span className="text-xs">{event.job?.title}</span>
-  </div>
-) : (
+      {/* Render for calendar variant */}
+      {variant === "calendar" ? (
+        <div className="flex items-center gap-2">
+          <span className="text-xs">{event.job?.title}</span>
+        </div>
+      ) : (
         /* Render for detailed variant */
         <>
           <div className="flex items-center justify-between gap-2">
