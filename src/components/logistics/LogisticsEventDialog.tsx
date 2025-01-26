@@ -10,6 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Department } from "@/types/department";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
+import { format } from "date-fns";
 
 interface LogisticsEventDialogProps {
   open: boolean;
@@ -20,6 +21,7 @@ interface LogisticsEventDialogProps {
     event_type: 'load' | 'unload';
     transport_type: string;
     event_time: string;
+    event_date: string;
     loading_bay: string | null;
     job_id: string | null;
     license_plate: string | null;
@@ -36,7 +38,7 @@ export const LogisticsEventDialog = ({
   const [eventType, setEventType] = useState<'load' | 'unload'>('load');
   const [transportType, setTransportType] = useState<string>('trailer');
   const [time, setTime] = useState('09:00');
-  const [date, setDate] = useState(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''); // New date field
+  const [date, setDate] = useState(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '');
   const [loadingBay, setLoadingBay] = useState('');
   const [selectedJob, setSelectedJob] = useState<string>('');
   const [licensePlate, setLicensePlate] = useState('');
@@ -52,17 +54,16 @@ export const LogisticsEventDialog = ({
       setEventType(selectedEvent.event_type);
       setTransportType(selectedEvent.transport_type);
       setTime(selectedEvent.event_time);
-      setDate(selectedEvent.event_date ? format(new Date(selectedEvent.event_date), 'yyyy-MM-dd') : ''); // Populate date
+      setDate(selectedEvent.event_date);
       setLoadingBay(selectedEvent.loading_bay || '');
       setSelectedJob(selectedEvent.job_id || '');
       setLicensePlate(selectedEvent.license_plate || '');
       setSelectedDepartments(selectedEvent.departments.map((d) => d.department));
     } else {
-      // Reset form for new events
       setEventType('load');
       setTransportType('trailer');
       setTime('09:00');
-      setDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''); // Reset date
+      setDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '');
       setLoadingBay('');
       setSelectedJob('');
       setLicensePlate('');
