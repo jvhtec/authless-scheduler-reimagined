@@ -33,7 +33,8 @@ export const LogisticsCalendar = ({ onDateSelect }: LogisticsCalendarProps) => {
           *,
           job:jobs(title),
           departments:logistics_event_departments(department)
-        `);
+        `)
+        .order('event_time', { ascending: true });
 
       if (error) {
         console.error('Error fetching events:', error);
