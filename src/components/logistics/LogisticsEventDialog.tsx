@@ -10,6 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Department } from "@/types/department";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
+import { format } from "date-fns"; // Added this import
 
 interface LogisticsEventDialogProps {
   open: boolean;
@@ -215,3 +216,4 @@ export const LogisticsEventDialog = ({
     </>
   );
 };
+
