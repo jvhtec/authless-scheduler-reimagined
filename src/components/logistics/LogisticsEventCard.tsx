@@ -25,23 +25,12 @@ export const LogisticsEventCard = ({
         className
       )}
     >
-      {/* Render for calendar variant */}
-      {variant === "calendar" ? (
-        <div className="flex items-center gap-2">
-          <Badge 
-            variant={event.event_type === 'load' ? 'default' : 'secondary'}
-            className="flex items-center gap-1"
-          >
-            {event.event_type === 'load' ? (
-              <Package className="h-3 w-3" />
-            ) : (
-              <PackageCheck className="h-3 w-3" />
-            )}
-            <span className="capitalize">{event.event_type}</span>
-          </Badge>
-          <span className="text-xs">{event.job?.title}</span>
-        </div>
-      ) : (
+     {/* Render for calendar variant */}
+{variant === "calendar" ? (
+  <div className="flex items-center gap-2">
+    <span className="text-xs">{event.job?.title}</span>
+  </div>
+) : (
         /* Render for detailed variant */
         <>
           <div className="flex items-center justify-between gap-2">
