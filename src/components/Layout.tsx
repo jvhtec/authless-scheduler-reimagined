@@ -10,7 +10,7 @@ import {
   SidebarTrigger
 } from "@/components/ui/sidebar";
 import { LogOut } from "lucide-react";
-import { useNavigate, Outlet } from "react-router-dom";
+import { useNavigate, Outlet, Navigate } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { ThemeToggle } from "./layout/ThemeToggle";
@@ -49,7 +49,7 @@ const Layout = () => {
       localStorage.clear();
       await supabase.auth.signOut();
       console.log("Sign out successful");
-      navigate('/auth');
+      navigate('/auth', { replace: true });
       toast({
         title: "Success",
         description: "You have been logged out successfully",
@@ -73,10 +73,9 @@ const Layout = () => {
     );
   }
 
-  if (!session && !isLoading) {
+  if (!session) {
     console.log("No session found in Layout, redirecting to auth");
-    navigate('/auth');
-    return null;
+    return <Navigate to="/auth" replace />;
   }
 
   return (
