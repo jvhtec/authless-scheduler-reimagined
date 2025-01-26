@@ -7,7 +7,8 @@ import {
   Video,
   Settings,
   Briefcase,
-  UserCircle
+  UserCircle,
+  Truck
 } from "lucide-react";
 
 interface SidebarNavigationProps {
@@ -51,32 +52,32 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
           </Button>
         </Link>
 
-        {isTechnician && (
-          <Link to="/profile">
-            <Button
-              variant="ghost"
-              className={`w-full justify-start gap-2 ${
-                location.pathname === "/profile" ? "bg-accent" : ""
-              }`}
-            >
-              <UserCircle className="h-4 w-4" />
-              <span>Profile</span>
-            </Button>
-          </Link>
-        )}
-
         {isAuthorizedForProjectManagement && (
-          <Link to="/project-management">
-            <Button
-              variant="ghost"
-              className={`w-full justify-start gap-2 ${
-                location.pathname === "/project-management" ? "bg-accent" : ""
-              }`}
-            >
-              <Briefcase className="h-4 w-4" />
-              <span>Project Management</span>
-            </Button>
-          </Link>
+          <>
+            <Link to="/project-management">
+              <Button
+                variant="ghost"
+                className={`w-full justify-start gap-2 ${
+                  location.pathname === "/project-management" ? "bg-accent" : ""
+                }`}
+              >
+                <Briefcase className="h-4 w-4" />
+                <span>Project Management</span>
+              </Button>
+            </Link>
+
+            <Link to="/logistics">
+              <Button
+                variant="ghost"
+                className={`w-full justify-start gap-2 ${
+                  location.pathname === "/logistics" ? "bg-accent" : ""
+                }`}
+              >
+                <Truck className="h-4 w-4" />
+                <span>Logistics</span>
+              </Button>
+            </Link>
+          </>
         )}
 
         {isAuthorizedForDepartments && (
@@ -117,6 +118,20 @@ export const SidebarNavigation = ({ userRole }: SidebarNavigationProps) => {
               </Button>
             </Link>
           </>
+        )}
+
+        {isTechnician && (
+          <Link to="/profile">
+            <Button
+              variant="ghost"
+              className={`w-full justify-start gap-2 ${
+                location.pathname === "/profile" ? "bg-accent" : ""
+              }`}
+            >
+              <UserCircle className="h-4 w-4" />
+              <span>Profile</span>
+            </Button>
+          </Link>
         )}
 
         {isAuthorizedForSettings && (

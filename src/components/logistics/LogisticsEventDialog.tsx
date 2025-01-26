@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface LogisticsEventDialogProps {
   open: boolean;
@@ -22,11 +23,25 @@ export const LogisticsEventDialog = ({
   const [transportType, setTransportType] = useState<string>('trailer');
   const [time, setTime] = useState('09:00');
   const [loadingBay, setLoadingBay] = useState('');
+  const [selectedJob, setSelectedJob] = useState<string>('');
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: jobs } = useQuery({
+    queryKey: ['jobs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('id, title');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDate) return;
+    if (!selectedDate || !selectedJob) return;
 
     try {
       const { error } = await supabase
@@ -37,6 +52,7 @@ export const LogisticsEventDialog = ({
           event_date: selectedDate,
           event_time: time,
           loading_bay: loadingBay || null,
+          job_id: selectedJob
         });
 
       if (error) throw error;
@@ -46,6 +62,8 @@ export const LogisticsEventDialog = ({
         description: "Logistics event created successfully",
       });
       
+      queryClient.invalidateQueries({ queryKey: ['logistics-events'] });
+      queryClient.invalidateQueries({ queryKey: ['today-logistics'] });
       onOpenChange(false);
     } catch (error: any) {
       toast({
@@ -63,6 +81,25 @@ export const LogisticsEventDialog = ({
           <DialogTitle>Create Logistics Event</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Job</Label>
+            <Select
+              value={selectedJob}
+              onValueChange={setSelectedJob}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a job" />
+              </SelectTrigger>
+              <SelectContent>
+                {jobs?.map((job) => (
+                  <SelectItem key={job.id} value={job.id}>
+                    {job.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2">
             <Label>Event Type</Label>
             <Select

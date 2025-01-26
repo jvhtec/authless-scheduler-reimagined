@@ -4,13 +4,16 @@ import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Package, PackageCheck, Truck } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export const TodayLogistics = () => {
   const today = format(new Date(), 'yyyy-MM-dd');
+  const { toast } = useToast();
 
   const { data: todayEvents, isLoading } = useQuery({
     queryKey: ['today-logistics'],
     queryFn: async () => {
+      console.log('Fetching today\'s logistics events for:', today);
       const { data, error } = await supabase
         .from('logistics_events')
         .select(`
@@ -20,7 +23,17 @@ export const TodayLogistics = () => {
         `)
         .eq('event_date', today);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching today\'s logistics events:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load today's events",
+          variant: "destructive",
+        });
+        throw error;
+      }
+
+      console.log('Fetched today\'s events:', data);
       return data;
     }
   });
