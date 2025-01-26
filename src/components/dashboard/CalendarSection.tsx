@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Mic, Printer } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear, eachMonthOfInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear, eachMonthOfInterval, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -127,19 +127,31 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     if (!jobs) return [];
     
     return jobs.filter(job => {
-      const startDate = new Date(job.start_time);
-      const endDate = new Date(job.end_time);
-      const compareDate = format(date, 'yyyy-MM-dd');
-      const jobStartDate = format(startDate, 'yyyy-MM-dd');
-      const jobEndDate = format(endDate, 'yyyy-MM-dd');
-      const isSingleDayJob = jobStartDate === jobEndDate;
-      const isWithinDuration = isSingleDayJob 
-        ? compareDate === jobStartDate
-        : compareDate >= jobStartDate && compareDate <= jobEndDate;
-      
-      return department 
-        ? isWithinDuration && job.job_departments.some((d: any) => d.department === department)
-        : isWithinDuration;
+      try {
+        const startDate = job.start_time ? parseISO(job.start_time) : null;
+        const endDate = job.end_time ? parseISO(job.end_time) : null;
+        
+        if (!startDate || !endDate) {
+          console.warn('Invalid date found for job:', job);
+          return false;
+        }
+
+        const compareDate = format(date, 'yyyy-MM-dd');
+        const jobStartDate = format(startDate, 'yyyy-MM-dd');
+        const jobEndDate = format(endDate, 'yyyy-MM-dd');
+        
+        const isSingleDayJob = jobStartDate === jobEndDate;
+        const isWithinDuration = isSingleDayJob 
+          ? compareDate === jobStartDate
+          : compareDate >= jobStartDate && compareDate <= jobEndDate;
+        
+        return department 
+          ? isWithinDuration && job.job_departments.some((d: any) => d.department === department)
+          : isWithinDuration;
+      } catch (error) {
+        console.error('Error processing job dates:', error, job);
+        return false;
+      }
     });
   };
 
