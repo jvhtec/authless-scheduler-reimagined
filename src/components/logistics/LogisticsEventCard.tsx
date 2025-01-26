@@ -7,13 +7,15 @@ interface LogisticsEventCardProps {
   event: any;
   onClick: (e: React.MouseEvent) => void;
   variant?: "calendar" | "detailed";
+  compact?: boolean;
   className?: string;
 }
 
 export const LogisticsEventCard = ({ 
   event, 
   onClick, 
-  variant = "detailed", 
+  variant = "detailed",
+  compact = false,
   className 
 }: LogisticsEventCardProps) => {
   return (
@@ -25,13 +27,11 @@ export const LogisticsEventCard = ({
         className
       )}
     >
-     {/* Render for calendar variant */}
-{variant === "calendar" ? (
-  <div className="flex items-center gap-2">
-    <span className="text-xs">{event.job?.title}</span>
-  </div>
-) : (
-        /* Render for detailed variant */
+      {variant === "calendar" ? (
+        <div className="flex items-center gap-2">
+          <span className="text-xs">{event.job?.title}</span>
+        </div>
+      ) : (
         <>
           <div className="flex items-center justify-between gap-2">
             <Badge 
