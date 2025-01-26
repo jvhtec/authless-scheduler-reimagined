@@ -1,4 +1,4 @@
-import { useState, useEffect, Dispatch, SetStateAction } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -26,6 +26,7 @@ export const LogisticsCalendar = ({ onDateSelect }: LogisticsCalendarProps) => {
   const { data: events, isLoading } = useQuery({
     queryKey: ['logistics-events'],
     queryFn: async () => {
+      console.log('Fetching logistics events');
       const { data, error } = await supabase
         .from('logistics_events')
         .select(`
@@ -35,7 +36,7 @@ export const LogisticsCalendar = ({ onDateSelect }: LogisticsCalendarProps) => {
         `);
 
       if (error) {
-        console.error('Error fetching logistics events:', error);
+        console.error('Error fetching events:', error);
         toast({
           title: "Error",
           description: "Failed to load logistics events",
@@ -69,9 +70,12 @@ export const LogisticsCalendar = ({ onDateSelect }: LogisticsCalendarProps) => {
   const allDays = [...prefixDays, ...daysInMonth, ...suffixDays];
 
   const getDayEvents = (date: Date) => {
-    return events?.filter(event => 
-      format(new Date(event.event_date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
-    );
+    if (!events) return [];
+    return events.filter(event => {
+      if (!event.event_date) return false;
+      const eventDate = new Date(event.event_date);
+      return format(eventDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+    });
   };
 
   const handlePreviousMonth = () => {
@@ -122,12 +126,12 @@ export const LogisticsCalendar = ({ onDateSelect }: LogisticsCalendarProps) => {
       const dayEvents = getDayEvents(day);
       if (dayEvents) {
         dayEvents.forEach((event, index) => {
-          doc.setFontSize(8);
-          doc.setTextColor(0);
-          const eventText = event.job?.title 
-            ? event.job.title 
-            : `${event.event_type} - ${event.transport_type}`;
-          doc.text(eventText.substring(0, 20), x + 5, y + 10 + (index * 5));
+          if (event && event.job) {
+            doc.setFontSize(8);
+            doc.setTextColor(0);
+            const eventText = event.job.title || `${event.event_type} - ${event.transport_type}`;
+            doc.text(eventText.substring(0, 20), x + 5, y + 10 + (index * 5));
+          }
         });
       }
     });
