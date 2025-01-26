@@ -87,29 +87,7 @@ export const LogisticsCalendar = () => {
           onSelect={setSelectedDate}
           className="rounded-md border"
           components={{
-            DayContent: ({ date }) => {
-              const dayEvents = getDayEvents(date);
-              return (
-                <div className="w-full h-full min-h-[120px] p-2">
-                  <div className="flex justify-between items-start">
-                    <span className="text-sm font-medium">
-                      {format(date, 'd')}
-                    </span>
-                  </div>
-                  <div className="mt-1 space-y-1 max-h-[100px] overflow-y-auto">
-                    {dayEvents?.map((event) => (
-                      <LogisticsEventCard
-                        key={event.id}
-                        event={event}
-                        onClick={() => handleEventClick(event)}
-                        compact
-                      />
-                    ))}
-                  </div>
-                </div>
-              );
-            },
-            Header: ({ localeDate, decreaseMonth, increaseMonth }) => {
+            Head: ({ localeDate, decreaseMonth, increaseMonth }) => {
               return (
                 <div className="flex items-center justify-between px-2 py-4">
                   <h2 className="text-lg font-semibold">
@@ -130,6 +108,28 @@ export const LogisticsCalendar = () => {
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
+                  </div>
+                </div>
+              );
+            },
+            Day: ({ date }) => {
+              const dayEvents = getDayEvents(date);
+              return (
+                <div className="w-full h-full min-h-[120px] p-2">
+                  <div className="flex justify-between items-start">
+                    <span className="text-sm font-medium">
+                      {format(date, 'd')}
+                    </span>
+                  </div>
+                  <div className="mt-1 space-y-1 max-h-[100px] overflow-y-auto">
+                    {dayEvents?.map((event) => (
+                      <LogisticsEventCard
+                        key={event.id}
+                        event={event}
+                        onClick={() => handleEventClick(event)}
+                        compact
+                      />
+                    ))}
                   </div>
                 </div>
               );
