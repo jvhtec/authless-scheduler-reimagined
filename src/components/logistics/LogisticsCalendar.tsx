@@ -119,7 +119,8 @@ export const LogisticsCalendar = () => {
       dayEvents?.forEach((event, index) => {
         doc.setFontSize(8);
         doc.setTextColor(0);
-        doc.text(event.title.substring(0, 20), x + 5, y + 10 + (index * 5));
+        const eventText = event.job?.title || `${event.event_type} - ${event.transport_type}`;
+        doc.text(eventText.substring(0, 20), x + 5, y + 10 + (index * 5));
       });
     });
 
@@ -197,7 +198,6 @@ export const LogisticsCalendar = () => {
                           setShowEventDialog(true);
                         }}
                         compact
-                        className="px-1.5 py-0.5 text-xs truncate hover:bg-accent/50"
                       />
                     ))}
                     {dayEvents && dayEvents.length > maxVisibleEvents && (
