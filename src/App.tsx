@@ -22,6 +22,7 @@ import VideoConsumosTool from '@/pages/VideoConsumosTool';
 import ExcelTool from '@/pages/ExcelTool';
 import HojaDeRuta from '@/pages/HojaDeRuta';
 import LaborPOForm from '@/pages/LaborPOForm';
+import Logistics from '@/pages/Logistics';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
               <Route path="sound" element={<Sound />} />
               <Route path="lights" element={<Lights />} />
               <Route path="video" element={<Video />} />
+              <Route path="logistics" element={<Logistics />} />
               <Route path="profile" element={<Profile />} />
               <Route path="settings" element={<Settings />} />
               <Route path="project-management" element={<ProjectManagement />} />

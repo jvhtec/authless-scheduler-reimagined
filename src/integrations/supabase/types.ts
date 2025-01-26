@@ -518,6 +518,76 @@ export type Database = {
         }
         Relationships: []
       }
+      logistics_event_departments: {
+        Row: {
+          department: string
+          event_id: string
+        }
+        Insert: {
+          department: string
+          event_id: string
+        }
+        Update: {
+          department?: string
+          event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistics_event_departments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "logistics_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logistics_events: {
+        Row: {
+          created_at: string | null
+          event_date: string
+          event_time: string
+          event_type: Database["public"]["Enums"]["logistics_event_type"]
+          id: string
+          job_id: string | null
+          loading_bay: string | null
+          notes: string | null
+          transport_type: Database["public"]["Enums"]["transport_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_date: string
+          event_time: string
+          event_type: Database["public"]["Enums"]["logistics_event_type"]
+          id?: string
+          job_id?: string | null
+          loading_bay?: string | null
+          notes?: string | null
+          transport_type: Database["public"]["Enums"]["transport_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_date?: string
+          event_time?: string
+          event_type?: Database["public"]["Enums"]["logistics_event_type"]
+          id?: string
+          job_id?: string | null
+          loading_bay?: string | null
+          notes?: string | null
+          transport_type?: Database["public"]["Enums"]["transport_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistics_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -1054,6 +1124,7 @@ export type Database = {
       job_date_type: "travel" | "setup" | "show" | "off" | "rehearsal"
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
       job_type: "single" | "tour"
+      logistics_event_type: "load" | "unload"
       message_status: "unread" | "read"
       milestone_category:
         | "planning"
@@ -1063,6 +1134,7 @@ export type Database = {
         | "production"
       project_status: "pending" | "in_progress" | "completed" | "cancelled"
       task_status: "not_started" | "in_progress" | "completed"
+      transport_type: "trailer" | "9m" | "8m" | "6m" | "4m" | "furgoneta"
       user_role: "admin" | "user" | "management" | "logistics" | "technician"
     }
     CompositeTypes: {
