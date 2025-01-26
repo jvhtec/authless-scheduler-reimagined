@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -30,7 +29,7 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
           departments:logistics_event_departments(department)
         `)
         .eq('event_date', formattedDate)
-        .order('start_time', { ascending: true });
+        .order('event_time', { ascending: true });
 
       if (error) {
         console.error('Error fetching events:', error);
