@@ -549,6 +549,7 @@ export type Database = {
           event_type: Database["public"]["Enums"]["logistics_event_type"]
           id: string
           job_id: string | null
+          license_plate: string | null
           loading_bay: string | null
           notes: string | null
           transport_type: Database["public"]["Enums"]["transport_type"]
@@ -561,6 +562,7 @@ export type Database = {
           event_type: Database["public"]["Enums"]["logistics_event_type"]
           id?: string
           job_id?: string | null
+          license_plate?: string | null
           loading_bay?: string | null
           notes?: string | null
           transport_type: Database["public"]["Enums"]["transport_type"]
@@ -573,6 +575,7 @@ export type Database = {
           event_type?: Database["public"]["Enums"]["logistics_event_type"]
           id?: string
           job_id?: string | null
+          license_plate?: string | null
           loading_bay?: string | null
           notes?: string | null
           transport_type?: Database["public"]["Enums"]["transport_type"]

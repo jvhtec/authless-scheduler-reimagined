@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 export const LogisticsCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [showEventDialog, setShowEventDialog] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const { toast } = useToast();
 
   const { data: events, isLoading } = useQuery({
@@ -49,11 +50,21 @@ export const LogisticsCalendar = () => {
     );
   };
 
+  const handleEventClick = (event: any) => {
+    setSelectedEvent(event);
+    setShowEventDialog(true);
+  };
+
+  const handleAddEvent = () => {
+    setSelectedEvent(null);
+    setShowEventDialog(true);
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Logistics Calendar</CardTitle>
-        <Button onClick={() => setShowEventDialog(true)} size="sm">
+        <Button onClick={handleAddEvent} size="sm">
           <Plus className="h-4 w-4 mr-2" />
           Add Event
         </Button>
@@ -75,7 +86,8 @@ export const LogisticsCalendar = () => {
                       <Badge 
                         key={event.id}
                         variant={event.event_type === 'load' ? 'default' : 'secondary'}
-                        className="w-full flex items-center gap-1 text-xs"
+                        className="w-full flex items-center gap-1 text-xs cursor-pointer hover:opacity-80"
+                        onClick={() => handleEventClick(event)}
                       >
                         {event.event_type === 'load' ? <Package className="h-3 w-3" /> : <PackageCheck className="h-3 w-3" />}
                         <Truck className="h-3 w-3" />
@@ -92,6 +104,7 @@ export const LogisticsCalendar = () => {
           open={showEventDialog} 
           onOpenChange={setShowEventDialog}
           selectedDate={selectedDate}
+          selectedEvent={selectedEvent}
         />
       </CardContent>
     </Card>
