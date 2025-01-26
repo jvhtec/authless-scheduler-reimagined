@@ -10,6 +10,7 @@ import { LogisticsEventDialog } from "./LogisticsEventDialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { LogisticsEventCard } from "./LogisticsEventCard";
 
 export const LogisticsCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -61,7 +62,7 @@ export const LogisticsCalendar = () => {
   };
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Logistics Calendar</CardTitle>
         <Button onClick={handleAddEvent} size="sm">
@@ -79,20 +80,18 @@ export const LogisticsCalendar = () => {
             DayContent: ({ date }) => {
               const dayEvents = getDayEvents(date);
               return (
-                <div className="w-full h-full p-2">
-                  <span className="text-sm">{format(date, 'd')}</span>
+                <div className="w-full h-full min-h-[100px] p-2">
+                  <span className="text-sm font-medium">
+                    {format(date, 'd')}
+                  </span>
                   <div className="mt-1 space-y-1">
                     {dayEvents?.map((event) => (
-                      <Badge 
+                      <LogisticsEventCard
                         key={event.id}
-                        variant={event.event_type === 'load' ? 'default' : 'secondary'}
-                        className="w-full flex items-center gap-1 text-xs cursor-pointer hover:opacity-80"
+                        event={event}
                         onClick={() => handleEventClick(event)}
-                      >
-                        {event.event_type === 'load' ? <Package className="h-3 w-3" /> : <PackageCheck className="h-3 w-3" />}
-                        <Truck className="h-3 w-3" />
-                        <span className="truncate">{event.job?.title}</span>
-                      </Badge>
+                        compact
+                      />
                     ))}
                   </div>
                 </div>

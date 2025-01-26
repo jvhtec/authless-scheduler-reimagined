@@ -1112,7 +1112,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_default_logistics_events_for_job: {
+        Args: {
+          job_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       assignment_status: "invited" | "confirmed" | "declined"
