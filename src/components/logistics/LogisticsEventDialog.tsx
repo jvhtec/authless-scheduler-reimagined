@@ -35,26 +35,26 @@ export const LogisticsEventDialog = ({
   selectedDate,
   selectedEvent,
 }: LogisticsEventDialogProps) => {
-  const [eventType, setEventType] = useState<'load' | 'unload'>('load');
-  const [transportType, setTransportType] = useState<string>('trailer');
-  const [time, setTime] = useState('09:00');
-  const [date, setDate] = useState(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '');
-  const [loadingBay, setLoadingBay] = useState('');
-  const [selectedJob, setSelectedJob] = useState<string>('');
-  const [licensePlate, setLicensePlate] = useState('');
-  const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([]);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [eventType, setEventType] = useState<'load' | 'unload'>('load'); // Event Type
+  const [transportType, setTransportType] = useState<string>('trailer'); // Transport Type
+  const [time, setTime] = useState('09:00'); // Time
+  const [date, setDate] = useState(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''); // Date
+  const [loadingBay, setLoadingBay] = useState(''); // Loading Bay
+  const [selectedJob, setSelectedJob] = useState<string>(''); // Job
+  const [licensePlate, setLicensePlate] = useState(''); // License Plate
+  const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([]); // Departments
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false); // Delete Dialog
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const departments: Department[] = ["sound", "lights", "video"];
+  const departments: Department[] = ["sound", "lights", "video"]; // Example departments
 
   useEffect(() => {
     if (selectedEvent) {
-      setEventType(selectedEvent.event_type);
+      setEventType(selectedEvent.event_type); // Populate Event Type
       setTransportType(selectedEvent.transport_type);
       setTime(selectedEvent.event_time);
-      setDate(selectedEvent.event_date);
+      setDate(selectedEvent.event_date ? format(new Date(selectedEvent.event_date), 'yyyy-MM-dd') : '');
       setLoadingBay(selectedEvent.loading_bay || '');
       setSelectedJob(selectedEvent.job_id || '');
       setLicensePlate(selectedEvent.license_plate || '');
@@ -93,13 +93,12 @@ export const LogisticsEventDialog = ({
 
     try {
       if (selectedEvent) {
-        // Update existing event
         const { error: updateError } = await supabase
           .from('logistics_events')
           .update({
             event_type: eventType,
             transport_type: transportType,
-            event_date: date, // Include the updated date
+            event_date: date,
             event_time: time,
             loading_bay: loadingBay || null,
             job_id: selectedJob || null,
@@ -109,7 +108,6 @@ export const LogisticsEventDialog = ({
 
         if (updateError) throw updateError;
 
-        // Update departments
         await supabase.from('logistics_event_departments').delete().eq('event_id', selectedEvent.id);
 
         if (selectedDepartments.length > 0) {
@@ -130,13 +128,12 @@ export const LogisticsEventDialog = ({
           description: "Logistics event updated successfully.",
         });
       } else {
-        // Create new event
         const { data: newEvent, error } = await supabase
           .from('logistics_events')
           .insert({
             event_type: eventType,
             transport_type: transportType,
-            event_date: date, // Include the selected date
+            event_date: date,
             event_time: time,
             loading_bay: loadingBay || null,
             job_id: selectedJob || null,
@@ -178,34 +175,6 @@ export const LogisticsEventDialog = ({
     }
   };
 
-  const handleDelete = async () => {
-    if (!selectedEvent) return;
-
-    try {
-      // Delete departments first due to foreign key constraint
-      await supabase.from('logistics_event_departments').delete().eq('event_id', selectedEvent.id);
-
-      const { error } = await supabase.from('logistics_events').delete().eq('id', selectedEvent.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Logistics event deleted successfully.",
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['logistics-events'] });
-      queryClient.invalidateQueries({ queryKey: ['today-logistics'] });
-      onOpenChange(false);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -214,6 +183,7 @@ export const LogisticsEventDialog = ({
             <DialogTitle>{selectedEvent ? 'Edit Logistics Event' : 'Create Logistics Event'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Job Selection */}
             <div className="space-y-2">
               <Label>Job</Label>
               <Select value={selectedJob} onValueChange={setSelectedJob}>
@@ -230,26 +200,46 @@ export const LogisticsEventDialog = ({
               </Select>
             </div>
 
+            {/* Event Type Selection */}
+            <div className="space-y-2">
+              <Label>Event Type</Label>
+              <Select
+                value={eventType}
+                onValueChange={(value: 'load' | 'unload') => setEventType(value)} // Bind to state
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="load">Load</SelectItem>
+                  <SelectItem value="unload">Unload</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date Selection */}
             <div className="space-y-2">
               <Label>Date</Label>
               <Input
                 type="date"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(e) => setDate(e.target.value)} // Bind to state
                 required
               />
             </div>
 
+            {/* Time Selection */}
             <div className="space-y-2">
               <Label>Time</Label>
               <Input
                 type="time"
                 value={time}
-                onChange={(e) => setTime(e.target.value)}
+                onChange={(e) => setTime(e.target.value)} // Bind to state
                 required
               />
             </div>
 
+            {/* Transport Type */}
             <div className="space-y-2">
               <Label>Transport Type</Label>
               <Select value={transportType} onValueChange={setTransportType}>
@@ -267,15 +257,17 @@ export const LogisticsEventDialog = ({
               </Select>
             </div>
 
+            {/* License Plate */}
             <div className="space-y-2">
               <Label>License Plate</Label>
               <Input
                 value={licensePlate}
-                onChange={(e) => setLicensePlate(e.target.value)}
+                onChange={(e) => setLicensePlate(e.target.value)} // Bind to state
                 placeholder="Enter license plate"
               />
             </div>
 
+            {/* Departments */}
             <div className="space-y-2">
               <Label>Departments</Label>
               <div className="flex flex-wrap gap-2">
@@ -296,50 +288,28 @@ export const LogisticsEventDialog = ({
               </div>
             </div>
 
+            {/* Loading Bay */}
             <div className="space-y-2">
               <Label>Loading Bay</Label>
               <Input
                 value={loadingBay}
-                onChange={(e) => setLoadingBay(e.target.value)}
+                onChange={(e) => setLoadingBay(e.target.value)} // Bind to state
                 placeholder="Optional"
               />
             </div>
 
+            {/* Submit and Delete Buttons */}
             <div className="flex justify-between">
               {selectedEvent && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => setShowDeleteDialog(true)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
+                <Button type="button" variant="destructive" onClick={() => setShowDeleteDialog(true)}>
                   Delete
                 </Button>
               )}
-              <Button type="submit" className={selectedEvent ? 'ml-auto' : 'w-full'}>
-                {selectedEvent ? 'Update' : 'Create'} Event
-              </Button>
+              <Button type="submit">{selectedEvent ? 'Update' : 'Create'} Event</Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the logistics event.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };
