@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { 
   SidebarProvider, 
   Sidebar, 
@@ -19,7 +20,6 @@ import { AboutCard } from "@/components/layout/AboutCard";
 import { NotificationBadge } from "@/components/layout/NotificationBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionManager } from "@/hooks/useSessionManager";
-import { ReloadButton } from "@/components/ReloadButton"; // Import ReloadButton
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -29,7 +29,7 @@ const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-
+  
   const {
     session,
     userRole,
@@ -42,7 +42,7 @@ const Layout = ({ children }: LayoutProps) => {
 
   const handleSignOut = async () => {
     if (isLoggingOut) return;
-
+    
     setIsLoggingOut(true);
     console.log("Starting sign out process");
 
@@ -77,6 +77,7 @@ const Layout = ({ children }: LayoutProps) => {
     );
   }
 
+  // Only redirect if we're certain there's no session
   if (!session && !isLoading) {
     console.log("No session found in Layout, redirecting to auth");
     navigate('/auth');
@@ -129,8 +130,6 @@ const Layout = ({ children }: LayoutProps) => {
             <div className="flex items-center gap-2">
               <SidebarTrigger />
             </div>
-            {/* Use ReloadButton */}
-            <ReloadButton />
           </header>
           <main className="p-6">
             {children}
