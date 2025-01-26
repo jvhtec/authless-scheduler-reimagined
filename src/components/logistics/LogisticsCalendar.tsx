@@ -87,7 +87,7 @@ export const LogisticsCalendar = () => {
           onSelect={setSelectedDate}
           className="rounded-md border"
           components={{
-            Head: ({ localeDate, decreaseMonth, increaseMonth }) => {
+            Head: ({ date, localeDate, decreaseMonth, increaseMonth }) => {
               return (
                 <div className="flex items-center justify-between px-2 py-4">
                   <h2 className="text-lg font-semibold">
