@@ -198,6 +198,7 @@ export const LogisticsCalendar = () => {
                           setShowEventDialog(true);
                         }}
                         compact
+                        className="px-1.5 py-0.5 text-xs truncate hover:bg-accent/50"
                       />
                     ))}
                     {dayEvents && dayEvents.length > maxVisibleEvents && (

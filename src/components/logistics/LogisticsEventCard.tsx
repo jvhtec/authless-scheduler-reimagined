@@ -1,22 +1,25 @@
 import { Badge } from "@/components/ui/badge";
 import { Package, PackageCheck, Truck } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface LogisticsEventCardProps {
   event: any;
   onClick: () => void;
   compact?: boolean;
+  className?: string; // Add className to props
 }
 
-export const LogisticsEventCard = ({ event, onClick, compact = false }: LogisticsEventCardProps) => {
+export const LogisticsEventCard = ({ event, onClick, compact = false, className }: LogisticsEventCardProps) => {
   return (
     <div
       onClick={onClick}
-      className={`
-        ${compact ? 'p-1' : 'p-3'} 
+      className={cn(
+        `${compact ? 'p-1' : 'p-3'} 
         bg-card border rounded-md cursor-pointer hover:shadow-md transition-shadow
-        ${event.event_type === 'load' ? 'border-blue-200' : 'border-green-200'}
-      `}
+        ${event.event_type === 'load' ? 'border-blue-200' : 'border-green-200'}`,
+        className
+      )}
     >
       <div className="flex items-center justify-between gap-2">
         <Badge 
