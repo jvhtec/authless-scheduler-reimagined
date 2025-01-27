@@ -20,11 +20,14 @@ import { AboutCard } from "./layout/AboutCard";
 import { NotificationBadge } from "./layout/NotificationBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useSessionManager } from "@/hooks/useSessionManager";
+import { ReloadButton } from "./ui/reload-button";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Layout = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const queryClient = useQueryClient();
   
   const {
     session,
@@ -63,6 +66,11 @@ const Layout = () => {
     } finally {
       setIsLoggingOut(false);
     }
+  };
+
+  const handleReload = async () => {
+    console.log("Reloading all queries");
+    await queryClient.refetchQueries();
   };
 
   if (isLoading) {
@@ -123,6 +131,9 @@ const Layout = () => {
           <header className="border-b p-4 flex justify-between items-center bg-background">
             <div className="flex items-center gap-2">
               <SidebarTrigger />
+            </div>
+            <div className="flex items-center gap-2">
+              <ReloadButton onReload={handleReload} />
             </div>
           </header>
           <main className="p-6">
