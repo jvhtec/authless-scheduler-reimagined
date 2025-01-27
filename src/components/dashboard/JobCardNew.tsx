@@ -99,7 +99,8 @@ interface JobCardNewProps {
   userRole?: string | null;
   onDeleteDocument?: (jobId: string, document: JobDocument) => void;
   showUpload?: boolean;
-  showManageArtists?: boolean; // New prop to control button visibility
+  showManageArtists?: boolean; // Already added in context
+  isProjectManagementPage?: boolean; // New prop
 }
 
 const getDateTypeIcon = (type: string) => {
@@ -732,7 +733,7 @@ export const JobCardNew = ({
           </Button>
         </div>
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-          {job.job_type === "festival" && showManageArtists && (
+          {job.job_type === "festival" && isProjectManagementPage && (
             <Button
               variant="outline"
               size="sm"
