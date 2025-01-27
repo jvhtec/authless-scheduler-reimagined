@@ -253,3 +253,6 @@ export const CreateJobDialog = ({ open, onOpenChange }: CreateJobDialogProps) =>
     </Dialog>
   );
 };
+
+export { CreateJobDialog };
+export default CreateJobDialog;
