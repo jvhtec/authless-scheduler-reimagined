@@ -59,33 +59,33 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
   }, [jobId]);
 
   const fetchArtists = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('festival_artists')
-      .select(`
-        *,
-        festival_artist_files (id, file_path)
-      `)
-      .eq('job_id', jobId);
+    try {
+      const { data, error } = await supabase
+        .from('festival_artists')
+        .select(`
+          *,
+          festival_artist_files (id, file_path)
+        `)
+        .eq('job_id', jobId);
 
-    if (error) throw error;
-    
-    // Map the files to the artist object
-    const artistsWithFiles = data.map(artist => ({
-      ...artist,
-      files: artist.festival_artist_files.map(file => file.file_path)
-    }));
-    
-    setArtists(artistsWithFiles || []);
-  } catch (error) {
-    console.error('Error fetching artists:', error);
-    toast({
-      title: "Error",
-      description: "Failed to fetch artists",
-      variant: "destructive",
-    });
-  }
-};
+      if (error) throw error;
+      
+      // Map the files to the artist object
+      const artistsWithFiles = data.map(artist => ({
+        ...artist,
+        files: artist.festival_artist_files.map(file => file.file_path)
+      }));
+      
+      setArtists(artistsWithFiles || []);
+    } catch (error) {
+      console.error('Error fetching artists:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch artists",
+        variant: "destructive",
+      });
+    }
+  };
 
   const addArtist = async () => {
     try {
@@ -158,46 +158,46 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     }
   };
 
-  cconst handleFileUpload = async (artistId: string, file: File) => {
-  setUploading(true);
-  try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${artistId}-${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
+  const handleFileUpload = async (artistId: string, file: File) => {
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${artistId}-${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
 
-    // Upload to storage
-    const { error: uploadError } = await supabase.storage
-      .from('artist-files')
-      .upload(filePath, file);
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('artist-files')
+        .upload(filePath, file);
 
-    if (uploadError) throw uploadError;
+      if (uploadError) throw uploadError;
 
-    // Insert into files table
-    const { error } = await supabase
-      .from('festival_artist_files')
-      .insert({
-        artist_id: artistId,
-        file_path: filePath
+      // Insert into files table
+      const { error } = await supabase
+        .from('festival_artist_files')
+        .insert({
+          artist_id: artistId,
+          file_path: filePath
+        });
+
+      if (error) throw error;
+      
+      // Update local state
+      setArtists(artists.map(a => a.id === artistId ? {
+        ...a,
+        files: [...a.files, filePath]
+      } : a));
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload file",
+        variant: "destructive",
       });
-
-    if (error) throw error;
-    
-    // Update local state
-    setArtists(artists.map(a => a.id === artistId ? {
-      ...a,
-      files: [...a.files, filePath]
-    } : a));
-  } catch (error) {
-    console.error('Error uploading file:', error);
-    toast({
-      title: "Error",
-      description: "Failed to upload file",
-      variant: "destructive",
-    });
-  } finally {
-    setUploading(false);
-  }
-};
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const getFileUrl = (filePath: string) => {
     const { data } = supabase.storage
@@ -510,7 +510,6 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
                           className="flex-1 min-w-[100px]"
                           onChange={(e) => updateArtist(index, "iem_quantity", parseInt(e.target.value))}
                           placeholder="Qty"
-                       
                         />
                         <Input
                           value={artist.iem_band}
