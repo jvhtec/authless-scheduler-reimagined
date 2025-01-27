@@ -254,5 +254,3 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
     </Dialog>
   );
 };
-
-export default CreateJobDialog;

@@ -27,6 +27,7 @@ import { Progress } from "@/components/ui/progress";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import createFolderIcon from "@/assets/icons/icon.png";
 import { Department } from "@/types/department";
+import { ArtistManagementDialog } from "../festival/ArtistManagementDialog";
 
 // Flex API base & token
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
@@ -264,6 +265,7 @@ export const JobCardNew = ({
   const [collapsed, setCollapsed] = useState(true);
   const [assignments, setAssignments] = useState(job.job_assignments || []);
   const [documents, setDocuments] = useState<JobDocument[]>(job.job_documents || []);
+  const [artistManagementOpen, setArtistManagementOpen] = useState(false);
 
   // Example: sound tasks
   const { data: soundTasks } = useQuery({
@@ -728,6 +730,15 @@ export const JobCardNew = ({
           </Button>
         </div>
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+          {job.job_type === "festival" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setArtistManagementOpen(true)}
+            >
+              Manage Artists
+            </Button>
+          )}
           <Button variant="ghost" size="icon" onClick={refreshData} title="Refresh">
             <RefreshCw className="h-4 w-4" />
           </Button>
@@ -902,9 +913,16 @@ export const JobCardNew = ({
           </>
         )}
       </CardContent>
+
+      {job.job_type === "festival" && (
+        <ArtistManagementDialog
+          jobId={job.id}
+          open={artistManagementOpen}
+          onOpenChange={setArtistManagementOpen}
+        />
+      )}
     </Card>
   );
 };
 
 export default JobCardNew;
-

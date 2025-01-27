@@ -15,6 +15,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Department } from "@/types/department";
 import { SimplifiedJobColorPicker } from "./SimplifiedJobColorPicker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { JobType } from "@/types/job";
 
 interface EditJobDialogProps {
   open: boolean;
@@ -28,6 +36,7 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
   const [startTime, setStartTime] = useState(job.start_time?.slice(0, 16) || "");
   const [endTime, setEndTime] = useState(job.end_time?.slice(0, 16) || "");
   const [color, setColor] = useState(job.color || "#7E69AB");
+  const [jobType, setJobType] = useState<JobType>(job.job_type || "single");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([]);
   const { toast } = useToast();
@@ -41,6 +50,7 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
       setStartTime(job.start_time?.slice(0, 16) || "");
       setEndTime(job.end_time?.slice(0, 16) || "");
       setColor(job.color || "#7E69AB");
+      setJobType(job.job_type || "single");
     }
   }, [job]);
 
@@ -79,7 +89,6 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
     setIsLoading(true);
 
     try {
-      // Update job details
       const { error: jobError } = await supabase
         .from("jobs")
         .update({
@@ -87,7 +96,8 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
           description,
           start_time: startTime,
           end_time: endTime,
-          color
+          color,
+          job_type: jobType
         })
         .eq("id", job.id);
 
@@ -190,6 +200,22 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
           <div>
             <Label>Color</Label>
             <SimplifiedJobColorPicker color={color} onChange={setColor} />
+          </div>
+          <div className="space-y-2">
+            <Label>Job Type</Label>
+            <Select
+              value={jobType}
+              onValueChange={(value) => setJobType(value as JobType)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select job type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="single">Single</SelectItem>
+                <SelectItem value="tour">Tour</SelectItem>
+                <SelectItem value="festival">Festival</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Departments</Label>
