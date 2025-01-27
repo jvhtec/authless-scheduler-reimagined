@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { JobCard } from "@/components/jobs/JobCard";
+import { JobCardNew } from "./JobCardNew";
 
 interface TodayScheduleProps {
   jobs: any[];
@@ -26,15 +26,14 @@ export const TodaySchedule = ({
       <CardContent className="p-4">
         <div className="space-y-4">
           {jobs.map(job => (
-            <JobCard
+            <JobCardNew
               key={job.id}
               job={job}
               onEditClick={onEditClick}
               onDeleteClick={onDeleteClick}
-              onJobClick={(jobId) => onJobClick(jobId)}
+              onJobClick={onJobClick}
               userRole={userRole}
               department="sound"
-              selectedDate={selectedDate}
             />
           ))}
         </div>
