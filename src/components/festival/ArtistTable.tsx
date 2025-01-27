@@ -12,16 +12,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Artist {
   id?: string;
   job_id: string;
   name: string;
-  show_start: string;
-  show_end: string;
+  show_start: string | null;
+  show_end: string | null;
   soundcheck: boolean;
-  soundcheck_start: string;
-  soundcheck_end: string;
+  soundcheck_start: string | null;
+  soundcheck_end: string | null;
   foh_console: string;
   foh_tech: boolean;
   mon_console: string;
@@ -71,11 +72,11 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     const newArtist: Omit<Artist, "id"> = {
       job_id: jobId,
       name: "",
-      show_start: "",
-      show_end: "",
+      show_start: null,
+      show_end: null,
       soundcheck: false,
-      soundcheck_start: "",
-      soundcheck_end: "",
+      soundcheck_start: null,
+      soundcheck_end: null,
       foh_console: "",
       foh_tech: false,
       mon_console: "",
@@ -112,6 +113,11 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
   };
 
   const updateArtist = async (index: number, key: keyof Artist, value: any) => {
+    // Handle empty time values
+    if ((key === 'show_start' || key === 'show_end' || key === 'soundcheck_start' || key === 'soundcheck_end') && value === '') {
+      value = null;
+    }
+
     const updatedArtist = { ...artists[index], [key]: value };
 
     try {
@@ -173,12 +179,12 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
                   <div className="flex gap-2">
                     <Input
                       type="time"
-                      value={artist.show_start}
+                      value={artist.show_start || ""}
                       onChange={(e) => updateArtist(index, "show_start", e.target.value)}
                     />
                     <Input
                       type="time"
-                      value={artist.show_end}
+                      value={artist.show_end || ""}
                       onChange={(e) => updateArtist(index, "show_end", e.target.value)}
                     />
                   </div>
