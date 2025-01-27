@@ -31,10 +31,10 @@ interface Artist {
   extras_df: boolean;
   extras_djbooth: boolean;
   extras_wired: string;
-  infras_cat6: boolean;
-  infras_hma: boolean;
-  infras_coax: boolean;
-  infras_analog: number;
+  infra_cat6: boolean;
+  infra_hma: boolean;
+  infra_coax: boolean;
+  infra_analog: number;
 }
 
 interface ArtistTableProps {
@@ -77,8 +77,8 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
       const newArtist: Artist = {
         job_id: jobId,
         name: "",
-        show_start: "",
-        show_end: "",
+        show_start: "12:00",  // Default time instead of empty string
+        show_end: "13:00",    // Default time instead of empty string
         foh_console: "",
         foh_tech: false,
         mon_console: "",
@@ -93,10 +93,10 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
         extras_df: false,
         extras_djbooth: false,
         extras_wired: "",
-        infras_cat6: false,
-        infras_hma: false,
-        infras_coax: false,
-        infras_analog: 0
+        infra_cat6: false,
+        infra_hma: false,
+        infra_coax: false,
+        infra_analog: 0
       };
 
       const { data, error } = await supabase
@@ -195,10 +195,10 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
       iem_pack: `${artist.iem_quantity}x ${artist.iem_model} (${artist.iem_band})`,
       rf_festival: '',
       infras: [
-        artist.infras_cat6 ? 'Cat6' : null,
-        artist.infras_hma ? 'HMA' : null,
-        artist.infras_coax ? 'COAX' : null,
-        artist.infras_analog > 0 ? `${artist.infras_analog}x Analog` : null
+        artist.infra_cat6 ? 'Cat6' : null,
+        artist.infra_hma ? 'HMA' : null,
+        artist.infra_coax ? 'COAX' : null,
+        artist.infra_analog > 0 ? `${artist.infra_analog}x Analog` : null
       ].filter(Boolean).join(' / ')
     }));
 
@@ -403,31 +403,31 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
                       <div className="grid grid-cols-2 gap-2">
                         <div className="flex items-center gap-2">
                           <Checkbox
-                            checked={artist.infras_cat6}
-                            onCheckedChange={(c) => updateArtist(index, "infras_cat6", c)}
+                            checked={artist.infra_cat6}
+                            onCheckedChange={(c) => updateArtist(index, "infra_cat6", c)}
                           />
                           <Label>Cat6</Label>
                         </div>
                         <div className="flex items-center gap-2">
                           <Checkbox
-                            checked={artist.infras_hma}
-                            onCheckedChange={(c) => updateArtist(index, "infras_hma", c)}
+                            checked={artist.infra_hma}
+                            onCheckedChange={(c) => updateArtist(index, "infra_hma", c)}
                           />
                           <Label>HMA</Label>
                         </div>
                         <div className="flex items-center gap-2">
                           <Checkbox
-                            checked={artist.infras_coax}
-                            onCheckedChange={(c) => updateArtist(index, "infras_coax", c)}
+                            checked={artist.infra_coax}
+                            onCheckedChange={(c) => updateArtist(index, "infra_coax", c)}
                           />
                           <Label>COAX</Label>
                         </div>
                         <div className="flex items-center gap-2">
                           <Input
                             type="number"
-                            value={artist.infras_analog}
+                            value={artist.infra_analog}
                             className="w-16"
-                            onChange={(e) => updateArtist(index, "infras_analog", parseInt(e.target.value))}
+                            onChange={(e) => updateArtist(index, "infra_analog", parseInt(e.target.value))}
                           />
                           <Label>Analog</Label>
                         </div>
