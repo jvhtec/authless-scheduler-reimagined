@@ -155,10 +155,10 @@ export type Database = {
           iem_band: string | null
           iem_model: string | null
           iem_quantity: number | null
-          infras_analog: number | null
-          infras_cat6: boolean | null
-          infras_coax: boolean | null
-          infras_hma: boolean | null
+          infra_analog: number | null
+          infra_cat6: boolean | null
+          infra_coax: boolean | null
+          infra_hma: boolean | null
           job_id: string | null
           mic_pack: string | null
           mon_console: string | null
@@ -193,10 +193,10 @@ export type Database = {
           iem_band?: string | null
           iem_model?: string | null
           iem_quantity?: number | null
-          infras_analog?: number | null
-          infras_cat6?: boolean | null
-          infras_coax?: boolean | null
-          infras_hma?: boolean | null
+          infra_analog?: number | null
+          infra_cat6?: boolean | null
+          infra_coax?: boolean | null
+          infra_hma?: boolean | null
           job_id?: string | null
           mic_pack?: string | null
           mon_console?: string | null
@@ -231,10 +231,10 @@ export type Database = {
           iem_band?: string | null
           iem_model?: string | null
           iem_quantity?: number | null
-          infras_analog?: number | null
-          infras_cat6?: boolean | null
-          infras_coax?: boolean | null
-          infras_hma?: boolean | null
+          infra_analog?: number | null
+          infra_cat6?: boolean | null
+          infra_coax?: boolean | null
+          infra_hma?: boolean | null
           job_id?: string | null
           mic_pack?: string | null
           mon_console?: string | null
