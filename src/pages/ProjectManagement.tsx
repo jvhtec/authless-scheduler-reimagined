@@ -24,11 +24,11 @@ const ProjectManagement = () => {
   useTabVisibility(['jobs']);
 
   const { jobs, jobsLoading, handleDeleteDocument } = useJobManagement(
-  selectedDepartment,
-  startDate,
-  endDate,
-  true // Indicating this is the Project Management page
-);
+    selectedDepartment,
+    startDate,
+    endDate,
+    true // Pass isProjectManagementPage as true
+  );
 
   useEffect(() => {
     const checkAccess = async () => {

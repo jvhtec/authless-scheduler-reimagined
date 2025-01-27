@@ -9,7 +9,7 @@ export const useJobManagement = (
   selectedDepartment: Department,
   startDate: Date,
   endDate: Date,
-  isProjectManagementPage: boolean // New parameter
+  isProjectManagementPage = false // Add default value
 ) => {
   const { toast } = useToast();
 
@@ -39,7 +39,7 @@ export const useJobManagement = (
         )
       `)
       .eq("job_departments.department", selectedDepartment)
-      .in("job_type", ["single", "festival"]) // Adjusted to allow multiple job types
+      .in("job_type", ["single", "festival"])
       .gte("start_time", startDate.toISOString())
       .lte("start_time", endDate.toISOString())
       .order("start_time", { ascending: true });
@@ -60,7 +60,7 @@ export const useJobManagement = (
         );
         return doc.file_path.startsWith(`${selectedDepartment}/`);
       }),
-      isProjectManagementPage // Attach the flag to each job for context
+      isProjectManagementPage // Add this to each job object
     }));
 
     console.log(
