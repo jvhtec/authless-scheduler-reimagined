@@ -160,7 +160,7 @@ const VideoConsumosTool: React.FC = () => {
     const pduSuggestion = recommendPDU(currentPerPhase);
 
     const newTable = {
-      name: `${tableName} (${pduSuggestion})- \n+CEE32A 3P+N+G (MOTORES`,
+      name: `${tableName} (${pduSuggestion})- \n+CEE32A 3P+N+G (MOTORES)`,
       rows: calculatedRows,
       totalWatts,
       currentPerPhase,
