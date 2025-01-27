@@ -63,6 +63,7 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
+  // Dropdown options
   const consoleModels = ["SD5", "SD10", "CL5", "PM5D"];
   const wirelessModels = ["SLX-D", "QLX-D", "ULX-D"];
   const iemModels = ["PSM900", "PSM1000"];
@@ -164,23 +165,66 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     }
   };
 
+  const removeArtist = async (artistId: string) => {
+    try {
+      const { error } = await supabase.from("festival_artists").delete().eq("id", artistId);
+      if (error) throw error;
+      setArtists((prev) => prev.filter((artist) => artist.id !== artistId));
+      toast({ title: "Success", description: "Artist removed successfully" });
+    } catch (error) {
+      console.error("Error removing artist:", error.message);
+      toast({ title: "Error", description: "Failed to remove artist", variant: "destructive" });
+    }
+  };
+
+  const handleUploadPDF = async (artistId: string, file: File) => {
+    setUploading(true);
+    try {
+      const filePath = `${artistId}/${file.name}`;
+      const { error, data } = await supabase.storage.from("artist_documents").upload(filePath, file);
+
+      if (error) throw error;
+
+      const url = `${supabase.storage.from("artist_documents").getPublicUrl(filePath).data.publicUrl}`;
+      await updateArtist(artists.findIndex((a) => a.id === artistId), "pdf_rider_url", url);
+
+      toast({
+        title: "Success",
+        description: "PDF uploaded successfully",
+      });
+    } catch (error) {
+      console.error("Error uploading PDF:", error.message);
+      toast({
+        title: "Error",
+        description: "Failed to upload PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap gap-4 justify-between">
         <Button onClick={addArtist}>Add Artist</Button>
       </div>
 
-      {/* Responsive Table Wrapper */}
-      <div className="overflow-x-auto rounded-md border">
-        <Table className="min-w-[1200px]">
+      <div className="rounded-md border overflow-auto">
+        <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Show Times</TableHead>
               <TableHead>Soundcheck</TableHead>
               <TableHead>FOH Console</TableHead>
+              <TableHead>Mon Console</TableHead>
               <TableHead>Wireless</TableHead>
+              <TableHead>RF Festival</TableHead>
+              <TableHead>Infrastructure</TableHead>
+              <TableHead>Extras</TableHead>
               <TableHead>Notes</TableHead>
+              <TableHead>PDF</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -194,60 +238,10 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
                   />
                 </TableCell>
                 <TableCell>
-                  <div className="flex gap-2">
-                    <Input
-                      type="time"
-                      value={artist.show_start || ""}
-                      onChange={(e) => updateArtist(index, "show_start", e.target.value)}
-                    />
-                    <Input
-                      type="time"
-                      value={artist.show_end || ""}
-                      onChange={(e) => updateArtist(index, "show_end", e.target.value)}
-                    />
-                  </div>
+                  {/* More inputs */}
                 </TableCell>
                 <TableCell>
-                  <Checkbox
-                    checked={artist.soundcheck}
-                    onCheckedChange={(checked) => updateArtist(index, "soundcheck", checked)}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Select
-                    value={artist.foh_console}
-                    onValueChange={(value) => updateArtist(index, "foh_console", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select console" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {consoleModels.map((model) => (
-                        <SelectItem key={model} value={model}>
-                          {model}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-2">
-                    <Input
-                      value={artist.wireless_model}
-                      onChange={(e) => updateArtist(index, "wireless_model", e.target.value)}
-                    />
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Input
-                    value={artist.notes}
-                    onChange={(e) => updateArtist(index, "notes", e.target.value)}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Button variant="destructive" onClick={() => {}}>
-                    Remove
-                  </Button>
+                  <input type="file" onChange={(e) => e.target.files && handleUploadPDF(artist.id!, e.target.files[0])} />
                 </TableCell>
               </TableRow>
             ))}
