@@ -145,7 +145,6 @@ export type Database = {
         Row: {
           created_at: string | null
           crew: string | null
-          date: string | null
           extras_df: boolean | null
           extras_djbooth: boolean | null
           extras_sf: boolean | null
@@ -156,10 +155,10 @@ export type Database = {
           iem_band: string | null
           iem_model: string | null
           iem_quantity: number | null
-          infra_analog: number | null
-          infra_cat6: boolean | null
-          infra_coax: boolean | null
-          infra_hma: boolean | null
+          infras_analog: number | null
+          infras_cat6: boolean | null
+          infras_coax: boolean | null
+          infras_hma: boolean | null
           job_id: string | null
           mic_pack: string | null
           mon_console: string | null
@@ -176,7 +175,6 @@ export type Database = {
           soundcheck: boolean | null
           soundcheck_end: string | null
           soundcheck_start: string | null
-          stage: string | null
           updated_at: string | null
           wireless_band: string | null
           wireless_model: string | null
@@ -185,7 +183,6 @@ export type Database = {
         Insert: {
           created_at?: string | null
           crew?: string | null
-          date?: string | null
           extras_df?: boolean | null
           extras_djbooth?: boolean | null
           extras_sf?: boolean | null
@@ -196,10 +193,10 @@ export type Database = {
           iem_band?: string | null
           iem_model?: string | null
           iem_quantity?: number | null
-          infra_analog?: number | null
-          infra_cat6?: boolean | null
-          infra_coax?: boolean | null
-          infra_hma?: boolean | null
+          infras_analog?: number | null
+          infras_cat6?: boolean | null
+          infras_coax?: boolean | null
+          infras_hma?: boolean | null
           job_id?: string | null
           mic_pack?: string | null
           mon_console?: string | null
@@ -216,7 +213,6 @@ export type Database = {
           soundcheck?: boolean | null
           soundcheck_end?: string | null
           soundcheck_start?: string | null
-          stage?: string | null
           updated_at?: string | null
           wireless_band?: string | null
           wireless_model?: string | null
@@ -225,7 +221,6 @@ export type Database = {
         Update: {
           created_at?: string | null
           crew?: string | null
-          date?: string | null
           extras_df?: boolean | null
           extras_djbooth?: boolean | null
           extras_sf?: boolean | null
@@ -236,10 +231,10 @@ export type Database = {
           iem_band?: string | null
           iem_model?: string | null
           iem_quantity?: number | null
-          infra_analog?: number | null
-          infra_cat6?: boolean | null
-          infra_coax?: boolean | null
-          infra_hma?: boolean | null
+          infras_analog?: number | null
+          infras_cat6?: boolean | null
+          infras_coax?: boolean | null
+          infras_hma?: boolean | null
           job_id?: string | null
           mic_pack?: string | null
           mon_console?: string | null
@@ -256,7 +251,6 @@ export type Database = {
           soundcheck?: boolean | null
           soundcheck_end?: string | null
           soundcheck_start?: string | null
-          stage?: string | null
           updated_at?: string | null
           wireless_band?: string | null
           wireless_model?: string | null

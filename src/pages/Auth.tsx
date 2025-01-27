@@ -26,37 +26,36 @@ const Auth = () => {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (isMounted) {
-          setSession(session);
-          if (session) navigate("/dashboard");
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        
+        console.log("Auth: Current session status:", !!session);
+        setSession(session);
+        
+        if (session) {
+          navigate("/dashboard");
         }
-      } catch (error) {
-        console.error("Error checking session:", error);
-        if (isMounted) setError("Failed to check authentication status");
+      } catch (error: any) {
+        console.error("Auth: Session check error:", error);
+        setError(error.message);
       }
     };
 
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        console.log("Auth: Auth state changed:", _event);
-        if (isMounted) {
-          setSession(session);
-          if (session) navigate("/dashboard");
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log("Auth: Auth state changed:", _event);
+      setSession(session);
+      if (session) {
+        navigate("/dashboard");
       }
-    );
+    });
 
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   return (

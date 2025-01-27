@@ -30,28 +30,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
     try {
       console.log("Starting login process for email:", formData.email);
       
-      // First check if the user exists
-      const { data: userExists, error: userCheckError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', formData.email.toLowerCase())
-        .maybeSingle();
-
-      if (userCheckError) {
-        console.error("Error checking user existence:", userCheckError);
-        setError("An error occurred while checking user account. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      if (!userExists) {
-        console.error("User not found in profiles");
-        setError("No account found with this email. Please sign up first.");
-        setLoading(false);
-        return;
-      }
-
-      // Attempt to sign in
+      // First attempt to sign in
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email.toLowerCase(),
         password: formData.password,
@@ -62,7 +41,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
         if (signInError.message.includes("Email not confirmed")) {
           setError("Please check your email to verify your account before logging in.");
         } else if (signInError.message.includes("Invalid login credentials")) {
-          setError("Invalid password. Please try again.");
+          setError("Invalid email or password. Please try again.");
         } else {
           setError(signInError.message);
         }
@@ -71,7 +50,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
 
       if (!signInData.user) {
         console.error("No user data returned after login");
-        setError("Login failed. Please try again.");
+        setError("No user found with these credentials.");
         return;
       }
 
@@ -82,7 +61,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
         .from('profiles')
         .select('role, department')
         .eq('id', signInData.user.id)
-        .maybeSingle();
+        .single();
 
       if (profileError) {
         console.error("Error fetching user profile:", profileError);
