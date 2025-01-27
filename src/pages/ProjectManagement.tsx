@@ -26,7 +26,8 @@ const ProjectManagement = () => {
   const { jobs, jobsLoading, handleDeleteDocument } = useJobManagement(
     selectedDepartment,
     startDate,
-    endDate
+    endDate,
+    true // Pass isProjectManagementPage as true
   );
 
   useEffect(() => {
