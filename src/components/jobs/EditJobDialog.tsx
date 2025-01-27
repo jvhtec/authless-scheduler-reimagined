@@ -200,7 +200,7 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
           </div>
           <div>
             <Label>Date Types</Label>
-            <DateTypeContextMenu jobId={job.id} selectedDate={new Date(startTime)} />
+            <DateTypeContextMenu jobId={job.id} date={new Date(startTime)} onTypeChange={() => {}} />
           </div>
           <div>
             <Label>Color</Label>
