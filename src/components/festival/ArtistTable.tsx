@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -6,173 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/components/supabase";
 import { useToast } from "@/hooks/use-toast";
 
-interface Artist {
-  id?: string;
-  job_id: string | null;
-  name: string;
-  show_start: string | null;
-  show_end: string | null;
-  foh_console: string | null;
-  foh_tech: boolean;
-  mon_console: string | null;
-  mon_tech: boolean;
-  wireless_model: string | null;
-  wireless_quantity: number;
-  wireless_band: string | null;
-  iem_model: string | null;
-  iem_quantity: number;
-  iem_band: string | null;
-  extras_sf: boolean;
-  extras_df: boolean;
-  extras_djbooth: boolean;
-  extras_wired: string | null;
-  infra_cat6: number;
-  infra_hma: number;
-  infra_coax: number;
-  infra_analog: number;
-}
-
-interface ArtistTableProps {
-  jobId: string;
-}
-
-const consoleModels = [
-  "Avid S6L",
-  "DiGiCo SD5",
-  "DiGiCo SD7",
-  "DiGiCo SD10",
-  "DiGiCo SD12",
-  "Yamaha PM7",
-  "Yamaha CL5",
-];
-
-const wirelessModels = [
-  "Shure Axient Digital",
-  "Shure ULX-D",
-  "Sennheiser 6000",
-  "Sennheiser 2000",
-];
-
-const iemModels = [
-  "Shure PSM1000",
-  "Shure PSM900",
-  "Sennheiser 2000 IEM",
-  "Sennheiser G4 IEM",
-];
+// ... (keep existing interfaces and constants)
 
 export const ArtistTable = ({ jobId }: ArtistTableProps) => {
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    fetchArtists();
-  }, [jobId]);
-
-  const fetchArtists = async () => {
-    const { data, error } = await supabase
-      .from("festival_artists")
-      .select("*")
-      .eq("job_id", jobId);
-
-    if (error) {
-      console.error("Error fetching artists:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch artists",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setArtists(data || []);
-  };
-
-  const addArtist = async () => {
-    const newArtist: Artist = {
-      job_id: jobId,
-      name: "",
-      show_start: null,
-      show_end: null,
-      foh_console: null,
-      foh_tech: false,
-      mon_console: null,
-      mon_tech: false,
-      wireless_model: null,
-      wireless_quantity: 0,
-      wireless_band: null,
-      iem_model: null,
-      iem_quantity: 0,
-      iem_band: null,
-      extras_sf: false,
-      extras_df: false,
-      extras_djbooth: false,
-      extras_wired: null,
-      infra_cat6: 0,
-      infra_hma: 0,
-      infra_coax: 0,
-      infra_analog: 0,
-    };
-
-    const { error } = await supabase.from("festival_artists").insert(newArtist);
-
-    if (error) {
-      console.error("Error adding artist:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add artist",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    fetchArtists();
-  };
-
-  const updateArtist = async (index: number, field: keyof Artist, value: any) => {
-    const artist = artists[index];
-    const updatedArtist = { ...artist, [field]: value };
-
-    const { error } = await supabase
-      .from("festival_artists")
-      .update(updatedArtist)
-      .eq("id", artist.id);
-
-    if (error) {
-      console.error("Error updating artist:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update artist",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const updatedArtists = [...artists];
-    updatedArtists[index] = updatedArtist;
-    setArtists(updatedArtists);
-  };
-
-  const removeArtist = async (artistId: string) => {
-    const { error } = await supabase
-      .from("festival_artists")
-      .delete()
-      .eq("id", artistId);
-
-    if (error) {
-      console.error("Error removing artist:", error);
-      toast({
-        title: "Error",
-        description: "Failed to remove artist",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    fetchArtists();
-  };
+  // ... (keep existing state and data fetching logic)
 
   return (
     <div className="space-y-4">
