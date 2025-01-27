@@ -11,14 +11,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
 const videoComponentDatabase = [
-  { id: 1, name: 'LED Panel P3.9', weight: 8.5 },
-  { id: 2, name: 'LED Panel P2.6', weight: 9.2 },
-  { id: 3, name: 'LED Processor', weight: 4.8 },
-  { id: 4, name: 'Professional Camera', weight: 7.2 },
-  { id: 5, name: 'Camera Tripod', weight: 4.5 },
-  { id: 6, name: 'Video Switcher', weight: 5.3 },
-  { id: 7, name: 'Projector 20K', weight: 55 },
-  { id: 8, name: 'Projector Screen', weight: 35 }
+  { id: 1, name: 'Pantalla Central', weight: 32 },
+  { id: 2, name: 'IMAGE Left', weight: 32 },
+  { id: 3, name: 'IMAGE Right', weight: 32 }
 ];
 
 interface TableRow {

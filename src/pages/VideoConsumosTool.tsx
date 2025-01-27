@@ -12,21 +12,16 @@ import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
 const videoComponentDatabase = [
-  { id: 1, name: 'LED Wall Panel', watts: 450 },
-  { id: 2, name: 'Projector 5000 Lumens', watts: 350 },
-  { id: 3, name: 'Video Processor', watts: 250 },
-  { id: 4, name: 'Media Server', watts: 500 },
-  { id: 5, name: 'Video Switcher', watts: 200 },
-  { id: 6, name: 'Camera System', watts: 150 },
-  { id: 7, name: 'Monitor/Display', watts: 300 },
-  { id: 8, name: 'Video Distribution', watts: 100 }
+  { id: 1, name: 'Pantalla Central', watts: 700 },
+  { id: 2, name: 'IMAGE Left', watts: 700 },
+  { id: 3, name: 'IMAGE Right', watts: 700 }
 ];
 
 const VOLTAGE_3PHASE = 400;
 const POWER_FACTOR = 0.85;
 const PHASES = 3;
 
-const PDU_TYPES = ['CEE32A 3P+N+G', 'CEE63A 3P+N+G', 'CEE125A 3P+N+G'];
+const PDU_TYPES = ['CEE32A 3P+N+G', 'CEE63A 3P+N+G', 'CEE400A 3P+N+G'];
 
 interface TableRow {
   quantity: string;
@@ -104,7 +99,7 @@ const VideoConsumosTool: React.FC = () => {
 
   const recommendPDU = (current: number) => {
     if (current < 32) return PDU_TYPES[0];
-    if (current < 63) return PDU_TYPES[1];
+    if (current > 63) return PDU_TYPES[2];
     return PDU_TYPES[2];
   };
 
@@ -165,7 +160,7 @@ const VideoConsumosTool: React.FC = () => {
     const pduSuggestion = recommendPDU(currentPerPhase);
 
     const newTable = {
-      name: `${tableName} (${pduSuggestion})`,
+      name: `${tableName} (${pduSuggestion})- \nCEE32A 3P+N+G (MOTORES)\nTOMAS DE SCHUKO EN FOH`,
       rows: calculatedRows,
       totalWatts,
       currentPerPhase,
