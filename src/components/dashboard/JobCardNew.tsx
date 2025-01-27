@@ -100,7 +100,7 @@ interface JobCardNewProps {
   onDeleteDocument?: (jobId: string, document: JobDocument) => void;
   showUpload?: boolean;
   showManageArtists?: boolean; // Already added in context
-  isProjectManagementPage?: boolean; // New prop
+  isProjectManagementPage?: boolean; // Added this prop definition
 }
 
 const getDateTypeIcon = (type: string) => {
@@ -260,7 +260,8 @@ export const JobCardNew = ({
   userRole,
   onDeleteDocument,
   showUpload = false,
-  showManageArtists = false // New prop to control button visibility
+  showManageArtists = false, // New prop to control button visibility
+  isProjectManagementPage = false // New prop
 }: JobCardNewProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
