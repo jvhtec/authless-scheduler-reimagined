@@ -39,9 +39,10 @@ const formSchema = z.object({
 interface CreateJobDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  currentDepartment?: string;
 }
 
-export const CreateJobDialog = ({ open, onOpenChange }: CreateJobDialogProps) => {
+export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [locations, setLocations] = useState<any[]>([]);

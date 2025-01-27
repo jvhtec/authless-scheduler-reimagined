@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import CreateJobDialog from "@/components/jobs/CreateJobDialog";
+import { CreateJobDialog } from "@/components/jobs/CreateJobDialog";
 import CreateTourDialog from "@/components/tours/CreateTourDialog";
 import { useJobs } from "@/hooks/useJobs";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
