@@ -13,13 +13,10 @@ import "jspdf-autotable";
 
 interface Artist {
   id?: string;
-  job_id: string;
+  job_id?: string;
   name: string;
   show_start: string;
   show_end: string;
-  soundcheck: boolean;
-  soundcheck_start: string;
-  soundcheck_end: string;
   foh_console: string;
   foh_tech: boolean;
   mon_console: string;
@@ -30,261 +27,457 @@ interface Artist {
   iem_model: string;
   iem_quantity: number;
   iem_band: string;
-  monitors_enabled: boolean;
-  monitors_quantity: number;
   extras_sf: boolean;
   extras_df: boolean;
   extras_djbooth: boolean;
   extras_wired: string;
-  rf_mics: number;
-  rf_wireless: number;
-  rf_link: string;
-  infra_cat6: number;
-  infra_hma: number;
-  infra_coax: number;
-  infra_analog: number;
-  mic_pack: "festival" | "artist";
-  crew: "A" | "B";
-  notes: string;
+  infras_cat6: boolean;
+  infras_hma: boolean;
+  infras_coax: boolean;
+  infras_analog: number;
 }
 
 interface ArtistTableProps {
   jobId: string;
 }
 
-const consoleModels = ["Digico SD12", "Avid S6L", "Yamaha CL5", "Midas PRO X", "Allen & Heath dLive"];
-const wirelessModels = ["Shure ULXD", "Sennheiser EW-D", "Lectrosonics Digital", "Audio-Technica System 10"];
-const iemModels = ["Sennheiser G4", "Shure PSM1000", "Lectrosonics R1A", "Wisycom MPR50"];
+const consoleModels = ["Digico SD7", "Digico SD10", "Digico SD12", "Yamaha CL5", "Yamaha PM5D"];
+const wirelessModels = ["Shure UR4D", "Shure AD4Q", "Sennheiser 6000"];
+const iemModels = ["Shure PSM1000", "Sennheiser 2050"];
 
 export const ArtistTable = ({ jobId }: ArtistTableProps) => {
   const [artists, setArtists] = useState<Artist[]>([]);
-  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchArtists = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("festival_artists")
-          .select("*")
-          .eq("job_id", jobId);
-        if (error) throw error;
-        setArtists(data || []);
-      } catch (error) {
-        console.error("Error fetching artists:", error.message);
-      }
-    };
     fetchArtists();
   }, [jobId]);
 
-  const addArtist = async () => {
-    const newArtist: Omit<Artist, "id"> = {
-      job_id: jobId,
-      name: "",
-      show_start: "",
-      show_end: "",
-      soundcheck: false,
-      soundcheck_start: "",
-      soundcheck_end: "",
-      foh_console: "",
-      foh_tech: false,
-      mon_console: "",
-      mon_tech: false,
-      wireless_model: "",
-      wireless_quantity: 0,
-      wireless_band: "",
-      iem_model: "",
-      iem_quantity: 0,
-      iem_band: "",
-      monitors_enabled: false,
-      monitors_quantity: 0,
-      extras_sf: false,
-      extras_df: false,
-      extras_djbooth: false,
-      extras_wired: "",
-      rf_mics: 0,
-      rf_wireless: 0,
-      rf_link: "",
-      infra_cat6: 0,
-      infra_hma: 0,
-      infra_coax: 0,
-      infra_analog: 0,
-      mic_pack: "festival",
-      crew: "A",
-      notes: "",
-    };
-
+  const fetchArtists = async () => {
     try {
       const { data, error } = await supabase
-        .from("festival_artists")
+        .from('festival_artists')
+        .select('*')
+        .eq('job_id', jobId);
+
+      if (error) throw error;
+      setArtists(data || []);
+    } catch (error) {
+      console.error('Error fetching artists:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch artists",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const addArtist = async () => {
+    try {
+      const newArtist: Artist = {
+        job_id: jobId,
+        name: "",
+        show_start: "",
+        show_end: "",
+        foh_console: "",
+        foh_tech: false,
+        mon_console: "",
+        mon_tech: false,
+        wireless_model: "",
+        wireless_quantity: 0,
+        wireless_band: "",
+        iem_model: "",
+        iem_quantity: 0,
+        iem_band: "",
+        extras_sf: false,
+        extras_df: false,
+        extras_djbooth: false,
+        extras_wired: "",
+        infras_cat6: false,
+        infras_hma: false,
+        infras_coax: false,
+        infras_analog: 0
+      };
+
+      const { data, error } = await supabase
+        .from('festival_artists')
         .insert([newArtist])
         .select()
         .single();
+
       if (error) throw error;
       setArtists([...artists, data]);
-      toast({ title: "Success", description: "Artist added successfully" });
     } catch (error) {
-      console.error("Error adding artist:", error.message);
-      toast({ title: "Error", description: "Failed to add artist", variant: "destructive" });
+      console.error('Error adding artist:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add artist",
+        variant: "destructive",
+      });
     }
   };
 
-  const updateArtist = async (index: number, key: keyof Artist, value: any) => {
-    const updatedArtist = { ...artists[index], [key]: value };
+  const updateArtist = async (index: number, field: keyof Artist, value: any) => {
+    try {
+      const updatedArtist = { ...artists[index], [field]: value };
+      const { error } = await supabase
+        .from('festival_artists')
+        .update(updatedArtist)
+        .eq('id', updatedArtist.id);
+
+      if (error) throw error;
+
+      const newArtists = [...artists];
+      newArtists[index] = updatedArtist;
+      setArtists(newArtists);
+    } catch (error) {
+      console.error('Error updating artist:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update artist",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeArtist = async (id: string) => {
     try {
       const { error } = await supabase
-        .from("festival_artists")
-        .update({ [key]: value })
-        .eq("id", updatedArtist.id);
+        .from('festival_artists')
+        .delete()
+        .eq('id', id);
+
       if (error) throw error;
-      const updatedArtists = [...artists];
-      updatedArtists[index] = updatedArtist;
-      setArtists(updatedArtists);
+      setArtists(artists.filter(artist => artist.id !== id));
     } catch (error) {
-      console.error("Error updating artist:", error.message);
-      toast({ title: "Error", description: "Failed to update artist", variant: "destructive" });
+      console.error('Error removing artist:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove artist",
+        variant: "destructive",
+      });
     }
   };
 
-  const removeArtist = async (artistId: string) => {
-    try {
-      const { error } = await supabase.from("festival_artists").delete().eq("id", artistId);
-      if (error) throw error;
-      setArtists((prev) => prev.filter((artist) => artist.id !== artistId));
-      toast({ title: "Success", description: "Artist removed successfully" });
-    } catch (error) {
-      console.error("Error removing artist:", error.message);
-      toast({ title: "Error", description: "Failed to remove artist", variant: "destructive" });
-    }
-  };
+  const generatePdf = () => {
+    const doc = new jsPDF('landscape');
+    const currentDate = new Date().toLocaleDateString();
 
-  const handleUpload = async (artistId: string, file: File) => {
-    setUploading(true);
-    try {
-      const filePath = `${artistId}/${file.name}`;
-      const { error } = await supabase.storage.from("artist_documents").upload(filePath, file);
-      if (error) throw error;
-      toast({ title: "Success", description: "File uploaded successfully" });
-    } catch (error) {
-      console.error("Error uploading file:", error.message);
-      toast({ title: "Error", description: "Failed to upload file", variant: "destructive" });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handlePrint = () => {
-    const doc = new jsPDF({
-      orientation: "landscape",
-      unit: "mm",
-      format: "a4"
-    });
-
-    doc.setFontSize(18);
-    doc.text("Festival Artist Schedule", 14, 20);
-
-    const tableData = artists.map(artist => [
-      artist.show_start,
-      artist.show_end,
-      artist.name,
-      artist.foh_console,
-      artist.foh_tech ? "✓" : "",
-      artist.mon_console,
-      artist.mon_tech ? "✓" : "",
-      artist.extras_sf ? "✓" : "",
-      artist.extras_df ? "✓" : "",
-      artist.extras_djbooth ? "✓" : "",
-      artist.extras_wired,
-      artist.wireless_model,
-      artist.wireless_quantity,
-      artist.wireless_band,
-      artist.iem_model,
-      artist.iem_quantity,
-      artist.iem_band,
-      artist.infra_cat6,
-      artist.infra_hma,
-      artist.infra_coax,
-      artist.infra_analog
-    ]);
-
-    const headers = [
-      ["Slot Start", "Slot End", "Artist", "FOH Console", "FOH Tech", "Mon Console", "Mon Tech", 
-       "SF", "DF", "Booth", "Wired", 
-       "WL Model", "WL Qty", "WL Band", 
-       "IEM Model", "IEM Qty", "IEM Band", 
-       "4xCat6", "2xHMA", "4xCOAX", "Analog"]
+    const columns = [
+      { header: 'SLOT', dataKey: 'slot' },
+      { header: 'ARTISTA', dataKey: 'artist' },
+      { header: 'FoH CONSOLE', dataKey: 'foh_console' },
+      { header: 'TECH', dataKey: 'foh_tech' },
+      { header: 'MON CONSOLE', dataKey: 'mon_console' },
+      { header: 'TECH', dataKey: 'mon_tech' },
+      { header: 'SF', dataKey: 'sf' },
+      { header: 'DF', dataKey: 'df' },
+      { header: 'BOOTH', dataKey: 'booth' },
+      { header: 'WiRED', dataKey: 'wired' },
+      { header: 'WL PACK', dataKey: 'wl_pack' },
+      { header: 'IEM PACK', dataKey: 'iem_pack' },
+      { header: 'RF FESTIVAL', dataKey: 'rf_festival' },
+      { header: 'INFRAS', dataKey: 'infras' },
     ];
 
-    doc.autoTable({
-      startY: 25,
-      head: headers,
-      body: tableData,
-      theme: "grid",
-      styles: {
-        fontSize: 8,
-        cellPadding: 1.5,
-        overflow: "linebreak"
-      },
-      headStyles: {
-        fillColor: [41, 128, 185],
-        textColor: 255,
-        fontStyle: "bold"
-      },
+    const rows = artists.map(artist => ({
+      slot: `${artist.show_start} - ${artist.show_end}`,
+      artist: artist.name,
+      foh_console: artist.foh_console,
+      foh_tech: artist.foh_tech ? '✓' : '✗',
+      mon_console: artist.mon_console,
+      mon_tech: artist.mon_tech ? '✓' : '✗',
+      sf: artist.extras_sf ? '✓' : '✗',
+      df: artist.extras_df ? '✓' : '✗',
+      booth: artist.extras_djbooth ? '✓' : '✗',
+      wired: artist.extras_wired,
+      wl_pack: `${artist.wireless_quantity}x ${artist.wireless_model} (${artist.wireless_band})`,
+      iem_pack: `${artist.iem_quantity}x ${artist.iem_model} (${artist.iem_band})`,
+      rf_festival: '',
+      infras: [
+        artist.infras_cat6 ? 'Cat6' : null,
+        artist.infras_hma ? 'HMA' : null,
+        artist.infras_coax ? 'COAX' : null,
+        artist.infras_analog > 0 ? `${artist.infras_analog}x Analog` : null
+      ].filter(Boolean).join(' / ')
+    }));
+
+    doc.setFontSize(18);
+    doc.text('Festival Production Sheet', 14, 20);
+    doc.setFontSize(12);
+    doc.text(`Generated: ${currentDate}`, 14, 27);
+
+    (doc as any).autoTable({
+      startY: 30,
+      head: [columns.map(col => col.header)],
+      body: rows.map(row => columns.map(col => row[col.dataKey as keyof typeof row])),
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 1.5 },
+      headerStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 9 },
       columnStyles: {
-        0: { cellWidth: 15 },
-        1: { cellWidth: 15 },
+        0: { cellWidth: 25 },
+        1: { cellWidth: 30 },
         2: { cellWidth: 25 },
-        3: { cellWidth: 20 },
-        4: { cellWidth: 10 },
-        5: { cellWidth: 20 },
+        3: { cellWidth: 15 },
+        4: { cellWidth: 25 },
+        5: { cellWidth: 15 },
         6: { cellWidth: 10 },
-        7: { cellWidth: 8 },
-        8: { cellWidth: 8 },
-        9: { cellWidth: 10 },
-        10: { cellWidth: 15 },
-        11: { cellWidth: 20 },
-        12: { cellWidth: 10 },
-        13: { cellWidth: 15 },
-        14: { cellWidth: 20 },
-        15: { cellWidth: 10 },
-        16: { cellWidth: 15 },
-        17: { cellWidth: 10 },
-        18: { cellWidth: 10 },
-        19: { cellWidth: 10 },
-        20: { cellWidth: 10 }
-      },
-      margin: { left: 5 }
+        7: { cellWidth: 10 },
+        8: { cellWidth: 15 },
+        9: { cellWidth: 20 },
+        10: { cellWidth: 35 },
+        11: { cellWidth: 35 },
+        12: { cellWidth: 25 },
+        13: { cellWidth: 30 },
+      }
     });
 
-    doc.save("festival_schedule.pdf");
+    doc.save(`production-sheet-${currentDate}.pdf`);
   };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-4 p-2">
         <Button onClick={addArtist} className="w-full sm:w-auto">Add Artist</Button>
-        <Button onClick={handlePrint} className="w-full sm:w-auto">Print PDF</Button>
+        <Button onClick={generatePdf} className="w-full sm:w-auto">Generate PDF</Button>
       </div>
 
       <div className="space-y-4">
         {artists.map((artist, index) => (
           <Collapsible key={artist.id} className="rounded-lg border p-4 bg-card">
-            {({ open }) => (
-              <>
-                <CollapsibleTrigger className="w-full">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-medium">{artist.name || "New Artist"}</h3>
-                    {open ? <ChevronUp /> : <ChevronDown />}
-                  </div>
-                </CollapsibleTrigger>
+            <div>
+              <CollapsibleTrigger className="w-full">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-medium">{artist.name || "New Artist"}</h3>
+                  <ChevronDown className="h-4 w-4" />
+                </div>
+              </CollapsibleTrigger>
 
-                <CollapsibleContent className="CollapsibleContent">
-                  <div className="grid grid-cols-1 gap-4 pt-4">
-                    {/* ... (keep all existing form fields) */}
+              <CollapsibleContent className="CollapsibleContent">
+                <div className="grid grid-cols-1 gap-4 pt-4">
+                  <div className="space-y-2">
+                    <Label>Artist Name</Label>
+                    <Input
+                      value={artist.name}
+                      onChange={(e) => updateArtist(index, "name", e.target.value)}
+                    />
                   </div>
-                </CollapsibleContent>
-              </>
-            )}
+
+                  <div className="space-y-2">
+                    <Label>Show Times</Label>
+                    <div className="flex flex-wrap gap-2">
+                      <Input
+                        type="time"
+                        value={artist.show_start}
+                        className="flex-1 min-w-[150px]"
+                        onChange={(e) => updateArtist(index, "show_start", e.target.value)}
+                      />
+                      <Input
+                        type="time"
+                        value={artist.show_end}
+                        className="flex-1 min-w-[150px]"
+                        onChange={(e) => updateArtist(index, "show_end", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>FOH Console</Label>
+                      <Select
+                        value={artist.foh_console}
+                        onValueChange={(v) => updateArtist(index, "foh_console", v)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select console" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {consoleModels.map((model) => (
+                            <SelectItem key={model} value={model}>{model}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Checkbox
+                          checked={artist.foh_tech}
+                          onCheckedChange={(c) => updateArtist(index, "foh_tech", c)}
+                        />
+                        <Label>FOH Tech Required</Label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Monitor Console</Label>
+                      <Select
+                        value={artist.mon_console}
+                        onValueChange={(v) => updateArtist(index, "mon_console", v)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select console" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {consoleModels.map((model) => (
+                            <SelectItem key={model} value={model}>{model}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Checkbox
+                          checked={artist.mon_tech}
+                          onCheckedChange={(c) => updateArtist(index, "mon_tech", c)}
+                        />
+                        <Label>Monitor Tech Required</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Wireless Systems</Label>
+                      <Select
+                        value={artist.wireless_model}
+                        onValueChange={(v) => updateArtist(index, "wireless_model", v)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select model" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {wirelessModels.map((model) => (
+                            <SelectItem key={model} value={model}>{model}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex flex-wrap gap-2">
+                        <Input
+                          type="number"
+                          value={artist.wireless_quantity}
+                          className="flex-1 min-w-[100px]"
+                          onChange={(e) => updateArtist(index, "wireless_quantity", parseInt(e.target.value))}
+                          placeholder="Qty"
+                        />
+                        <Input
+                          value={artist.wireless_band}
+                          className="flex-1 min-w-[120px]"
+                          onChange={(e) => updateArtist(index, "wireless_band", e.target.value)}
+                          placeholder="Frequency Band"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>IEM Systems</Label>
+                      <Select
+                        value={artist.iem_model}
+                        onValueChange={(v) => updateArtist(index, "iem_model", v)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select model" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {iemModels.map((model) => (
+                            <SelectItem key={model} value={model}>{model}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex flex-wrap gap-2">
+                        <Input
+                          type="number"
+                          value={artist.iem_quantity}
+                          className="flex-1 min-w-[100px]"
+                          onChange={(e) => updateArtist(index, "iem_quantity", parseInt(e.target.value))}
+                          placeholder="Qty"
+                        />
+                        <Input
+                          value={artist.iem_band}
+                          className="flex-1 min-w-[120px]"
+                          onChange={(e) => updateArtist(index, "iem_band", e.target.value)}
+                          placeholder="Frequency Band"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Infrastructure</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={artist.infras_cat6}
+                            onCheckedChange={(c) => updateArtist(index, "infras_cat6", c)}
+                          />
+                          <Label>Cat6</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={artist.infras_hma}
+                            onCheckedChange={(c) => updateArtist(index, "infras_hma", c)}
+                          />
+                          <Label>HMA</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={artist.infras_coax}
+                            onCheckedChange={(c) => updateArtist(index, "infras_coax", c)}
+                          />
+                          <Label>COAX</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            value={artist.infras_analog}
+                            className="w-16"
+                            onChange={(e) => updateArtist(index, "infras_analog", parseInt(e.target.value))}
+                          />
+                          <Label>Analog</Label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Extras</Label>
+                      <div className="flex flex-wrap gap-4">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={artist.extras_sf}
+                            onCheckedChange={(c) => updateArtist(index, "extras_sf", c)}
+                          />
+                          <Label>SF</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={artist.extras_df}
+                            onCheckedChange={(c) => updateArtist(index, "extras_df", c)}
+                          />
+                          <Label>DF</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={artist.extras_djbooth}
+                            onCheckedChange={(c) => updateArtist(index, "extras_djbooth", c)}
+                          />
+                          <Label>DJ Booth</Label>
+                        </div>
+                      </div>
+                      <Input
+                        value={artist.extras_wired}
+                        onChange={(e) => updateArtist(index, "extras_wired", e.target.value)}
+                        placeholder="Wired Positions"
+                        className="mt-2"
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="destructive"
+                    onClick={() => removeArtist(artist.id!)}
+                    className="w-full mt-4"
+                  >
+                    Remove Artist
+                  </Button>
+                </div>
+              </CollapsibleContent>
+            </div>
           </Collapsible>
         ))}
       </div>
