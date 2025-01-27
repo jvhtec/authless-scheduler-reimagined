@@ -12,8 +12,5 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     flowType: 'pkce',
     storage: localStorage,
     storageKey: 'supabase.auth.token',
-  },
-  headers: {
-    'apikey': SUPABASE_PUBLISHABLE_KEY
   }
 });
