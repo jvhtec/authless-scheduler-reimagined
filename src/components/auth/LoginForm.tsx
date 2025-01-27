@@ -30,7 +30,21 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
     try {
       console.log("Starting login process for email:", formData.email);
       
-      // First attempt to sign in
+      // First check if the user exists
+      const { data: userExists, error: userCheckError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', formData.email.toLowerCase())
+        .single();
+
+      if (!userExists) {
+        console.error("User not found in profiles");
+        setError("No account found with this email. Please sign up first.");
+        setLoading(false);
+        return;
+      }
+
+      // Attempt to sign in
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email.toLowerCase(),
         password: formData.password,
@@ -41,7 +55,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
         if (signInError.message.includes("Email not confirmed")) {
           setError("Please check your email to verify your account before logging in.");
         } else if (signInError.message.includes("Invalid login credentials")) {
-          setError("Invalid email or password. Please try again.");
+          setError("Invalid password. Please try again.");
         } else {
           setError(signInError.message);
         }
@@ -50,7 +64,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
 
       if (!signInData.user) {
         console.error("No user data returned after login");
-        setError("No user found with these credentials.");
+        setError("Login failed. Please try again.");
         return;
       }
 
