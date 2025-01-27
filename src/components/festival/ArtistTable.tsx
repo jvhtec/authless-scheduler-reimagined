@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
@@ -14,8 +14,6 @@ import "jspdf-autotable";
 interface Artist {
   id?: string;
   job_id?: string;
-  date: string;
-  stage: string;
   name: string;
   show_start: string;
   show_end: string;
@@ -37,8 +35,6 @@ interface Artist {
   infras_hma: boolean;
   infras_coax: boolean;
   infras_analog: number;
-  files: string[];
-  festival_artist_files?: Array<{ id: string; file_path: string }>; // Add this line
 }
 
 interface ArtistTableProps {
@@ -52,7 +48,6 @@ const iemModels = ["Shure PSM1000", "Sennheiser 2050"];
 export const ArtistTable = ({ jobId }: ArtistTableProps) => {
   const [artists, setArtists] = useState<Artist[]>([]);
   const { toast } = useToast();
-  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetchArtists();
@@ -62,21 +57,11 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     try {
       const { data, error } = await supabase
         .from('festival_artists')
-        .select(`
-          *,
-          festival_artist_files (id, file_path)
-        `)
+        .select('*')
         .eq('job_id', jobId);
 
       if (error) throw error;
-      
-      // Map the files to the artist object
-      const artistsWithFiles = data.map(artist => ({
-        ...artist,
-        files: artist.festival_artist_files.map(file => file.file_path)
-      }));
-      
-      setArtists(artistsWithFiles || []);
+      setArtists(data || []);
     } catch (error) {
       console.error('Error fetching artists:', error);
       toast({
@@ -91,8 +76,6 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     try {
       const newArtist: Artist = {
         job_id: jobId,
-        date: new Date().toISOString().split('T')[0],
-        stage: "Main Stage",
         name: "",
         show_start: "",
         show_end: "",
@@ -113,8 +96,7 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
         infras_cat6: false,
         infras_hma: false,
         infras_coax: false,
-        infras_analog: 0,
-        files: []
+        infras_analog: 0
       };
 
       const { data, error } = await supabase
@@ -158,54 +140,6 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     }
   };
 
-  const handleFileUpload = async (artistId: string, file: File) => {
-    setUploading(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${artistId}-${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      // Upload to storage
-      const { error: uploadError } = await supabase.storage
-        .from('artist-files')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // Insert into files table
-      const { error } = await supabase
-        .from('festival_artist_files')
-        .insert({
-          artist_id: artistId,
-          file_path: filePath
-        });
-
-      if (error) throw error;
-      
-      // Update local state
-      setArtists(artists.map(a => a.id === artistId ? {
-        ...a,
-        files: [...a.files, filePath]
-      } : a));
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      toast({
-        title: "Error",
-        description: "Failed to upload file",
-        variant: "destructive",
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const getFileUrl = (filePath: string) => {
-    const { data } = supabase.storage
-      .from('artist-files')
-      .getPublicUrl(filePath);
-    return data.publicUrl;
-  };
-
   const removeArtist = async (id: string) => {
     try {
       const { error } = await supabase
@@ -230,42 +164,47 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     const currentDate = new Date().toLocaleDateString();
 
     const columns = [
-      { header: 'DATE', dataKey: 'date' },
-      { header: 'STAGE', dataKey: 'stage' },
       { header: 'SLOT', dataKey: 'slot' },
       { header: 'ARTISTA', dataKey: 'artist' },
-      { header: 'FOH CONSOLE', dataKey: 'foh_console' },
+      { header: 'FoH CONSOLE', dataKey: 'foh_console' },
       { header: 'TECH', dataKey: 'foh_tech' },
       { header: 'MON CONSOLE', dataKey: 'mon_console' },
       { header: 'TECH', dataKey: 'mon_tech' },
       { header: 'SF', dataKey: 'sf' },
       { header: 'DF', dataKey: 'df' },
       { header: 'BOOTH', dataKey: 'booth' },
-      { header: 'WIRED', dataKey: 'wired' },
+      { header: 'WiRED', dataKey: 'wired' },
       { header: 'WL PACK', dataKey: 'wl_pack' },
       { header: 'IEM PACK', dataKey: 'iem_pack' },
+      { header: 'RF FESTIVAL', dataKey: 'rf_festival' },
+      { header: 'INFRAS', dataKey: 'infras' },
     ];
 
     const rows = artists.map(artist => ({
-      date: artist.date,
-      stage: artist.stage,
       slot: `${artist.show_start} - ${artist.show_end}`,
       artist: artist.name,
       foh_console: artist.foh_console,
-      foh_tech: artist.foh_tech ? 'Y' : 'N',
+      foh_tech: artist.foh_tech ? '✓' : '✗',
       mon_console: artist.mon_console,
-      mon_tech: artist.mon_tech ? 'Y' : 'N',
-      sf: artist.extras_sf ? 'Y' : 'N',
-      df: artist.extras_df ? 'Y' : 'N',
-      booth: artist.extras_djbooth ? 'Y' : 'N',
+      mon_tech: artist.mon_tech ? '✓' : '✗',
+      sf: artist.extras_sf ? '✓' : '✗',
+      df: artist.extras_df ? '✓' : '✗',
+      booth: artist.extras_djbooth ? '✓' : '✗',
       wired: artist.extras_wired,
-      wl_pack: `${artist.wireless_quantity}x ${artist.wireless_model}${artist.wireless_band ? ` (${artist.wireless_band})` : ''}`,
-      iem_pack: `${artist.iem_quantity}x ${artist.iem_model}${artist.iem_band ? ` (${artist.iem_band})` : ''}`,
+      wl_pack: `${artist.wireless_quantity}x ${artist.wireless_model} (${artist.wireless_band})`,
+      iem_pack: `${artist.iem_quantity}x ${artist.iem_model} (${artist.iem_band})`,
+      rf_festival: '',
+      infras: [
+        artist.infras_cat6 ? 'Cat6' : null,
+        artist.infras_hma ? 'HMA' : null,
+        artist.infras_coax ? 'COAX' : null,
+        artist.infras_analog > 0 ? `${artist.infras_analog}x Analog` : null
+      ].filter(Boolean).join(' / ')
     }));
 
-    doc.setFontSize(14);
+    doc.setFontSize(18);
     doc.text('Festival Production Sheet', 14, 20);
-    doc.setFontSize(10);
+    doc.setFontSize(12);
     doc.text(`Generated: ${currentDate}`, 14, 27);
 
     (doc as any).autoTable({
@@ -273,33 +212,22 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
       head: [columns.map(col => col.header)],
       body: rows.map(row => columns.map(col => row[col.dataKey as keyof typeof row])),
       theme: 'grid',
-      styles: { 
-        fontSize: 7, 
-        cellPadding: 1,
-        overflow: 'linebreak'
-      },
-      headerStyles: { 
-        fillColor: [41, 128, 185], 
-        textColor: 255, 
-        fontSize: 8,
-        cellPadding: 2
-      },
-      margin: { left: 5, right: 5 },
-      tableWidth: 'auto',
+      styles: { fontSize: 8, cellPadding: 1.5 },
+      headerStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 9 },
       columnStyles: {
-        0: { cellWidth: 20 },
-        1: { cellWidth: 25 },
+        0: { cellWidth: 25 },
+        1: { cellWidth: 30 },
         2: { cellWidth: 25 },
-        3: { cellWidth: 25 },
+        3: { cellWidth: 15 },
         4: { cellWidth: 25 },
-        5: { cellWidth: 12 },
-        6: { cellWidth: 25 },
-        7: { cellWidth: 12 },
-        8: { cellWidth: 10 },
-        9: { cellWidth: 10 },
-        10: { cellWidth: 15 },
-        11: { cellWidth: 20 },
-        12: { cellWidth: 30 },
+        5: { cellWidth: 15 },
+        6: { cellWidth: 10 },
+        7: { cellWidth: 10 },
+        8: { cellWidth: 15 },
+        9: { cellWidth: 20 },
+        10: { cellWidth: 35 },
+        11: { cellWidth: 35 },
+        12: { cellWidth: 25 },
         13: { cellWidth: 30 },
       }
     });
@@ -327,26 +255,6 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
 
               <CollapsibleContent className="CollapsibleContent">
                 <div className="grid grid-cols-1 gap-4 pt-4">
-                  {/* Date and Stage */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Date</Label>
-                      <Input
-                        type="date"
-                        value={artist.date}
-                        onChange={(e) => updateArtist(index, "date", e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Stage</Label>
-                      <Input
-                        value={artist.stage}
-                        onChange={(e) => updateArtist(index, "stage", e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Artist Name */}
                   <div className="space-y-2">
                     <Label>Artist Name</Label>
                     <Input
@@ -355,7 +263,6 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
                     />
                   </div>
 
-                  {/* Show Times */}
                   <div className="space-y-2">
                     <Label>Show Times</Label>
                     <div className="flex flex-wrap gap-2">
@@ -374,36 +281,6 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
                     </div>
                   </div>
 
-                  {/* File Upload */}
-                  <div className="space-y-2">
-                    <Label>Files</Label>
-                    <div className="flex flex-col gap-2">
-                      <Input
-                        type="file"
-                        disabled={uploading}
-                        onChange={(e) => {
-                          if (e.target.files?.[0] && artist.id) {
-                            handleFileUpload(artist.id, e.target.files[0]);
-                          }
-                        }}
-                      />
-                      <div className="flex flex-wrap gap-2">
-                        {artist.files?.map((file, fileIndex) => (
-                          <a
-                            key={fileIndex}
-                            href={getFileUrl(file)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 hover:underline text-sm"
-                          >
-                            File {fileIndex + 1}
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Console Section */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>FOH Console</Label>
@@ -454,7 +331,6 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
                     </div>
                   </div>
 
-                  {/* Wireless & IEM Systems */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Wireless Systems</Label>
