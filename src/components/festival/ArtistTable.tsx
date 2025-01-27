@@ -12,7 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 interface Artist {
   id?: string;
@@ -48,8 +49,8 @@ interface ArtistTableProps {
 
 export const ArtistTable = ({ jobId }: ArtistTableProps) => {
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
-  const consoleModels = ["SD5", "SD10", "CL5", "PM5D"];
 
   useEffect(() => {
     const fetchArtists = async () => {
@@ -113,11 +114,6 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
   };
 
   const updateArtist = async (index: number, key: keyof Artist, value: any) => {
-    // Handle empty time values
-    if ((key === 'show_start' || key === 'show_end' || key === 'soundcheck_start' || key === 'soundcheck_end') && value === '') {
-      value = null;
-    }
-
     const updatedArtist = { ...artists[index], [key]: value };
 
     try {
@@ -148,20 +144,83 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     }
   };
 
+  const handlePrint = () => {
+    const doc = new jsPDF();
+    doc.text("Artist Details", 14, 10);
+
+    const tableData = artists.map((artist) => [
+      artist.name,
+      artist.show_start || "N/A",
+      artist.show_end || "N/A",
+      artist.soundcheck ? "Yes" : "No",
+      artist.foh_console || "N/A",
+      artist.wireless_model || "N/A",
+      artist.iem_model || "N/A",
+      artist.monitors_enabled ? artist.monitors_quantity : "N/A",
+      artist.notes || "N/A",
+    ]);
+
+    doc.autoTable({
+      head: [
+        [
+          "Name",
+          "Show Start",
+          "Show End",
+          "Soundcheck",
+          "FOH Console",
+          "Wireless Model",
+          "IEM Model",
+          "Monitors",
+          "Notes",
+        ],
+      ],
+      body: tableData,
+    });
+
+    doc.save("artist-details.pdf");
+  };
+
+  const handleUpload = async (artistId: string, file: File) => {
+    setUploading(true);
+    try {
+      const filePath = `${artistId}/${file.name}`;
+      const { error } = await supabase.storage.from("artist_documents").upload(filePath, file);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "File uploaded successfully",
+      });
+    } catch (error) {
+      console.error("Error uploading file:", error.message);
+      toast({
+        title: "Error",
+        description: "Failed to upload file",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <Button onClick={addArtist} className="mb-4">
-        Add Artist
-      </Button>
+      <div className="flex gap-4">
+        <Button onClick={addArtist}>Add Artist</Button>
+        <Button onClick={handlePrint}>Print</Button>
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Artist Name</TableHead>
+              <TableHead>Name</TableHead>
               <TableHead>Show Time</TableHead>
               <TableHead>Soundcheck</TableHead>
-              <TableHead>FOH</TableHead>
+              <TableHead>FOH Console</TableHead>
+              <TableHead>Wireless</TableHead>
               <TableHead>Notes</TableHead>
+              <TableHead>Upload</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -172,7 +231,6 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
                   <Input
                     value={artist.name}
                     onChange={(e) => updateArtist(index, "name", e.target.value)}
-                    placeholder="Artist name"
                   />
                 </TableCell>
                 <TableCell>
@@ -196,27 +254,27 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
                   />
                 </TableCell>
                 <TableCell>
-                  <Select
+                  <Input
                     value={artist.foh_console}
-                    onValueChange={(value) => updateArtist(index, "foh_console", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select console" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {consoleModels.map((model) => (
-                        <SelectItem key={model} value={model}>
-                          {model}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(e) => updateArtist(index, "foh_console", e.target.value)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    value={artist.wireless_model}
+                    onChange={(e) => updateArtist(index, "wireless_model", e.target.value)}
+                  />
                 </TableCell>
                 <TableCell>
                   <Input
                     value={artist.notes}
                     onChange={(e) => updateArtist(index, "notes", e.target.value)}
-                    placeholder="Notes"
+                  />
+                </TableCell>
+                <TableCell>
+                  <input
+                    type="file"
+                    onChange={(e) => e.target.files && handleUpload(artist.id!, e.target.files[0])}
                   />
                 </TableCell>
                 <TableCell>
