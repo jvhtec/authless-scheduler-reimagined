@@ -25,48 +25,38 @@ const Auth = () => {
     };
   }, []);
 
- useEffect(() => {
+  useEffect(() => {
     let isMounted = true;
-    let subscription;
 
-    const initializeSession = async () => {
+    const checkSession = async () => {
       try {
-        const { data: { session } } = await le.auth.getSession();
-        if (isMounted) await u(session); // Update state if component is still mounted
-
-        const { data: { subscription } } = le.auth.onAuthStateChange(
-          async (event, newSession) => {
-            if (isMounted) await u(newSession);
-          }
-        );
-        subscription = subscription;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (isMounted) {
+          setSession(session);
+          if (session) navigate("/dashboard");
+        }
       } catch (error) {
-        if (isMounted) o(false); // Handle error state
+        console.error("Error checking session:", error);
+        if (isMounted) setError("Failed to check authentication status");
       }
     };
-
-    initializeSession();
-
-    return () => {
-      isMounted = false;
-      if (subscription) subscription.unsubscribe();
-    };
-  }, []); // Empty dependency array = runs once on mount
-
 
     checkSession();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log("Auth: Auth state changed:", _event);
-      setSession(session);
-      if (session) {
-        navigate("/dashboard");
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        console.log("Auth: Auth state changed:", _event);
+        if (isMounted) {
+          setSession(session);
+          if (session) navigate("/dashboard");
+        }
       }
-    });
+    );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   return (
