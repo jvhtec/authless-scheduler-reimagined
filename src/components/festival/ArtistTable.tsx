@@ -38,6 +38,7 @@ interface Artist {
   infras_coax: boolean;
   infras_analog: number;
   files: string[];
+  festival_artist_files?: Array<{ id: string; file_path: string }>; // Add this line
 }
 
 interface ArtistTableProps {
@@ -58,23 +59,33 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
   }, [jobId]);
 
   const fetchArtists = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('festival_artists')
-        .select('*')
-        .eq('job_id', jobId);
+  try {
+    const { data, error } = await supabase
+      .from('festival_artists')
+      .select(`
+        *,
+        festival_artist_files (id, file_path)
+      `)
+      .eq('job_id', jobId);
 
-      if (error) throw error;
-      setArtists(data || []);
-    } catch (error) {
-      console.error('Error fetching artists:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch artists",
-        variant: "destructive",
-      });
-    }
-  };
+    if (error) throw error;
+    
+    // Map the files to the artist object
+    const artistsWithFiles = data.map(artist => ({
+      ...artist,
+      files: artist.festival_artist_files.map(file => file.file_path)
+    }));
+    
+    setArtists(artistsWithFiles || []);
+  } catch (error) {
+    console.error('Error fetching artists:', error);
+    toast({
+      title: "Error",
+      description: "Failed to fetch artists",
+      variant: "destructive",
+    });
+  }
+};
 
   const addArtist = async () => {
     try {
@@ -147,42 +158,46 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     }
   };
 
-  const handleFileUpload = async (artistId: string, file: File) => {
-    setUploading(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${artistId}-${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
+  cconst handleFileUpload = async (artistId: string, file: File) => {
+  setUploading(true);
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${artistId}-${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('artist-files')
-        .upload(filePath, file);
+    // Upload to storage
+    const { error: uploadError } = await supabase.storage
+      .from('artist-files')
+      .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+    if (uploadError) throw uploadError;
 
-      const artist = artists.find(a => a.id === artistId);
-      if (!artist) return;
-
-      const updatedFiles = [...artist.files, filePath];
-      const { error } = await supabase
-        .from('festival_artists')
-        .update({ files: updatedFiles })
-        .eq('id', artistId);
-
-      if (error) throw error;
-      
-      setArtists(artists.map(a => a.id === artistId ? {...a, files: updatedFiles} : a));
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      toast({
-        title: "Error",
-        description: "Failed to upload file",
-        variant: "destructive",
+    // Insert into files table
+    const { error } = await supabase
+      .from('festival_artist_files')
+      .insert({
+        artist_id: artistId,
+        file_path: filePath
       });
-    } finally {
-      setUploading(false);
-    }
-  };
+
+    if (error) throw error;
+    
+    // Update local state
+    setArtists(artists.map(a => a.id === artistId ? {
+      ...a,
+      files: [...a.files, filePath]
+    } : a));
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    toast({
+      title: "Error",
+      description: "Failed to upload file",
+      variant: "destructive",
+    });
+  } finally {
+    setUploading(false);
+  }
+};
 
   const getFileUrl = (filePath: string) => {
     const { data } = supabase.storage
