@@ -1,3 +1,4 @@
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
