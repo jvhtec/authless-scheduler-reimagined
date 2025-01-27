@@ -99,6 +99,7 @@ interface JobCardNewProps {
   userRole?: string | null;
   onDeleteDocument?: (jobId: string, document: JobDocument) => void;
   showUpload?: boolean;
+  showManageArtists?: boolean; // New prop to control button visibility
 }
 
 const getDateTypeIcon = (type: string) => {
@@ -257,7 +258,8 @@ export const JobCardNew = ({
   department = "sound",
   userRole,
   onDeleteDocument,
-  showUpload = false
+  showUpload = false,
+  showManageArtists = false // New prop to control button visibility
 }: JobCardNewProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -730,7 +732,7 @@ export const JobCardNew = ({
           </Button>
         </div>
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-          {job.job_type === "festival" && (
+          {job.job_type === "festival" && showManageArtists && (
             <Button
               variant="outline"
               size="sm"

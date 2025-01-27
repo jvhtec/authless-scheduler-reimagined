@@ -15,7 +15,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Department } from "@/types/department";
 import { SimplifiedJobColorPicker } from "./SimplifiedJobColorPicker";
-import { DateTypeContextMenu } from "@/components/dashboard/DateTypeContextMenu";
 import {
   Select,
   SelectContent,
@@ -197,18 +196,6 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
                 required
               />
             </div>
-          </div>
-          <div>
-            <Label>Date Types</Label>
-            <DateTypeContextMenu jobId={job.id} date={new Date(startTime)} onTypeChange={() => {}}>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full justify-start text-left"
-              >
-                Set Date Type
-              </Button>
-            </DateTypeContextMenu>
           </div>
           <div>
             <Label>Color</Label>

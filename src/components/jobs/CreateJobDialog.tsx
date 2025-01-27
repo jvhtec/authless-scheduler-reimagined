@@ -45,7 +45,6 @@ interface CreateJobDialogProps {
 export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [locations, setLocations] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -73,13 +72,33 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
     setIsSubmitting(true);
 
     try {
+      // First create or get location
+      const { data: locationData, error: locationError } = await supabase
+        .from("locations")
+        .insert([{ name: values.location_id }])
+        .select()
+        .single();
+
+      if (locationError && locationError.code !== '23505') throw locationError;
+
+      // If location already exists, get it
+      let locationId = locationData?.id;
+      if (locationError?.code === '23505') {
+        const { data: existingLocation } = await supabase
+          .from("locations")
+          .select("id")
+          .eq("name", values.location_id)
+          .single();
+        locationId = existingLocation?.id;
+      }
+
       const { data: job, error: jobError } = await supabase
         .from("jobs")
         .insert([
           {
             title: values.title,
             description: values.description,
-            location_id: values.location_id,
+            location_id: locationId,
             start_time: values.start_time.toISOString(),
             end_time: values.end_time.toISOString(),
             job_type: values.job_type,
@@ -122,15 +141,6 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
     }
   };
 
-  const fetchLocations = async () => {
-    const { data } = await supabase.from("locations").select("*");
-    if (data) setLocations(data);
-  };
-
-  useState(() => {
-    fetchLocations();
-  });
-
   const departments: Department[] = ["sound", "lights", "video"];
   const selectedDepartments = watch("departments") || [];
 
@@ -165,21 +175,7 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
 
             <div className="space-y-2">
               <Label>Location</Label>
-              <Select
-                onValueChange={(value) => setValue("location_id", value)}
-                defaultValue={watch("location_id")}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      {location.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input {...register("location_id")} placeholder="Enter location" />
               {errors.location_id && (
                 <p className="text-sm text-destructive">
                   {errors.location_id.message}
