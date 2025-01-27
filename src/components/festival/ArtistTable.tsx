@@ -77,8 +77,8 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
       const newArtist: Artist = {
         job_id: jobId,
         name: "",
-        show_start: "",
-        show_end: "",
+        show_start: "12:00",  // Default time instead of empty string
+        show_end: "13:00",    // Default time instead of empty string
         foh_console: "",
         foh_tech: false,
         mon_console: "",
