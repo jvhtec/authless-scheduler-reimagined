@@ -1,9 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/lib/supabase"; // Ensure this is properly initialized with your API key and URL
+import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -58,6 +66,13 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
   const consoleModels = ["SD5", "SD10", "CL5", "PM5D"];
   const wirelessModels = ["SLX-D", "QLX-D", "ULX-D"];
   const iemModels = ["PSM900", "PSM1000"];
+  const frequencyBands = {
+    "SLX-D": ["Band G58", "Band G59"],
+    "QLX-D": ["Band J50", "Band K51"],
+    "ULX-D": ["Band J52", "Band G53"],
+    "PSM900": ["Band H20", "Band K15"],
+    "PSM1000": ["Band J51", "Band K53"],
+  };
 
   useEffect(() => {
     const fetchArtists = async () => {
@@ -66,7 +81,6 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
           .from("festival_artists")
           .select("*")
           .eq("job_id", jobId);
-
         if (error) throw error;
         setArtists(data || []);
       } catch (error) {
@@ -150,82 +164,95 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     }
   };
 
-  const handleRemoveArtist = async (artistId: string) => {
-    try {
-      const { error } = await supabase.from("festival_artists").delete().eq("id", artistId);
-
-      if (error) throw error;
-      setArtists((prev) => prev.filter((artist) => artist.id !== artistId));
-      toast({ title: "Success", description: "Artist removed successfully" });
-    } catch (error) {
-      console.error("Error removing artist:", error.message);
-      toast({ title: "Error", description: "Failed to remove artist", variant: "destructive" });
-    }
-  };
-
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap justify-between">
+      <div className="flex justify-between items-center">
         <Button onClick={addArtist}>Add Artist</Button>
       </div>
 
-      {/* Mobile-friendly card layout for artists */}
-      <div className="space-y-4">
-        {artists.map((artist, index) => (
-          <div key={artist.id} className="rounded-lg border p-4 space-y-4 bg-white shadow-sm">
-            <div className="flex flex-col gap-2">
-              <Input
-                placeholder="Artist Name"
-                value={artist.name}
-                onChange={(e) => updateArtist(index, "name", e.target.value)}
-              />
-              <div className="flex gap-2">
-                <Input
-                  type="time"
-                  placeholder="Show Start"
-                  value={artist.show_start || ""}
-                  onChange={(e) => updateArtist(index, "show_start", e.target.value)}
-                />
-                <Input
-                  type="time"
-                  placeholder="Show End"
-                  value={artist.show_end || ""}
-                  onChange={(e) => updateArtist(index, "show_end", e.target.value)}
-                />
-              </div>
-              <Checkbox
-                checked={artist.soundcheck}
-                onCheckedChange={(checked) => updateArtist(index, "soundcheck", checked)}
-              >
-                Soundcheck
-              </Checkbox>
-              <Select
-                value={artist.foh_console}
-                onValueChange={(value) => updateArtist(index, "foh_console", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="FOH Console" />
-                </SelectTrigger>
-                <SelectContent>
-                  {consoleModels.map((model) => (
-                    <SelectItem key={model} value={model}>
-                      {model}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex gap-4">
-              <Button
-                variant="destructive"
-                onClick={() => handleRemoveArtist(artist.id!)}
-              >
-                Remove
-              </Button>
-            </div>
-          </div>
-        ))}
+      {/* Responsive Table Wrapper */}
+      <div className="overflow-x-auto rounded-md border">
+        <Table className="min-w-[1200px]">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Show Times</TableHead>
+              <TableHead>Soundcheck</TableHead>
+              <TableHead>FOH Console</TableHead>
+              <TableHead>Wireless</TableHead>
+              <TableHead>Notes</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {artists.map((artist, index) => (
+              <TableRow key={artist.id}>
+                <TableCell>
+                  <Input
+                    value={artist.name}
+                    onChange={(e) => updateArtist(index, "name", e.target.value)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Input
+                      type="time"
+                      value={artist.show_start || ""}
+                      onChange={(e) => updateArtist(index, "show_start", e.target.value)}
+                    />
+                    <Input
+                      type="time"
+                      value={artist.show_end || ""}
+                      onChange={(e) => updateArtist(index, "show_end", e.target.value)}
+                    />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Checkbox
+                    checked={artist.soundcheck}
+                    onCheckedChange={(checked) => updateArtist(index, "soundcheck", checked)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Select
+                    value={artist.foh_console}
+                    onValueChange={(value) => updateArtist(index, "foh_console", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select console" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {consoleModels.map((model) => (
+                        <SelectItem key={model} value={model}>
+                          {model}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-2">
+                    <Input
+                      value={artist.wireless_model}
+                      onChange={(e) => updateArtist(index, "wireless_model", e.target.value)}
+                    />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Input
+                    value={artist.notes}
+                    onChange={(e) => updateArtist(index, "notes", e.target.value)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Button variant="destructive" onClick={() => {}}>
+                    Remove
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
