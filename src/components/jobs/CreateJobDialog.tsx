@@ -1,121 +1,144 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Department } from "@/types/department";
-import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { SimplifiedJobColorPicker } from "./SimplifiedJobColorPicker";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLocationManagement } from "@/hooks/useLocationManagement";
+import { Department } from "@/types/department";
+import { JobType } from "@/types/job";
+import { useState } from "react";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+
+const formSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  location_id: z.string().min(1, "Location is required"),
+  start_time: z.date(),
+  end_time: z.date(),
+  job_type: z.enum(["single", "tour", "festival"] as const),
+  departments: z.array(z.string()).min(1, "At least one department is required"),
+});
 
 interface CreateJobDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentDepartment: Department;
 }
 
-const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDialogProps) => {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [location, setLocation] = useState("");
-  const [color, setColor] = useState("#7E69AB");
-  const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([currentDepartment]);
+export const CreateJobDialog = ({ open, onOpenChange }: CreateJobDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { getOrCreateLocation } = useLocationManagement();
+  const [locations, setLocations] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const availableDepartments: Department[] = ["sound", "lights", "video"];
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      location_id: "",
+      start_time: new Date(),
+      end_time: new Date(),
+      job_type: "single" as JobType,
+      departments: [],
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Creating job...");
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
     try {
-      // Get the current user session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) throw sessionError;
-      if (!session?.user) {
-        throw new Error("You must be logged in to create a job");
-      }
-
-      // Get or create location if provided
-      const locationId = location ? await getOrCreateLocation(location) : null;
-
-      // Create the job
-      const { data: jobData, error: jobError } = await supabase
-        .from('jobs')
-        .insert({
-          title,
-          description,
-          start_time: startTime,
-          end_time: endTime,
-          color,
-          created_by: session.user.id,
-          location_id: locationId,
-          job_type: 'single'
-        })
+      const { data: job, error: jobError } = await supabase
+        .from("jobs")
+        .insert([
+          {
+            title: values.title,
+            description: values.description,
+            location_id: values.location_id,
+            start_time: values.start_time.toISOString(),
+            end_time: values.end_time.toISOString(),
+            job_type: values.job_type,
+          },
+        ])
         .select()
         .single();
 
       if (jobError) throw jobError;
 
-      console.log("Job created:", jobData);
-
-      // Create the job departments
-      const jobDepartments = selectedDepartments.map(department => ({
-        job_id: jobData.id,
+      const departmentInserts = values.departments.map((department) => ({
+        job_id: job.id,
         department,
       }));
 
-      console.log("Creating job departments:", jobDepartments);
-
       const { error: deptError } = await supabase
-        .from('job_departments')
-        .insert(jobDepartments);
+        .from("job_departments")
+        .insert(departmentInserts);
 
-      if (deptError) {
-        console.error("Error creating job departments:", deptError);
-        throw deptError;
-      }
+      if (deptError) throw deptError;
 
-      console.log("Job departments created successfully");
-
-      // Invalidate queries to refresh the data
-      await queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      await queryClient.invalidateQueries({ queryKey: ["jobs"] });
 
       toast({
         title: "Success",
         description: "Job created successfully",
       });
 
-      // Reset form and close dialog
-      setTitle("");
-      setDescription("");
-      setStartTime("");
-      setEndTime("");
-      setLocation("");
-      setColor("#7E69AB");
-      setSelectedDepartments([currentDepartment]);
+      reset();
       onOpenChange(false);
-    } catch (error: any) {
-      console.error("Error creating job:", {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      });
+    } catch (error) {
+      console.error("Error creating job:", error);
       toast({
         title: "Error",
-        description: "Failed to create job. Please try again.",
+        description: "Failed to create job",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const fetchLocations = async () => {
+    const { data } = await supabase.from("locations").select("*");
+    if (data) setLocations(data);
+  };
+
+  useState(() => {
+    fetchLocations();
+  });
+
+  const departments: Department[] = ["sound", "lights", "video"];
+  const selectedDepartments = watch("departments") || [];
+
+  const toggleDepartment = (department: Department) => {
+    const current = selectedDepartments;
+    const updated = current.includes(department)
+      ? current.filter((d) => d !== department)
+      : [...current, department];
+    setValue("departments", updated);
   };
 
   return (
@@ -124,86 +147,109 @@ const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: CreateJobDia
         <DialogHeader>
           <DialogTitle>Create New Job</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="startTime">Start Time</Label>
-              <Input
-                id="startTime"
-                type="datetime-local"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                required
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input {...register("title")} />
+              {errors.title && (
+                <p className="text-sm text-destructive">{errors.title.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea {...register("description")} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Location</Label>
+              <Select
+                onValueChange={(value) => setValue("location_id", value)}
+                defaultValue={watch("location_id")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((location) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.location_id && (
+                <p className="text-sm text-destructive">
+                  {errors.location_id.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Job Type</Label>
+              <Select
+                onValueChange={(value) => setValue("job_type", value as JobType)}
+                defaultValue={watch("job_type")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select job type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="single">Single</SelectItem>
+                  <SelectItem value="tour">Tour</SelectItem>
+                  <SelectItem value="festival">Festival</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Start Time</Label>
+              <DateTimePicker
+                value={watch("start_time")}
+                onChange={(date) => setValue("start_time", date)}
               />
             </div>
-            <div>
-              <Label htmlFor="endTime">End Time</Label>
-              <Input
-                id="endTime"
-                type="datetime-local"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                required
+
+            <div className="space-y-2">
+              <Label>End Time</Label>
+              <DateTimePicker
+                value={watch("end_time")}
+                onChange={(date) => setValue("end_time", date)}
               />
             </div>
-          </div>
-          <div>
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>Departments</Label>
-            <div className="flex gap-2">
-              {availableDepartments.map((dept) => (
-                <Button
-                  key={dept}
-                  type="button"
-                  variant={selectedDepartments.includes(dept) ? "default" : "outline"}
-                  onClick={() => {
-                    setSelectedDepartments((prev) =>
-                      prev.includes(dept)
-                        ? prev.filter((d) => d !== dept)
-                        : [...prev, dept]
-                    );
-                  }}
-                >
-                  {dept}
-                </Button>
-              ))}
+
+            <div className="space-y-2">
+              <Label>Departments</Label>
+              <div className="flex gap-2">
+                {departments.map((department) => (
+                  <Button
+                    key={department}
+                    type="button"
+                    variant={
+                      selectedDepartments.includes(department)
+                        ? "default"
+                        : "outline"
+                    }
+                    onClick={() => toggleDepartment(department)}
+                  >
+                    {department}
+                  </Button>
+                ))}
+              </div>
+              {errors.departments && (
+                <p className="text-sm text-destructive">
+                  {errors.departments.message}
+                </p>
+              )}
             </div>
-          </div>
-          <SimplifiedJobColorPicker color={color} onChange={setColor} />
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create Job"}
             </Button>
-            <Button type="submit">Create Job</Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
   );
 };
-
-export default CreateJobDialog;

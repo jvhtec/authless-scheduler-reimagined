@@ -93,6 +93,179 @@ export type Database = {
           },
         ]
       }
+      festival_artist_files: {
+        Row: {
+          artist_id: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          uploaded_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          artist_id?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          artist_id?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_artist_files_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "festival_artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_artist_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_artists: {
+        Row: {
+          created_at: string | null
+          crew: string | null
+          extras_df: boolean | null
+          extras_djbooth: boolean | null
+          extras_sf: boolean | null
+          extras_wired: string | null
+          foh_console: string | null
+          foh_tech: boolean | null
+          id: string
+          iem_band: string | null
+          iem_model: string | null
+          iem_quantity: number | null
+          infras_analog: number | null
+          infras_cat6: boolean | null
+          infras_coax: boolean | null
+          infras_hma: boolean | null
+          job_id: string | null
+          mic_pack: string | null
+          mon_console: string | null
+          mon_tech: boolean | null
+          monitors_enabled: boolean | null
+          monitors_quantity: number | null
+          name: string
+          notes: string | null
+          rf_festival_mics: number | null
+          rf_festival_url: string | null
+          rf_festival_wireless: number | null
+          show_end: string | null
+          show_start: string | null
+          soundcheck: boolean | null
+          soundcheck_end: string | null
+          soundcheck_start: string | null
+          updated_at: string | null
+          wireless_band: string | null
+          wireless_model: string | null
+          wireless_quantity: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          crew?: string | null
+          extras_df?: boolean | null
+          extras_djbooth?: boolean | null
+          extras_sf?: boolean | null
+          extras_wired?: string | null
+          foh_console?: string | null
+          foh_tech?: boolean | null
+          id?: string
+          iem_band?: string | null
+          iem_model?: string | null
+          iem_quantity?: number | null
+          infras_analog?: number | null
+          infras_cat6?: boolean | null
+          infras_coax?: boolean | null
+          infras_hma?: boolean | null
+          job_id?: string | null
+          mic_pack?: string | null
+          mon_console?: string | null
+          mon_tech?: boolean | null
+          monitors_enabled?: boolean | null
+          monitors_quantity?: number | null
+          name: string
+          notes?: string | null
+          rf_festival_mics?: number | null
+          rf_festival_url?: string | null
+          rf_festival_wireless?: number | null
+          show_end?: string | null
+          show_start?: string | null
+          soundcheck?: boolean | null
+          soundcheck_end?: string | null
+          soundcheck_start?: string | null
+          updated_at?: string | null
+          wireless_band?: string | null
+          wireless_model?: string | null
+          wireless_quantity?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          crew?: string | null
+          extras_df?: boolean | null
+          extras_djbooth?: boolean | null
+          extras_sf?: boolean | null
+          extras_wired?: string | null
+          foh_console?: string | null
+          foh_tech?: boolean | null
+          id?: string
+          iem_band?: string | null
+          iem_model?: string | null
+          iem_quantity?: number | null
+          infras_analog?: number | null
+          infras_cat6?: boolean | null
+          infras_coax?: boolean | null
+          infras_hma?: boolean | null
+          job_id?: string | null
+          mic_pack?: string | null
+          mon_console?: string | null
+          mon_tech?: boolean | null
+          monitors_enabled?: boolean | null
+          monitors_quantity?: number | null
+          name?: string
+          notes?: string | null
+          rf_festival_mics?: number | null
+          rf_festival_url?: string | null
+          rf_festival_wireless?: number | null
+          show_end?: string | null
+          show_start?: string | null
+          soundcheck?: boolean | null
+          soundcheck_end?: string | null
+          soundcheck_start?: string | null
+          updated_at?: string | null
+          wireless_band?: string | null
+          wireless_model?: string | null
+          wireless_quantity?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_artists_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_assignments: {
         Row: {
           assigned_at: string
@@ -1131,7 +1304,7 @@ export type Database = {
       direct_message_status: "unread" | "read"
       job_date_type: "travel" | "setup" | "show" | "off" | "rehearsal"
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
-      job_type: "single" | "tour"
+      job_type: "single" | "tour" | "festival"
       logistics_event_type: "load" | "unload"
       message_status: "unread" | "read"
       milestone_category:
