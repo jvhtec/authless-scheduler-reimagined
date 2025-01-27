@@ -35,7 +35,14 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
         .from('profiles')
         .select('id')
         .eq('email', formData.email.toLowerCase())
-        .single();
+        .maybeSingle();
+
+      if (userCheckError) {
+        console.error("Error checking user existence:", userCheckError);
+        setError("An error occurred while checking user account. Please try again.");
+        setLoading(false);
+        return;
+      }
 
       if (!userExists) {
         console.error("User not found in profiles");
@@ -75,7 +82,7 @@ export const LoginForm = ({ onShowSignUp }: LoginFormProps) => {
         .from('profiles')
         .select('role, department')
         .eq('id', signInData.user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error("Error fetching user profile:", profileError);
