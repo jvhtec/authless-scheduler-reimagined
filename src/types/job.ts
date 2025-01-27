@@ -4,3 +4,21 @@ export interface JobDocument {
   file_path: string;
   uploaded_at: string;
 }
+
+export type JobType = "single" | "tour" | "festival";
+
+export interface Job {
+  id: string;
+  title: string;
+  description?: string;
+  start_time: string;
+  end_time: string;
+  location_id?: string;
+  tour_date_id?: string;
+  color?: string;
+  status?: string;
+  created_by?: string;
+  created_at: string;
+  job_type: JobType;
+  flex_folders_created?: boolean;
+}

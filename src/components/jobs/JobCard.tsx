@@ -2,6 +2,7 @@ import { Music, CalendarDays } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Job } from "@/types/job";
+import { cn } from "@/lib/utils";
 
 interface JobCardProps {
   job: Job;
@@ -18,8 +19,7 @@ export const JobCard = ({ job, onEditClick, onDeleteClick, onJobClick, userRole,
     <Card 
       className={cn(
         "relative transition-all hover:shadow-lg cursor-pointer",
-        job.color && `border-l-4`,
-        job.color && `border-l-[${job.color}]`
+        job.color && `border-l-4 border-l-[${job.color}]`
       )}
       onClick={() => onJobClick(job.id)}
     >
