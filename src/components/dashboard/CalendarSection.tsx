@@ -25,8 +25,8 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [showMilestones, setShowMilestones] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
-  // Add this line alongside the other useState calls
   const [selectedJobType, setSelectedJobType] = useState("All");
+  
   const currentMonth = date || new Date();
   const firstDayOfMonth = startOfMonth(currentMonth);
   const lastDayOfMonth = endOfMonth(currentMonth);
@@ -48,6 +48,9 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   });
 
   const allDays = [...prefixDays, ...daysInMonth, ...suffixDays];
+
+  // Define distinctJobTypes at the component level
+  const distinctJobTypes = jobs ? Array.from(new Set(jobs.map(job => job.job_type).filter(Boolean))) : [];
 
   useEffect(() => {
     const fetchDateTypes = async () => {
@@ -146,24 +149,21 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
           ? compareDate === jobStartDate
           : compareDate >= jobStartDate && compareDate <= jobEndDate;
         
-        return department 
+        const matchesDepartment = department 
           ? isWithinDuration && job.job_departments.some((d: any) => d.department === department)
           : isWithinDuration;
+
+        const matchesJobType = selectedJobType === "All" || job.job_type === selectedJobType;
+
+        return matchesDepartment && matchesJobType;
       } catch (error) {
         console.error('Error processing job dates:', error, job);
         return false;
       }
-  // If the user picked a specific type (not "All"), exclude jobs of other types
-if (selectedJobType !== "All") {
-  // If job.type is missing OR doesn't match the chosen filter, exclude it
-  if (!job.type || job.type !== selectedJobType) {
-    return false;
-  }
-}
     });
   };
 
-   const generatePDF = async (range: 'month' | 'quarter' | 'year') => {
+  const generatePDF = async (range: 'month' | 'quarter' | 'year') => {
     const doc = new jsPDF('landscape');
     const currentDate = date || new Date();
     let startDate: Date, endDate: Date;
@@ -320,7 +320,7 @@ if (selectedJobType !== "All") {
     setShowPrintDialog(false);
   };
 
-  // Color utilities (keep these the same)
+  // Color utilities
   const hexToRgb = (hex: string): [number, number, number] => {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
@@ -338,8 +338,6 @@ if (selectedJobType !== "All") {
     const dateTypeIcon = getDateTypeIcon(job.id, date);
     const totalRequired = getTotalRequiredPersonnel(job);
     const currentlyAssigned = job.job_assignments?.length || 0;
-    // Just above the return:
-    const distinctJobTypes = Array.from(new Set(jobs.map((job) => job.type).filter(Boolean)));
     
     return (
       <DateTypeContextMenu 
@@ -483,18 +481,18 @@ if (selectedJobType !== "All") {
             </Button>
           </div>
         </div>
-<select
-  value={selectedJobType}
-  onChange={(e) => setSelectedJobType(e.target.value)}
-  className="border border-gray-300 rounded-md py-1 px-2 text-sm"
->
-  <option value="All">All Types</option>
-  {distinctJobTypes.map((type) => (
-    <option key={type} value={type}>
-      {type}
-    </option>
-  ))}
-</select>
+        <select
+          value={selectedJobType}
+          onChange={(e) => setSelectedJobType(e.target.value)}
+          className="border border-gray-300 rounded-md py-1 px-2 text-sm mb-4"
+        >
+          <option value="All">All Types</option>
+          {distinctJobTypes.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
         {!isCollapsed && (
           <div className="border rounded-lg">
             <div className="grid grid-cols-7 gap-px bg-muted">
