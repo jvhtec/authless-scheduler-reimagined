@@ -25,6 +25,7 @@ interface LogisticsEventDialogProps {
     loading_bay: string | null;
     job_id: string | null;
     license_plate: string | null;
+    title?: string;
     departments: { department: Department }[];
   };
 }
@@ -40,7 +41,8 @@ export const LogisticsEventDialog = ({
   const [time, setTime] = useState('09:00'); // Time
   const [date, setDate] = useState(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''); // Date
   const [loadingBay, setLoadingBay] = useState(''); // Loading Bay
-  const [selectedJob, setSelectedJob] = useState<string>(''); // Job
+  const [selectedJob, setSelectedJob] = useState<string | null>(null); // Job
+  const [customTitle, setCustomTitle] = useState<string>(''); // Title
   const [licensePlate, setLicensePlate] = useState(''); // License Plate
   const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([]); // Departments
   const [showDeleteDialog, setShowDeleteDialog] = useState(false); // Delete Dialog
@@ -56,7 +58,8 @@ export const LogisticsEventDialog = ({
       setTime(selectedEvent.event_time);
       setDate(selectedEvent.event_date ? format(new Date(selectedEvent.event_date), 'yyyy-MM-dd') : '');
       setLoadingBay(selectedEvent.loading_bay || '');
-      setSelectedJob(selectedEvent.job_id || '');
+      setSelectedJob(selectedEvent.job_id || null);
+      setCustomTitle(selectedEvent.title || '');
       setLicensePlate(selectedEvent.license_plate || '');
       setSelectedDepartments(selectedEvent.departments.map((d) => d.department));
     } else {
@@ -65,7 +68,8 @@ export const LogisticsEventDialog = ({
       setTime('09:00');
       setDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '');
       setLoadingBay('');
-      setSelectedJob('');
+      setSelectedJob(null);
+      setCustomTitle('');
       setLicensePlate('');
       setSelectedDepartments([]);
     }
@@ -82,10 +86,10 @@ export const LogisticsEventDialog = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date || !time) {
+    if (!date || !time || (!selectedJob && !customTitle)) {
       toast({
         title: "Error",
-        description: "Date and time are required.",
+        description: "Date, time, and title (if no job) are required.",
         variant: "destructive",
       });
       return;
@@ -102,6 +106,7 @@ export const LogisticsEventDialog = ({
             event_time: time,
             loading_bay: loadingBay || null,
             job_id: selectedJob || null,
+            title: customTitle || null,
             license_plate: licensePlate || null,
           })
           .eq('id', selectedEvent.id);
@@ -137,6 +142,7 @@ export const LogisticsEventDialog = ({
             event_time: time,
             loading_bay: loadingBay || null,
             job_id: selectedJob || null,
+            title: customTitle || null,
             license_plate: licensePlate || null,
           })
           .select()
@@ -186,11 +192,17 @@ export const LogisticsEventDialog = ({
             {/* Job Selection */}
             <div className="space-y-2">
               <Label>Job</Label>
-              <Select value={selectedJob} onValueChange={setSelectedJob}>
+              <Select
+                value={selectedJob || "no-job"}
+                onValueChange={(value) => {
+                  setSelectedJob(value === "no-job" ? null : value);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a job" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="no-job">No Job</SelectItem>
                   {jobs?.map((job) => (
                     <SelectItem key={job.id} value={job.id}>
                       {job.title}
@@ -200,12 +212,25 @@ export const LogisticsEventDialog = ({
               </Select>
             </div>
 
+            {/* Custom Title */}
+            {selectedJob === null && (
+              <div className="space-y-2">
+                <Label>Title</Label>
+                <Input
+                  value={customTitle}
+                  onChange={(e) => setCustomTitle(e.target.value)}
+                  placeholder="Enter event title"
+                  required
+                />
+              </div>
+            )}
+
             {/* Event Type Selection */}
             <div className="space-y-2">
               <Label>Event Type</Label>
               <Select
                 value={eventType}
-                onValueChange={(value: 'load' | 'unload') => setEventType(value)} // Bind to state
+                onValueChange={(value: 'load' | 'unload') => setEventType(value)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -223,7 +248,7 @@ export const LogisticsEventDialog = ({
               <Input
                 type="date"
                 value={date}
-                onChange={(e) => setDate(e.target.value)} // Bind to state
+                onChange={(e) => setDate(e.target.value)}
                 required
               />
             </div>
@@ -234,7 +259,7 @@ export const LogisticsEventDialog = ({
               <Input
                 type="time"
                 value={time}
-                onChange={(e) => setTime(e.target.value)} // Bind to state
+                onChange={(e) => setTime(e.target.value)}
                 required
               />
             </div>
@@ -262,7 +287,7 @@ export const LogisticsEventDialog = ({
               <Label>License Plate</Label>
               <Input
                 value={licensePlate}
-                onChange={(e) => setLicensePlate(e.target.value)} // Bind to state
+                onChange={(e) => setLicensePlate(e.target.value)}
                 placeholder="Enter license plate"
               />
             </div>
@@ -293,7 +318,7 @@ export const LogisticsEventDialog = ({
               <Label>Loading Bay</Label>
               <Input
                 value={loadingBay}
-                onChange={(e) => setLoadingBay(e.target.value)} // Bind to state
+                onChange={(e) => setLoadingBay(e.target.value)}
                 placeholder="Optional"
               />
             </div>
