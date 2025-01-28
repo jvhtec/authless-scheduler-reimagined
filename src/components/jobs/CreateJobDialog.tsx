@@ -24,7 +24,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Department } from "@/types/department";
 import { JobType } from "@/types/job";
 import { useState } from "react";
-import { SimplifiedJobColorPicker } from "@/components/ui/simplified-job-color-picker"; // Adjust import as needed
+import { SimplifiedJobColorPicker } from "./SimplifiedJobColorPicker";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
