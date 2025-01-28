@@ -24,7 +24,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Department } from "@/types/department";
 import { JobType } from "@/types/job";
 import { useState } from "react";
-import { SimplifiedJobColorPicker } from "@/components/ui/simplified-job-color-picker"; // Adjust import as needed
+import { SimplifiedJobColorPicker } from "@/components/ui/simplified-job-color-picker"; // Adjust import path as needed
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -48,10 +48,6 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // State for form fields
-  const [startTime, setStartTime] = useState<string>("");
-  const [endTime, setEndTime] = useState<string>("");
-
   const {
     register,
     handleSubmit,
@@ -65,6 +61,8 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
       title: "",
       description: "",
       location_id: "",
+      start_time: "",
+      end_time: "",
       job_type: "single" as JobType,
       departments: [],
       color: "#7E69AB", // Default color
@@ -103,8 +101,8 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
             title: values.title,
             description: values.description,
             location_id: locationId,
-            start_time: new Date(startTime).toISOString(),
-            end_time: new Date(endTime).toISOString(),
+            start_time: new Date(values.start_time).toISOString(),
+            end_time: new Date(values.end_time).toISOString(),
             job_type: values.job_type,
             color: values.color,
           },
@@ -135,8 +133,6 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
       });
 
       reset();
-      setStartTime("");
-      setEndTime("");
       onOpenChange(false);
     } catch (error) {
       console.error("Error creating job:", error);
@@ -195,9 +191,7 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
               <Label>Start Time</Label>
               <Input
                 type="datetime-local"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                required
+                {...register("start_time")}
               />
               {errors.start_time && (
                 <p className="text-sm text-destructive">
@@ -209,9 +203,7 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
               <Label>End Time</Label>
               <Input
                 type="datetime-local"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                required
+                {...register("end_time")}
               />
               {errors.end_time && (
                 <p className="text-sm text-destructive">
