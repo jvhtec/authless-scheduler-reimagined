@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Upload, Trash2, FileText } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
@@ -15,8 +15,12 @@ interface Artist {
   id?: string;
   job_id?: string;
   name: string;
+  date: string;
   show_start: string;
   show_end: string;
+  soundcheck: boolean;
+  soundcheck_start: string;
+  soundcheck_end: string;
   foh_console: string;
   foh_tech: boolean;
   mon_console: string;
@@ -57,8 +61,12 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     try {
       const { data, error } = await supabase
         .from('festival_artists')
-        .select('*')
-        .eq('job_id', jobId);
+        .select(`
+          *,
+          festival_artist_files(*)
+        `)
+        .eq('job_id', jobId)
+        .order('date', { ascending: true });
 
       if (error) throw error;
       setArtists(data || []);
@@ -77,8 +85,12 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
       const newArtist: Artist = {
         job_id: jobId,
         name: "",
-        show_start: "12:00",  // Default time instead of empty string
-        show_end: "13:00",    // Default time instead of empty string
+        date: new Date().toISOString().split('T')[0],
+        show_start: "12:00",
+        show_end: "13:00",
+        soundcheck: false,
+        soundcheck_start: "10:00",
+        soundcheck_end: "11:00",
         foh_console: "",
         foh_tech: false,
         mon_console: "",
@@ -140,21 +152,92 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     }
   };
 
-  const removeArtist = async (id: string) => {
+  const handleFileUpload = async (artistId: string, file: File) => {
     try {
-      const { error } = await supabase
-        .from('festival_artists')
-        .delete()
-        .eq('id', id);
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${artistId}/${crypto.randomUUID()}.${fileExt}`;
 
-      if (error) throw error;
-      setArtists(artists.filter(artist => artist.id !== id));
+      const { error: uploadError } = await supabase.storage
+        .from('artist_files')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase
+        .from('festival_artist_files')
+        .insert({
+          artist_id: artistId,
+          file_name: file.name,
+          file_path: filePath,
+          file_type: file.type,
+          file_size: file.size
+        });
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Success",
+        description: "File uploaded successfully"
+      });
+
+      // Refresh artists data to show new file
+      fetchArtists();
     } catch (error) {
-      console.error('Error removing artist:', error);
+      console.error('Error uploading file:', error);
       toast({
         title: "Error",
-        description: "Failed to remove artist",
-        variant: "destructive",
+        description: "Failed to upload file",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleFileDelete = async (fileId: string, filePath: string) => {
+    try {
+      const { error: storageError } = await supabase.storage
+        .from('artist_files')
+        .remove([filePath]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from('festival_artist_files')
+        .delete()
+        .eq('id', fileId);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Success",
+        description: "File deleted successfully"
+      });
+
+      // Refresh artists data to update file list
+      fetchArtists();
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete file",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleViewFile = async (filePath: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('artist_files')
+        .createSignedUrl(filePath, 60);
+
+      if (error) throw error;
+      window.open(data.signedUrl, '_blank');
+    } catch (error) {
+      console.error('Error viewing file:', error);
+      toast({
+        title: "Error",
+        description: "Failed to view file",
+        variant: "destructive"
       });
     }
   };
@@ -264,6 +347,15 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
                   </div>
 
                   <div className="space-y-2">
+                    <Label>Date</Label>
+                    <Input
+                      type="date"
+                      value={artist.date}
+                      onChange={(e) => updateArtist(index, "date", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
                     <Label>Show Times</Label>
                     <div className="flex flex-wrap gap-2">
                       <Input
@@ -281,190 +373,77 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>FOH Console</Label>
-                      <Select
-                        value={artist.foh_console}
-                        onValueChange={(v) => updateArtist(index, "foh_console", v)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select console" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {consoleModels.map((model) => (
-                            <SelectItem key={model} value={model}>{model}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Checkbox
-                          checked={artist.foh_tech}
-                          onCheckedChange={(c) => updateArtist(index, "foh_tech", c)}
-                        />
-                        <Label>FOH Tech Required</Label>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Monitor Console</Label>
-                      <Select
-                        value={artist.mon_console}
-                        onValueChange={(v) => updateArtist(index, "mon_console", v)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select console" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {consoleModels.map((model) => (
-                            <SelectItem key={model} value={model}>{model}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Checkbox
-                          checked={artist.mon_tech}
-                          onCheckedChange={(c) => updateArtist(index, "mon_tech", c)}
-                        />
-                        <Label>Monitor Tech Required</Label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Wireless Systems</Label>
-                      <Select
-                        value={artist.wireless_model}
-                        onValueChange={(v) => updateArtist(index, "wireless_model", v)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select model" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {wirelessModels.map((model) => (
-                            <SelectItem key={model} value={model}>{model}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <div className="flex flex-wrap gap-2">
-                        <Input
-                          type="number"
-                          value={artist.wireless_quantity}
-                          className="flex-1 min-w-[100px]"
-                          onChange={(e) => updateArtist(index, "wireless_quantity", parseInt(e.target.value))}
-                          placeholder="Qty"
-                        />
-                        <Input
-                          value={artist.wireless_band}
-                          className="flex-1 min-w-[120px]"
-                          onChange={(e) => updateArtist(index, "wireless_band", e.target.value)}
-                          placeholder="Frequency Band"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>IEM Systems</Label>
-                      <Select
-                        value={artist.iem_model}
-                        onValueChange={(v) => updateArtist(index, "iem_model", v)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select model" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {iemModels.map((model) => (
-                            <SelectItem key={model} value={model}>{model}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <div className="flex flex-wrap gap-2">
-                        <Input
-                          type="number"
-                          value={artist.iem_quantity}
-                          className="flex-1 min-w-[100px]"
-                          onChange={(e) => updateArtist(index, "iem_quantity", parseInt(e.target.value))}
-                          placeholder="Qty"
-                        />
-                        <Input
-                          value={artist.iem_band}
-                          className="flex-1 min-w-[120px]"
-                          onChange={(e) => updateArtist(index, "iem_band", e.target.value)}
-                          placeholder="Frequency Band"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Infrastructure</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={artist.infra_cat6}
-                            onCheckedChange={(c) => updateArtist(index, "infra_cat6", c)}
-                          />
-                          <Label>Cat6</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={artist.infra_hma}
-                            onCheckedChange={(c) => updateArtist(index, "infra_hma", c)}
-                          />
-                          <Label>HMA</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={artist.infra_coax}
-                            onCheckedChange={(c) => updateArtist(index, "infra_coax", c)}
-                          />
-                          <Label>COAX</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            value={artist.infra_analog}
-                            className="w-16"
-                            onChange={(e) => updateArtist(index, "infra_analog", parseInt(e.target.value))}
-                          />
-                          <Label>Analog</Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Extras</Label>
-                      <div className="flex flex-wrap gap-4">
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={artist.extras_sf}
-                            onCheckedChange={(c) => updateArtist(index, "extras_sf", c)}
-                          />
-                          <Label>SF</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={artist.extras_df}
-                            onCheckedChange={(c) => updateArtist(index, "extras_df", c)}
-                          />
-                          <Label>DF</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={artist.extras_djbooth}
-                            onCheckedChange={(c) => updateArtist(index, "extras_djbooth", c)}
-                          />
-                          <Label>DJ Booth</Label>
-                        </div>
-                      </div>
-                      <Input
-                        value={artist.extras_wired}
-                        onChange={(e) => updateArtist(index, "extras_wired", e.target.value)}
-                        placeholder="Wired Positions"
-                        className="mt-2"
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={artist.soundcheck}
+                        onCheckedChange={(checked) => updateArtist(index, "soundcheck", checked)}
                       />
+                      <Label>Soundcheck Required</Label>
+                    </div>
+                    
+                    {artist.soundcheck && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <Input
+                          type="time"
+                          value={artist.soundcheck_start}
+                          className="flex-1 min-w-[150px]"
+                          onChange={(e) => updateArtist(index, "soundcheck_start", e.target.value)}
+                        />
+                        <Input
+                          type="time"
+                          value={artist.soundcheck_end}
+                          className="flex-1 min-w-[150px]"
+                          onChange={(e) => updateArtist(index, "soundcheck_end", e.target.value)}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Documents</Label>
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <input
+                          type="file"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file && artist.id) {
+                              handleFileUpload(artist.id, file);
+                            }
+                          }}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                        <Button variant="outline" className="w-full">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Document
+                        </Button>
+                      </div>
+
+                      {artist.festival_artist_files?.map((file) => (
+                        <div key={file.id} className="flex items-center justify-between p-2 bg-accent/20 rounded">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            <span className="text-sm">{file.file_name}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewFile(file.file_path)}
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleFileDelete(file.id, file.file_path)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
