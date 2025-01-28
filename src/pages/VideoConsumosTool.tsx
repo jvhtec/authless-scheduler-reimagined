@@ -203,12 +203,12 @@ const VideoConsumosTool: React.FC = () => {
     try {
       const pdfBlob = await exportToPDF(
         selectedJob.title,
-        tables.map((table) => ({ ...table, toolType: 'pesos' })),
-        'weight',
+        tables.map((table) => ({ ...table, toolType: 'consumos' })),
+        'power',
         selectedJob.title
       );
 
-      const fileName = `Video Weight Report - ${selectedJob.title}.pdf`;
+      const fileName = `Video Power Report - ${selectedJob.title}.pdf`;
       const url = window.URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
