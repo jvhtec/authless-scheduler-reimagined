@@ -27,6 +27,9 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [selectedJobType, setSelectedJobType] = useState("All");
   
+  // Define distinctJobTypes at the component level
+  const distinctJobTypes = jobs ? Array.from(new Set(jobs.map(job => job.job_type).filter(Boolean))) : [];
+  
   const currentMonth = date || new Date();
   const firstDayOfMonth = startOfMonth(currentMonth);
   const lastDayOfMonth = endOfMonth(currentMonth);
@@ -48,9 +51,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   });
 
   const allDays = [...prefixDays, ...daysInMonth, ...suffixDays];
-
-  // Define distinctJobTypes at the component level
-  const distinctJobTypes = jobs ? Array.from(new Set(jobs.map(job => job.job_type).filter(Boolean))) : [];
 
   useEffect(() => {
     const fetchDateTypes = async () => {
