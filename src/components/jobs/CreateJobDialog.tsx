@@ -24,14 +24,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Department } from "@/types/department";
 import { JobType } from "@/types/job";
 import { useState } from "react";
-import { SimplifiedJobColorPicker } from "@/components/ui/simplified-job-color-picker"; // Adjust import path as needed
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { SimplifiedJobColorPicker } from "@/components/ui/simplified-job-color-picker"; // Adjust import as needed
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   location_id: z.string().min(1, "Location is required"),
-  start_time: z.string().min(1, "Start time is required"),
-  end_time: z.string().min(1, "End time is required"),
+  start_time: z.date(),
+  end_time: z.date(),
   job_type: z.enum(["single", "tour", "festival", "Dry Hire"] as const),
   departments: z.array(z.string()).min(1, "At least one department is required"),
   color: z.string().min(1, "Color is required"),
@@ -61,8 +62,8 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
       title: "",
       description: "",
       location_id: "",
-      start_time: "",
-      end_time: "",
+      start_time: new Date(),
+      end_time: new Date(),
       job_type: "single" as JobType,
       departments: [],
       color: "#7E69AB", // Default color
@@ -74,7 +75,7 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
     setIsSubmitting(true);
 
     try {
-      // Insert or find the location
+      // First create or get location
       const { data: locationData, error: locationError } = await supabase
         .from("locations")
         .insert([{ name: values.location_id }])
@@ -83,6 +84,7 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
 
       if (locationError && locationError.code !== "23505") throw locationError;
 
+      // If location already exists, get it
       let locationId = locationData?.id;
       if (locationError?.code === "23505") {
         const { data: existingLocation } = await supabase
@@ -93,7 +95,6 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
         locationId = existingLocation?.id;
       }
 
-      // Insert the job
       const { data: job, error: jobError } = await supabase
         .from("jobs")
         .insert([
@@ -101,8 +102,8 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
             title: values.title,
             description: values.description,
             location_id: locationId,
-            start_time: new Date(values.start_time).toISOString(),
-            end_time: new Date(values.end_time).toISOString(),
+            start_time: values.start_time.toISOString(),
+            end_time: values.end_time.toISOString(),
             job_type: values.job_type,
             color: values.color,
           },
@@ -112,7 +113,6 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
 
       if (jobError) throw jobError;
 
-      // Insert job departments
       const departmentInserts = values.departments.map((department) => ({
         job_id: job.id,
         department,
@@ -124,7 +124,6 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
 
       if (deptError) throw deptError;
 
-      // Refresh job list
       await queryClient.invalidateQueries({ queryKey: ["jobs"] });
 
       toast({
@@ -148,12 +147,15 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
 
   const departments: Department[] = ["sound", "lights", "video"];
   const selectedDepartments = watch("departments") || [];
+  const start_time = watch("start_time"); // Watch start_time
+  const end_time = watch("end_time"); // Watch end_time
 
   const toggleDepartment = (department: Department) => {
-    const updatedDepartments = selectedDepartments.includes(department)
-      ? selectedDepartments.filter((d) => d !== department)
-      : [...selectedDepartments, department];
-    setValue("departments", updatedDepartments);
+    const current = selectedDepartments;
+    const updated = current.includes(department)
+      ? current.filter((d) => d !== department)
+      : [...current, department];
+    setValue("departments", updated);
   };
 
   return (
@@ -162,114 +164,105 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
         <DialogHeader>
           <DialogTitle>Create New Job</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Title</Label>
-            <Input {...register("title")} />
-            {errors.title && (
-              <p className="text-sm text-destructive">{errors.title.message}</p>
-            )}
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input {...register("title")} />
+              {errors.title && (
+                <p className="text-sm text-destructive">{errors.title.message}</p>
+              )}
+            </div>
 
-          <div className="space-y-2">
-            <Label>Description</Label>
-            <Textarea {...register("description")} />
-          </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea {...register("description")} />
+            </div>
 
-          <div className="space-y-2">
-            <Label>Location</Label>
-            <Input {...register("location_id")} placeholder="Enter location" />
-            {errors.location_id && (
-              <p className="text-sm text-destructive">
-                {errors.location_id.message}
-              </p>
-            )}
-          </div>
+            <div className="space-y-2">
+              <Label>Location</Label>
+              <Input {...register("location_id")} placeholder="Enter location" />
+              {errors.location_id && (
+                <p className="text-sm text-destructive">
+                  {errors.location_id.message}
+                </p>
+              )}
+            </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div className="space-y-2">
+              <Label>Job Type</Label>
+              <Select
+                onValueChange={(value) => setValue("job_type", value as JobType)}
+                defaultValue={watch("job_type")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select job type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="single">Single</SelectItem>
+                  <SelectItem value="tour">Tour</SelectItem>
+                  <SelectItem value="festival">Festival</SelectItem>
+                  <SelectItem value="Dry Hire">Dry Hire</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label>Start Time</Label>
-              <Input
-                type="datetime-local"
-                {...register("start_time")}
+              <DateTimePicker
+                value={start_time} // Watch start_time
+                onChange={(date) => setValue("start_time", date || new Date())}
               />
-              {errors.start_time && (
-                <p className="text-sm text-destructive">
-                  {errors.start_time.message}
-                </p>
-              )}
             </div>
-            <div>
+
+            <div className="space-y-2">
               <Label>End Time</Label>
-              <Input
-                type="datetime-local"
-                {...register("end_time")}
+              <DateTimePicker
+                value={end_time} // Watch end_time
+                onChange={(date) => setValue("end_time", date || new Date())}
               />
-              {errors.end_time && (
+            </div>
+
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <SimplifiedJobColorPicker
+                color={watch("color")}
+                onChange={(color) => setValue("color", color)}
+              />
+              {errors.color && (
+                <p className="text-sm text-destructive">{errors.color.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Departments</Label>
+              <div className="flex gap-2">
+                {departments.map((department) => (
+                  <Button
+                    key={department}
+                    type="button"
+                    variant={
+                      selectedDepartments.includes(department)
+                        ? "default"
+                        : "outline"
+                    }
+                    onClick={() => toggleDepartment(department)}
+                  >
+                    {department}
+                  </Button>
+                ))}
+              </div>
+              {errors.departments && (
                 <p className="text-sm text-destructive">
-                  {errors.end_time.message}
+                  {errors.departments.message}
                 </p>
               )}
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label>Job Type</Label>
-            <Select
-              onValueChange={(value) => setValue("job_type", value as JobType)}
-              defaultValue={watch("job_type")}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select job type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="single">Single</SelectItem>
-                <SelectItem value="tour">Tour</SelectItem>
-                <SelectItem value="festival">Festival</SelectItem>
-                <SelectItem value="Dry Hire">Dry Hire</SelectItem>
-              </SelectContent>
-            </Select>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create Job"}
+            </Button>
           </div>
-
-          <div className="space-y-2">
-            <Label>Color</Label>
-            <SimplifiedJobColorPicker
-              color={watch("color")}
-              onChange={(color) => setValue("color", color)}
-            />
-            {errors.color && (
-              <p className="text-sm text-destructive">{errors.color.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label>Departments</Label>
-            <div className="flex gap-2">
-              {departments.map((department) => (
-                <Button
-                  key={department}
-                  type="button"
-                  variant={
-                    selectedDepartments.includes(department)
-                      ? "default"
-                      : "outline"
-                  }
-                  onClick={() => toggleDepartment(department)}
-                >
-                  {department}
-                </Button>
-              ))}
-            </div>
-            {errors.departments && (
-              <p className="text-sm text-destructive">
-                {errors.departments.message}
-              </p>
-            )}
-          </div>
-
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Creating..." : "Create Job"}
-          </Button>
         </form>
       </DialogContent>
     </Dialog>
