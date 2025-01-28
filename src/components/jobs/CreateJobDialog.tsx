@@ -20,17 +20,14 @@ const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   location_id: z.string().min(1, "Location is required"),
-  start_time: z
+  start_time: z.string().min(1, "Start time is required"),
+  end_time: z
     .string()
-    .min(1, "Start time is required")
-    .refine(
-      (val, ctx) =>
-        new Date(val).getTime() > new Date(ctx.parent.start_time).getTime(),
-      {
-        message: "End time must be after start time",
-      }
-    ),
-  end_time: z.string().min(1, "End time is required"),
+    .min(1, "End time is required")
+    .refine((val, ctx) => {
+      if (!ctx.parent?.start_time) return true;
+      return new Date(val).getTime() > new Date(ctx.parent.start_time).getTime();
+    }, "End time must be after start time"),
   job_type: z.enum(["single", "tour", "festival", "Dry Hire"] as const),
   departments: z.array(z.string()).min(1, "At least one department is required"),
   color: z.string().min(1, "Color is required"),
@@ -60,11 +57,11 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
       title: "",
       description: "",
       location_id: "",
-      start_time: new Date().toISOString().slice(0, 16), // Default to current datetime
+      start_time: new Date().toISOString().slice(0, 16),
       end_time: new Date().toISOString().slice(0, 16),
       job_type: "single" as JobType,
       departments: [],
-      color: "#7E69AB", // Default color
+      color: "#7E69AB",
     },
   });
 
@@ -161,119 +158,115 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
         <DialogHeader>
           <DialogTitle>Create New Job</DialogTitle>
         </DialogHeader>
-        <div className="max-h-[75vh] overflow-y-auto">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Title</Label>
-              <Input {...register("title")} />
-              {errors.title && (
-                <p className="text-sm text-destructive">{errors.title.message}</p>
-              )}
-            </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Title</Label>
+            <Input {...register("title")} />
+            {errors.title && (
+              <p className="text-sm text-destructive">{errors.title.message as string}</p>
+            )}
+          </div>
 
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea {...register("description")} />
-            </div>
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea {...register("description")} />
+          </div>
 
-            <div className="space-y-2">
-              <Label>Location</Label>
-              <Input {...register("location_id")} placeholder="Enter location" />
-              {errors.location_id && (
-                <p className="text-sm text-destructive">
-                  {errors.location_id.message}
-                </p>
-              )}
-            </div>
+          <div className="space-y-2">
+            <Label>Location</Label>
+            <Input {...register("location_id")} placeholder="Enter location" />
+            {errors.location_id && (
+              <p className="text-sm text-destructive">
+                {errors.location_id.message as string}
+              </p>
+            )}
+          </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Start Time</Label>
-                <Input
-                  type="datetime-local"
-                  {...register("start_time")}
-                  onChange={(e) => setValue("start_time", e.target.value)}
-                />
-                {errors.start_time && (
-                  <p className="text-sm text-destructive">
-                    {errors.start_time.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label>End Time</Label>
-                <Input
-                  type="datetime-local"
-                  {...register("end_time")}
-                  onChange={(e) => setValue("end_time", e.target.value)}
-                />
-                {errors.end_time && (
-                  <p className="text-sm text-destructive">
-                    {errors.end_time.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Job Type</Label>
-              <Select
-                onValueChange={(value) => setValue("job_type", value as JobType)}
-                defaultValue={watch("job_type")}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select job type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="single">Single</SelectItem>
-                  <SelectItem value="tour">Tour</SelectItem>
-                  <SelectItem value="festival">Festival</SelectItem>
-                  <SelectItem value="Dry Hire">Dry Hire</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Color</Label>
-              <SimplifiedJobColorPicker
-                color={watch("color")}
-                onChange={(color) => setValue("color", color)}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Start Time</Label>
+              <Input
+                type="datetime-local"
+                {...register("start_time")}
               />
-              {errors.color && (
-                <p className="text-sm text-destructive">{errors.color.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Departments</Label>
-              <div className="flex gap-2">
-                {departments.map((department) => (
-                  <Button
-                    key={department}
-                    type="button"
-                    variant={
-                      selectedDepartments.includes(department)
-                        ? "default"
-                        : "outline"
-                    }
-                    onClick={() => toggleDepartment(department)}
-                  >
-                    {department}
-                  </Button>
-                ))}
-              </div>
-              {errors.departments && (
+              {errors.start_time && (
                 <p className="text-sm text-destructive">
-                  {errors.departments.message}
+                  {errors.start_time.message as string}
                 </p>
               )}
             </div>
+            <div>
+              <Label>End Time</Label>
+              <Input
+                type="datetime-local"
+                {...register("end_time")}
+              />
+              {errors.end_time && (
+                <p className="text-sm text-destructive">
+                  {errors.end_time.message as string}
+                </p>
+              )}
+            </div>
+          </div>
 
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Job"}
-            </Button>
-          </form>
-        </div>
+          <div className="space-y-2">
+            <Label>Job Type</Label>
+            <Select
+              onValueChange={(value) => setValue("job_type", value as JobType)}
+              defaultValue={watch("job_type")}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select job type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="single">Single</SelectItem>
+                <SelectItem value="tour">Tour</SelectItem>
+                <SelectItem value="festival">Festival</SelectItem>
+                <SelectItem value="Dry Hire">Dry Hire</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Color</Label>
+            <SimplifiedJobColorPicker
+              color={watch("color")}
+              onChange={(color) => setValue("color", color)}
+            />
+            {errors.color && (
+              <p className="text-sm text-destructive">{errors.color.message as string}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Departments</Label>
+            <div className="flex gap-2">
+              {departments.map((department) => (
+                <Button
+                  key={department}
+                  type="button"
+                  variant={
+                    selectedDepartments.includes(department)
+                      ? "default"
+                      : "outline"
+                  }
+                  onClick={() => toggleDepartment(department)}
+                >
+                  {department}
+                </Button>
+              ))}
+            </div>
+            {errors.departments && (
+              <p className="text-sm text-destructive">
+                {errors.departments.message as string}
+              </p>
+            )}
+          </div>
+
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create Job"}
+          </Button>
+        </form>
       </DialogContent>
     </Dialog>
   );
