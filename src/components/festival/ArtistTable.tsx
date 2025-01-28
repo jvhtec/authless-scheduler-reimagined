@@ -11,6 +11,12 @@ import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
+interface ArtistFile {
+  id: string;
+  file_name: string;
+  file_path: string;
+}
+
 interface Artist {
   id?: string;
   job_id?: string;
@@ -39,6 +45,7 @@ interface Artist {
   infra_hma: boolean;
   infra_coax: boolean;
   infra_analog: number;
+  festival_artist_files?: ArtistFile[];
 }
 
 interface ArtistTableProps {
@@ -129,6 +136,30 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     }
   };
 
+  const removeArtist = async (artistId: string) => {
+    try {
+      const { error } = await supabase
+        .from('festival_artists')
+        .delete()
+        .eq('id', artistId);
+
+      if (error) throw error;
+
+      setArtists(artists.filter(artist => artist.id !== artistId));
+      toast({
+        title: "Success",
+        description: "Artist removed successfully"
+      });
+    } catch (error) {
+      console.error('Error removing artist:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove artist",
+        variant: "destructive",
+      });
+    }
+  };
+
   const updateArtist = async (index: number, field: keyof Artist, value: any) => {
     try {
       const updatedArtist = { ...artists[index], [field]: value };
@@ -180,7 +211,6 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
         description: "File uploaded successfully"
       });
 
-      // Refresh artists data to show new file
       fetchArtists();
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -212,7 +242,6 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
         description: "File deleted successfully"
       });
 
-      // Refresh artists data to update file list
       fetchArtists();
     } catch (error) {
       console.error('Error deleting file:', error);
