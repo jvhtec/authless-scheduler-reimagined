@@ -264,14 +264,10 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         for (const [dayIndex, day] of week.entries()) {
           const x = startX + (dayIndex * cellWidth);
 
-          if (!day) {
-            doc.setDrawColor(200);
-            doc.rect(x, currentY, cellWidth, cellHeight);
-            continue;
-          }
-
           doc.setDrawColor(200);
           doc.rect(x, currentY, cellWidth, cellHeight);
+
+          if (!day) continue;
 
           doc.setTextColor(isSameMonth(day, monthStart) ? 0 : 200);
           doc.setFontSize(12);
