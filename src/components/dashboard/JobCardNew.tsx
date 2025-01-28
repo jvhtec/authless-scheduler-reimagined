@@ -271,6 +271,9 @@ export const JobCardNew = ({
   const [documents, setDocuments] = useState<JobDocument[]>(job.job_documents || []);
   const [artistManagementOpen, setArtistManagementOpen] = useState(false);
 
+  // Define distinctJobTypes at the component level
+  const distinctJobTypes = Array.from(new Set(job.job_departments.map((dept: any) => dept.department)));
+
   // Example: sound tasks
   const { data: soundTasks } = useQuery({
     queryKey: ["sound-tasks", job.id],
@@ -729,9 +732,9 @@ const getBadgeForJobType = (jobType: string) => {
       <CardHeader className="pb-2 flex justify-between items-center">
         <div className="flex items-center flex-grow">
           <div className="font-medium">
-  {job.title}
-  {getBadgeForJobType(job.job_type)}
-</div>
+            {job.title}
+            {getBadgeForJobType(job.job_type)}
+          </div>
           <Button
             variant="ghost"
             size="icon"
