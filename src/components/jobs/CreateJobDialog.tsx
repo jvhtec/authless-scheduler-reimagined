@@ -32,7 +32,7 @@ const formSchema = z.object({
   location_id: z.string().min(1, "Location is required"),
   start_time: z.date(),
   end_time: z.date(),
-  job_type: z.enum(["single", "tour", "festival"] as const),
+  job_type: z.enum(["single", "tour", "festival","Dry Hire"] as const),
   departments: z.array(z.string()).min(1, "At least one department is required"),
 });
 
