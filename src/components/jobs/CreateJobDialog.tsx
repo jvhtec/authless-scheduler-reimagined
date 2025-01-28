@@ -21,25 +21,17 @@ const formSchema = z.object({
   description: z.string().optional(),
   location_id: z.string().min(1, "Location is required"),
   start_time: z.string().min(1, "Start time is required"),
-  end_time: z.string().min(1, "End time is required").superRefine((val, ctx) => {
-    const startTime = ctx.parent?.start_time;
-    if (!startTime) return true;
-
-    const start = new Date(startTime);
-    const end = new Date(val);
-
-    if (end <= start) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "End time must be after start time",
-      });
-      return false;
-    }
-    return true;
-  }),
+  end_time: z.string().min(1, "End time is required"),
   job_type: z.enum(["single", "tour", "festival", "dryhire"] as const),
   departments: z.array(z.string()).min(1, "At least one department is required"),
   color: z.string().min(1, "Color is required"),
+}).refine((data) => {
+  const start = new Date(data.start_time);
+  const end = new Date(data.end_time);
+  return end > start;
+}, {
+  message: "End time must be after start time",
+  path: ["end_time"],
 });
 
 interface CreateJobDialogProps {
