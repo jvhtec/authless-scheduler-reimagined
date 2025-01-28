@@ -70,41 +70,26 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     try {
       console.log('Fetching artists for job:', jobId);
       
-      // First fetch the artists
-      const { data: artistsData, error: artistsError } = await supabase
+      const { data, error } = await supabase
         .from('festival_artists')
-        .select('*')
+        .select(`
+          *,
+          festival_artist_files:festival_artist_files(*)
+        `)
         .eq('job_id', jobId)
         .order('date', { ascending: true });
 
-      if (artistsError) {
-        console.error('Error fetching artists:', artistsError);
-        throw artistsError;
+      if (error) {
+        console.error('Error fetching artists:', error);
+        throw error;
       }
 
-      // Then fetch the files for these artists
-      const artistIds = artistsData?.map(artist => artist.id) || [];
-      const { data: filesData, error: filesError } = await supabase
-        .from('festival_artist_files')
-        .select('*')
-        .in('artist_id', artistIds);
-
-      if (filesError) {
-        console.error('Error fetching files:', filesError);
-        throw filesError;
-      }
-
-      // Combine the data
-      const artistsWithFiles = artistsData?.map(artist => ({
-        ...artist,
-        festival_artist_files: filesData?.filter(file => file.artist_id === artist.id) || []
-      }));
-
-      setArtists(artistsWithFiles || []);
+      console.log('Fetched artists data:', data);
+      setArtists(data || []);
       
       // Set initial selected date to the first artist's date if available
-      if (artistsWithFiles && artistsWithFiles.length > 0) {
-        setSelectedDate(artistsWithFiles[0].date);
+      if (data && data.length > 0) {
+        setSelectedDate(data[0].date);
       }
     } catch (error) {
       console.error('Error in fetchArtists:', error);
