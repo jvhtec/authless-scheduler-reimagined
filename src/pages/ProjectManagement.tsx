@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input"; 
 import { supabase } from "@/lib/supabase";
-import { Loader2, Plus, FileText } from "lucide-react";
+import { Loader2, Plus, FileText, Filter } from "lucide-react";
 import { Department } from "@/types/department";
-import { startOfMonth, endOfMonth, addMonths } from "date-fns";
+import { startOfMonth, endOfMonth, addMonths, parseISO, isWithinInterval } from "date-fns";
 import { MonthNavigation } from "@/components/project-management/MonthNavigation";
 import { DepartmentTabs } from "@/components/project-management/DepartmentTabs";
 import { useJobManagement } from "@/hooks/useJobManagement";
@@ -17,18 +18,29 @@ const ProjectManagement = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>("");
 
   const startDate = startOfMonth(currentDate);
   const endDate = endOfMonth(currentDate);
 
   useTabVisibility(['jobs']);
 
-  const { jobs, jobsLoading, handleDeleteDocument } = useJobManagement(
+  const { jobs: unfilteredJobs, jobsLoading, handleDeleteDocument } = useJobManagement(
     selectedDepartment,
     startDate,
     endDate,
-    true // Pass isProjectManagementPage as true
+    true
   );
+
+  // Filter jobs based on selected date
+  const jobs = selectedDate 
+    ? unfilteredJobs?.filter(job => {
+        const jobStart = parseISO(job.start_time);
+        const jobEnd = parseISO(job.end_time);
+        const filterDate = parseISO(selectedDate);
+        return isWithinInterval(filterDate, { start: jobStart, end: jobEnd });
+      })
+    : unfilteredJobs;
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -83,6 +95,15 @@ const ProjectManagement = () => {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle>Project Management</CardTitle>
           <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-auto"
+              />
+            </div>
             <Button 
               onClick={() => navigate('/hoja-de-ruta')} 
               className="flex items-center gap-2"

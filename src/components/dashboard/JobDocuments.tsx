@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, Trash2 } from "lucide-react";
+import { Download, Trash2, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -41,7 +41,6 @@ export const JobDocuments = ({
         throw error;
       }
 
-      // Create a download link using the global document object
       const url = window.URL.createObjectURL(data);
       const downloadLink = window.document.createElement('a');
       downloadLink.href = url;
@@ -59,6 +58,30 @@ export const JobDocuments = ({
       console.error('Download error:', error);
       toast({
         title: "Download failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleView = async (jobDocument: JobDocument) => {
+    try {
+      console.log('Starting view for document:', jobDocument.file_name);
+      
+      const { data: { signedUrl }, error } = await supabase.storage
+        .from('job_documents')
+        .createSignedUrl(jobDocument.file_path, 60);
+
+      if (error) {
+        console.error('View error:', error);
+        throw error;
+      }
+
+      window.open(signedUrl, '_blank');
+    } catch (error: any) {
+      console.error('View error:', error);
+      toast({
+        title: "View failed",
         description: error.message,
         variant: "destructive",
       });
@@ -88,8 +111,20 @@ export const JobDocuments = ({
                 size="icon"
                 onClick={(e) => {
                   e.stopPropagation();
+                  handleView(doc);
+                }}
+                title="View"
+              >
+                <FileText className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
                   handleDownload(doc);
                 }}
+                title="Download"
               >
                 <Download className="h-4 w-4" />
               </Button>
@@ -100,6 +135,7 @@ export const JobDocuments = ({
                   e.stopPropagation();
                   onDeleteDocument(jobId, doc);
                 }}
+                title="Delete"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
