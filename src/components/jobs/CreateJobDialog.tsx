@@ -25,7 +25,7 @@ import { Department } from "@/types/department";
 import { JobType } from "@/types/job";
 import { useState } from "react";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { SimplifiedJobColorPicker } from "@/components/ui/simplified-job-color-picker"; // Adjust import as needed
+import { SimplifiedJobColorPicker } from "./SimplifiedJobColorPicker"; // Fixed import path
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
