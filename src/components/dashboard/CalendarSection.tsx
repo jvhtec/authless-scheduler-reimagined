@@ -226,21 +226,62 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
 
       const monthEnd = endOfMonth(monthStart);
       const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
-      const weeks: Date[][] = [];
-      let currentWeek: Date[] = [];
 
-      monthDays.forEach(day => {
-        currentWeek.push(day);
-        if (currentWeek.length === 7) {
-          weeks.push([...currentWeek]);
-          currentWeek = [];
-        }
-      });
+// Decide if Monday or Sunday is the first day of week:
+const firstDayOfWeek = 1; // 1 = Monday as first column, 0 = Sunday as first column
 
-      if (currentWeek.length > 0) {
-        weeks.push([...currentWeek]);
-      }
+function getDayIndex(d: Date) {
+  // d.getDay() returns Sunday=0, Monday=1, ..., Saturday=6 natively
+  if (firstDayOfWeek === 1) {
+    // Transform so Monday=0, Tuesday=1, ..., Sunday=6
+    return (d.getDay() + 6) % 7;
+  } else {
+    // Keep Sunday=0..Saturday=6
+    return d.getDay();
+  }
+}
 
+// Calculate how many placeholders to add
+const offset = getDayIndex(monthStart);
+const offsetDays = Array.from({ length: offset }, () => null);
+
+// Combine offsetDays and the real days of this month
+const allDays = [...offsetDays, ...monthDays];
+
+// Now chunk `allDays` into weeks:
+const weeks: Array<Array<Date | null>> = [];
+while (allDays.length > 0) {
+  weeks.push(allDays.splice(0, 7));
+}
+let yPos = startY + 10;
+for (const week of weeks) {
+  for (const [dayIndex, day] of week.entries()) {
+    const x = startX + (dayIndex * cellWidth);
+
+    if (!day) {
+      // This is one of the offset placeholders
+      // Just draw an empty rectangle or skip entirely
+      doc.setDrawColor(200);
+      doc.rect(x, yPos, cellWidth, cellHeight);
+      continue;
+    }
+
+    // Otherwise, day is a Date
+    doc.setDrawColor(200);
+    doc.rect(x, yPos, cellWidth, cellHeight);
+
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text(format(day, 'd'), x + 2, yPos + 5);
+
+    // Then handle your job rendering logic...
+    const dayJobs = getJobsForDate(day);
+    // etc.
+  }
+  yPos += cellHeight;
+}
+
+ 
       // Add month title below logo
       doc.setFontSize(16);
       doc.text(
