@@ -731,6 +731,7 @@ export type Database = {
           license_plate: string | null
           loading_bay: string | null
           notes: string | null
+          title: string | null
           transport_type: Database["public"]["Enums"]["transport_type"]
           updated_at: string | null
         }
@@ -744,6 +745,7 @@ export type Database = {
           license_plate?: string | null
           loading_bay?: string | null
           notes?: string | null
+          title?: string | null
           transport_type: Database["public"]["Enums"]["transport_type"]
           updated_at?: string | null
         }
@@ -757,6 +759,7 @@ export type Database = {
           license_plate?: string | null
           loading_bay?: string | null
           notes?: string | null
+          title?: string | null
           transport_type?: Database["public"]["Enums"]["transport_type"]
           updated_at?: string | null
         }

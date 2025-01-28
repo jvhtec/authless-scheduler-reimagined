@@ -27,7 +27,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [selectedJobType, setSelectedJobType] = useState("All");
   
-  // Define distinctJobTypes at the component level
   const distinctJobTypes = jobs ? Array.from(new Set(jobs.map(job => job.job_type).filter(Boolean))) : [];
   
   const currentMonth = date || new Date();
@@ -205,7 +204,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const cellWidth = 40;
     const cellHeight = 30;
     const startX = 10;
-    const startY = 10 + (logo ? logoHeight + 10 : 0); // Adjust start position for logo
+    const startY = 10 + (logo ? logoHeight + 10 : 0);
     const daysOfWeek = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'];
 
     const dateTypeLabels: Record<string, string> = {
@@ -224,64 +223,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         doc.addImage(logo, 'PNG', logoX, 10, logoWidth, logoHeight);
       }
 
-      const monthEnd = endOfMonth(monthStart);
-      const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
-// Decide if Monday or Sunday is the first day of week:
-const firstDayOfWeek = 1; // 1 = Monday as first column, 0 = Sunday as first column
-
-function getDayIndex(d: Date) {
-  // d.getDay() returns Sunday=0, Monday=1, ..., Saturday=6 natively
-  if (firstDayOfWeek === 1) {
-    // Transform so Monday=0, Tuesday=1, ..., Sunday=6
-    return (d.getDay() + 6) % 7;
-  } else {
-    // Keep Sunday=0..Saturday=6
-    return d.getDay();
-  }
-}
-
-// Calculate how many placeholders to add
-const offset = getDayIndex(monthStart);
-const offsetDays = Array.from({ length: offset }, () => null);
-
-// Combine offsetDays and the real days of this month
-const allDays = [...offsetDays, ...monthDays];
-
-// Now chunk `allDays` into weeks:
-const weeks: Array<Array<Date | null>> = [];
-while (allDays.length > 0) {
-  weeks.push(allDays.splice(0, 7));
-}
-let yPos = startY + 10;
-for (const week of weeks) {
-  for (const [dayIndex, day] of week.entries()) {
-    const x = startX + (dayIndex * cellWidth);
-
-    if (!day) {
-      // This is one of the offset placeholders
-      // Just draw an empty rectangle or skip entirely
-      doc.setDrawColor(200);
-      doc.rect(x, yPos, cellWidth, cellHeight);
-      continue;
-    }
-
-    // Otherwise, day is a Date
-    doc.setDrawColor(200);
-    doc.rect(x, yPos, cellWidth, cellHeight);
-
-    doc.setFontSize(12);
-    doc.setTextColor(0);
-    doc.text(format(day, 'd'), x + 2, yPos + 5);
-
-    // Then handle your job rendering logic...
-    const dayJobs = getJobsForDate(day);
-    // etc.
-  }
-  yPos += cellHeight;
-}
-
- 
       // Add month title below logo
       doc.setFontSize(16);
       doc.text(
@@ -300,22 +241,45 @@ for (const week of weeks) {
         doc.text(day, startX + (index * cellWidth) + 15, startY + 7);
       });
 
-      let yPos = startY + 10;
+      const monthEnd = endOfMonth(monthStart);
+      const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+      const firstDayOfWeek = 1;
+
+      function getDayIndex(d: Date) {
+        return firstDayOfWeek === 1 ? (d.getDay() + 6) % 7 : d.getDay();
+      }
+
+      const offset = getDayIndex(monthStart);
+      const offsetDays = Array.from({ length: offset }, () => null);
+      const allDays = [...offsetDays, ...monthDays];
+      const weeks: Array<Array<Date | null>> = [];
+
+      while (allDays.length > 0) {
+        weeks.push(allDays.splice(0, 7));
+      }
+
+      let currentY = startY + 10;
+
       for (const week of weeks) {
         for (const [dayIndex, day] of week.entries()) {
           const x = startX + (dayIndex * cellWidth);
-          const y = yPos;
-          
+
+          if (!day) {
+            doc.setDrawColor(200);
+            doc.rect(x, currentY, cellWidth, cellHeight);
+            continue;
+          }
+
           doc.setDrawColor(200);
-          doc.rect(x, y, cellWidth, cellHeight);
+          doc.rect(x, currentY, cellWidth, cellHeight);
 
           doc.setTextColor(isSameMonth(day, monthStart) ? 0 : 200);
           doc.setFontSize(12);
-          doc.text(format(day, 'd'), x + 2, y + 5);
+          doc.text(format(day, 'd'), x + 2, currentY + 5);
 
           const dayJobs = getJobsForDate(day);
-          let eventY = y + 8;
-          
+          let eventY = currentY + 8;
+
           for (const [index, job] of dayJobs.slice(0, 8).entries()) {
             const key = `${job.id}-${format(day, 'yyyy-MM-dd')}`;
             const dateType = dateTypes[key]?.type;
@@ -325,18 +289,15 @@ for (const week of weeks) {
             const [r, g, b] = hexToRgb(baseColor);
             const textColor = getContrastColor(baseColor);
 
-            // Draw background with original job color
             doc.setFillColor(r, g, b);
             doc.rect(x + 1, eventY + (index * 5), cellWidth - 2, 4, 'F');
 
-            // Draw type label
             if (typeLabel) {
               doc.setFontSize(8);
               doc.setTextColor(textColor);
               doc.text(typeLabel, x + 3, eventY + (index * 5) + 3);
             }
 
-            // Draw job title
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(7);
             doc.setTextColor(textColor);
@@ -344,11 +305,11 @@ for (const week of weeks) {
             doc.text(job.title.substring(0, 18), titleX, eventY + (index * 5) + 3);
           }
         }
-        yPos += cellHeight;
+        currentY += cellHeight;
       }
 
       if (pageIndex === 0) {
-        const legendY = yPos + 10;
+        const legendY = currentY + 10;
         doc.setFontSize(8);
         doc.setTextColor(0);
         Object.entries(dateTypeLabels).forEach(([type, label], index) => {
