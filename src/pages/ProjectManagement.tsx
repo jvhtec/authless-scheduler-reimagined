@@ -18,34 +18,30 @@ const ProjectManagement = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [userRole, setUserRole] = useState<string | null>(null);
-//  const [selectedDate, setSelectedDate] = useState<string>("");
-  // New piece of state for job-type filtering
   const [selectedJobType, setSelectedJobType] = useState("All");
-
 
   const startDate = startOfMonth(currentDate);
   const endDate = endOfMonth(currentDate);
 
   useTabVisibility(['jobs']);
 
-  const { jobs: unfilteredJobs, jobsLoading, handleDeleteDocument } = useJobManagement(
+  const { jobs: unfilteredJobs = [], jobsLoading, handleDeleteDocument } = useJobManagement(
     selectedDepartment,
     startDate,
     endDate,
     true
   );
 
-// Derive distinct job types from unfilteredJobs
-const distinctJobTypes = Array.from(
-   new Set(unfilteredJobs.map((job: any) => job.type).filter(Boolean))
- );
+  // Safely derive distinct job types from unfilteredJobs
+  const distinctJobTypes = Array.from(
+    new Set((unfilteredJobs || []).map((job: any) => job.job_type).filter(Boolean))
+  );
 
- // Filter jobs based on selected job type
- const jobs = unfilteredJobs?.filter((job: any) => {
-  if (selectedJobType === "All") return true;
-   // only include jobs matching the chosen type
-   return job.type === selectedJobType;
- });
+  // Filter jobs based on selected job type with null check
+  const jobs = (unfilteredJobs || []).filter((job: any) => {
+    if (selectedJobType === "All") return true;
+    return job.job_type === selectedJobType;
+  });
   
   useEffect(() => {
     const checkAccess = async () => {
@@ -102,18 +98,18 @@ const distinctJobTypes = Array.from(
           <div className="flex gap-2">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
-           <select
-       value={selectedJobType}
-       onChange={(e) => setSelectedJobType(e.target.value)}
-       className="border border-gray-300 rounded-md py-1 px-2 text-sm"
-     >
-       <option value="All">All Types</option>
-       {distinctJobTypes.map((type) => (
-         <option key={type} value={type}>
-           {type}
-         </option>
-       ))}
-     </select>
+              <select
+                value={selectedJobType}
+                onChange={(e) => setSelectedJobType(e.target.value)}
+                className="border border-gray-300 rounded-md py-1 px-2 text-sm"
+              >
+                <option value="All">All Types</option>
+                {distinctJobTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
             </div>
             <Button 
               onClick={() => navigate('/hoja-de-ruta')} 
@@ -141,7 +137,7 @@ const distinctJobTypes = Array.from(
           <DepartmentTabs
             selectedDepartment={selectedDepartment}
             onDepartmentChange={(value) => setSelectedDepartment(value as Department)}
-            jobs={jobs || []}
+            jobs={jobs}
             jobsLoading={jobsLoading}
             onDeleteDocument={handleDeleteDocument}
             userRole={userRole}
