@@ -25,7 +25,7 @@ import { Department } from "@/types/department";
 import { JobType } from "@/types/job";
 import { useState } from "react";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { SimplifiedJobColorPicker } from "@/components/ui/simplified-job-color-picker"; // Adjust the import based on your file structure
+import { SimplifiedJobColorPicker } from "@/components/ui/simplified-job-color-picker"; // Adjust import as needed
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -147,6 +147,8 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
 
   const departments: Department[] = ["sound", "lights", "video"];
   const selectedDepartments = watch("departments") || [];
+  const start_time = watch("start_time"); // Watch start_time
+  const end_time = watch("end_time"); // Watch end_time
 
   const toggleDepartment = (department: Department) => {
     const current = selectedDepartments;
@@ -208,16 +210,16 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
             <div className="space-y-2">
               <Label>Start Time</Label>
               <DateTimePicker
-                value={watch("start_time")}
-                onChange={(date) => setValue("start_time", date)}
+                value={start_time} // Watch start_time
+                onChange={(date) => setValue("start_time", date || new Date())}
               />
             </div>
 
             <div className="space-y-2">
               <Label>End Time</Label>
               <DateTimePicker
-                value={watch("end_time")}
-                onChange={(date) => setValue("end_time", date)}
+                value={end_time} // Watch end_time
+                onChange={(date) => setValue("end_time", date || new Date())}
               />
             </div>
 
