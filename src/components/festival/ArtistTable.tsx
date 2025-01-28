@@ -70,26 +70,52 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     try {
       console.log('Fetching artists for job:', jobId);
       
-      const { data, error } = await supabase
+      // First fetch the artists
+      const { data: artistsData, error: artistsError } = await supabase
         .from('festival_artists')
-        .select(`
-          *,
-          festival_artist_files:festival_artist_files(*)
-        `)
+        .select('*')
         .eq('job_id', jobId)
         .order('date', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching artists:', error);
-        throw error;
+      if (artistsError) {
+        console.error('Error fetching artists:', artistsError);
+        throw artistsError;
       }
 
-      console.log('Fetched artists data:', data);
-      setArtists(data || []);
+      console.log('Fetched artists:', artistsData);
+
+      if (!artistsData?.length) {
+        console.log('No artists found');
+        setArtists([]);
+        return;
+      }
+
+      // Then fetch the files for all artists
+      const { data: filesData, error: filesError } = await supabase
+        .from('festival_artist_files')
+        .select('*')
+        .in('artist_id', artistsData.map(artist => artist.id));
+
+      if (filesError) {
+        console.error('Error fetching files:', filesError);
+        throw filesError;
+      }
+
+      console.log('Fetched files:', filesData);
+
+      // Combine artists with their files
+      const artistsWithFiles = artistsData.map(artist => ({
+        ...artist,
+        festival_artist_files: filesData?.filter(file => file.artist_id === artist.id) || []
+      }));
+
+      console.log('Combined artists with files:', artistsWithFiles);
+      
+      setArtists(artistsWithFiles);
       
       // Set initial selected date to the first artist's date if available
-      if (data && data.length > 0) {
-        setSelectedDate(data[0].date);
+      if (artistsWithFiles.length > 0) {
+        setSelectedDate(artistsWithFiles[0].date);
       }
     } catch (error) {
       console.error('Error in fetchArtists:', error);
