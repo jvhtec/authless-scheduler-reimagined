@@ -25,7 +25,7 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
         .from('logistics_events')
         .select(`
           *,
-          job:jobs(title),
+          job:jobs(id, title),
           departments:logistics_event_departments(department)
         `)
         .eq('event_date', formattedDate)
