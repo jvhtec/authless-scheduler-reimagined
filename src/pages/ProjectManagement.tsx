@@ -18,7 +18,10 @@ const ProjectManagement = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>("");
+//  const [selectedDate, setSelectedDate] = useState<string>("");
+  // New piece of state for job-type filtering
+  const [selectedJobType, setSelectedJobType] = useState("All");
+
 
   const startDate = startOfMonth(currentDate);
   const endDate = endOfMonth(currentDate);
@@ -32,16 +35,18 @@ const ProjectManagement = () => {
     true
   );
 
-  // Filter jobs based on selected date
-  const jobs = selectedDate 
-    ? unfilteredJobs?.filter(job => {
-        const jobStart = parseISO(job.start_time);
-        const jobEnd = parseISO(job.end_time);
-        const filterDate = parseISO(selectedDate);
-        return isWithinInterval(filterDate, { start: jobStart, end: jobEnd });
-      })
-    : unfilteredJobs;
+// Derive distinct job types from unfilteredJobs
+const distinctJobTypes = Array.from(
+   new Set(unfilteredJobs.map((job: any) => job.type).filter(Boolean))
+ );
 
+ // Filter jobs based on selected job type
+ const jobs = unfilteredJobs?.filter((job: any) => {
+  if (selectedJobType === "All") return true;
+   // only include jobs matching the chosen type
+   return job.type === selectedJobType;
+ });
+  
   useEffect(() => {
     const checkAccess = async () => {
       try {
@@ -97,12 +102,18 @@ const ProjectManagement = () => {
           <div className="flex gap-2">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <Input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-auto"
-              />
+           <select
+       value={selectedJobType}
+       onChange={(e) => setSelectedJobType(e.target.value)}
+       className="border border-gray-300 rounded-md py-1 px-2 text-sm"
+     >
+       <option value="All">All Types</option>
+       {distinctJobTypes.map((type) => (
+         <option key={type} value={type}>
+           {type}
+         </option>
+       ))}
+     </select>
             </div>
             <Button 
               onClick={() => navigate('/hoja-de-ruta')} 
