@@ -25,7 +25,6 @@ import { Department } from "@/types/department";
 import { JobType } from "@/types/job";
 import { useState } from "react";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { SimplifiedJobColorPicker } from "@/components/ui/simplified-job-color-picker"; // Adjust the import based on your file structure
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -33,9 +32,8 @@ const formSchema = z.object({
   location_id: z.string().min(1, "Location is required"),
   start_time: z.date(),
   end_time: z.date(),
-  job_type: z.enum(["single", "tour", "festival", "Dry Hire"] as const),
+  job_type: z.enum(["single", "tour", "festival","Dry Hire"] as const),
   departments: z.array(z.string()).min(1, "At least one department is required"),
-  color: z.string().min(1, "Color is required"),
 });
 
 interface CreateJobDialogProps {
@@ -66,7 +64,6 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
       end_time: new Date(),
       job_type: "single" as JobType,
       departments: [],
-      color: "#7E69AB", // Default color
     },
   });
 
@@ -82,11 +79,11 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
         .select()
         .single();
 
-      if (locationError && locationError.code !== "23505") throw locationError;
+      if (locationError && locationError.code !== '23505') throw locationError;
 
       // If location already exists, get it
       let locationId = locationData?.id;
-      if (locationError?.code === "23505") {
+      if (locationError?.code === '23505') {
         const { data: existingLocation } = await supabase
           .from("locations")
           .select("id")
@@ -105,7 +102,6 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
             start_time: values.start_time.toISOString(),
             end_time: values.end_time.toISOString(),
             job_type: values.job_type,
-            color: values.color,
           },
         ])
         .select()
@@ -200,7 +196,6 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
                   <SelectItem value="single">Single</SelectItem>
                   <SelectItem value="tour">Tour</SelectItem>
                   <SelectItem value="festival">Festival</SelectItem>
-                  <SelectItem value="Dry Hire">Dry Hire</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -219,17 +214,6 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
                 value={watch("end_time")}
                 onChange={(date) => setValue("end_time", date)}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Color</Label>
-              <SimplifiedJobColorPicker
-                color={watch("color")}
-                onChange={(color) => setValue("color", color)}
-              />
-              {errors.color && (
-                <p className="text-sm text-destructive">{errors.color.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">

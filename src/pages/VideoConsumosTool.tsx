@@ -14,8 +14,7 @@ import { useNavigate } from 'react-router-dom';
 const videoComponentDatabase = [
   { id: 1, name: 'Pantalla Central', watts: 700 },
   { id: 2, name: 'IMAGE Left', watts: 700 },
-  { id: 3, name: 'IMAGE Right', watts: 700 },
-  { id: 4, name: 'LED Screen', weight: 700 }
+  { id: 3, name: 'IMAGE Right', watts: 700 }
 ];
 
 const VOLTAGE_3PHASE = 400;
