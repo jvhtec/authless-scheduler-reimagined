@@ -26,6 +26,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { useEffect, useState } from "react";
+import LocationInput from "@/components/ui/location-input";
+import { upsertLocation } from "@/lib/supabase";
 
 interface LogisticsEventDialogProps {
   open: boolean;
@@ -60,6 +63,13 @@ export const LogisticsEventDialog = ({
   const [customTitle, setCustomTitle] = useState("");
   const [licensePlate, setLicensePlate] = useState("");
   const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([]);
+const [location, setLocation] = useState({
+  google_place_id: "",
+  formatted_address: "",
+  latitude: 0,
+  longitude: 0,
+  photo_reference: "",
+});
 
   // NEW: showDeleteDialog is now properly used with <AlertDialog>
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -98,6 +108,28 @@ export const LogisticsEventDialog = ({
       setSelectedDepartments([]);
     }
   }, [selectedEvent, selectedDate]);
+
+useEffect(() => {
+  if (selectedEvent?.job_id) {
+    supabase
+      .from("locations")
+      .select("*")
+      .eq("id", selectedEvent.job_id)
+      .single()
+      .then(({ data, error }) => {
+        if (data) {
+          setLocation({
+            google_place_id: data.google_place_id,
+            formatted_address: data.formatted_address,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            photo_reference: data.photo_reference || "",
+          });
+        }
+      });
+  }
+}, [selectedEvent]);
+
 
   // Fetch available Jobs
   const { data: jobs } = useQuery({
@@ -152,15 +184,79 @@ export const LogisticsEventDialog = ({
 
   // Handler to create or update an event
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!date || !time || (!selectedJob && !customTitle)) {
-      toast({
-        title: "Error",
-        description: "Date, time, and title (if no job) are required.",
-        variant: "destructive",
-      });
-      return;
+  e.preventDefault();
+  if (!date || !time || (!selectedJob && !customTitle)) {
+    toast({
+      title: "Error",
+      description: "Date, time, and title (if no job) are required.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  try {
+    let locationId = null;
+
+    // Save location if one was selected
+    if (location.google_place_id) {
+      const savedLocation = await upsertLocation(location);
+      if (savedLocation) {
+        locationId = savedLocation.id;
+      }
     }
+
+    if (selectedEvent) {
+      // Update existing event
+      const { error: updateError } = await supabase
+        .from("logistics_events")
+        .update({
+          event_type: eventType,
+          transport_type: transportType,
+          event_date: date,
+          event_time: time,
+          loading_bay: loadingBay || null,
+          job_id: selectedJob || null,
+          location_id: locationId, // Save location reference
+          title: customTitle || null,
+          license_plate: licensePlate || null,
+        })
+        .eq("id", selectedEvent.id);
+
+      if (updateError) throw updateError;
+
+      toast({ title: "Success", description: "Logistics event updated successfully." });
+    } else {
+      // Create new event
+      const { error } = await supabase
+        .from("logistics_events")
+        .insert({
+          event_type: eventType,
+          transport_type: transportType,
+          event_date: date,
+          event_time: time,
+          loading_bay: loadingBay || null,
+          job_id: selectedJob || null,
+          location_id: locationId, // Save location reference
+          title: customTitle || null,
+          license_plate: licensePlate || null,
+        });
+
+      if (error) throw error;
+
+      toast({ title: "Success", description: "Logistics event created successfully." });
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["logistics-events"] });
+    queryClient.invalidateQueries({ queryKey: ["today-logistics"] });
+    onOpenChange(false);
+  } catch (error: any) {
+    toast({
+      title: "Error",
+      description: error.message,
+      variant: "destructive",
+    });
+  }
+};
 
     try {
       // If editing an existing event...
@@ -287,6 +383,15 @@ export const LogisticsEventDialog = ({
                 </SelectContent>
               </Select>
             </div>
+
+{/* Location Selection */}
+<div className="space-y-2">
+  <Label>Location (Optional)</Label>
+  <LocationInput onSelectLocation={setLocation} />
+  {location.formatted_address && (
+    <p className="text-sm text-muted-foreground">Selected: {location.formatted_address}</p>
+  )}
+</div>
 
             {/* Custom Title (only required if no job is selected) */}
             {selectedJob === null && (
