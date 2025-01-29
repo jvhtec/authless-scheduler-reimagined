@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Mic, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Mic, Check } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear, eachMonthOfInterval, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -481,45 +481,40 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
             </Button>
           </div>
         </div>
-       import { ChevronDown, Check } from "lucide-react";
-import { useState } from "react";
+        <div className="relative mb-4">
+          <button
+            className="border border-gray-300 rounded-md py-1 px-2 text-sm w-full flex items-center justify-between"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          >
+            {selectedJobTypes.length > 0
+              ? selectedJobTypes.join(", ")
+              : "Select Job Types"}
+            <ChevronDown className="h-4 w-4 ml-2" />
+          </button>
 
-const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-<div className="relative mb-4">
-  <button
-    className="border border-gray-300 rounded-md py-1 px-2 text-sm w-full flex items-center justify-between"
-    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-  >
-    {selectedJobTypes.length > 0
-      ? selectedJobTypes.join(", ")
-      : "Select Job Types"}
-    <ChevronDown className="h-4 w-4 ml-2" />
-  </button>
-
-  {isDropdownOpen && (
-    <div className="absolute z-10 mt-2 w-full bg-white border border-gray-200 rounded-md shadow-md">
-      {distinctJobTypes.map((type) => (
-        <div
-          key={type}
-          className="flex items-center justify-between px-3 py-2 hover:bg-gray-100 cursor-pointer"
-          onClick={() => {
-            setSelectedJobTypes((prev) =>
-              prev.includes(type)
-                ? prev.filter((t) => t !== type)
-                : [...prev, type]
-            );
-          }}
-        >
-          <span className="text-sm">{type}</span>
-          {selectedJobTypes.includes(type) && (
-            <Check className="h-4 w-4 text-blue-500" />
+          {isDropdownOpen && (
+            <div className="absolute z-10 mt-2 w-full bg-white border border-gray-200 rounded-md shadow-md">
+              {distinctJobTypes.map((type) => (
+                <div
+                  key={type}
+                  className="flex items-center justify-between px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                  onClick={() => {
+                    setSelectedJobTypes((prev) =>
+                      prev.includes(type)
+                        ? prev.filter((t) => t !== type)
+                        : [...prev, type]
+                    );
+                  }}
+                >
+                  <span className="text-sm">{type}</span>
+                  {selectedJobTypes.includes(type) && (
+                    <Check className="h-4 w-4 text-blue-500" />
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
-      ))}
-    </div>
-  )}
-</div>;
 
         {!isCollapsed && (
           <div className="border rounded-lg">
