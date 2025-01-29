@@ -34,6 +34,7 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
           loading_bay,
           notes,
           license_plate,
+          title,
           job:jobs(id, title),
           departments:logistics_event_departments(department)
         `)
@@ -52,9 +53,9 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
 
       return data.map(event => ({
         ...event,
-        job: event.job ? {
-          id: event.job.id,
-          title: event.job.title
+        job: event.job?.[0] ? {
+          id: event.job[0].id,
+          title: event.job[0].title
         } : undefined
       })) as LogisticsEvent[];
     }

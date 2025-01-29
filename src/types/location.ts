@@ -24,7 +24,8 @@ export interface LogisticsEvent {
   event_date: string;
   loading_bay?: string;
   license_plate?: string;
-  departments?: { department: string }[];
+  title?: string;
+  departments: { department: string }[];
   job?: {
     id: string;
     title: string;

@@ -44,7 +44,7 @@ export const LogisticsEventCard = ({
     >
       {variant === "calendar" ? (
         <div className="flex items-center gap-2">
-          <span className="text-xs">{event.job?.title}</span>
+          <span className="text-xs">{event.job?.title || event.title}</span>
         </div>
       ) : (
         <>
@@ -66,7 +66,9 @@ export const LogisticsEventCard = ({
             </Badge>
           </div>
           
-          {event.job?.title && <h3 className="font-medium mt-2">{event.job.title}</h3>}
+          {(event.job?.title || event.title) && (
+            <h3 className="font-medium mt-2">{event.job?.title || event.title}</h3>
+          )}
 
           {location && (
             <div className="text-sm text-muted-foreground mt-1">
