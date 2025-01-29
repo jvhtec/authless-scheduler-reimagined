@@ -6,6 +6,7 @@ export interface Location {
   latitude: number;
   longitude: number;
   photo_reference?: string;
+  name: string;  // Added this required field
 }
 
 export interface LocationResponse extends Location {

@@ -44,6 +44,7 @@ const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, default
           latitude: place.geometry.location?.lat() || 0,
           longitude: place.geometry.location?.lng() || 0,
           photo_reference: place.photos?.[0]?.getUrl() || "",
+          name: place.name || place.formatted_address || "", // Use place name or address as fallback
         };
 
         try {
@@ -58,7 +59,10 @@ const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, default
             // If location doesn't exist, insert it
             const { error: insertError } = await supabase
               .from("locations")
-              .insert([selectedLocation]);
+              .insert({
+                ...selectedLocation,
+                name: selectedLocation.name
+              });
 
             if (insertError) {
               console.error("Error inserting location:", insertError);
