@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { JobType } from "@/types/job";
+import LocationInput from "@/components/ui/location-input";
 
 interface EditJobDialogProps {
   open: boolean;
@@ -42,17 +43,32 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+const [location, setLocation] = useState({
+  google_place_id: job.location?.google_place_id || "",
+  formatted_address: job.location?.formatted_address || "",
+  latitude: job.location?.latitude || 0,
+  longitude: job.location?.longitude || 0,
+  photo_reference: job.location?.photo_reference || "",
+});
+
   // Reset form when job changes
-  useEffect(() => {
-    if (job) {
-      setTitle(job.title);
-      setDescription(job.description || "");
-      setStartTime(job.start_time?.slice(0, 16) || "");
-      setEndTime(job.end_time?.slice(0, 16) || "");
-      setColor(job.color || "#7E69AB");
-      setJobType(job.job_type || "single");
-    }
-  }, [job]);
+useEffect(() => {
+  if (job) {
+    setTitle(job.title);
+    setDescription(job.description || "");
+    setStartTime(job.start_time?.slice(0, 16) || "");
+    setEndTime(job.end_time?.slice(0, 16) || "");
+    setColor(job.color || "#7E69AB");
+    setJobType(job.job_type || "single");
+    setLocation({
+      google_place_id: job.location?.google_place_id || "",
+      formatted_address: job.location?.formatted_address || "",
+      latitude: job.location?.latitude || 0,
+      longitude: job.location?.longitude || 0,
+      photo_reference: job.location?.photo_reference || "",
+    });
+  }
+}, [job]);
 
   // Fetch current departments when dialog opens
   useEffect(() => {
@@ -85,9 +101,61 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  e.preventDefault();
+  setIsLoading(true);
 
+  try {
+    // Update location in database
+    const { data: locationData, error: locationError } = await supabase
+      .from("locations")
+      .upsert([
+        {
+          google_place_id: location.google_place_id,
+          formatted_address: location.formatted_address,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          photo_reference: location.photo_reference,
+        },
+      ])
+      .select()
+      .single();
+
+    if (locationError) throw locationError;
+    
+    // Update the job with the location ID
+    const { error: jobError } = await supabase
+      .from("jobs")
+      .update({
+        title,
+        description,
+        location_id: locationData.id, // Reference the new location
+        start_time: startTime,
+        end_time: endTime,
+        color,
+        job_type: jobType,
+      })
+      .eq("id", job.id);
+
+    if (jobError) throw jobError;
+
+    toast({
+      title: "Job updated successfully",
+      description: "The job has been updated.",
+    });
+
+    queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    onOpenChange(false);
+  } catch (error: any) {
+    console.error("Error updating job:", error);
+    toast({
+      title: "Error updating job",
+      description: error.message,
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
     try {
       const { error: jobError } = await supabase
         .from("jobs")
