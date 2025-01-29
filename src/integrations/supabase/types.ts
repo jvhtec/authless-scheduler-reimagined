@@ -682,18 +682,33 @@ export type Database = {
       locations: {
         Row: {
           created_at: string
+          formatted_address: string | null
+          google_place_id: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           name: string
+          photo_reference: string | null
         }
         Insert: {
           created_at?: string
+          formatted_address?: string | null
+          google_place_id?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           name: string
+          photo_reference?: string | null
         }
         Update: {
           created_at?: string
+          formatted_address?: string | null
+          google_place_id?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           name?: string
+          photo_reference?: string | null
         }
         Relationships: []
       }
@@ -924,6 +939,27 @@ export type Database = {
           residencia?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           time_span?: string | null
+        }
+        Relationships: []
+      }
+      secrets: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          value?: string
         }
         Relationships: []
       }

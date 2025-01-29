@@ -14,6 +14,7 @@ import { useState } from "react";
 import { Department } from "@/types/department";
 import { JobType } from "@/types/job";
 import { SimplifiedJobColorPicker } from "./SimplifiedJobColorPicker";
+import { useLocationManagement } from "@/hooks/useLocationManagement";
 
 // Schema for validation
 const formSchema = z.object({
@@ -44,6 +45,7 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { getOrCreateLocation } = useLocationManagement();
 
   const {
     register,
@@ -71,24 +73,8 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
     setIsSubmitting(true);
 
     try {
-      // Insert or find the location
-      const { data: locationData, error: locationError } = await supabase
-        .from("locations")
-        .insert([{ name: values.location_id }])
-        .select()
-        .single();
-
-      if (locationError && locationError.code !== "23505") throw locationError;
-
-      let locationId = locationData?.id;
-      if (locationError?.code === "23505") {
-        const { data: existingLocation } = await supabase
-          .from("locations")
-          .select("id")
-          .eq("name", values.location_id)
-          .single();
-        locationId = existingLocation?.id;
-      }
+      // Get or create location
+      const locationId = await getOrCreateLocation(values.location_id);
 
       // Insert the job
       const { data: job, error: jobError } = await supabase
