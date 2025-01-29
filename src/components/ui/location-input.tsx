@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Location } from "@/types/location";
 import { Loader2 } from "lucide-react";
@@ -8,7 +9,6 @@ interface LocationInputProps {
 }
 
 const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, defaultValue }) => {
-  const [inputValue, setInputValue] = useState(defaultValue || "");
   const [isLoading, setIsLoading] = useState(false);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -30,7 +30,6 @@ const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, default
       name: place.name || place.formatted_address || "",
     };
 
-    setInputValue(selectedLocation.formatted_address);
     onSelectLocation(selectedLocation);
   }, [onSelectLocation]);
 
@@ -45,13 +44,11 @@ const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, default
         script.defer = true;
 
         script.onload = () => {
-          console.log("Google Maps script loaded");
           setIsLoading(false);
           initializeAutocomplete();
         };
 
-        script.onerror = (error) => {
-          console.error("Error loading Google Maps script:", error);
+        script.onerror = () => {
           setIsLoading(false);
         };
 
@@ -91,17 +88,12 @@ const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, default
     };
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-  };
-
   return (
     <div className="relative">
       <input
         ref={inputRef}
         type="text"
-        value={inputValue}
-        onChange={handleInputChange}
+        defaultValue={defaultValue || ""}
         placeholder="Search location..."
         className="w-full p-2 border border-input rounded-md pr-8"
         disabled={isLoading}
