@@ -152,7 +152,7 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] md:max-h-none md:h-auto overflow-y-auto md:overflow-visible">
         <DialogHeader>
           <DialogTitle>Edit Job</DialogTitle>
         </DialogHeader>
