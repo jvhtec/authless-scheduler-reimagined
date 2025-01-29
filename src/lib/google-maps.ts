@@ -8,25 +8,39 @@ export const loadGoogleMapsAPI = (apiKey: string) => {
   document.head.appendChild(script);
 };
 
-export const getGeocodeFromPlaceId = async (
+interface PlaceResult {
+  google_place_id: string;
+  formatted_address: string;
+  latitude: number;
+  longitude: number;
+  photo_reference?: string;
+}
+
+export const getPlaceDetails = async (
   placeId: string,
   apiKey: string
-): Promise<{ latitude: number; longitude: number; formatted_address: string } | null> => {
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?place_id=${placeId}&key=${apiKey}`;
+): Promise<PlaceResult | null> => {
+  console.log("Fetching place details for:", placeId);
+  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=formatted_address,geometry,photos&key=${apiKey}`;
+  
   try {
     const response = await fetch(url);
     const data = await response.json();
 
-    if (data.status !== "OK" || !data.results.length) return null;
+    if (data.status !== "OK" || !data.result) {
+      console.error("Error fetching place details:", data);
+      return null;
+    }
 
-    const { lat, lng } = data.results[0].geometry.location;
     return {
-      latitude: lat,
-      longitude: lng,
-      formatted_address: data.results[0].formatted_address,
+      google_place_id: placeId,
+      formatted_address: data.result.formatted_address,
+      latitude: data.result.geometry.location.lat,
+      longitude: data.result.geometry.location.lng,
+      photo_reference: data.result.photos?.[0]?.photo_reference,
     };
   } catch (error) {
-    console.error("Error fetching geocode data:", error);
+    console.error("Error in getPlaceDetails:", error);
     return null;
   }
 };
