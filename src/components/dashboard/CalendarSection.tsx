@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Mic, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, MapPin, Clock, Users, Music2, Lightbulb, Video, Plane, Wrench, Star, Moon, Mic, Check, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, addMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear, eachMonthOfInterval, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -26,8 +26,8 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const [showMilestones, setShowMilestones] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [selectedJobTypes, setSelectedJobTypes] = useState<string[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  
   const distinctJobTypes = jobs ? Array.from(new Set(jobs.map(job => job.job_type).filter(Boolean))) : [];
   
   const currentMonth = date || new Date();
@@ -154,7 +154,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
           : isWithinDuration;
 
         const matchesJobType = selectedJobTypes.length === 0 || selectedJobTypes.includes(job.job_type);
-
 
         return matchesDepartment && matchesJobType;
       } catch (error) {
@@ -481,6 +480,7 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
             </Button>
           </div>
         </div>
+
         <div className="relative mb-4">
           <button
             className="border border-gray-300 rounded-md py-1 px-2 text-sm w-full flex items-center justify-between"
