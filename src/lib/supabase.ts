@@ -47,7 +47,7 @@ export const upsertLocation = async (location: Location) => {
     .from("locations")
     .insert([location])
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Error inserting location:", error);
@@ -65,7 +65,7 @@ export const fetchJobLocation = async (jobId: string): Promise<LocationResponse 
     .from('jobs')
     .select('location_id')
     .eq('id', jobId)
-    .single();
+    .maybeSingle();
 
   if (jobError || !job?.location_id) {
     console.error('Error fetching job:', jobError);
@@ -76,7 +76,7 @@ export const fetchJobLocation = async (jobId: string): Promise<LocationResponse 
     .from('locations')
     .select('*')
     .eq('id', job.location_id)
-    .single();
+    .maybeSingle();
 
   if (locationError) {
     console.error('Error fetching location:', locationError);
