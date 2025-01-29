@@ -4,22 +4,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { fetchJobLocation } from "@/lib/supabase";
-
-interface LogisticsEvent {
-  id: string;
-  job_id?: string;
-  event_type: 'load' | 'unload';
-  transport_type: string;
-  event_time: string;
-  event_date: string;
-  loading_bay?: string;
-  license_plate?: string;
-  departments?: { department: string }[];
-  job?: {
-    id: string;
-    title: string;
-  };
-}
+import { LocationResponse, LogisticsEvent } from "@/types/location";
 
 interface LogisticsEventCardProps {
   event: LogisticsEvent;
@@ -36,13 +21,13 @@ export const LogisticsEventCard = ({
   compact = false,
   className 
 }: LogisticsEventCardProps) => {
-  const [location, setLocation] = useState<string | null>(null);
+  const [location, setLocation] = useState<LocationResponse | null>(null);
 
   useEffect(() => {
     if (event.job?.id) {
       fetchJobLocation(event.job.id).then((loc) => {
         if (loc) {
-          setLocation(loc.formatted_address);
+          setLocation(loc);
         }
       });
     }
@@ -85,7 +70,7 @@ export const LogisticsEventCard = ({
 
           {location && (
             <div className="text-sm text-muted-foreground mt-1">
-              Location: {location}
+              Location: {location.formatted_address}
             </div>
           )}
 

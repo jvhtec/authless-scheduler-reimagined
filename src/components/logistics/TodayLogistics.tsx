@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LogisticsEventCard } from "./LogisticsEventCard";
 import { LogisticsEventDialog } from "./LogisticsEventDialog";
 import { useState } from "react";
+import { LogisticsEvent } from "@/types/location";
 
 interface TodayLogisticsProps {
   selectedDate: Date;
@@ -14,7 +15,7 @@ interface TodayLogisticsProps {
 export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
   const { toast } = useToast();
   const [showEventDialog, setShowEventDialog] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [selectedEvent, setSelectedEvent] = useState<LogisticsEvent | null>(null);
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
 
   const { data: events, isLoading } = useQuery({
@@ -49,11 +50,17 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
         throw error;
       }
 
-      return data;
+      return data.map(event => ({
+        ...event,
+        job: event.job ? {
+          id: event.job.id,
+          title: event.job.title
+        } : undefined
+      })) as LogisticsEvent[];
     }
   });
 
-  const handleEventClick = (event: any) => {
+  const handleEventClick = (event: LogisticsEvent) => {
     setSelectedEvent(event);
     setShowEventDialog(true);
   };
