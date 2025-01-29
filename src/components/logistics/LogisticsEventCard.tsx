@@ -2,6 +2,20 @@ import { Badge } from "@/components/ui/badge";
 import { Package, PackageCheck, Truck } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { fetchJobLocation } from "@/lib/supabase";
+
+const [location, setLocation] = useState<string | null>(null);
+
+useEffect(() => {
+  if (event.job?.id) {
+    fetchJobLocation(event.job.id).then((loc) => {
+      if (loc) {
+        setLocation(loc.formatted_address);
+      }
+    });
+  }
+}, [event.job?.id]);
 
 interface LogisticsEventCardProps {
   event: any;
@@ -51,7 +65,13 @@ export const LogisticsEventCard = ({
             </Badge>
           </div>
           
-          <h3 className="font-medium mt-2">{event.job?.title}</h3>
+        <h3 className="font-medium mt-2">{event.job?.title}</h3>
+
+{location && (
+  <div className="text-sm text-muted-foreground mt-1">
+    Location: {location}
+  </div>
+)}
           <div className="text-sm text-muted-foreground mt-1">
             {format(new Date(`2000-01-01T${event.event_time}`), 'HH:mm')}
           </div>
