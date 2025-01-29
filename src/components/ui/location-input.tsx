@@ -1,7 +1,12 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Location } from "@/types/location";
 import { Loader2 } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 interface LocationInputProps {
   onSelectLocation: (location: Location) => void;
@@ -10,8 +15,28 @@ interface LocationInputProps {
 
 const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, defaultValue }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Fetch Google Maps API key from Supabase secrets
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      const { data, error } = await supabase
+        .from("secrets")
+        .select("value")
+        .eq("key", "GOOGLE_MAPS_API_KEY")
+        .single();
+
+      if (error) {
+        console.error("Error fetching API key:", error);
+        return;
+      }
+      setApiKey(data.value);
+    };
+
+    fetchApiKey();
+  }, []);
 
   const handlePlaceSelect = useCallback(() => {
     const place = autocompleteRef.current?.getPlace();
@@ -34,42 +59,35 @@ const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, default
   }, [onSelectLocation]);
 
   useEffect(() => {
-    if (!window.google || !inputRef.current) {
-      const loadGoogleMapsScript = () => {
-        setIsLoading(true);
-        const script = document.createElement("script");
-        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-        script.async = true;
-        script.defer = true;
+    if (!apiKey || !inputRef.current || window.google) return;
 
-        script.onload = () => {
-          setIsLoading(false);
-          initializeAutocomplete();
-        };
+    const loadGoogleMapsScript = () => {
+      setIsLoading(true);
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+      script.async = true;
+      script.defer = true;
 
-        script.onerror = () => {
-          setIsLoading(false);
-        };
-
-        document.head.appendChild(script);
+      script.onload = () => {
+        setIsLoading(false);
+        initializeAutocomplete();
       };
 
-      loadGoogleMapsScript();
-      return;
-    }
+      script.onerror = () => {
+        setIsLoading(false);
+        console.error("Google Maps script failed to load.");
+      };
 
-    initializeAutocomplete();
-  }, []);
+      document.head.appendChild(script);
+    };
+
+    loadGoogleMapsScript();
+  }, [apiKey]);
 
   const initializeAutocomplete = () => {
     if (!inputRef.current || !window.google) return;
 
     try {
-      if (autocompleteRef.current) {
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
-      }
-
       autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
         types: ["geocode"],
       });
