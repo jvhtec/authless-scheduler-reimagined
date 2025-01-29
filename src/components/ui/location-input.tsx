@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Location } from "@/types/location";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 interface LocationInputProps {
   onSelectLocation: (location: Location) => void;
@@ -9,8 +10,28 @@ interface LocationInputProps {
 
 const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, defaultValue }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Fetch Google Maps API key from Supabase secrets
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      const { data, error } = await supabase
+        .from("secrets")
+        .select("value")
+        .eq("key", "GOOGLE_MAPS_API_KEY")
+        .single();
+
+      if (error) {
+        console.error("Error fetching API key:", error);
+        return;
+      }
+      setApiKey(data.value);
+    };
+
+    fetchApiKey();
+  }, []);
 
   const handlePlaceSelect = useCallback(() => {
     const place = autocompleteRef.current?.getPlace();
@@ -33,12 +54,12 @@ const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, default
   }, [onSelectLocation]);
 
   useEffect(() => {
-    if (!inputRef.current || window.google) return;
+    if (!apiKey || !inputRef.current || window.google) return;
 
     const loadGoogleMapsScript = () => {
       setIsLoading(true);
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
       script.async = true;
       script.defer = true;
 
@@ -56,7 +77,7 @@ const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, default
     };
 
     loadGoogleMapsScript();
-  }, []);
+  }, [apiKey]);
 
   const initializeAutocomplete = () => {
     if (!inputRef.current || !window.google) return;
