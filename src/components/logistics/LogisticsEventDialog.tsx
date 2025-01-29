@@ -28,6 +28,7 @@ import { Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import LocationInput from "@/components/ui/location-input";
 import { upsertLocation } from "@/lib/supabase";
+import { Location } from "@/types/location";
 
 interface LogisticsEventDialogProps {
   open: boolean;
@@ -62,7 +63,7 @@ export const LogisticsEventDialog = ({
   const [customTitle, setCustomTitle] = useState("");
   const [licensePlate, setLicensePlate] = useState("");
   const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([]);
-  const [location, setLocation] = useState({
+  const [location, setLocation] = useState<Location>({
     google_place_id: "",
     formatted_address: "",
     latitude: 0,
@@ -315,9 +316,13 @@ export const LogisticsEventDialog = ({
 
             <div className="space-y-2">
               <Label>Location (Optional)</Label>
-              <LocationInput onSelectLocation={setLocation} />
+              <LocationInput 
+                onSelectLocation={(loc: Location) => setLocation(loc)} 
+              />
               {location.formatted_address && (
-                <p className="text-sm text-muted-foreground">Selected: {location.formatted_address}</p>
+                <p className="text-sm text-muted-foreground">
+                  Selected: {location.formatted_address}
+                </p>
               )}
             </div>
 

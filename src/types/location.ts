@@ -1,3 +1,5 @@
+import { Department } from "./department";
+
 export interface Location {
   google_place_id: string;
   formatted_address: string;

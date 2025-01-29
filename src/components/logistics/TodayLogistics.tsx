@@ -7,6 +7,7 @@ import { LogisticsEventCard } from "./LogisticsEventCard";
 import { LogisticsEventDialog } from "./LogisticsEventDialog";
 import { useState } from "react";
 import { LogisticsEvent } from "@/types/location";
+import { Department } from "@/types/department";
 
 interface TodayLogisticsProps {
   selectedDate: Date;
@@ -57,9 +58,9 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
           id: event.job[0].id,
           title: event.job[0].title
         } : undefined,
-        loading_bay: event.loading_bay || '',
-        license_plate: event.license_plate || '',
-        job_id: event.job_id || ''
+        departments: event.departments.map(d => ({
+          department: d.department as Department
+        }))
       })) as LogisticsEvent[];
     }
   });
