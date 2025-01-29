@@ -2,23 +2,27 @@ import { Badge } from "@/components/ui/badge";
 import { Package, PackageCheck, Truck } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { fetchJobLocation } from "@/lib/supabase";
 
-const [location, setLocation] = useState<string | null>(null);
-
-useEffect(() => {
-  if (event.job?.id) {
-    fetchJobLocation(event.job.id).then((loc) => {
-      if (loc) {
-        setLocation(loc.formatted_address);
-      }
-    });
-  }
-}, [event.job?.id]);
+interface LogisticsEvent {
+  id: string;
+  job_id?: string;
+  event_type: 'load' | 'unload';
+  transport_type: string;
+  event_time: string;
+  event_date: string;
+  loading_bay?: string;
+  license_plate?: string;
+  departments?: { department: string }[];
+  job?: {
+    id: string;
+    title: string;
+  };
+}
 
 interface LogisticsEventCardProps {
-  event: any;
+  event: LogisticsEvent;
   onClick: (e: React.MouseEvent) => void;
   variant?: "calendar" | "detailed";
   compact?: boolean;
@@ -32,6 +36,18 @@ export const LogisticsEventCard = ({
   compact = false,
   className 
 }: LogisticsEventCardProps) => {
+  const [location, setLocation] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (event.job?.id) {
+      fetchJobLocation(event.job.id).then((loc) => {
+        if (loc) {
+          setLocation(loc.formatted_address);
+        }
+      });
+    }
+  }, [event.job?.id]);
+
   return (
     <div
       onClick={onClick}
@@ -65,13 +81,14 @@ export const LogisticsEventCard = ({
             </Badge>
           </div>
           
-        <h3 className="font-medium mt-2">{event.job?.title}</h3>
+          {event.job?.title && <h3 className="font-medium mt-2">{event.job.title}</h3>}
 
-{location && (
-  <div className="text-sm text-muted-foreground mt-1">
-    Location: {location}
-  </div>
-)}
+          {location && (
+            <div className="text-sm text-muted-foreground mt-1">
+              Location: {location}
+            </div>
+          )}
+
           <div className="text-sm text-muted-foreground mt-1">
             {format(new Date(`2000-01-01T${event.event_time}`), 'HH:mm')}
           </div>
@@ -83,7 +100,7 @@ export const LogisticsEventCard = ({
           )}
 
           <div className="flex flex-wrap gap-1 mt-1">
-            {event.departments?.map((dept: any) => (
+            {event.departments?.map((dept) => (
               <Badge key={dept.department} variant="secondary" className="text-xs">
                 {dept.department}
               </Badge>

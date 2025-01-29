@@ -1,29 +1,36 @@
 import React, { useState, useEffect, useRef } from "react";
-
-interface Location {
-  google_place_id: string;
-  formatted_address: string;
-  latitude: number;
-  longitude: number;
-  photo_reference?: string;
-}
+import { Location } from "@/types/location";
 
 interface LocationInputProps {
   onSelectLocation: (location: Location) => void;
+  defaultValue?: string;
 }
 
-const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation }) => {
-  const [inputValue, setInputValue] = useState("");
+declare global {
+  interface Window {
+    google: typeof google;
+  }
+}
+
+const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, defaultValue }) => {
+  const [inputValue, setInputValue] = useState(defaultValue || "");
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (!window.google || !window.google.maps || !window.google.maps.places) {
-      console.error("Google Maps JavaScript API not loaded.");
-      return;
-    }
+    const loadGoogleMapsScript = () => {
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
 
-    if (inputRef.current) {
+      script.onload = initializeAutocomplete;
+    };
+
+    const initializeAutocomplete = () => {
+      if (!inputRef.current) return;
+
       autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
         types: ["geocode"],
       });
@@ -37,15 +44,20 @@ const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation }) => {
           formatted_address: place.formatted_address || "",
           latitude: place.geometry.location?.lat() || 0,
           longitude: place.geometry.location?.lng() || 0,
-          photo_reference:
-            place.photos && place.photos.length > 0 ? place.photos[0].getUrl() : undefined,
+          photo_reference: place.photos?.[0]?.getUrl() || undefined,
         };
 
         setInputValue(selectedLocation.formatted_address);
         onSelectLocation(selectedLocation);
       });
+    };
+
+    if (!window.google) {
+      loadGoogleMapsScript();
+    } else {
+      initializeAutocomplete();
     }
-  }, []);
+  }, [onSelectLocation]);
 
   return (
     <div>
@@ -55,7 +67,7 @@ const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation }) => {
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         placeholder="Search location..."
-        className="w-full p-2 border border-gray-300 rounded"
+        className="w-full p-2 border border-input rounded-md"
       />
     </div>
   );
