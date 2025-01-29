@@ -64,7 +64,13 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
     defaultValues: {
       title: "",
       description: "",
-      location_id: "",
+      location: {
+        google_place_id: "",
+        formatted_address: "",
+        latitude: 0,
+        longitude: 0,
+        photo_reference: "",
+      },
       start_time: new Date().toISOString().slice(0, 16),
       end_time: new Date().toISOString().slice(0, 16),
       job_type: "single" as JobType,
@@ -74,89 +80,89 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-  if (isSubmitting) return;
-  setIsSubmitting(true);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
-  try {
-    // Insert location details
-    const { data: locationData, error: locationError } = await supabase
-      .from("locations")
-      .insert([
-        {
-          google_place_id: values.location.google_place_id,
-          formatted_address: values.location.formatted_address,
-          latitude: values.location.latitude,
-          longitude: values.location.longitude,
-          photo_reference: values.location.photo_reference,
-        },
-      ])
-      .select()
-      .single();
-
-    if (locationError && locationError.code !== "23505") throw locationError;
-
-    let locationId = locationData?.id;
-    if (locationError?.code === "23505") {
-      const { data: existingLocation } = await supabase
+    try {
+      // Insert location details
+      const { data: locationData, error: locationError } = await supabase
         .from("locations")
-        .select("id")
-        .eq("google_place_id", values.location.google_place_id)
+        .insert([
+          {
+            google_place_id: values.location.google_place_id,
+            formatted_address: values.location.formatted_address,
+            latitude: values.location.latitude,
+            longitude: values.location.longitude,
+            photo_reference: values.location.photo_reference,
+          },
+        ])
+        .select()
         .single();
-      locationId = existingLocation?.id;
+
+      if (locationError && locationError.code !== "23505") throw locationError;
+
+      let locationId = locationData?.id;
+      if (locationError?.code === "23505") {
+        const { data: existingLocation } = await supabase
+          .from("locations")
+          .select("id")
+          .eq("google_place_id", values.location.google_place_id)
+          .single();
+        locationId = existingLocation?.id;
+      }
+
+      // Insert the job
+      const { data: job, error: jobError } = await supabase
+        .from("jobs")
+        .insert([
+          {
+            title: values.title,
+            description: values.description,
+            location_id: locationId,
+            start_time: new Date(values.start_time).toISOString(),
+            end_time: new Date(values.end_time).toISOString(),
+            job_type: values.job_type,
+            color: values.color,
+          },
+        ])
+        .select()
+        .single();
+
+      if (jobError) throw jobError;
+
+      // Insert job departments
+      const departmentInserts = values.departments.map((department) => ({
+        job_id: job.id,
+        department,
+      }));
+
+      const { error: deptError } = await supabase
+        .from("job_departments")
+        .insert(departmentInserts);
+
+      if (deptError) throw deptError;
+
+      // Refresh job list
+      await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+
+      toast({
+        title: "Success",
+        description: "Job created successfully",
+      });
+
+      reset();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error creating job:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create job",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // Insert the job
-    const { data: job, error: jobError } = await supabase
-      .from("jobs")
-      .insert([
-        {
-          title: values.title,
-          description: values.description,
-          location_id: locationId,
-          start_time: new Date(values.start_time).toISOString(),
-          end_time: new Date(values.end_time).toISOString(),
-          job_type: values.job_type,
-          color: values.color,
-        },
-      ])
-      .select()
-      .single();
-
-    if (jobError) throw jobError;
-
-    // Insert job departments
-    const departmentInserts = values.departments.map((department) => ({
-      job_id: job.id,
-      department,
-    }));
-
-    const { error: deptError } = await supabase
-      .from("job_departments")
-      .insert(departmentInserts);
-
-    if (deptError) throw deptError;
-
-    // Refresh job list
-    await queryClient.invalidateQueries({ queryKey: ["jobs"] });
-
-    toast({
-      title: "Success",
-      description: "Job created successfully",
-    });
-
-    reset();
-    onOpenChange(false);
-  } catch (error) {
-    console.error("Error creating job:", error);
-    toast({
-      title: "Error",
-      description: "Failed to create job",
-      variant: "destructive",
-    });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const departments: Department[] = ["sound", "lights", "video"];
   const selectedDepartments = watch("departments") || [];
@@ -188,17 +194,17 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
             <Textarea {...register("description")} />
           </div>
 
-       <div className="space-y-2">
-  <Label>Location</Label>
-  <LocationInput
-    onSelectLocation={(location) => setValue("location", location)}
-  />
-  {errors.location && (
-    <p className="text-sm text-destructive">
-      {errors.location.message as string}
-    </p>
-  )}
-</div>
+          <div className="space-y-2">
+            <Label>Location</Label>
+            <LocationInput
+              onSelectLocation={(location) => setValue("location", location)}
+            />
+            {errors.location && (
+              <p className="text-sm text-destructive">
+                {errors.location.message as string}
+              </p>
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>

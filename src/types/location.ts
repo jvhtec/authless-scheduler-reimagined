@@ -17,7 +17,7 @@ export interface LocationResponse {
 
 export interface LogisticsEvent {
   id: string;
-  job_id?: string;
+  job_id: string;
   event_type: 'load' | 'unload';
   transport_type: string;
   event_time: string;

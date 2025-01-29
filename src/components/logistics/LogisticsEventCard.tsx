@@ -27,7 +27,7 @@ export const LogisticsEventCard = ({
     if (event.job?.id) {
       fetchJobLocation(event.job.id).then((loc) => {
         if (loc) {
-          setLocation(loc);
+          setLocation(loc as LocationResponse);
         }
       });
     }

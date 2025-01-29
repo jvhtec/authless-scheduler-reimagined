@@ -58,7 +58,8 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
           title: event.job[0].title
         } : undefined,
         loading_bay: event.loading_bay || '',
-        license_plate: event.license_plate || ''
+        license_plate: event.license_plate || '',
+        job_id: event.job_id || ''
       })) as LogisticsEvent[];
     }
   });
