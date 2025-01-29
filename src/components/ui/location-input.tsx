@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Location } from "@/types/location";
+import { Loader2 } from "lucide-react";
 
 interface LocationInputProps {
   onSelectLocation: (location: Location) => void;
@@ -14,61 +15,105 @@ declare global {
 
 const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, defaultValue }) => {
   const [inputValue, setInputValue] = useState(defaultValue || "");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
-    const loadGoogleMapsScript = () => {
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
+  const initializeAutocomplete = useCallback(() => {
+    if (!inputRef.current || !window.google) return;
 
-      script.onload = initializeAutocomplete;
-    };
-
-    const initializeAutocomplete = () => {
-      if (!inputRef.current) return;
-
+    try {
       autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
         types: ["geocode"],
       });
 
       autocompleteRef.current.addListener("place_changed", () => {
         const place = autocompleteRef.current?.getPlace();
-        if (!place || !place.geometry || !place.place_id) return;
+        
+        if (!place || !place.geometry || !place.place_id) {
+          console.log("No place details available");
+          return;
+        }
 
         const selectedLocation: Location = {
           google_place_id: place.place_id,
           formatted_address: place.formatted_address || "",
           latitude: place.geometry.location?.lat() || 0,
           longitude: place.geometry.location?.lng() || 0,
-          photo_reference: place.photos?.[0]?.getUrl() || undefined,
+          photo_reference: place.photos?.[0]?.getUrl() || "",
         };
 
         setInputValue(selectedLocation.formatted_address);
         onSelectLocation(selectedLocation);
       });
-    };
-
-    if (!window.google) {
-      loadGoogleMapsScript();
-    } else {
-      initializeAutocomplete();
+    } catch (error) {
+      console.error("Error initializing autocomplete:", error);
     }
   }, [onSelectLocation]);
 
+  useEffect(() => {
+    const loadGoogleMapsScript = () => {
+      setIsLoading(true);
+      
+      // Check if script is already loaded
+      if (window.google) {
+        setIsScriptLoaded(true);
+        setIsLoading(false);
+        initializeAutocomplete();
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+
+      script.onload = () => {
+        console.log("Google Maps script loaded successfully");
+        setIsScriptLoaded(true);
+        setIsLoading(false);
+        initializeAutocomplete();
+      };
+
+      script.onerror = (error) => {
+        console.error("Error loading Google Maps script:", error);
+        setIsLoading(false);
+      };
+
+      document.head.appendChild(script);
+    };
+
+    loadGoogleMapsScript();
+
+    // Cleanup function
+    return () => {
+      if (autocompleteRef.current) {
+        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      }
+    };
+  }, [initializeAutocomplete]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+  };
+
   return (
-    <div>
+    <div className="relative">
       <input
         ref={inputRef}
         type="text"
         value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
+        onChange={handleInputChange}
         placeholder="Search location..."
-        className="w-full p-2 border border-input rounded-md"
+        className="w-full p-2 border border-input rounded-md pr-8"
+        disabled={isLoading || !isScriptLoaded}
       />
+      {isLoading && (
+        <div className="absolute right-2 top-1/2 -translate-y-1/2">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        </div>
+      )}
     </div>
   );
 };
