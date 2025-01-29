@@ -21,7 +21,7 @@ export const getPlaceDetails = async (placeId: string): Promise<Location | null>
   
   try {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=formatted_address,geometry,photos&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`
+      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,geometry,photos&key=${process.env.VITE_GOOGLE_MAPS_API_KEY}`
     );
     const data = await response.json();
 
@@ -36,6 +36,7 @@ export const getPlaceDetails = async (placeId: string): Promise<Location | null>
       latitude: data.result.geometry.location.lat,
       longitude: data.result.geometry.location.lng,
       photo_reference: data.result.photos?.[0]?.photo_reference,
+      name: data.result.name || data.result.formatted_address // Use formatted_address as fallback
     };
   } catch (error) {
     console.error("Error in getPlaceDetails:", error);

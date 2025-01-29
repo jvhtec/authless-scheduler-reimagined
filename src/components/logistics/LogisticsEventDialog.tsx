@@ -69,6 +69,7 @@ export const LogisticsEventDialog = ({
     latitude: 0,
     longitude: 0,
     photo_reference: "",
+    name: "" // Initialize with empty name
   });
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -116,11 +117,12 @@ export const LogisticsEventDialog = ({
         .then(({ data, error }) => {
           if (data) {
             setLocation({
-              google_place_id: data.google_place_id,
-              formatted_address: data.formatted_address,
-              latitude: data.latitude,
-              longitude: data.longitude,
+              google_place_id: data.google_place_id || "",
+              formatted_address: data.formatted_address || "",
+              latitude: data.latitude || 0,
+              longitude: data.longitude || 0,
               photo_reference: data.photo_reference || "",
+              name: data.name || data.formatted_address || "" // Use formatted_address as fallback
             });
           }
         });
