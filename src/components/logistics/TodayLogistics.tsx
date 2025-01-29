@@ -54,6 +54,9 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
 
       return data.map(event => ({
         ...event,
+        loading_bay: event.loading_bay || '',
+        license_plate: event.license_plate || '',
+        job_id: event.job_id || '',
         job: event.job?.[0] ? {
           id: event.job[0].id,
           title: event.job[0].title
