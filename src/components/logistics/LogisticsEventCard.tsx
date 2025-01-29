@@ -2,12 +2,9 @@ import { Badge } from "@/components/ui/badge";
 import { Package, PackageCheck, Truck } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
-import { fetchJobLocation } from "@/lib/supabase";
-import { LocationResponse, LogisticsEvent } from "@/types/location";
 
 interface LogisticsEventCardProps {
-  event: LogisticsEvent;
+  event: any;
   onClick: (e: React.MouseEvent) => void;
   variant?: "calendar" | "detailed";
   compact?: boolean;
@@ -21,18 +18,6 @@ export const LogisticsEventCard = ({
   compact = false,
   className 
 }: LogisticsEventCardProps) => {
-  const [location, setLocation] = useState<LocationResponse | null>(null);
-
-  useEffect(() => {
-    if (event.job?.id) {
-      fetchJobLocation(event.job.id).then((loc) => {
-        if (loc) {
-          setLocation(loc);
-        }
-      });
-    }
-  }, [event.job?.id]);
-
   return (
     <div
       onClick={onClick}
@@ -44,7 +29,7 @@ export const LogisticsEventCard = ({
     >
       {variant === "calendar" ? (
         <div className="flex items-center gap-2">
-          <span className="text-xs">{event.job?.title || event.title}</span>
+          <span className="text-xs">{event.job?.title}</span>
         </div>
       ) : (
         <>
@@ -66,16 +51,7 @@ export const LogisticsEventCard = ({
             </Badge>
           </div>
           
-          {(event.job?.title || event.title) && (
-            <h3 className="font-medium mt-2">{event.job?.title || event.title}</h3>
-          )}
-
-          {location && (
-            <div className="text-sm text-muted-foreground mt-1">
-              Location: {location.formatted_address}
-            </div>
-          )}
-
+          <h3 className="font-medium mt-2">{event.job?.title}</h3>
           <div className="text-sm text-muted-foreground mt-1">
             {format(new Date(`2000-01-01T${event.event_time}`), 'HH:mm')}
           </div>
@@ -87,7 +63,7 @@ export const LogisticsEventCard = ({
           )}
 
           <div className="flex flex-wrap gap-1 mt-1">
-            {event.departments?.map((dept) => (
+            {event.departments?.map((dept: any) => (
               <Badge key={dept.department} variant="secondary" className="text-xs">
                 {dept.department}
               </Badge>

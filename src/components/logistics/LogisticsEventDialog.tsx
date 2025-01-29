@@ -26,9 +26,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
 import { format } from "date-fns";
-import LocationInput from "@/components/ui/location-input";
-import { upsertLocation } from "@/lib/supabase";
-import { Location } from "@/types/location";
 
 interface LogisticsEventDialogProps {
   open: boolean;
@@ -63,15 +60,8 @@ export const LogisticsEventDialog = ({
   const [customTitle, setCustomTitle] = useState("");
   const [licensePlate, setLicensePlate] = useState("");
   const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([]);
-  const [location, setLocation] = useState<Location>({
-    google_place_id: "",
-    formatted_address: "",
-    latitude: 0,
-    longitude: 0,
-    photo_reference: "",
-    name: "" // Initialize with empty name
-  });
 
+  // NEW: showDeleteDialog is now properly used with <AlertDialog>
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const { toast } = useToast();
@@ -79,6 +69,7 @@ export const LogisticsEventDialog = ({
 
   const departments: Department[] = ["sound", "lights", "video"];
 
+  // Populate form fields from selectedEvent (edit mode) or defaults (create mode).
   useEffect(() => {
     if (selectedEvent) {
       setEventType(selectedEvent.event_type);
@@ -95,6 +86,7 @@ export const LogisticsEventDialog = ({
       setLicensePlate(selectedEvent.license_plate || "");
       setSelectedDepartments(selectedEvent.departments.map((d) => d.department));
     } else {
+      // Reset to defaults
       setEventType("load");
       setTransportType("trailer");
       setTime("09:00");
@@ -107,28 +99,7 @@ export const LogisticsEventDialog = ({
     }
   }, [selectedEvent, selectedDate]);
 
-  useEffect(() => {
-    if (selectedEvent?.job_id) {
-      supabase
-        .from("locations")
-        .select("*")
-        .eq("id", selectedEvent.job_id)
-        .single()
-        .then(({ data, error }) => {
-          if (data) {
-            setLocation({
-              google_place_id: data.google_place_id || "",
-              formatted_address: data.formatted_address || "",
-              latitude: data.latitude || 0,
-              longitude: data.longitude || 0,
-              photo_reference: data.photo_reference || "",
-              name: data.name || data.formatted_address || "" // Use formatted_address as fallback
-            });
-          }
-        });
-    }
-  }, [selectedEvent]);
-
+  // Fetch available Jobs
   const { data: jobs } = useQuery({
     queryKey: ["jobs"],
     queryFn: async () => {
@@ -138,10 +109,12 @@ export const LogisticsEventDialog = ({
     },
   });
 
+  // NEW: Handler to delete the selected logistics event
   const handleDelete = async () => {
     try {
       if (!selectedEvent) return;
 
+      // First delete any referencing rows in logistics_event_departments
       const { error: deptError } = await supabase
         .from("logistics_event_departments")
         .delete()
@@ -149,6 +122,7 @@ export const LogisticsEventDialog = ({
 
       if (deptError) throw deptError;
 
+      // Then delete the main record from logistics_events
       const { error: eventError } = await supabase
         .from("logistics_events")
         .delete()
@@ -164,6 +138,7 @@ export const LogisticsEventDialog = ({
       queryClient.invalidateQueries({ queryKey: ["logistics-events"] });
       queryClient.invalidateQueries({ queryKey: ["today-logistics"] });
 
+      // Close both the delete dialog and the main event dialog
       setShowDeleteDialog(false);
       onOpenChange(false);
     } catch (error: any) {
@@ -175,6 +150,7 @@ export const LogisticsEventDialog = ({
     }
   };
 
+  // Handler to create or update an event
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!date || !time || (!selectedJob && !customTitle)) {
@@ -187,16 +163,9 @@ export const LogisticsEventDialog = ({
     }
 
     try {
-      let locationId = null;
-
-      if (location.google_place_id) {
-        const savedLocation = await upsertLocation(location);
-        if (savedLocation) {
-          locationId = savedLocation.id;
-        }
-      }
-
+      // If editing an existing event...
       if (selectedEvent) {
+        // Update the record in logistics_events
         const { error: updateError } = await supabase
           .from("logistics_events")
           .update({
@@ -206,7 +175,6 @@ export const LogisticsEventDialog = ({
             event_time: time,
             loading_bay: loadingBay || null,
             job_id: selectedJob || null,
-            location_id: locationId,
             title: customTitle || null,
             license_plate: licensePlate || null,
           })
@@ -214,11 +182,13 @@ export const LogisticsEventDialog = ({
 
         if (updateError) throw updateError;
 
+        // Remove any existing department records
         await supabase
           .from("logistics_event_departments")
           .delete()
           .eq("event_id", selectedEvent.id);
 
+        // Insert chosen departments
         if (selectedDepartments.length > 0) {
           const { error: deptError } = await supabase
             .from("logistics_event_departments")
@@ -236,6 +206,7 @@ export const LogisticsEventDialog = ({
           description: "Logistics event updated successfully.",
         });
       } else {
+        // Creating a new event
         const { data: newEvent, error } = await supabase
           .from("logistics_events")
           .insert({
@@ -245,7 +216,6 @@ export const LogisticsEventDialog = ({
             event_time: time,
             loading_bay: loadingBay || null,
             job_id: selectedJob || null,
-            location_id: locationId,
             title: customTitle || null,
             license_plate: licensePlate || null,
           })
@@ -272,6 +242,7 @@ export const LogisticsEventDialog = ({
         });
       }
 
+      // Refresh data & close
       queryClient.invalidateQueries({ queryKey: ["logistics-events"] });
       queryClient.invalidateQueries({ queryKey: ["today-logistics"] });
       onOpenChange(false);
@@ -294,6 +265,7 @@ export const LogisticsEventDialog = ({
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Job Selection */}
             <div className="space-y-2">
               <Label>Job</Label>
               <Select
@@ -316,18 +288,7 @@ export const LogisticsEventDialog = ({
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Location (Optional)</Label>
-              <LocationInput 
-                onSelectLocation={(loc: Location) => setLocation(loc)} 
-              />
-              {location.formatted_address && (
-                <p className="text-sm text-muted-foreground">
-                  Selected: {location.formatted_address}
-                </p>
-              )}
-            </div>
-
+            {/* Custom Title (only required if no job is selected) */}
             {selectedJob === null && (
               <div className="space-y-2">
                 <Label>Title</Label>
@@ -340,6 +301,7 @@ export const LogisticsEventDialog = ({
               </div>
             )}
 
+            {/* Event Type */}
             <div className="space-y-2">
               <Label>Event Type</Label>
               <Select
@@ -356,6 +318,7 @@ export const LogisticsEventDialog = ({
               </Select>
             </div>
 
+            {/* Date */}
             <div className="space-y-2">
               <Label>Date</Label>
               <Input
@@ -366,6 +329,7 @@ export const LogisticsEventDialog = ({
               />
             </div>
 
+            {/* Time */}
             <div className="space-y-2">
               <Label>Time</Label>
               <Input
@@ -376,6 +340,7 @@ export const LogisticsEventDialog = ({
               />
             </div>
 
+            {/* Transport Type */}
             <div className="space-y-2">
               <Label>Transport Type</Label>
               <Select value={transportType} onValueChange={setTransportType}>
@@ -393,6 +358,7 @@ export const LogisticsEventDialog = ({
               </Select>
             </div>
 
+            {/* License Plate */}
             <div className="space-y-2">
               <Label>License Plate</Label>
               <Input
@@ -402,6 +368,7 @@ export const LogisticsEventDialog = ({
               />
             </div>
 
+            {/* Departments */}
             <div className="space-y-2">
               <Label>Departments</Label>
               <div className="flex flex-wrap gap-2">
@@ -424,6 +391,7 @@ export const LogisticsEventDialog = ({
               </div>
             </div>
 
+            {/* Loading Bay */}
             <div className="space-y-2">
               <Label>Loading Bay</Label>
               <Input
@@ -433,12 +401,13 @@ export const LogisticsEventDialog = ({
               />
             </div>
 
+            {/* Submit & Delete Buttons */}
             <div className="flex justify-between items-center pt-2">
               {selectedEvent && (
                 <Button
                   type="button"
                   variant="destructive"
-                  onClick={() => setShowDeleteDialog(true)}
+                  onClick={() => setShowDeleteDialog(true)} // NEW
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
@@ -452,6 +421,7 @@ export const LogisticsEventDialog = ({
         </DialogContent>
       </Dialog>
 
+      {/* NEW: Confirm Delete AlertDialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

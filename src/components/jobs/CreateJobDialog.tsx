@@ -14,19 +14,12 @@ import { useState } from "react";
 import { Department } from "@/types/department";
 import { JobType } from "@/types/job";
 import { SimplifiedJobColorPicker } from "./SimplifiedJobColorPicker";
-import LocationInput from "@/components/ui/location-input";
 
 // Schema for validation
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  location: z.object({
-    google_place_id: z.string().min(1, "Location is required"),
-    formatted_address: z.string().min(1, "Address is required"),
-    latitude: z.number(),
-    longitude: z.number(),
-    photo_reference: z.string().optional(),
-  }),
+  location_id: z.string().min(1, "Location is required"),
   start_time: z.string().min(1, "Start time is required"),
   end_time: z.string().min(1, "End time is required"),
   job_type: z.enum(["single", "tour", "festival", "dryhire"] as const),
@@ -64,13 +57,7 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
     defaultValues: {
       title: "",
       description: "",
-      location: {
-        google_place_id: "",
-        formatted_address: "",
-        latitude: 0,
-        longitude: 0,
-        photo_reference: "",
-      },
+      location_id: "",
       start_time: new Date().toISOString().slice(0, 16),
       end_time: new Date().toISOString().slice(0, 16),
       job_type: "single" as JobType,
@@ -84,18 +71,10 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
     setIsSubmitting(true);
 
     try {
-      // Insert location details
+      // Insert or find the location
       const { data: locationData, error: locationError } = await supabase
         .from("locations")
-        .insert([
-          {
-            google_place_id: values.location.google_place_id,
-            formatted_address: values.location.formatted_address,
-            latitude: values.location.latitude,
-            longitude: values.location.longitude,
-            photo_reference: values.location.photo_reference,
-          },
-        ])
+        .insert([{ name: values.location_id }])
         .select()
         .single();
 
@@ -106,7 +85,7 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
         const { data: existingLocation } = await supabase
           .from("locations")
           .select("id")
-          .eq("google_place_id", values.location.google_place_id)
+          .eq("name", values.location_id)
           .single();
         locationId = existingLocation?.id;
       }
@@ -196,12 +175,10 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
 
           <div className="space-y-2">
             <Label>Location</Label>
-            <LocationInput
-              onSelectLocation={(location) => setValue("location", location)}
-            />
-            {errors.location && (
+            <Input {...register("location_id")} placeholder="Enter location" />
+            {errors.location_id && (
               <p className="text-sm text-destructive">
-                {errors.location.message as string}
+                {errors.location_id.message as string}
               </p>
             )}
           </div>

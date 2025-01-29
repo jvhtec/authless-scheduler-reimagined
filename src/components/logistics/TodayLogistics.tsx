@@ -6,8 +6,6 @@ import { useToast } from "@/hooks/use-toast";
 import { LogisticsEventCard } from "./LogisticsEventCard";
 import { LogisticsEventDialog } from "./LogisticsEventDialog";
 import { useState } from "react";
-import { LogisticsEvent } from "@/types/location";
-import { Department } from "@/types/department";
 
 interface TodayLogisticsProps {
   selectedDate: Date;
@@ -16,7 +14,7 @@ interface TodayLogisticsProps {
 export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
   const { toast } = useToast();
   const [showEventDialog, setShowEventDialog] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<LogisticsEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const formattedDate = format(selectedDate, 'yyyy-MM-dd');
 
   const { data: events, isLoading } = useQuery({
@@ -35,7 +33,6 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
           loading_bay,
           notes,
           license_plate,
-          title,
           job:jobs(id, title),
           departments:logistics_event_departments(department)
         `)
@@ -52,23 +49,11 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
         throw error;
       }
 
-      return data.map(event => ({
-        ...event,
-        loading_bay: event.loading_bay || '',
-        license_plate: event.license_plate || '',
-        job_id: event.job_id || '',
-        job: event.job?.[0] ? {
-          id: event.job[0].id,
-          title: event.job[0].title
-        } : undefined,
-        departments: event.departments.map(d => ({
-          department: d.department as Department
-        }))
-      })) as LogisticsEvent[];
+      return data;
     }
   });
 
-  const handleEventClick = (event: LogisticsEvent) => {
+  const handleEventClick = (event: any) => {
     setSelectedEvent(event);
     setShowEventDialog(true);
   };
