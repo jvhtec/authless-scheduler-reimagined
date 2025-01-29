@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { fetchJobLocation } from "@/lib/supabase";
 
 // Add type declaration for jsPDF with autotable
 interface AutoTableJsPDF extends jsPDF {
@@ -126,6 +127,26 @@ const HojaDeRutaGenerator = () => {
           eventName: selectedJob.title,
           eventDates: formattedDates,
         }));
+
+// Fetch venue details
+      fetchJobLocation(selectedJob.id).then(location => {
+        if (location) {
+          setEventData(prev => ({
+            ...prev,
+            venue: {
+              name: location.formatted_address || "Unknown Venue",
+              address: location.formatted_address || "",
+            },
+          }));
+
+          if (location.photo_reference) {
+            setImagePreviews(prev => ({
+              ...prev,
+              venue: [location.photo_reference], // Use venue photo
+            }));
+          }
+        }
+      });
 
         // Fetch power requirements
         fetchPowerRequirements(selectedJob.id);
@@ -365,17 +386,34 @@ const HojaDeRutaGenerator = () => {
     doc.text(`Dates: ${eventData.eventDates}`, 20, yPosition);
     yPosition += 15;
 
-    // Venue Information
-    doc.setFontSize(14);
-    doc.setTextColor(125, 1, 1);
-    doc.text("Venue Information", 20, yPosition);
-    yPosition += 10;
-    doc.setFontSize(10);
-    doc.setTextColor(51, 51, 51);
-    doc.text(`Name: ${eventData.venue.name}`, 30, yPosition);
-    yPosition += 7;
-    doc.text(`Address: ${eventData.venue.address}`, 30, yPosition);
-    yPosition += 15;
+   // Venue Information
+doc.setFontSize(14);
+doc.setTextColor(125, 1, 1);
+doc.text("Venue Information", 20, yPosition);
+yPosition += 10;
+doc.setFontSize(10);
+doc.setTextColor(51, 51, 51);
+doc.text(`Name: ${eventData.venue.name}`, 30, yPosition);
+yPosition += 7;
+doc.text(`Address: ${eventData.venue.address}`, 30, yPosition);
+yPosition += 15;
+
+// Add venue photo if available
+if (imagePreviews.venue.length > 0) {
+  try {
+    doc.addImage(
+      imagePreviews.venue[0], // Use the first venue image
+      'JPEG',
+      30,
+      yPosition,
+      100,
+      60
+    );
+    yPosition += 70;
+  } catch (error) {
+    console.error("Error adding venue image:", error);
+  }
+}
 
     // Contacts Section
     if (eventData.contacts.length > 0) {
