@@ -63,30 +63,30 @@ export const upsertLocation = async (location: {
   return data;
 };
 
-// Fetch location details for a given job
-export const fetchJobLocation = async (jobId: string) => {
-  console.log("Fetching location for job:", jobId);
+export const fetchJobLocation = async (jobId: string): Promise<LocationResponse | null> => {
+  console.log('Fetching location for job:', jobId);
   
-  const { data, error } = await supabase
-    .from("jobs")
-    .select(`
-      location_id,
-      locations (
-        id,
-        google_place_id,
-        formatted_address,
-        latitude,
-        longitude,
-        photo_reference
-      )
-    `)
-    .eq("id", jobId)
-    .maybeSingle();
+  const { data: job, error: jobError } = await supabase
+    .from('jobs')
+    .select('location_id')
+    .eq('id', jobId)
+    .single();
 
-  if (error) {
-    console.error("Error fetching job location:", error);
+  if (jobError || !job?.location_id) {
+    console.error('Error fetching job:', jobError);
     return null;
   }
 
-  return data?.locations;
+  const { data: location, error: locationError } = await supabase
+    .from('locations')
+    .select('*')
+    .eq('id', job.location_id)
+    .single();
+
+  if (locationError) {
+    console.error('Error fetching location:', locationError);
+    return null;
+  }
+
+  return location as LocationResponse;
 };
