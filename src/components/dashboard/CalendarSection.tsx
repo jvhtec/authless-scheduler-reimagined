@@ -25,7 +25,8 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [showMilestones, setShowMilestones] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
-  const [selectedJobType, setSelectedJobType] = useState("All");
+  const [selectedJobTypes, setSelectedJobTypes] = useState<string[]>([]);
+
   
   const distinctJobTypes = jobs ? Array.from(new Set(jobs.map(job => job.job_type).filter(Boolean))) : [];
   
@@ -152,7 +153,8 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
           ? isWithinDuration && job.job_departments.some((d: any) => d.department === department)
           : isWithinDuration;
 
-        const matchesJobType = selectedJobType === "All" || job.job_type === selectedJobType;
+        const matchesJobType = selectedJobTypes.length === 0 || selectedJobTypes.includes(job.job_type);
+
 
         return matchesDepartment && matchesJobType;
       } catch (error) {
@@ -480,17 +482,20 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
           </div>
         </div>
         <select
-          value={selectedJobType}
-          onChange={(e) => setSelectedJobType(e.target.value)}
-          className="border border-gray-300 rounded-md py-1 px-2 text-sm mb-4"
-        >
-          <option value="All">All Types</option>
-          {distinctJobTypes.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
+  multiple
+  value={selectedJobTypes}
+  onChange={(e) => {
+    const values = Array.from(e.target.selectedOptions, option => option.value);
+    setSelectedJobTypes(values);
+  }}
+  className="border border-gray-300 rounded-md py-1 px-2 text-sm mb-4"
+>
+  {distinctJobTypes.map((type) => (
+    <option key={type} value={type}>
+      {type}
+    </option>
+  ))}
+</select>
         {!isCollapsed && (
           <div className="border rounded-lg">
             <div className="grid grid-cols-7 gap-px bg-muted">
