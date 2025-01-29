@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Location } from "@/types/location";
 import { Loader2 } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 interface LocationInputProps {
   onSelectLocation: (location: Location) => void;
@@ -14,29 +8,10 @@ interface LocationInputProps {
 }
 
 const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, defaultValue }) => {
+  const [inputValue, setInputValue] = useState(defaultValue || "");
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState<string | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-
-  // Fetch Google Maps API key from Supabase secrets
-  useEffect(() => {
-    const fetchApiKey = async () => {
-      const { data, error } = await supabase
-        .from("secrets")
-        .select("value")
-        .eq("key", "GOOGLE_MAPS_API_KEY")
-        .single();
-
-      if (error) {
-        console.error("Error fetching API key:", error);
-        return;
-      }
-      setApiKey(data.value);
-    };
-
-    fetchApiKey();
-  }, []);
 
   const handlePlaceSelect = useCallback(() => {
     const place = autocompleteRef.current?.getPlace();
@@ -55,39 +30,49 @@ const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, default
       name: place.name || place.formatted_address || "",
     };
 
+    setInputValue(selectedLocation.formatted_address);
     onSelectLocation(selectedLocation);
   }, [onSelectLocation]);
 
   useEffect(() => {
-    if (!apiKey || !inputRef.current || window.google) return;
+    if (!window.google || !inputRef.current) {
+      const loadGoogleMapsScript = () => {
+        setIsLoading(true);
+        const script = document.createElement("script");
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+        script.async = true;
+        script.defer = true;
 
-    const loadGoogleMapsScript = () => {
-      setIsLoading(true);
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-      script.async = true;
-      script.defer = true;
+        script.onload = () => {
+          console.log("Google Maps script loaded");
+          setIsLoading(false);
+          initializeAutocomplete();
+        };
 
-      script.onload = () => {
-        setIsLoading(false);
-        initializeAutocomplete();
+        script.onerror = (error) => {
+          console.error("Error loading Google Maps script:", error);
+          setIsLoading(false);
+        };
+
+        document.head.appendChild(script);
       };
 
-      script.onerror = () => {
-        setIsLoading(false);
-        console.error("Google Maps script failed to load.");
-      };
+      loadGoogleMapsScript();
+      return;
+    }
 
-      document.head.appendChild(script);
-    };
-
-    loadGoogleMapsScript();
-  }, [apiKey]);
+    initializeAutocomplete();
+  }, []);
 
   const initializeAutocomplete = () => {
     if (!inputRef.current || !window.google) return;
 
     try {
+      if (autocompleteRef.current) {
+        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      }
+
       autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
         types: ["geocode"],
       });
@@ -106,12 +91,17 @@ const LocationInput: React.FC<LocationInputProps> = ({ onSelectLocation, default
     };
   }, []);
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+  };
+
   return (
     <div className="relative">
       <input
         ref={inputRef}
         type="text"
-        defaultValue={defaultValue || ""}
+        value={inputValue}
+        onChange={handleInputChange}
         placeholder="Search location..."
         className="w-full p-2 border border-input rounded-md pr-8"
         disabled={isLoading}
