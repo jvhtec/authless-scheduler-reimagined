@@ -14,9 +14,9 @@ const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
 const FLEX_FOLDER_IDS = {
   subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
   location: "2f49c62c-b139-11df-b8d5-00e08175e43e",
-  documentacionTecnica: "358f312c-b051-11df-b8d5-00e08175e43e",
-  presupuestosRecibidos: "358f312c-b051-11df-b8d5-00e08175e43e",
-  hojaGastos: "358f312c-b051-11df-b8d5-00e08175e43e"
+  documentacionTecnica: "3787806c-af2d-11df-b8d5-00e08175e43e",
+  presupuestosRecibidos: "3787806c-af2d-11df-b8d5-00e08175e43e",
+  hojaGastos: "566d32e0-1a1e-11e0-a472-00e08175e43e"
 };
 
 const DEPARTMENT_IDS = {
@@ -147,7 +147,7 @@ export const TourDateManagementDialog = ({
               parentElementId: parentFolderId,
               open: true,
               locked: false,
-              name: sf.name,
+              name: `${sf.name} - ${locationName} ${DEPARTMENT_SUFFIXES[dept]}`,
               plannedStartDate: formattedStartDate,
               plannedEndDate: formattedEndDate,
               locationId: FLEX_FOLDER_IDS.location,
