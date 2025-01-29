@@ -155,7 +155,7 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] md:max-h-none md:h-auto overflow-y-auto md:overflow-visible">
         <DialogHeader>
           <DialogTitle>Create New Job</DialogTitle>
         </DialogHeader>
