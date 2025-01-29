@@ -1,12 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Location } from "@/types/location";
 import { Loader2 } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_ANON_KEY!
-);
+import { supabase } from "@/lib/supabase";
 
 interface LocationInputProps {
   onSelectLocation: (location: Location) => void;
