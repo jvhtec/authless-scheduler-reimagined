@@ -718,22 +718,16 @@ export const JobCardNew = ({
       case 'tourdate':
         return <Badge variant="secondary" className="ml-2">Tour Date</Badge>;
       case 'dry hire':
-        return <Badge variant="outline" className="ml-2 border-yellow-500 text-yellow-500">Dry Hire</Badge>;
+        return <Badge variant="secondary" className="ml-2">Dry Hire</Badge>;
       default:
         return null;
     }
   };
 
-  // Don't show assignment dialog for dry hire jobs
-  const handleJobClick = (jobId: string) => {
-    if (job.job_type === 'dryhire') return;
-    onJobClick(jobId);
-  };
-
   return (
     <Card
       className="mb-4 hover:shadow-md transition-shadow cursor-pointer"
-      onClick={() => userRole !== "logistics" && handleJobClick(job.id)}
+      onClick={() => userRole !== "logistics" && onJobClick(job.id)}
       style={{
         borderColor: `${job.color}30` || "#7E69AB30",
         backgroundColor: `${job.color}05` || "#7E69AB05"
