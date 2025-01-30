@@ -15,7 +15,7 @@ const videoComponentDatabase = [
   { id: 1, name: 'Pantalla Central', watts: 700 },
   { id: 2, name: 'IMAGE Left', watts: 700 },
   { id: 3, name: 'IMAGE Right', watts: 700 },
-  { id: 4, name: 'LED Screen', weight: 700 }
+  { id: 4, name: 'LED Screen', watts: 700 }
 ];
 
 const VOLTAGE_3PHASE = 400;
@@ -66,7 +66,7 @@ const VideoConsumosTool: React.FC = () => {
 
   const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
-    if (field === 'componentId') {
+    if (field === 'componentId' && value) {
       const component = videoComponentDatabase.find((c) => c.id.toString() === value);
       newRows[index] = {
         ...newRows[index],
@@ -86,6 +86,7 @@ const VideoConsumosTool: React.FC = () => {
   };
 
   const handleJobSelect = (jobId: string) => {
+    if (!jobId) return;
     setSelectedJobId(jobId);
     const job = jobs?.find((j) => j.id === jobId) || null;
     setSelectedJob(job);
@@ -146,7 +147,7 @@ const VideoConsumosTool: React.FC = () => {
     const calculatedRows = currentTable.rows.map((row) => {
       const component = videoComponentDatabase.find((c) => c.id.toString() === row.componentId);
       const totalWatts =
-        parseFloat(row.quantity) && parseFloat(row.watts)
+        parseFloat(row.quantity || '0') && parseFloat(row.watts || '0')
           ? parseFloat(row.quantity) * parseFloat(row.watts)
           : 0;
       return {
@@ -210,6 +211,18 @@ const VideoConsumosTool: React.FC = () => {
       );
 
       const fileName = `Video Power Report - ${selectedJob.title}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      const filePath = `video/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+
+      const { error: uploadError } = await supabase.storage.from('task_documents').upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      toast({
+        title: 'Success',
+        description: 'PDF has been generated and uploaded successfully.',
+      });
+
+      // Also provide download to user
       const url = window.URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -218,16 +231,11 @@ const VideoConsumosTool: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-
-      toast({
-        title: 'Success',
-        description: 'PDF has been generated successfully.',
-      });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error exporting PDF:', error);
       toast({
         title: 'Error',
-        description: 'Failed to generate the PDF.',
+        description: 'Failed to generate or upload the PDF.',
         variant: 'destructive',
       });
     }
@@ -295,7 +303,7 @@ const VideoConsumosTool: React.FC = () => {
                     <td className="p-4">
                       <Select
                         value={row.componentId}
-                        onValueChange={(value) => updateInput(index, 'componentId', value)}
+                        onValueChange={(value) => value && updateInput(index, 'componentId', value)}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select component" />
@@ -328,8 +336,8 @@ const VideoConsumosTool: React.FC = () => {
             </Button>
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
-                <FileText className="w-4 h-4" />
-                Export PDF
+                <FileText className="h-4 w-4" />
+                Export & Upload PDF
               </Button>
             )}
           </div>
