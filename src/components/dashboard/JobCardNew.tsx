@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { cn } from "@/lib/utils"; // Add this import
+import { cn } from "@/lib/utils";
 import {
   Clock,
   MapPin,
@@ -30,35 +30,16 @@ import createFolderIcon from "@/assets/icons/icon.png";
 import { Department } from "@/types/department";
 import { ArtistManagementDialog } from "../festival/ArtistManagementDialog";
 
-// Flex API base & token
-const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
-const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
-
-/**
- * NOTE: “documentacionTecnica” and “presupuestosRecibidos” now both point to the
- * same working definitionId => "3787806c-af2d-11df-b8d5-00e08175e43e".
- */
 const FLEX_FOLDER_IDS = {
-  // The top-level folder (no parentElementId) definition
   mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
-
-  // Department folder definition
   subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
-
   location: "2f49c62c-b139-11df-b8d5-00e08175e43e",
   mainResponsible: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb",
-
-  // Both "Documentación Técnica" and "Presupuestos Recibidos" share this ID:
   documentacionTecnica: "3787806c-af2d-11df-b8d5-00e08175e43e",
   presupuestosRecibidos: "3787806c-af2d-11df-b8d5-00e08175e43e",
-
-  // Hoja de Gastos
   hojaGastos: "566d32e0-1a1e-11e0-a472-00e08175e43e"
 };
 
-/**
- * Department references
- */
 const DEPARTMENT_IDS = {
   sound: "cdd5e372-d124-11e1-bba1-00e08175e43e",
   lights: "d5af7892-d124-11e1-bba1-00e08175e43e",
@@ -100,8 +81,8 @@ interface JobCardNewProps {
   userRole?: string | null;
   onDeleteDocument?: (jobId: string, document: JobDocument) => void;
   showUpload?: boolean;
-  showManageArtists?: boolean; // Already added in context
-  isProjectManagementPage?: boolean; // Added this prop definition
+  showManageArtists?: boolean;
+  isProjectManagementPage?: boolean;
 }
 
 const getDateTypeIcon = (type: string) => {
@@ -115,16 +96,13 @@ const getDateTypeIcon = (type: string) => {
   }
 };
 
-/**
- * Create a folder in Flex. Returns the newly created folder object with .elementId
- */
 async function createFlexFolder(payload: Record<string, any>) {
   console.log("Creating Flex folder with payload:", payload);
-  const response = await fetch(BASE_URL, {
+  const response = await fetch("https://sectorpro.flexrentalsolutions.com/f5/api/element", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Auth-Token": API_KEY
+      "X-Auth-Token": "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E"
     },
     body: JSON.stringify(payload)
   });
@@ -140,23 +118,12 @@ async function createFlexFolder(payload: Record<string, any>) {
   return data;
 }
 
-/**
- * Creates the entire hierarchy:
- * 1) Top-level folder (no parentElementId, using "mainFolder" definition)
- * 2) Sibling "Documentación Técnica" folder under top-level
- * 3) Department folders: Sound, Lights, Video, Production, Personnel
- * 4) For each department (except Personnel), 3 subfolders:
- *    - Documentación Técnica (definitionId = "3787806c...")
- *    - Presupuestos Recibidos (ALSO "3787806c...", just different name)
- *    - Hoja de Gastos
- */
 async function createAllFoldersForJob(
   job: any,
   formattedStartDate: string,
   formattedEndDate: string,
   documentNumber: string
 ) {
-  // 1) Top-level folder
   const topPayload = {
     definitionId: FLEX_FOLDER_IDS.mainFolder,
     open: true,
@@ -167,12 +134,10 @@ async function createAllFoldersForJob(
     locationId: FLEX_FOLDER_IDS.location,
     personResponsibleId: FLEX_FOLDER_IDS.mainResponsible,
     documentNumber
-    // no parentElementId => top-level
   };
   const topFolder = await createFlexFolder(topPayload);
   const topFolderId = topFolder.elementId;
 
-  // 2) Sibling "Documentación Técnica"
   const docTecPayload = {
     definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
     parentElementId: topFolderId,
@@ -185,14 +150,12 @@ async function createAllFoldersForJob(
   };
   await createFlexFolder(docTecPayload);
 
-  // 3) Department folders
   const departments = ["sound", "lights", "video", "production", "personnel"] as const;
 
   for (const dept of departments) {
-    // Validate that the department exists in DEPARTMENT_SUFFIXES
     if (!(dept in DEPARTMENT_SUFFIXES)) {
       console.error(`Invalid department: ${dept}`);
-      continue; // Skip invalid department
+      continue;
     }
   
     const deptPayload = {
@@ -205,16 +168,14 @@ async function createAllFoldersForJob(
       plannedEndDate: formattedEndDate,
       locationId: FLEX_FOLDER_IDS.location,
       departmentId: DEPARTMENT_IDS[dept],
-      documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`, // Correct concatenation of suffix
+      documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`,
       personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
     };
     const deptFolder = await createFlexFolder(deptPayload);
     const deptFolderId = deptFolder.elementId;
 
-    // "Personnel" has no subfolders
     if (dept === "personnel") continue;
 
-    // 3 subfolders for the other depts
     const subfolders = [
       {
         definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
@@ -261,8 +222,8 @@ export const JobCardNew = ({
   userRole,
   onDeleteDocument,
   showUpload = false,
-  showManageArtists = false, // New prop to control button visibility
-  isProjectManagementPage = false // New prop
+  showManageArtists = false,
+  isProjectManagementPage = false
 }: JobCardNewProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -272,10 +233,8 @@ export const JobCardNew = ({
   const [documents, setDocuments] = useState<JobDocument[]>(job.job_documents || []);
   const [artistManagementOpen, setArtistManagementOpen] = useState(false);
 
-  // Define distinctJobTypes at the component level
   const distinctJobTypes = Array.from(new Set(job.job_departments.map((dept: any) => dept.department)));
 
-  // Example: sound tasks
   const { data: soundTasks } = useQuery({
     queryKey: ["sound-tasks", job.id],
     queryFn: async () => {
@@ -301,7 +260,6 @@ export const JobCardNew = ({
     retryDelay: 1000
   });
 
-  // Example: sound_job_personnel
   const { data: personnel } = useQuery({
     queryKey: ["sound-personnel", job.id],
     queryFn: async () => {
@@ -333,7 +291,6 @@ export const JobCardNew = ({
     enabled: department === "sound"
   });
 
-  // Mutation to mark job as having flex_folders_created
   const updateFolderStatus = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
@@ -347,9 +304,6 @@ export const JobCardNew = ({
     }
   });
 
-  /**
-   * Called by "Create Flex folders" button
-   */
   const createFlexFolders = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
@@ -371,10 +325,8 @@ export const JobCardNew = ({
       const formattedEndDate =
         new Date(job.end_time).toISOString().split(".")[0] + ".000Z";
 
-      // Create hierarchy
       await createAllFoldersForJob(job, formattedStartDate, formattedEndDate, documentNumber);
 
-      // Mark DB
       await updateFolderStatus.mutateAsync();
 
       toast({
@@ -391,16 +343,17 @@ export const JobCardNew = ({
     }
   };
 
-  // Some helpers
   const calculateTotalProgress = () => {
     if (!soundTasks?.length) return 0;
     const totalProgress = soundTasks.reduce((acc, task) => acc + (task.progress || 0), 0);
     return Math.round(totalProgress / soundTasks.length);
   };
+
   const getCompletedTasks = () => {
     if (!soundTasks?.length) return 0;
     return soundTasks.filter((task: any) => task.status === "completed").length;
   };
+
   const getTotalPersonnel = () => {
     if (!personnel) return 0;
     return (
@@ -411,13 +364,11 @@ export const JobCardNew = ({
     );
   };
 
-  // Edit job
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onEditClick(job);
   };
 
-  // Delete job from DB
   const handleDeleteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
@@ -437,7 +388,6 @@ export const JobCardNew = ({
     try {
       console.log("Deleting job:", job.id);
 
-      // 1) gather tasks
       const { data: soundTaskIds } = await supabase
         .from("sound_job_tasks")
         .select("id")
@@ -451,7 +401,6 @@ export const JobCardNew = ({
         .select("id")
         .eq("job_id", job.id);
 
-      // 2) delete task docs
       if (soundTaskIds?.length) {
         const { error: soundDocsError } = await supabase
           .from("task_documents")
@@ -483,21 +432,18 @@ export const JobCardNew = ({
         if (videoDocsError) throw videoDocsError;
       }
 
-      // 3) delete tasks
       await Promise.all([
         supabase.from("sound_job_tasks").delete().eq("job_id", job.id),
         supabase.from("lights_job_tasks").delete().eq("job_id", job.id),
         supabase.from("video_job_tasks").delete().eq("job_id", job.id)
       ]);
 
-      // 4) delete dept personnel
       await Promise.all([
         supabase.from("sound_job_personnel").delete().eq("job_id", job.id),
         supabase.from("lights_job_personnel").delete().eq("job_id", job.id),
         supabase.from("video_job_personnel").delete().eq("job_id", job.id)
       ]);
 
-      // 5) delete job docs from storage
       if (job.job_documents?.length > 0) {
         const { error: storageError } = await supabase.storage
           .from("job_documents")
@@ -505,28 +451,24 @@ export const JobCardNew = ({
         if (storageError) throw storageError;
       }
 
-      // 6) delete job docs from DB
       const { error: jobDocsError } = await supabase
         .from("job_documents")
         .delete()
         .eq("job_id", job.id);
       if (jobDocsError) throw jobDocsError;
 
-      // 7) delete job assignments
       const { error: assignmentsError } = await supabase
         .from("job_assignments")
         .delete()
         .eq("job_id", job.id);
       if (assignmentsError) throw assignmentsError;
 
-      // 8) delete job_departments
       const { error: departmentsError } = await supabase
         .from("job_departments")
         .delete()
         .eq("job_id", job.id);
       if (departmentsError) throw departmentsError;
 
-      // 9) finally delete the job
       const { error: jobError } = await supabase
         .from("jobs")
         .delete()
@@ -550,13 +492,11 @@ export const JobCardNew = ({
     }
   };
 
-  // Toggle collapse
   const toggleCollapse = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCollapsed(!collapsed);
   };
 
-  // File upload => Supabase
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
     const file = e.target.files?.[0];
@@ -597,7 +537,6 @@ export const JobCardNew = ({
     }
   };
 
-  // View doc => signed URL
   const handleViewDocument = async (doc: JobDocument) => {
     try {
       console.log('Attempting to view document:', doc);
@@ -622,7 +561,6 @@ export const JobCardNew = ({
     }
   };
 
-  // Delete doc => Supabase
   const handleDeleteDocument = async (doc: JobDocument) => {
     if (!window.confirm("Are you sure you want to delete this document?")) return;
     try {
@@ -663,10 +601,8 @@ export const JobCardNew = ({
     }
   };
 
-  // If userRole="logistics", can't edit
   const canEdit = userRole !== "logistics";
 
-  // Convert assignments => array of {id, name, role}
   const assignedTechnicians = assignments
     .map((assignment: any) => {
       let role = null;
@@ -695,7 +631,6 @@ export const JobCardNew = ({
     })
     .filter(Boolean);
 
-  // Refresh data
   const refreshData = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await queryClient.invalidateQueries({ queryKey: ["jobs"] });
@@ -726,7 +661,6 @@ export const JobCardNew = ({
   };
 
   const handleJobClick = () => {
-    // Don't allow technician assignments for dry hire jobs
     if (job.job_type === 'dryhire') {
       return;
     }
@@ -893,68 +827,4 @@ export const JobCardNew = ({
                   Required Personnel: {getTotalPersonnel()}
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>FOH Engineers: {personnel.foh_engineers || 0}</div>
-                  <div>MON Engineers: {personnel.mon_engineers || 0}</div>
-                  <div>PA Techs: {personnel.pa_techs || 0}</div>
-                  <div>RF Techs: {personnel.rf_techs || 0}</div>
-                </div>
-              </div>
-            )}
-            {department === "sound" && soundTasks?.length > 0 && job.job_type !== 'dryhire' && (
-              <div className="mt-4 space-y-2">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>
-                    Task Progress ({getCompletedTasks()}/{soundTasks.length} completed)
-                  </span>
-                  <span>{calculateTotalProgress()}%</span>
-                </div>
-                <Progress value={calculateTotalProgress()} className="h-1" />
-                <div className="space-y-1">
-                  {soundTasks.map((task: any) => (
-                    <div key={task.id} className="flex items-center justify-between text-xs">
-                      <span>{task.task_type}</span>
-                      <div className="flex items-center gap-2">
-                        {task.assigned_to && (
-                          <span className="text-muted-foreground">
-                            {task.assigned_to.first_name} {task.assigned_to.last_name}
-                          </span>
-                        )}
-                        <Badge
-                          variant={task.status === "completed" ? "default" : "secondary"}
-                        >
-                          {task.status === "not_started"
-                            ? "Not Started"
-                            : task.status === "in_progress"
-                            ? "In Progress"
-                            : "Completed"}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {job.job_documents && onDeleteDocument && (
-              <JobDocuments
-                jobId={job.id}
-                documents={job.job_documents}
-                department={department}
-                onDeleteDocument={onDeleteDocument}
-              />
-            )}
-          </>
-        )}
-      </CardContent>
-
-      {job.job_type === "festival" && (
-        <ArtistManagementDialog
-          jobId={job.id}
-          open={artistManagementOpen}
-          onOpenChange={setArtistManagementOpen}
-        />
-      )}
-    </Card>
-  );
-};
-
-export default JobCardNew;
+                  <div>FOH Engineers: {personnel.foh_engineers ||
