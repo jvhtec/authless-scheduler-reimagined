@@ -555,7 +555,7 @@ export const JobCardNew = ({
       const formattedEndDate =
         new Date(job.end_time).toISOString().split(".")[0] + ".000Z";
 
-      await createAllFoldersForJob(job, formattedStartDate, formattedEndDate, documentNumber);
+      await createAllFoldersForJob(job, department: job.department || null, formattedStartDate, formattedEndDate, documentNumber);
 
       await updateFolderStatus.mutateAsync();
 
