@@ -827,4 +827,16 @@ export const JobCardNew = ({
                   Required Personnel: {getTotalPersonnel()}
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>FOH Engineers: {personnel.foh_engineers ||
+                  <div>FOH Engineers: {personnel.foh_engineers || 0}</div>
+                  <div>MON Engineers: {personnel.mon_engineers || 0}</div>
+                  <div>PA Techs: {personnel.pa_techs || 0}</div>
+                  <div>RF Techs: {personnel.rf_techs || 0}</div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
