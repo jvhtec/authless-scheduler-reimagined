@@ -213,8 +213,9 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
               <SelectContent>
                 <SelectItem value="single">Single</SelectItem>
                 <SelectItem value="tour">Tour</SelectItem>
+                <SelectItem value="tourdate">Tour Date</SelectItem>
                 <SelectItem value="festival">Festival</SelectItem>
-                <SelectItem value="dryhire">DryHire</SelectItem>
+                <SelectItem value="dryhire">Dry Hire</SelectItem>
               </SelectContent>
             </Select>
           </div>

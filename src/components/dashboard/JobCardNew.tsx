@@ -717,17 +717,28 @@ export const JobCardNew = ({
         return <Badge variant="secondary" className="ml-2">Festival</Badge>;
       case 'tourdate':
         return <Badge variant="secondary" className="ml-2">Tour Date</Badge>;
-      case 'dry hire':
-        return <Badge variant="secondary" className="ml-2">Dry Hire</Badge>;
+      case 'dryhire':
+        return <Badge variant="secondary" className="ml-2 bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">Dry Hire</Badge>;
       default:
         return null;
     }
   };
 
+  const handleJobClick = () => {
+    // Don't allow technician assignments for dry hire jobs
+    if (job.job_type === 'dryhire') {
+      return;
+    }
+    onJobClick(job.id);
+  };
+
   return (
     <Card
-      className="mb-4 hover:shadow-md transition-shadow cursor-pointer"
-      onClick={() => userRole !== "logistics" && onJobClick(job.id)}
+      className={cn(
+        "mb-4 hover:shadow-md transition-shadow",
+        job.job_type === 'dryhire' ? 'cursor-default' : 'cursor-pointer'
+      )}
+      onClick={handleJobClick}
       style={{
         borderColor: `${job.color}30` || "#7E69AB30",
         backgroundColor: `${job.color}05` || "#7E69AB05"
@@ -822,7 +833,7 @@ export const JobCardNew = ({
               {job.location.name}
             </div>
           )}
-          {assignedTechnicians.length > 0 && (
+          {assignedTechnicians.length > 0 && job.job_type !== 'dryhire' && (
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
               <div className="flex flex-wrap gap-1">
@@ -888,7 +899,7 @@ export const JobCardNew = ({
                 </div>
               </div>
             )}
-            {department === "sound" && soundTasks?.length > 0 && (
+            {department === "sound" && soundTasks?.length > 0 && job.job_type !== 'dryhire' && (
               <div className="mt-4 space-y-2">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>
