@@ -147,58 +147,73 @@ async function createAllFoldersForJob(
   };
 
   // **Handle `dryhire` Job Type**
- if (job.job_type === "dryhire") {
-  console.log("Dryhire job detected. Validating department...", job);
+  if (job.job_type === "dryhire") {
+    console.log("Dryhire job detected. Validating department...", job);
 
-  const startMonth = new Date(job.start_time).getMonth();
-  const department = job.department ? job.department.toLowerCase() : null;
+    // Get department from job_departments
+    const department = job.job_departments?.[0]?.department?.toLowerCase();
+    if (!department || !(department in DRYHIRE_PARENT_IDS)) {
+      console.error(`Invalid or missing department in job_departments: ${department}`);
+      throw new Error(`Department is missing or invalid in job departments`);
+    }
 
-  if (!department || !(department in DRYHIRE_PARENT_IDS)) {
-    console.error(`Invalid or missing department: ${job.department}`);
-    throw new Error(`Department is missing or invalid: ${job.department}`);
+    const startMonth = new Date(job.start_time).getMonth();
+    const parentIds = DRYHIRE_PARENT_IDS[department];
+    const parentElementId = parentIds[startMonth];
+
+    if (!parentElementId) {
+      throw new Error(`No parent element ID found for month: ${startMonth} in department: ${department}`);
+    }
+
+    const dryhirePayload = {
+      definitionId: FLEX_FOLDER_IDS.subFolder,
+      parentElementId,
+      open: true,
+      locked: false,
+      name: `Dry Hire - ${job.title} - ${department.charAt(0).toUpperCase() + department.slice(1)}`,
+      plannedStartDate: formattedStartDate,
+      plannedEndDate: formattedEndDate,
+      locationId: FLEX_FOLDER_IDS.location,
+      departmentId: DEPARTMENT_IDS[department],
+      documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[department]}DH`,
+      personResponsibleId: RESPONSIBLE_PERSON_IDS[department],
+    };
+
+    console.log("Creating Dryhire folder with payload:", dryhirePayload);
+    const dryhireFolder = await createFlexFolder(dryhirePayload);
+
+    await supabase
+      .from("flex_folders")
+      .insert({
+        job_id: job.id,
+        element_id: dryhireFolder.elementId,
+        parent_id: parentElementId,
+        department,
+        folder_type: "dryhire",
+      });
+
+    return;
   }
-
-  const parentIds = DRYHIRE_PARENT_IDS[department];
-  const parentElementId = parentIds[startMonth];
-
-  if (!parentElementId) {
-    throw new Error(`No parent element ID found for month: ${startMonth} in department: ${department}`);
-  }
-
-  const dryhirePayload = {
-    definitionId: FLEX_FOLDER_IDS.subFolder,
-    parentElementId,
-    open: true,
-    locked: false,
-    name: `Dry Hire - ${job.title} - ${department.charAt(0).toUpperCase() + department.slice(1)}`,
-    plannedStartDate: formattedStartDate,
-    plannedEndDate: formattedEndDate,
-    locationId: FLEX_FOLDER_IDS.location,
-    departmentId: DEPARTMENT_IDS[department],
-    documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[department]}DH`,
-    personResponsibleId: RESPONSIBLE_PERSON_IDS[department],
-  };
-
-  console.log("Creating Dryhire folder with payload:", dryhirePayload);
-  const dryhireFolder = await createFlexFolder(dryhirePayload);
-
-  await supabase
-    .from("flex_folders")
-    .insert({
-      job_id: job.id,
-      element_id: dryhireFolder.elementId,
-      parent_id: parentElementId,
-      department,
-      folder_type: "dryhire",
-    });
-
-  return;
-}
-
 
   // **Handle `tourdate` Job Type**
   if (job.job_type === "tourdate") {
-    console.log("Tourdate job type detected. Fetching existing department folders.");
+    console.log("Tourdate job type detected. Validating tour data...");
+
+    if (!job.tour_id) {
+      throw new Error("Tour ID is missing for tourdate job");
+    }
+
+    // Get tour info first to validate it exists
+    const { data: tourData, error: tourError } = await supabase
+      .from("tours")
+      .select("name")
+      .eq("id", job.tour_id)
+      .single();
+
+    if (tourError || !tourData) {
+      console.error("Error fetching tour data:", tourError);
+      throw new Error("Failed to fetch parent tour data");
+    }
 
     // Fetch existing department folders from Supabase
     const { data: departmentFolders, error } = await supabase
@@ -214,6 +229,9 @@ async function createAllFoldersForJob(
       departmentFolders.map((folder) => [folder.department, folder.element_id])
     );
 
+    const locationName = job.location?.name || "No Location";
+    const formattedDate = format(new Date(job.start_time), "MMM d, yyyy");
+
     const departments = ["sound", "lights", "video", "production", "personnel"];
     for (const dept of departments) {
       const parentFolderId = departmentFolderIds[dept];
@@ -228,7 +246,7 @@ async function createAllFoldersForJob(
         parentElementId: parentFolderId,
         open: true,
         locked: false,
-        name: `${job.location.name} - ${job.start_date} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+        name: `${locationName} - ${formattedDate} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
         plannedStartDate: formattedStartDate,
         plannedEndDate: formattedEndDate,
         locationId: FLEX_FOLDER_IDS.location,
@@ -237,6 +255,7 @@ async function createAllFoldersForJob(
         personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
       };
 
+      console.log(`Creating tour date folder for ${dept}:`, tourDateFolderPayload);
       const tourDateFolder = await createFlexFolder(tourDateFolderPayload);
       const tourDateFolderId = tourDateFolder.elementId;
 
@@ -277,7 +296,7 @@ async function createAllFoldersForJob(
             parentElementId: tourDateFolderId,
             open: true,
             locked: false,
-            name: `Pull Sheet - ${job.location.name}`,
+            name: `Pull Sheet - ${locationName}`,
           };
           await createFlexFolder(pullSheetPayload);
         }
@@ -291,27 +310,10 @@ async function createAllFoldersForJob(
             parentElementId: tourDateFolderId,
             open: true,
             locked: false,
-            name: `Crew Call - ${job.location.name}`,
+            name: `Crew Call - ${locationName}`,
           };
           await createFlexFolder(crewCallPayload);
         }
-
-        // Add Hoja de Gastos to Personnel
-        const personnelHojaGastosPayload = {
-          definitionId: FLEX_FOLDER_IDS.hojaGastos,
-          parentElementId: tourDateFolderId,
-          open: true,
-          locked: false,
-          name: `Hoja de Gastos - Personnel`,
-          plannedStartDate: formattedStartDate,
-          plannedEndDate: formattedEndDate,
-          locationId: FLEX_FOLDER_IDS.location,
-          departmentId: DEPARTMENT_IDS[dept],
-          documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}HG`,
-          personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
-        };
-
-        await createFlexFolder(personnelHojaGastosPayload);
       }
     }
 
