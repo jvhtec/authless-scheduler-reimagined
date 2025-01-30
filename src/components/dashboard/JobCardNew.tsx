@@ -706,20 +706,24 @@ export const JobCardNew = ({
       description: "The job information has been updated."
     });
   };
-const getBadgeForJobType = (jobType: string) => {
-  switch (jobType) {
-    case 'tour':
-      return <Badge variant="secondary" className="ml-2">Tour</Badge>;
-    case 'single':
-      return <Badge variant="secondary" className="ml-2">Single</Badge>;
-    case 'festival':
-      return <Badge variant="secondary" className="ml-2">Festival</Badge>;
-    case 'dry hire':
-      return <Badge variant="secondary" className="ml-2">Dry Hire</Badge>;
-    default:
-      return null;
-  }
-};
+
+  const getBadgeForJobType = (jobType: string) => {
+    switch (jobType) {
+      case 'tour':
+        return <Badge variant="secondary" className="ml-2">Tour</Badge>;
+      case 'single':
+        return <Badge variant="secondary" className="ml-2">Single</Badge>;
+      case 'festival':
+        return <Badge variant="secondary" className="ml-2">Festival</Badge>;
+      case 'tourdate':
+        return <Badge variant="secondary" className="ml-2">Tour Date</Badge>;
+      case 'dry hire':
+        return <Badge variant="secondary" className="ml-2">Dry Hire</Badge>;
+      default:
+        return null;
+    }
+  };
+
   return (
     <Card
       className="mb-4 hover:shadow-md transition-shadow cursor-pointer"

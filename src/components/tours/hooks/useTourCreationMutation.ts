@@ -120,12 +120,12 @@ export const useTourCreationMutation = () => {
           const { data: dateJob, error: dateJobError } = await supabase
             .from("jobs")
             .insert({
-              title: `${title} (Tour Date)`,
+              title: title, // Remove the "(Tour Date)" suffix
               description,
               start_time: `${dateInfo.date}T00:00:00`,
               end_time: `${dateInfo.date}T23:59:59`,
               location_id: locationId,
-              job_type: "single",
+              job_type: "tourdate", // Use the new job type
               tour_date_id: tourDate.id,
               color,
             })

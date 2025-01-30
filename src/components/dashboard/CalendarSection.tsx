@@ -202,6 +202,10 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     }
 
     const months = eachMonthOfInterval({ start: startDate, end: endDate });
+
+    // Filter jobs based on selected job types before generating PDF
+    const filteredJobs = jobs.filter(job => selectedJobTypes.length === 0 || selectedJobTypes.includes(job.job_type));
+
     const cellWidth = 40;
     const cellHeight = 30;
     const startX = 10;

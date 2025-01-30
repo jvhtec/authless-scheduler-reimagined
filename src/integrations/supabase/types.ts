@@ -1349,7 +1349,7 @@ export type Database = {
       direct_message_status: "unread" | "read"
       job_date_type: "travel" | "setup" | "show" | "off" | "rehearsal"
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
-      job_type: "single" | "tour" | "festival" | "dryhire"
+      job_type: "single" | "tour" | "festival" | "dryhire" | "tourdate"
       logistics_event_type: "load" | "unload"
       message_status: "unread" | "read"
       milestone_category:
