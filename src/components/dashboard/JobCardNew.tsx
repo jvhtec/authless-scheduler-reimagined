@@ -147,53 +147,54 @@ async function createAllFoldersForJob(
   };
 
   // **Handle `dryhire` Job Type**
-  if (job.job_type === "dryhire") {
-    console.log("Dryhire job type detected. Creating simplified folder structure.");
+ if (job.job_type === "dryhire") {
+  console.log("Dryhire job detected. Validating department...", job);
 
-    // Determine the start month (0-based index: January = 0, December = 11)
-    const startMonth = new Date(job.start_time).getMonth();
-    const department = job.department.toLowerCase(); // Expected: 'sound' or 'lights'
-    const parentIds = DRYHIRE_PARENT_IDS[department];
+  const startMonth = new Date(job.start_time).getMonth();
+  const department = job.department ? job.department.toLowerCase() : null;
 
-    if (!parentIds) {
-      throw new Error(`No parent IDs found for department: ${department}`);
-    }
-
-    const parentElementId = parentIds[startMonth];
-    if (!parentElementId) {
-      throw new Error(`No parent element ID found for month: ${startMonth} in department: ${department}`);
-    }
-
-    // Create the dryhire folder
-    const dryhirePayload = {
-      definitionId: FLEX_FOLDER_IDS.subFolder,
-      parentElementId,
-      open: true,
-      locked: false,
-      name: `Dry Hire - ${job.title} - ${department.charAt(0).toUpperCase() + department.slice(1)}`,
-      plannedStartDate: formattedStartDate,
-      plannedEndDate: formattedEndDate,
-      locationId: FLEX_FOLDER_IDS.location,
-      departmentId: DEPARTMENT_IDS[department],
-      documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[department]}DH`, // Add 'DH' as suffix
-      personResponsibleId: RESPONSIBLE_PERSON_IDS[department],
-    };
-
-    const dryhireFolder = await createFlexFolder(dryhirePayload);
-
-    // Store the dryhire folder in Supabase
-    await supabase
-      .from("flex_folders")
-      .insert({
-        job_id: job.id,
-        element_id: dryhireFolder.elementId,
-        parent_id: parentElementId,
-        department,
-        folder_type: "dryhire",
-      });
-
-    return;
+  if (!department || !(department in DRYHIRE_PARENT_IDS)) {
+    console.error(`Invalid or missing department: ${job.department}`);
+    throw new Error(`Department is missing or invalid: ${job.department}`);
   }
+
+  const parentIds = DRYHIRE_PARENT_IDS[department];
+  const parentElementId = parentIds[startMonth];
+
+  if (!parentElementId) {
+    throw new Error(`No parent element ID found for month: ${startMonth} in department: ${department}`);
+  }
+
+  const dryhirePayload = {
+    definitionId: FLEX_FOLDER_IDS.subFolder,
+    parentElementId,
+    open: true,
+    locked: false,
+    name: `Dry Hire - ${job.title} - ${department.charAt(0).toUpperCase() + department.slice(1)}`,
+    plannedStartDate: formattedStartDate,
+    plannedEndDate: formattedEndDate,
+    locationId: FLEX_FOLDER_IDS.location,
+    departmentId: DEPARTMENT_IDS[department],
+    documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[department]}DH`,
+    personResponsibleId: RESPONSIBLE_PERSON_IDS[department],
+  };
+
+  console.log("Creating Dryhire folder with payload:", dryhirePayload);
+  const dryhireFolder = await createFlexFolder(dryhirePayload);
+
+  await supabase
+    .from("flex_folders")
+    .insert({
+      job_id: job.id,
+      element_id: dryhireFolder.elementId,
+      parent_id: parentElementId,
+      department,
+      folder_type: "dryhire",
+    });
+
+  return;
+}
+
 
   // **Handle `tourdate` Job Type**
   if (job.job_type === "tourdate") {
