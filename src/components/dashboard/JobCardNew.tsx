@@ -204,70 +204,44 @@ async function createAllFoldersForJob(
     }
 
     const { data: tourData, error: tourError } = await supabase
-  .from("tours")
-  .select(`
-    id,
-    name,
-    flex_main_folder_id,
-    flex_sound_folder_id,
-    flex_lights_folder_id,
-    flex_video_folder_id,
-    flex_production_folder_id,
-    flex_personnel_folder_id
-  `)
-  .eq("id", job.tour_id)
-  .single();
+      .from("tours")
+      .select(`
+        id,
+        name,
+        flex_main_folder_id,
+        flex_sound_folder_id,
+        flex_lights_folder_id,
+        flex_video_folder_id,
+        flex_production_folder_id,
+        flex_personnel_folder_id
+      `)
+      .eq("id", job.tour_id)
+      .single();
 
-if (tourError || !tourData) {
-  console.error("Error fetching tour data:", tourError);
-  throw new Error(`Tour not found for tour_id: ${job.tour_id}`);
-}
+    if (tourError || !tourData) {
+      console.error("Error fetching tour data:", tourError);
+      throw new Error(`Tour not found for tour_id: ${job.tour_id}`);
+    }
 
-console.log("Fetched tour data:", tourData);
+    console.log("Fetched tour data:", tourData);
 
-   // Fetch the tour's existing flex folder IDs from the "tours" table
-const { data: tourData, error: tourError } = await supabase
-  .from("tours")
-  .select(`
-    id,
-    name,
-    flex_main_folder_id,
-    flex_sound_folder_id,
-    flex_lights_folder_id,
-    flex_video_folder_id,
-    flex_production_folder_id,
-    flex_personnel_folder_id
-  `)
-  .eq("id", job.tour_id)
-  .single();
+    // Map department folders using the stored flex folder IDs
+    const departmentFolders = {
+      sound: tourData.flex_sound_folder_id,
+      lights: tourData.flex_lights_folder_id,
+      video: tourData.flex_video_folder_id,
+      production: tourData.flex_production_folder_id,
+      personnel: tourData.flex_personnel_folder_id
+    };
 
-if (tourError || !tourData) {
-  console.error("Error fetching tour data:", tourError);
-  throw new Error(`Tour not found for tour_id: ${job.tour_id}`);
-}
+    console.log("Using department folders from tour:", departmentFolders);
 
-// Map department folders using the stored flex folder IDs
-const departmentFolders = {
-  sound: tourData.flex_sound_folder_id,
-  lights: tourData.flex_lights_folder_id,
-  video: tourData.flex_video_folder_id,
-  production: tourData.flex_production_folder_id,
-  personnel: tourData.flex_personnel_folder_id
-};
-
-console.log("Using department folders from tour:", departmentFolders);
-
-
-    const departmentFolderIds = Object.fromEntries(
-      departmentFolders.map((folder) => [folder.department, folder.element_id])
-    );
-
+    const departments = ["sound", "lights", "video", "production", "personnel"];
     const locationName = job.location?.name || "No Location";
     const formattedDate = format(new Date(job.start_time), "MMM d, yyyy");
 
-    const departments = ["sound", "lights", "video", "production", "personnel"];
     for (const dept of departments) {
-      const parentFolderId = departmentFolderIds[dept];
+      const parentFolderId = departmentFolders[dept];
       if (!parentFolderId) {
         console.warn(`No existing folder found for department: ${dept}`);
         continue;
