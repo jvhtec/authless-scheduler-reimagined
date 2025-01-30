@@ -497,27 +497,28 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
           </button>
 
           {isDropdownOpen && (
-            <div className="absolute z-10 mt-2 w-full bg-white border border-gray-200 rounded-md shadow-md">
-              {distinctJobTypes.map((type) => (
-                <div
-                  key={type}
-                  className="flex items-center justify-between px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                  onClick={() => {
-                    setSelectedJobTypes((prev) =>
-                      prev.includes(type)
-                        ? prev.filter((t) => t !== type)
-                        : [...prev, type]
-                    );
-                  }}
-                >
-                  <span className="text-sm">{type}</span>
-                  {selectedJobTypes.includes(type) && (
-                    <Check className="h-4 w-4 text-blue-500" />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+  <div className="absolute z-10 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-md">
+    {distinctJobTypes.map((type) => (
+      <div
+        key={type}
+        className="flex items-center justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+        onClick={() => {
+          setSelectedJobTypes((prev) =>
+            prev.includes(type)
+              ? prev.filter((t) => t !== type)
+              : [...prev, type]
+          );
+        }}
+      >
+        <span className="text-sm text-black dark:text-white">{type}</span>
+        {selectedJobTypes.includes(type) && (
+          <Check className="h-4 w-4 text-blue-500" />
+        )}
+      </div>
+    ))}
+  </div>
+)}
+
         </div>
 
         {!isCollapsed && (
