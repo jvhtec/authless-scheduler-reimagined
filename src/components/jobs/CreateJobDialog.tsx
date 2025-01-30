@@ -23,7 +23,7 @@ const formSchema = z.object({
   location_id: z.string().min(1, "Location is required"),
   start_time: z.string().min(1, "Start time is required"),
   end_time: z.string().min(1, "End time is required"),
-  job_type: z.enum(["single", "tour", "festival", "dryhire"] as const),
+  job_type: z.enum(["single", "tour", "festival", "dryhire", "tourdate"] as const),
   departments: z.array(z.string()).min(1, "At least one department is required"),
   color: z.string().min(1, "Color is required"),
 }).refine((data) => {
@@ -210,6 +210,7 @@ export const CreateJobDialog = ({ open, onOpenChange, currentDepartment }: Creat
                 <SelectItem value="tour">Tour</SelectItem>
                 <SelectItem value="festival">Festival</SelectItem>
                 <SelectItem value="dryhire">Dry Hire</SelectItem>
+                <SelectItem value="tourdate">Tour Date</SelectItem>
               </SelectContent>
             </Select>
           </div>
