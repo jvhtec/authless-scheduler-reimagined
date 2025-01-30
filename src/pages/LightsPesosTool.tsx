@@ -71,6 +71,7 @@ const lightsComponentDatabase = [
   { id: 58, name: 'TRUSS PROLYTE 30x30 CUBO', weight: 12 },
   { id: 59, name: 'TRUSS PRT 2.44M', weight: 45 },
   { id: 60, name: 'TRUSS PRT 3,06M', weight: 43 }
+  { id: 61, name: 'VARIOS', weight: 100 }
 ];
 
 interface TableRow {
