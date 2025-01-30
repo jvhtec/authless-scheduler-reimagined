@@ -203,27 +203,60 @@ async function createAllFoldersForJob(
       throw new Error("Tour ID is missing for tourdate job");
     }
 
-    // Get tour info first to validate it exists
     const { data: tourData, error: tourError } = await supabase
-      .from("tours")
-      .select("name")
-      .eq("id", job.tour_id)
-      .single();
+  .from("tours")
+  .select(`
+    id,
+    name,
+    flex_main_folder_id,
+    flex_sound_folder_id,
+    flex_lights_folder_id,
+    flex_video_folder_id,
+    flex_production_folder_id,
+    flex_personnel_folder_id
+  `)
+  .eq("id", job.tour_id)
+  .single();
 
-    if (tourError || !tourData) {
-      console.error("Error fetching tour data:", tourError);
-      throw new Error("Failed to fetch parent tour data");
-    }
+if (tourError || !tourData) {
+  console.error("Error fetching tour data:", tourError);
+  throw new Error(`Tour not found for tour_id: ${job.tour_id}`);
+}
 
-    // Fetch existing department folders from Supabase
-    const { data: departmentFolders, error } = await supabase
-      .from("flex_folders")
-      .select("department, element_id")
-      .eq("job_id", job.tour_id);
+console.log("Fetched tour data:", tourData);
 
-    if (error || !departmentFolders) {
-      throw new Error("Failed to fetch department folder IDs for tourdate.");
-    }
+   // Fetch the tour's existing flex folder IDs from the "tours" table
+const { data: tourData, error: tourError } = await supabase
+  .from("tours")
+  .select(`
+    id,
+    name,
+    flex_main_folder_id,
+    flex_sound_folder_id,
+    flex_lights_folder_id,
+    flex_video_folder_id,
+    flex_production_folder_id,
+    flex_personnel_folder_id
+  `)
+  .eq("id", job.tour_id)
+  .single();
+
+if (tourError || !tourData) {
+  console.error("Error fetching tour data:", tourError);
+  throw new Error(`Tour not found for tour_id: ${job.tour_id}`);
+}
+
+// Map department folders using the stored flex folder IDs
+const departmentFolders = {
+  sound: tourData.flex_sound_folder_id,
+  lights: tourData.flex_lights_folder_id,
+  video: tourData.flex_video_folder_id,
+  production: tourData.flex_production_folder_id,
+  personnel: tourData.flex_personnel_folder_id
+};
+
+console.log("Using department folders from tour:", departmentFolders);
+
 
     const departmentFolderIds = Object.fromEntries(
       departmentFolders.map((folder) => [folder.department, folder.element_id])
