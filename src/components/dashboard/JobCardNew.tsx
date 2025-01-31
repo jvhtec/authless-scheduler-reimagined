@@ -58,18 +58,18 @@ const DRYHIRE_PARENT_IDS = {
     "12": "i5j6k7l8-0123-4567-89ab-cdef01234567"  // December
   },
   lights: {
-    "01": "0a17dc75-6bef-4af1-903b-7526d6b694f0", // January
-    "02": "1b28ed86-7cf0-5bg2-014c-8637e7c705f1", // February
-    "03": "2c39fe97-8d01-6ch3-125d-9748f8d816g2", // March
-    "04": "3d40gf08-9e12-7di4-236e-0859g9e927h3", // April
-    "05": "4e51hg19-0f23-8ej5-347f-196ah0f038i4", // May
-    "06": "5f62ih20-1g34-9fk6-458g-207bi1g149j5", // June
-    "07": "6g73ji31-2h45-0gl7-569h-318cj2h250k6", // July
-    "08": "7h84kj42-3i56-1hm8-670i-429dk3i361l7", // August
-    "09": "8i95lk53-4j67-2in9-781j-530el4j472m8", // September
-    "10": "9j06ml64-5k78-3jo0-892k-641fm5k583n9", // October
-    "11": "0k17nm75-6l89-4kp1-903l-752gn6l694o0", // November
-    "12": "1l28on86-7m90-5lq2-014m-863ho7m705p1"  // December
+    "01": "967f1612-fb01-4608-ad1d-0dc002ae9f8b", // January
+    "02": "0c42a6b2-03dc-40fe-b30f-6d406329e8b0", // February
+    "03": "9dc0d60b-6d0b-4fc7-be1a-85989d7df6d0", // March
+    "04": "af64eafc-f8e8-442c-84e1-9088f2a939eb", // April
+    "05": "801ee08a-a868-42e1-8cf3-d34d33d881a5", // May
+    "06": "de57a801-7e5a-4831-afdb-0816522082a2", // June
+    "07": "0e8e9cf1-9ec2-4522-a46e-d3f60bc7816a", // July
+    "08": "86cc8f06-6286-4825-bfb8-cfc3cd614c82", // August
+    "09": "4f0297a6-89cd-4654-b8c5-14c20cb9bc44", // September
+    "10": "73a98ac6-6c11-4680-a854-186cc3d6901e", // October
+    "11": "43b1f259-420e-4d12-b76d-1675ce6ddbfd", // November
+    "12": "faa70677-f8de-4161-8b2e-8846caa07ada"  // December
   }
 };
 
