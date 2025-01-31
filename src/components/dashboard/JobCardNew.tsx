@@ -205,7 +205,7 @@ async function createAllFoldersForJob(
     return;
   }
 
-  // Handle tourdate job type
+  // 2) TOURDATE: *** UPDATED BLOCK BELOW ***
   if (job.job_type === "tourdate") {
     console.log("Tourdate job type detected. Validating tour data...");
 
@@ -213,6 +213,7 @@ async function createAllFoldersForJob(
       throw new Error("Tour ID is missing for tourdate job");
     }
 
+    // 2A) Fetch the 'tour' record that holds the parent *Flex* IDs
     const { data: tourData, error: tourError } = await supabase
       .from("tours")
       .select(`
@@ -234,29 +235,51 @@ async function createAllFoldersForJob(
     }
 
     if (!tourData.flex_main_folder_id) {
-      throw new Error("Tour folders have not been created yet. Please create tour folders first.");
+      throw new Error(
+        "Tour folders have not been created yet. Please create tour folders first."
+      );
     }
 
     console.log("Using tour folders:", tourData);
 
+    // 2B) We'll create subfolders under each dept folder from 'tours'
     const departments = ["sound", "lights", "video", "production", "personnel"];
     const locationName = job.location?.name || "No Location";
     const formattedDate = format(new Date(job.start_time), "MMM d, yyyy");
 
     for (const dept of departments) {
-      const parentFolderId = tourData[`flex_${dept}_folder_id`];
-      if (!parentFolderId) {
+      // Get the parent's *Flex* ID from the 'tours' record
+      const parentFlexId = tourData[`flex_${dept}_folder_id`];
+      if (!parentFlexId) {
         console.warn(`No existing folder found for department: ${dept}`);
         continue;
       }
 
-      // Create Tour Date Folder
+      // 2C) Find the local row in flex_folders that corresponds to that parent's Flex ID
+      const { data: [parentRow], error: parentErr } = await supabase
+        .from("flex_folders")
+        .select("*")
+        .eq("element_id", parentFlexId)
+        .limit(1);
+
+      if (parentErr) {
+        console.error("Error fetching parent row:", parentErr);
+        continue;
+      }
+      if (!parentRow) {
+        console.warn(`No local DB row found for parent element_id=${parentFlexId}`);
+        continue;
+      }
+
+      // 2D) Create the "tour date folder" in Flex for that dept
       const tourDateFolderPayload = {
         definitionId: FLEX_FOLDER_IDS.subFolder,
-        parentElementId: parentFolderId,
+        parentElementId: parentFlexId, // <-- pass the *Flex* ID for nesting in Flex
         open: true,
         locked: false,
-        name: `${locationName} - ${formattedDate} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+        name: `${locationName} - ${formattedDate} - ${
+          dept.charAt(0).toUpperCase() + dept.slice(1)
+        }`,
         plannedStartDate: formattedStartDate,
         plannedEndDate: formattedEndDate,
         locationId: FLEX_FOLDER_IDS.location,
@@ -267,25 +290,33 @@ async function createAllFoldersForJob(
 
       console.log(`Creating tour date folder for ${dept}:`, tourDateFolderPayload);
       const tourDateFolder = await createFlexFolder(tourDateFolderPayload);
-      const tourDateFolderId = tourDateFolder.elementId;
 
-      // Store the tourdate folder in Supabase
-      await supabase
+      // 2E) Insert the new folder row in local DB, referencing the parent's local .id
+      const { data: [childRow], error: childErr } = await supabase
         .from("flex_folders")
         .insert({
           job_id: job.id,
-          parent_id: parentFolderId,
-          element_id: tourDateFolderId,
+          parent_id: parentRow.id,              // <-- parent's local DB ID
+          element_id: tourDateFolder.elementId,  // child folder's *Flex* ID
           department: dept,
           folder_type: "tourdate",
-        });
+        })
+        .select("*");
 
-      // Add department-specific subfolders
+      if (childErr) {
+        console.error("Error inserting child folder row:", childErr);
+        continue;
+      }
+
+      // ==============
+      // SUB-SUBFOLDERS
+      // ==============
+
+      // 2F) Example: "Hoja de Gastos" for non-personnel depts
       if (dept !== "personnel") {
-        // Add Hoja de Gastos
         const hojaGastosPayload = {
           definitionId: FLEX_FOLDER_IDS.hojaGastos,
-          parentElementId: tourDateFolderId,
+          parentElementId: tourDateFolder.elementId, // parent's *Flex* ID
           open: true,
           locked: false,
           name: `Hoja de Gastos - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
@@ -298,25 +329,22 @@ async function createAllFoldersForJob(
         };
 
         const hojaGastosFolder = await createFlexFolder(hojaGastosPayload);
-        
-        // Store in flex_folders
-        await supabase
-          .from("flex_folders")
-          .insert({
-            job_id: job.id,
-            parent_id: tourDateFolderId,
-            element_id: hojaGastosFolder.elementId,
-            department: dept,
-            folder_type: "hoja_gastos",
-          });
+
+        // Insert the sub-subfolder row, referencing 'childRow.id' as parent
+        await supabase.from("flex_folders").insert({
+          job_id: job.id,
+          parent_id: childRow.id,                 // local DB adjacency
+          element_id: hojaGastosFolder.elementId,  // Flex ID
+          department: dept,
+          folder_type: "hoja_gastos",
+        });
       }
 
-      // Add department-specific folders
+      // 2G) For "sound": create "Pull Sheet"
       if (dept === "sound") {
-        // Add Pull Sheets
         const pullSheetPayload = {
           definitionId: FLEX_FOLDER_IDS.pullSheet,
-          parentElementId: tourDateFolderId,
+          parentElementId: tourDateFolder.elementId,
           open: true,
           locked: false,
           name: `Pull Sheet - ${locationName}`,
@@ -329,18 +357,48 @@ async function createAllFoldersForJob(
         };
 
         const pullSheetFolder = await createFlexFolder(pullSheetPayload);
-        
-        // Store in flex_folders
-        await supabase
-          .from("flex_folders")
-          .insert({
-            job_id: job.id,
-            parent_id: tourDateFolderId,
-            element_id: pullSheetFolder.elementId,
-            department: dept,
-            folder_type: "pull_sheet",
-          });
+
+        await supabase.from("flex_folders").insert({
+          job_id: job.id,
+          parent_id: childRow.id,
+          element_id: pullSheetFolder.elementId,
+          department: dept,
+          folder_type: "pull_sheet",
+        });
       }
+
+      // 2H) For "personnel": create "Crew Call"
+      if (dept === "personnel") {
+        const crewCallPayload = {
+          definitionId: FLEX_FOLDER_IDS.crewCall,
+          parentElementId: tourDateFolder.elementId,
+          open: true,
+          locked: false,
+          name: `Crew Call - ${locationName}`,
+          plannedStartDate: formattedStartDate,
+          plannedEndDate: formattedEndDate,
+          locationId: FLEX_FOLDER_IDS.location,
+          departmentId: DEPARTMENT_IDS[dept],
+          documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}CC`,
+          personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
+        };
+
+        const crewCallFolder = await createFlexFolder(crewCallPayload);
+
+        await supabase.from("flex_folders").insert({
+          job_id: job.id,
+          parent_id: childRow.id,
+          element_id: crewCallFolder.elementId,
+          department: dept,
+          folder_type: "crew_call",
+        });
+      }
+    }
+return;
+  }
+
+
+  // 3) EVERYTHIN
 
       if (dept === "personnel") {
         // Add Crew Calls
