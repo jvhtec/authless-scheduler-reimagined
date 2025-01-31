@@ -199,7 +199,7 @@ async function createAllFoldersForJob(
       .insert({
         job_id: job.id,
         parent_id: parentFolderId,
-        element_id: dryHireFolder.elementId,
+        element_id: dryHireFolder.id,
         department: department,
         folder_type: "dryhire",
       });
@@ -229,7 +229,7 @@ async function createAllFoldersForJob(
     };
 
     const mainFolder = await createFlexFolder(mainPayload);
-    const mainFolderId = mainFolder.Id;
+    const mainFolderId = mainFolder.id;
     const mainFolderNumber = mainFolder.documentNumber;
 
     // Also store the main folder in "flex_folders" (optional, but consistent)
@@ -268,7 +268,7 @@ async function createAllFoldersForJob(
       };
 
       const deptFolder = await createFlexFolder(deptPayload);
-      const deptFolderId = deptFolder.Id;
+      const deptFolderId = deptFolder.id;
       const deptFolderNumber = deptFolder.documentNumber;
 
       // Store the department folder in Supabase as well
@@ -473,7 +473,7 @@ async function createAllFoldersForJob(
 
       console.log(`Creating tour date folder for ${dept}:`, tourDateFolderPayload);
       const tourDateFolder = await createFlexFolder(tourDateFolderPayload);
-      const tourDateFolderId = tourDateFolder.elementId;
+      const tourDateFolderId = tourDateFolder.id;
 
       // Store the tourdate folder in Supabase
       await supabase
@@ -510,7 +510,7 @@ async function createAllFoldersForJob(
           .insert({
             job_id: job.id,
             parent_id: tourDateFolderId,
-            element_id: hojaGastosFolder.elementId,
+            element_id: hojaGastosFolder.id,
             department: dept,
             folder_type: "hoja_gastos",
           });
@@ -540,7 +540,7 @@ async function createAllFoldersForJob(
           .insert({
             job_id: job.id,
             parent_id: tourDateFolderId,
-            element_id: pullSheetFolder.elementId,
+            element_id: pullSheetFolder.id,
             department: dept,
             folder_type: "pull_sheet",
           });
@@ -570,7 +570,7 @@ async function createAllFoldersForJob(
           .insert({
             job_id: job.id,
             parent_id: tourDateFolderId,
-            element_id: crewCallFolder.elementId,
+            element_id: crewCallFolder.id,
             department: dept,
             folder_type: "crew_call",
           });
@@ -599,7 +599,7 @@ async function createAllFoldersForJob(
   };
 
   const topFolder = await createFlexFolder(topPayload);
-  const topFolderId = topFolder.elementId;
+  const topFolderId = topFolder.id;
 
   // Store the main folder in Supabase
   await supabase
@@ -627,7 +627,7 @@ async function createAllFoldersForJob(
     };
 
     const deptFolder = await createFlexFolder(deptPayload);
-    const deptFolderId = deptFolder.elementId;
+    const deptFolderId = deptFolder.id;
 
     // Store department folder in Supabase
     await supabase
