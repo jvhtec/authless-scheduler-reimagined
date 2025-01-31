@@ -1,4 +1,3 @@
-// Add these interfaces at the top of the file
 interface TourFolders {
   flex_main_folder_id: string | null;
   flex_sound_folder_id: string | null;
@@ -19,7 +18,6 @@ import CreateTourDialog from "../tours/CreateTourDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Department } from "@/types/department";
 
-// Add these constants after the imports
 const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
 const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
 
@@ -102,7 +100,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
     setIsDatesDialogOpen(true);
   };
 
-  const handleCreateFlexFolders = async (tourId: string) => {
+  const createFlexFolders = async (tourId: string) => {
     try {
       console.log("Creating Flex folders for tour:", tourId);
       const tour = tours.find(t => t.id === tourId);
@@ -125,8 +123,6 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
       
       const formattedStartDate = new Date(tour.start_date).toISOString().split('.')[0] + '.000Z';
       const formattedEndDate = new Date(tour.end_date).toISOString().split('.')[0] + '.000Z';
-
-      console.log('Formatted dates:', { formattedStartDate, formattedEndDate });
 
       // Create main folder
       const mainFolderPayload = {
@@ -209,14 +205,27 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
           const subFolder = await subResponse.json();
           console.log(`${dept} subfolder created:`, subFolder);
 
+          // Store the folder IDs in the updates object
           folderUpdates[`flex_${dept}_folder_id`] = subFolder.elementId;
           folderUpdates[`flex_${dept}_folder_number`] = subFolder.elementNumber;
+
+          // Create the flex_folders record
+          await supabase
+            .from('flex_folders')
+            .insert({
+              job_id: null, // This is a tour folder, not associated with a specific job
+              parent_id: mainFolder.elementId,
+              element_id: subFolder.elementId,
+              department: dept,
+              folder_type: 'tour_department'
+            });
+
         } catch (error) {
           console.error(`Error creating ${dept} subfolder:`, error);
         }
       }
 
-      // Update tour with all folder IDs
+      // Update tour with all folder IDs and mark as created
       const { error: updateError } = await supabase
         .from('tours')
         .update({
@@ -264,7 +273,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
             tour={tour}
             onTourClick={() => onTourClick(tour.id)}
             onManageDates={() => handleManageDates(tour.id)}
-            onCreateFlexFolders={() => handleCreateFlexFolders(tour.id)}
+            onCreateFlexFolders={() => createFlexFolders(tour.id)}
           />
         ))}
       </div>
