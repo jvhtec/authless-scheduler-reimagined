@@ -229,7 +229,7 @@ async function createAllFoldersForJob(
     };
 
     const mainFolder = await createFlexFolder(mainPayload);
-    const mainFolderId = mainFolder.elementId;
+    const mainFolderId = mainFolder.Id;
     const mainFolderNumber = mainFolder.documentNumber;
 
     // Also store the main folder in "flex_folders" (optional, but consistent)
@@ -268,7 +268,7 @@ async function createAllFoldersForJob(
       };
 
       const deptFolder = await createFlexFolder(deptPayload);
-      const deptFolderId = deptFolder.elementId;
+      const deptFolderId = deptFolder.Id;
       const deptFolderNumber = deptFolder.documentNumber;
 
       // Store the department folder in Supabase as well
