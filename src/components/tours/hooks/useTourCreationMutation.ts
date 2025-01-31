@@ -62,6 +62,7 @@ export const useTourCreationMutation = () => {
           end_time: `${validDates[validDates.length - 1].date}T23:59:59`,
           job_type: "tour",
           color,
+          tour_id: tour.id  // Add tour_id to main tour job
         })
         .select()
         .single();
@@ -120,13 +121,14 @@ export const useTourCreationMutation = () => {
           const { data: dateJob, error: dateJobError } = await supabase
             .from("jobs")
             .insert({
-              title: title, // Remove the "(Tour Date)" suffix
+              title: title,
               description,
               start_time: `${dateInfo.date}T00:00:00`,
               end_time: `${dateInfo.date}T23:59:59`,
               location_id: locationId,
-              job_type: "tourdate", // Use the new job type
+              job_type: "tourdate",
               tour_date_id: tourDate.id,
+              tour_id: tour.id,  // Add tour_id to tour date job
               color,
             })
             .select()
