@@ -42,6 +42,37 @@ const FLEX_FOLDER_IDS = {
   pullSheet:"a220432c-af33-11df-b8d5-00e08175e43e"
 };
 
+const DRYHIRE_PARENT_IDS = {
+  sound: {
+    "01": "283e0891-9ecb-406c-8c2c-51665d040b1d", // January
+    "02": "6d21b607-7c3a-43fe-bdb4-75a77a8ac4fa", // February
+    "03": "f8a9c4e2-1234-5678-90ab-cdef01234567", // March
+    "04": "a7b8c9d0-2345-6789-01ab-cdef23456789", // April
+    "05": "b8c9d0e1-3456-7890-12ab-cdef34567890", // May
+    "06": "c9d0e1f2-4567-8901-23ab-cdef45678901", // June
+    "07": "d0e1f2g3-5678-9012-34ab-cdef56789012", // July
+    "08": "e1f2g3h4-6789-0123-45ab-cdef67890123", // August
+    "09": "f2g3h4i5-7890-1234-56ab-cdef78901234", // September
+    "10": "g3h4i5j6-8901-2345-67ab-cdef89012345", // October
+    "11": "h4i5j6k7-9012-3456-78ab-cdef90123456", // November
+    "12": "i5j6k7l8-0123-4567-89ab-cdef01234567"  // December
+  },
+  lights: {
+    "01": "0a17dc75-6bef-4af1-903b-7526d6b694f0", // January
+    "02": "1b28ed86-7cf0-5bg2-014c-8637e7c705f1", // February
+    "03": "2c39fe97-8d01-6ch3-125d-9748f8d816g2", // March
+    "04": "3d40gf08-9e12-7di4-236e-0859g9e927h3", // April
+    "05": "4e51hg19-0f23-8ej5-347f-196ah0f038i4", // May
+    "06": "5f62ih20-1g34-9fk6-458g-207bi1g149j5", // June
+    "07": "6g73ji31-2h45-0gl7-569h-318cj2h250k6", // July
+    "08": "7h84kj42-3i56-1hm8-670i-429dk3i361l7", // August
+    "09": "8i95lk53-4j67-2in9-781j-530el4j472m8", // September
+    "10": "9j06ml64-5k78-3jo0-892k-641fm5k583n9", // October
+    "11": "0k17nm75-6l89-4kp1-903l-752gn6l694o0", // November
+    "12": "1l28on86-7m90-5lq2-014m-863ho7m705p1"  // December
+  }
+};
+
 const DEPARTMENT_IDS = {
   sound: "cdd5e372-d124-11e1-bba1-00e08175e43e",
   lights: "d5af7892-d124-11e1-bba1-00e08175e43e",
@@ -126,7 +157,55 @@ async function createAllFoldersForJob(
   formattedEndDate: string,
   documentNumber: string
 ) {
-  // Handle tourdate job type first since it's the most complex
+  // Handle dryhire job type first
+  if (job.job_type === "dryhire") {
+    console.log("Dryhire job type detected. Creating dryhire folder...");
+
+    const department = job.job_departments[0]?.department;
+    if (!department || !["sound", "lights"].includes(department)) {
+      throw new Error("Invalid department for dryhire job");
+    }
+
+    const startDate = new Date(job.start_time);
+    const monthKey = startDate.toISOString().slice(5, 7); // Get month as "MM"
+    const parentFolderId = DRYHIRE_PARENT_IDS[department][monthKey];
+
+    if (!parentFolderId) {
+      throw new Error(`No parent folder found for month ${monthKey}`);
+    }
+
+    const dryHireFolderPayload = {
+      definitionId: FLEX_FOLDER_IDS.subFolder,
+      parentElementId: parentFolderId,
+      open: true,
+      locked: false,
+      name: `Dry Hire - ${job.title}`,
+      plannedStartDate: formattedStartDate,
+      plannedEndDate: formattedEndDate,
+      locationId: FLEX_FOLDER_IDS.location,
+      departmentId: DEPARTMENT_IDS[department],
+      documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[department]}`,
+      personResponsibleId: RESPONSIBLE_PERSON_IDS[department],
+    };
+
+    console.log("Creating dryhire folder with payload:", dryHireFolderPayload);
+    const dryHireFolder = await createFlexFolder(dryHireFolderPayload);
+
+    // Store the dryhire folder in Supabase
+    await supabase
+      .from("flex_folders")
+      .insert({
+        job_id: job.id,
+        parent_id: parentFolderId,
+        element_id: dryHireFolder.elementId,
+        department: department,
+        folder_type: "dryhire",
+      });
+
+    return;
+  }
+
+  // Handle tourdate job type
   if (job.job_type === "tourdate") {
     console.log("Tourdate job type detected. Validating tour data...");
 
