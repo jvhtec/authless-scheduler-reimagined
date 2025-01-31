@@ -586,6 +586,7 @@ export type Database = {
           status: Database["public"]["Enums"]["job_status"] | null
           title: string
           tour_date_id: string | null
+          tour_id: string | null
         }
         Insert: {
           color?: string | null
@@ -601,6 +602,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["job_status"] | null
           title: string
           tour_date_id?: string | null
+          tour_id?: string | null
         }
         Update: {
           color?: string | null
@@ -616,6 +618,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["job_status"] | null
           title?: string
           tour_date_id?: string | null
+          tour_id?: string | null
         }
         Relationships: [
           {
