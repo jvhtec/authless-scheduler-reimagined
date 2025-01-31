@@ -44,18 +44,18 @@ const FLEX_FOLDER_IDS = {
 
 const DRYHIRE_PARENT_IDS = {
   sound: {
-    "01": "283e0891-9ecb-406c-8c2c-51665d040b1d", // January
+    "01": "43b1f259-420e-4d12-b76d-1675ce6ddbfd", // January
     "02": "6d21b607-7c3a-43fe-bdb4-75a77a8ac4fa", // February
-    "03": "f8a9c4e2-1234-5678-90ab-cdef01234567", // March
-    "04": "a7b8c9d0-2345-6789-01ab-cdef23456789", // April
-    "05": "b8c9d0e1-3456-7890-12ab-cdef34567890", // May
-    "06": "c9d0e1f2-4567-8901-23ab-cdef45678901", // June
-    "07": "d0e1f2g3-5678-9012-34ab-cdef56789012", // July
-    "08": "e1f2g3h4-6789-0123-45ab-cdef67890123", // August
-    "09": "f2g3h4i5-7890-1234-56ab-cdef78901234", // September
-    "10": "g3h4i5j6-8901-2345-67ab-cdef89012345", // October
-    "11": "h4i5j6k7-9012-3456-78ab-cdef90123456", // November
-    "12": "i5j6k7l8-0123-4567-89ab-cdef01234567"  // December
+    "03": "b8f1c60a-8fa2-44a5-ac83-40012e73f639", // March
+    "04": "68d9ff6c-8313-4ff9-844d-47873d958b9b", // April
+    "05": "a19204e0-4b8c-4f2d-a86b-a07fa189f44c", // May
+    "06": "27229f82-d759-4f7d-800a-1793e8c2b514", // June
+    "07": "73b16d86-db32-4b91-bbe2-f11149db4aa5", // July
+    "08": "8cdb98c5-8c32-4a14-bb3f-8a108cebb283", // August
+    "09": "650960c8-3000-4e4a-8113-ec1cc5acb1c9", // September
+    "10": "40ac2c72-3dbd-4804-998f-e42a6dd7dd33", // October
+    "11": "edaae406-25c2-4154-80ac-662bff9921c2", // November
+    "12": "bc758718-24c8-4045-bc65-6039b46fae0c"  // December
   },
   lights: {
     "01": "967f1612-fb01-4608-ad1d-0dc002ae9f8b", // January
