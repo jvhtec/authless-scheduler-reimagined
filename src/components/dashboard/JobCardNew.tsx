@@ -425,9 +425,9 @@ async function createAllFoldersForJob(
 
     if (dept === "personnel") {
       const personnelSubfolders = [
-        { name: '${job.title}', "Crew Call Sonido", suffix: "CCS" },
-        { name: '${job.title}', "Crew Call Luces", suffix: "CCL" },
-        { name: "Gastos de Personal", '${job.title}', suffix: "GP" },
+        { name: `Crew Call Sonido - ${job.title}`, suffix: "CCS" },
+        { name: `Crew Call Luces - ${job.title}`, suffix: "CCL" },
+        { name: `Gastos de Personal - ${job.title}`, suffix: "GP" },
       ];
 
       for (const sf of personnelSubfolders) {
