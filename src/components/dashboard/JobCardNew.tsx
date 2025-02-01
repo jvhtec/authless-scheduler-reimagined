@@ -937,7 +937,7 @@ export const JobCardNew = ({
       <Card
         className="mb-4 hover:shadow-md transition-shadow cursor-pointer"
         onClick={() => {
-          // If project mgmt page, open the tasks dialog for the current dept
+          // If on the project management page, open the tasks dialog for the current department
           if (isProjectManagementPage) {
             if (department === "sound") {
               setSoundTaskDialogOpen(true);
@@ -951,7 +951,7 @@ export const JobCardNew = ({
               }
             }
           } else {
-            // Not in project mgmt, do the default
+            // Not in project management, do the default
             if (userRole !== "logistics") {
               onJobClick(job.id);
             }
@@ -1161,15 +1161,32 @@ export const JobCardNew = ({
           )}
         </CardContent>
       </Card>
-      <JobCardNew
-  job={job}
-  department="sound" // or "lights"/"video"
-  userRole={userRole}
-  onJobClick={(id) => handleJobClick(id)}
-  isProjectManagementPage={true} // <-- crucial
-  ...
-/>
 
+      {/* Conditionally render the task dialogs based on department */}
+      {soundTaskDialogOpen && (
+        <SoundTaskDialog
+          open={soundTaskDialogOpen}
+          onOpenChange={setSoundTaskDialogOpen}
+          jobId={job.id}
+          // add any additional props required by SoundTaskDialog here
+        />
+      )}
+      {lightsTaskDialogOpen && (
+        <LightsTaskDialog
+          open={lightsTaskDialogOpen}
+          onOpenChange={setLightsTaskDialogOpen}
+          jobId={job.id}
+          // add any additional props required by LightsTaskDialog here
+        />
+      )}
+      {videoTaskDialogOpen && (
+        <VideoTaskDialog
+          open={videoTaskDialogOpen}
+          onOpenChange={setVideoTaskDialogOpen}
+          jobId={job.id}
+          // add any additional props required by VideoTaskDialog here
+        />
+      )}
 
       {artistManagementOpen && (
         <ArtistManagementDialog
