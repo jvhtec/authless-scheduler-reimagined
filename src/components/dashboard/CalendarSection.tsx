@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface CalendarSectionProps {
   date: Date | undefined;
@@ -27,53 +28,93 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [selectedJobTypes, setSelectedJobTypes] = useState<string[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const { toast } = useToast();
 
   const distinctJobTypes = jobs ? Array.from(new Set(jobs.map(job => job.job_type).filter(Boolean))) : [];
-  
-  const currentMonth = date || new Date();
-  const firstDayOfMonth = startOfMonth(currentMonth);
-  const lastDayOfMonth = endOfMonth(currentMonth);
-  const daysInMonth = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth });
-  const startDay = firstDayOfMonth.getDay();
-  const paddingDays = startDay === 0 ? 6 : startDay - 1;
-
-  const prefixDays = Array.from({ length: paddingDays }).map((_, i) => {
-    const day = new Date(firstDayOfMonth);
-    day.setDate(day.getDate() - (paddingDays - i));
-    return day;
-  });
-
-  const totalDaysNeeded = 42;
-  const suffixDays = Array.from({ length: totalDaysNeeded - (prefixDays.length + daysInMonth.length) }).map((_, i) => {
-    const day = new Date(lastDayOfMonth);
-    day.setDate(day.getDate() + (i + 1));
-    return day;
-  });
-
-  const allDays = [...prefixDays, ...daysInMonth, ...suffixDays];
 
   useEffect(() => {
-    const fetchDateTypes = async () => {
-      if (!jobs?.length) return;
-      
-      const { data, error } = await supabase
-        .from('job_date_types')
-        .select('*')
-        .in('job_id', jobs.map((job: any) => job.id));
-        
-      if (error) {
-        console.error('Error fetching date types:', error);
-        return;
+    const loadUserPreferences = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user?.id) return;
+
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('selected_job_types')
+          .eq('id', session.user.id)
+          .single();
+
+        if (error) {
+          console.error('Error loading user preferences:', error);
+          return;
+        }
+
+        if (profile?.selected_job_types) {
+          setSelectedJobTypes(profile.selected_job_types);
+        }
+      } catch (error) {
+        console.error('Error in loadUserPreferences:', error);
       }
-
-      const typesMap = data.reduce((acc: Record<string, any>, curr) => ({
-        ...acc,
-        [`${curr.job_id}-${curr.date}`]: curr
-      }), {});
-
-      setDateTypes(typesMap);
     };
 
+    loadUserPreferences();
+  }, []);
+
+  const saveUserPreferences = async (types: string[]) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) return;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ selected_job_types: types })
+        .eq('id', session.user.id);
+
+      if (error) {
+        console.error('Error saving user preferences:', error);
+        toast({
+          title: "Error saving preferences",
+          description: "Your filter preferences couldn't be saved.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error in saveUserPreferences:', error);
+    }
+  };
+
+  const handleJobTypeSelection = (type: string) => {
+    const newTypes = selectedJobTypes.includes(type)
+      ? selectedJobTypes.filter(t => t !== type)
+      : [...selectedJobTypes, type];
+    
+    setSelectedJobTypes(newTypes);
+    saveUserPreferences(newTypes);
+    setIsDropdownOpen(false);
+  };
+
+  const fetchDateTypes = async () => {
+    if (!jobs?.length) return;
+    
+    const { data, error } = await supabase
+      .from('job_date_types')
+      .select('*')
+      .in('job_id', jobs.map((job: any) => job.id));
+      
+    if (error) {
+      console.error('Error fetching date types:', error);
+      return;
+    }
+
+    const typesMap = data.reduce((acc: Record<string, any>, curr) => ({
+      ...acc,
+      [`${curr.job_id}-${curr.date}`]: curr
+    }), {});
+
+    setDateTypes(typesMap);
+  };
+
+  useEffect(() => {
     fetchDateTypes();
   }, [jobs]);
 
@@ -497,28 +538,21 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
           </button>
 
           {isDropdownOpen && (
-  <div className="absolute z-10 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-md">
-    {distinctJobTypes.map((type) => (
-      <div
-        key={type}
-        className="flex items-center justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-        onClick={() => {
-          setSelectedJobTypes((prev) =>
-            prev.includes(type)
-              ? prev.filter((t) => t !== type)
-              : [...prev, type]
-          );
-        }}
-      >
-        <span className="text-sm text-black dark:text-white">{type}</span>
-        {selectedJobTypes.includes(type) && (
-          <Check className="h-4 w-4 text-blue-500" />
-        )}
-      </div>
-    ))}
-  </div>
-)}
-
+            <div className="absolute z-10 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-md">
+              {distinctJobTypes.map((type) => (
+                <div
+                  key={type}
+                  className="flex items-center justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                  onClick={() => handleJobTypeSelection(type)}
+                >
+                  <span className="text-sm text-black dark:text-white">{type}</span>
+                  {selectedJobTypes.includes(type) && (
+                    <Check className="h-4 w-4 text-blue-500" />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {!isCollapsed && (
