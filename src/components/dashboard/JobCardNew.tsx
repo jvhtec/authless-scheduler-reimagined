@@ -348,9 +348,13 @@ async function createAllFoldersForJob(
             personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
           };
           
+          await createFlexFolder(subPayload);
+        }
+      }
       if (dept === "personnel") {
         const personnelSubfolders = [
-          { name: `Gastos de Personal - ${job.title}`, suffix: "GP" },  ];
+          { name: `Gastos de Personal - ${job.title}`, suffix: "GP" },  
+        ];
 
         for (const sf of personnelSubfolders) {
           const subPayload = {
@@ -366,13 +370,16 @@ async function createAllFoldersForJob(
             departmentId: DEPARTMENT_IDS[dept],
             personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
           };
- 
-          const personnelcrewCall = [
-             { name: `Crew Call Sonido - ${job.title}`, suffix: "CCS" },  
-             { name: `Crew Call Luces - ${job.title}`, suffix: "CCL" },
-            ];
 
-          for (const sf of personnelcrewCall) {
+          await createFlexFolder(subPayload);
+        }
+
+        const personnelcrewCall = [
+          { name: `Crew Call Sonido - ${job.title}`, suffix: "CCS" },  
+          { name: `Crew Call Luces - ${job.title}`, suffix: "CCL" },
+        ];
+
+        for (const sf of personnelcrewCall) {
           const subPayload = {
             definitionId: FLEX_FOLDER_IDS.crewCall,
             parentElementId: childRow.element_id,
@@ -518,7 +525,7 @@ async function createAllFoldersForJob(
 // ----------------------------------------------------------------
 // JobCardNew Component
 // ----------------------------------------------------------------
-const JobCardNew = ({
+export function JobCardNew({
   job,
   onEditClick,
   onDeleteClick,
@@ -529,7 +536,7 @@ const JobCardNew = ({
   showUpload = false,
   showManageArtists = false,
   isProjectManagementPage = false
-}: JobCardNewProps) => {
+}: JobCardNewProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -1236,6 +1243,4 @@ const JobCardNew = ({
       )}
     </>
   );
-};
-
-export default JobCardNew;
+}
