@@ -983,7 +983,6 @@ export const JobCardNew = ({
                 </Button>
               </>
             )}
-            {/* Create Flex Folders button is always shown */}
             <Button
               variant="ghost"
               size="icon"
@@ -993,7 +992,6 @@ export const JobCardNew = ({
             >
               <img src={createFolderIcon} alt="Create Flex folders" className="h-4 w-4" />
             </Button>
-            {/* Show file upload only for non-dryhire jobs */}
             {job.job_type !== "dryhire" && showUpload && (
               <div className="relative">
                 <input
@@ -1030,7 +1028,6 @@ export const JobCardNew = ({
                 {job.location.name}
               </div>
             )}
-            {/* For non-dryhire jobs only, display assigned technicians and documents */}
             {job.job_type !== "dryhire" && (
               <>
                 {assignedTechnicians.length > 0 && (
@@ -1086,63 +1083,62 @@ export const JobCardNew = ({
             )}
           </div>
 
-          {/* Expanded details: Only for non-dryhire jobs */}
           {!collapsed && job.job_type !== "dryhire" && (
             <>
               {department === "sound" && personnel && (
-                <div className="mt-2 p-2 bg-accent/20 rounded-md">
-                  <div className="text-xs font-medium mb-1">
-                    Required Personnel: {getTotalPersonnel()}
+                <>
+                  <div className="mt-2 p-2 bg-accent/20 rounded-md">
+                    <div className="text-xs font-medium mb-1">
+                      Required Personnel: {getTotalPersonnel()}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>FOH Engineers: {personnel.foh_engineers || 0}</div>
+                      <div>MON Engineers: {personnel.mon_engineers || 0}</div>
+                      <div>PA Techs: {personnel.pa_techs || 0}</div>
+                      <div>RF Techs: {personnel.rf_techs || 0}</div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>FOH Engineers: {personnel.foh_engineers || 0}</div>
-                    <div>MON Engineers: {personnel.mon_engineers || 0}</div>
-                    <div>PA Techs: {personnel.pa_techs || 0}</div>
-                    <div>RF Techs: {personnel.rf_techs || 0}</div>
-                  </div>
-                </div>
-{department === "sound" && soundTasks?.length > 0 && (
-  <div className="mt-4 space-y-2">
-    {/* Overall progress bar and counts */}
-    <div className="flex items-center justify-between text-xs text-muted-foreground">
-      <span>
-        Task Progress ({getCompletedTasks()}/{soundTasks.length} completed)
-      </span>
-      <span>{calculateTotalProgress()}%</span>
-    </div>
-    <Progress value={calculateTotalProgress()} className="h-1" />
 
-    {/* Individual tasks */}
-    <div className="space-y-1">
-      {soundTasks.map((task: any) => (
-        <div key={task.id} className="flex items-center justify-between text-xs">
-          <span>{task.task_type}</span>
-          <div className="flex items-center gap-2">
-            {task.assigned_to && (
-              <span className="text-muted-foreground">
-                {task.assigned_to.first_name} {task.assigned_to.last_name}
-              </span>
-            )}
-            <Badge variant={task.status === "completed" ? "default" : "secondary"}>
-              {task.status === "not_started"
-                ? "Not Started"
-                : task.status === "in_progress"
-                ? "In Progress"
-                : "Completed"}
-            </Badge>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+                  {soundTasks?.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>
+                          Task Progress ({getCompletedTasks()}/{soundTasks.length} completed)
+                        </span>
+                        <span>{calculateTotalProgress()}%</span>
+                      </div>
+                      <Progress value={calculateTotalProgress()} className="h-1" />
+
+                      <div className="space-y-1">
+                        {soundTasks.map((task: any) => (
+                          <div key={task.id} className="flex items-center justify-between text-xs">
+                            <span>{task.task_type}</span>
+                            <div className="flex items-center gap-2">
+                              {task.assigned_to && (
+                                <span className="text-muted-foreground">
+                                  {task.assigned_to.first_name} {task.assigned_to.last_name}
+                                </span>
+                              )}
+                              <Badge variant={task.status === "completed" ? "default" : "secondary"}>
+                                {task.status === "not_started"
+                                  ? "Not Started"
+                                  : task.status === "in_progress"
+                                  ? "In Progress"
+                                  : "Completed"}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
         </CardContent>
       </Card>
 
-      {/* Render Artist Management Dialog for festival jobs */}
       {artistManagementOpen && (
         <ArtistManagementDialog
           open={artistManagementOpen}
