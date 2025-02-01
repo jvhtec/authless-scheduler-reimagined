@@ -13,38 +13,26 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
-  Eye
+  Eye,
+  Plane,
+  Wrench,
+  Star,
+  Moon,
+  Mic
 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { JobDocuments } from "./JobDocuments";
+import { Progress } from "@/components/ui/progress";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import createFolderIcon from "@/assets/icons/icon.png";
 import { Department } from "@/types/department";
 import { ArtistManagementDialog } from "../festival/ArtistManagementDialog";
 
-export interface JobDocument {
-  id: string;
-  file_name: string;
-  file_path: string;
-  uploaded_at: string;
-}
-
-export interface JobCardNewProps {
-  job: any;
-  onEditClick: (job: any) => void;
-  onDeleteClick: (jobId: string) => void;
-  onJobClick: (jobId: string) => void;
-  showAssignments?: boolean;
-  department?: Department;
-  userRole?: string | null;
-  onDeleteDocument?: (jobId: string, document: JobDocument) => void;
-  showUpload?: boolean;
-  showManageArtists?: boolean;
-  isProjectManagementPage?: boolean;
-}
-
-// Constants used in folder creation
+// ----------------------
+// Constants used in Flex folder creation
+// ----------------------
 const FLEX_FOLDER_IDS = {
   mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
   subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
@@ -149,20 +137,16 @@ async function createAllFoldersForJob(
   // Handle dryhire job type first
   if (job.job_type === "dryhire") {
     console.log("Dryhire job type detected. Creating dryhire folder...");
-
     const department = job.job_departments[0]?.department;
     if (!department || !["sound", "lights"].includes(department)) {
       throw new Error("Invalid department for dryhire job");
     }
-
     const startDate = new Date(job.start_time);
-    const monthKey = startDate.toISOString().slice(5, 7);
+    const monthKey = startDate.toISOString().slice(5, 7); // "MM"
     const parentFolderId = DRYHIRE_PARENT_IDS[department][monthKey];
-
     if (!parentFolderId) {
       throw new Error(`No parent folder found for month ${monthKey}`);
     }
-
     const dryHireFolderPayload = {
       definitionId: FLEX_FOLDER_IDS.subFolder,
       parentElementId: parentFolderId,
@@ -176,10 +160,8 @@ async function createAllFoldersForJob(
       documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[department]}`,
       personResponsibleId: RESPONSIBLE_PERSON_IDS[department],
     };
-
     console.log("Creating dryhire folder with payload:", dryHireFolderPayload);
     const dryHireFolder = await createFlexFolder(dryHireFolderPayload);
-
     await supabase
       .from("flex_folders")
       .insert({
@@ -189,18 +171,15 @@ async function createAllFoldersForJob(
         department: department,
         folder_type: "dryhire",
       });
-
     return;
   }
 
   // Handle tourdate job type
   if (job.job_type === "tourdate") {
     console.log("Tourdate job type detected. Validating tour data...");
-
     if (!job.tour_id) {
       throw new Error("Tour ID is missing for tourdate job");
     }
-
     const { data: tourData, error: tourError } = await supabase
       .from("tours")
       .select(`
@@ -215,35 +194,28 @@ async function createAllFoldersForJob(
       `)
       .eq("id", job.tour_id)
       .single();
-
     if (tourError || !tourData) {
       console.error("Error fetching tour data:", tourError);
       throw new Error(`Tour not found for tour_id: ${job.tour_id}`);
     }
-
     if (!tourData.flex_main_folder_id) {
       throw new Error("Tour folders have not been created yet. Please create tour folders first.");
     }
-
     console.log("Using tour folders:", tourData);
-
     const departments = ["sound", "lights", "video", "production", "personnel"];
     const locationName = job.location?.name || "No Location";
     const formattedDate = format(new Date(job.start_time), "MMM d, yyyy");
-
     for (const dept of departments) {
       const parentFolderId = tourData[`flex_${dept}_folder_id`];
       if (!parentFolderId) {
         console.warn(`No parent folder ID found for ${dept} department`);
         continue;
       }
-
       const { data: [parentRow], error: parentErr } = await supabase
         .from("flex_folders")
         .select("*")
         .eq("element_id", parentFolderId)
         .limit(1);
-
       if (parentErr) {
         console.error("Error fetching parent row:", parentErr);
         continue;
@@ -252,7 +224,6 @@ async function createAllFoldersForJob(
         console.warn(`No local DB row found for parent element_id=${parentFolderId}`);
         continue;
       }
-
       const tourDateFolderPayload = {
         definitionId: FLEX_FOLDER_IDS.subFolder,
         parentElementId: parentFolderId,
@@ -266,10 +237,8 @@ async function createAllFoldersForJob(
         documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`,
         personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
       };
-
       console.log(`Creating tour date folder for ${dept}:`, tourDateFolderPayload);
       const tourDateFolder = await createFlexFolder(tourDateFolderPayload);
-
       const { data: [childRow], error: childErr } = await supabase
         .from("flex_folders")
         .insert({
@@ -280,12 +249,10 @@ async function createAllFoldersForJob(
           folder_type: "tourdate",
         })
         .select("*");
-
       if (childErr) {
         console.error("Error inserting child folder row:", childErr);
         continue;
       }
-
       if (dept !== "personnel") {
         const subfolders = [
           {
@@ -304,7 +271,6 @@ async function createAllFoldersForJob(
             suffix: "HG",
           },
         ];
-
         for (const sf of subfolders) {
           const subPayload = {
             definitionId: sf.definitionId,
@@ -319,18 +285,38 @@ async function createAllFoldersForJob(
             documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
             personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
           };
-
           await createFlexFolder(subPayload);
         }
       }
-
+      if (dept === "sound") {
+        const pullSheetPayload = {
+          definitionId: FLEX_FOLDER_IDS.pullSheet,
+          parentElementId: tourDateFolder.elementId,
+          open: true,
+          locked: false,
+          name: `Pull Sheet - ${locationName}`,
+          plannedStartDate: formattedStartDate,
+          plannedEndDate: formattedEndDate,
+          locationId: FLEX_FOLDER_IDS.location,
+          departmentId: DEPARTMENT_IDS[dept],
+          documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}PS`,
+          personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
+        };
+        const pullSheetFolder = await createFlexFolder(pullSheetPayload);
+        await supabase.from("flex_folders").insert({
+          job_id: job.id,
+          parent_id: childRow.id,
+          element_id: pullSheetFolder.elementId,
+          department: dept,
+          folder_type: "pull_sheet",
+        });
+      }
       if (dept === "personnel") {
         const personnelSubfolders = [
           { name: `Crew Call Sonido - ${job.title}`, suffix: "CCS" },
           { name: `Crew Call Luces - ${job.title}`, suffix: "CCL" },
           { name: `Gastos de Personal - ${job.title}`, suffix: "GP" },
         ];
-
         for (const sf of personnelSubfolders) {
           const subPayload = {
             definitionId: FLEX_FOLDER_IDS.subFolder,
@@ -345,7 +331,6 @@ async function createAllFoldersForJob(
             departmentId: DEPARTMENT_IDS[dept],
             personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
           };
-
           await createFlexFolder(subPayload);
         }
       }
@@ -355,7 +340,6 @@ async function createAllFoldersForJob(
 
   // Default Logic: Full Folder Structure for non-dryhire/non-tourdate jobs
   console.log("Default job type detected. Creating full folder structure.");
-
   const topPayload = {
     definitionId: FLEX_FOLDER_IDS.mainFolder,
     open: true,
@@ -367,10 +351,8 @@ async function createAllFoldersForJob(
     personResponsibleId: FLEX_FOLDER_IDS.mainResponsible,
     documentNumber,
   };
-
   const topFolder = await createFlexFolder(topPayload);
   const topFolderId = topFolder.elementId;
-
   await supabase
     .from("flex_folders")
     .insert({
@@ -378,7 +360,6 @@ async function createAllFoldersForJob(
       element_id: topFolderId,
       folder_type: "main_event",
     });
-
   const departments = ["sound", "lights", "video", "production", "personnel"];
   for (const dept of departments) {
     const deptPayload = {
@@ -394,10 +375,8 @@ async function createAllFoldersForJob(
       documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`,
       personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
     };
-
     const deptFolder = await createFlexFolder(deptPayload);
     const deptFolderId = deptFolder.elementId;
-
     await supabase
       .from("flex_folders")
       .insert({
@@ -407,7 +386,6 @@ async function createAllFoldersForJob(
         department: dept,
         folder_type: "department",
       });
-
     if (dept !== "personnel") {
       const subfolders = [
         {
@@ -426,7 +404,6 @@ async function createAllFoldersForJob(
           suffix: "HG",
         },
       ];
-
       for (const sf of subfolders) {
         const subPayload = {
           definitionId: sf.definitionId,
@@ -441,18 +418,15 @@ async function createAllFoldersForJob(
           documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
           personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
         };
-
         await createFlexFolder(subPayload);
       }
     }
-
     if (dept === "personnel") {
       const personnelSubfolders = [
         { name: `Crew Call Sonido - ${job.title}`, suffix: "CCS" },
         { name: `Crew Call Luces - ${job.title}`, suffix: "CCL" },
         { name: `Gastos de Personal - ${job.title}`, suffix: "GP" },
       ];
-
       for (const sf of personnelSubfolders) {
         const subPayload = {
           definitionId: FLEX_FOLDER_IDS.subFolder,
@@ -467,198 +441,98 @@ async function createAllFoldersForJob(
           departmentId: DEPARTMENT_IDS[dept],
           personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
         };
-
         await createFlexFolder(subPayload);
       }
     }
   }
-}
 
-// ----------------------------------------------------------------
-// JobCardNew Component
-// ----------------------------------------------------------------
-export const JobCardNew = ({
-  job,
-  onEditClick,
-  onDeleteClick,
-  onJobClick,
-  department = "sound",
-  userRole,
-  onDeleteDocument,
-  showUpload = false,
-  showManageArtists = false,
-  isProjectManagementPage = false
-}: JobCardNewProps) => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
+  // ----------------------
+  // JobCardNew Component
+  // ----------------------
   const [collapsed, setCollapsed] = useState(true);
   const [assignments, setAssignments] = useState(job.job_assignments || []);
   const [documents, setDocuments] = useState<JobDocument[]>(job.job_documents || []);
   const [artistManagementOpen, setArtistManagementOpen] = useState(false);
 
-  const assignedTechnicians =
-    job.job_type !== "dryhire"
-      ? assignments
-          .map((assignment: any) => {
-            let role = null;
-            switch (department) {
-              case "sound":
-                role = assignment.sound_role;
-                break;
-              case "lights":
-                role = assignment.lights_role;
-                break;
-              case "video":
-                role = assignment.video_role;
-                break;
-              default:
-                role =
-                  assignment.sound_role ||
-                  assignment.lights_role ||
-                  assignment.video_role;
-            }
-            if (!role) return null;
-            return {
-              id: assignment.technician_id,
-              name: `${assignment.profiles?.first_name || ""} ${
-                assignment.profiles?.last_name || ""
-              }`.trim(),
-              role
-            };
-          })
-          .filter(Boolean)
-      : [];
-
-  const { data: soundTasks } = useQuery({
-    queryKey: ["sound-tasks", job.id],
-    queryFn: async () => {
-      if (department !== "sound") return null;
-      const { data, error } = await supabase
-        .from("sound_job_tasks")
-        .select(
-          `
+  // Tasks queries (custom hooks)
+  function useSoundTasks(jobId: string, department: string) {
+    return useQuery({
+      queryKey: ["sound-tasks", jobId],
+      queryFn: async () => {
+        if (department !== "sound") return null;
+        const { data, error } = await supabase
+          .from("sound_job_tasks")
+          .select(`
             *,
             assigned_to (
               first_name,
               last_name
             ),
             task_documents(*)
-          `
-        )
-        .eq("job_id", job.id);
-      if (error) throw error;
-      return data;
-    },
-    enabled: department === "sound",
-    retry: 3,
-    retryDelay: 1000
-  });
+          `)
+          .eq("job_id", jobId);
+        if (error) throw error;
+        return data;
+      },
+      enabled: department === "sound",
+      retry: 3,
+      retryDelay: 1000
+    });
+  }
 
-  const { data: personnel } = useQuery({
-    queryKey: ["sound-personnel", job.id],
-    queryFn: async () => {
-      if (department !== "sound") return null;
-      const { data: existingData, error: fetchError } = await supabase
-        .from("sound_job_personnel")
-        .select("*")
-        .eq("job_id", job.id)
-        .maybeSingle();
-      if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
-      if (!existingData) {
-        const { data: newData, error: insertError } = await supabase
-          .from("sound_job_personnel")
-          .insert({
-            job_id: job.id,
-            foh_engineers: 0,
-            mon_engineers: 0,
-            pa_techs: 0,
-            rf_techs: 0
-          })
-          .select()
-          .single();
-        if (insertError) throw insertError;
-        return newData;
-      }
-      return existingData;
-    },
-    enabled: department === "sound"
-  });
+  function useLightsTasks(jobId: string, department: string) {
+    return useQuery({
+      queryKey: ["lights-tasks", jobId],
+      queryFn: async () => {
+        if (department !== "lights") return null;
+        const { data, error } = await supabase
+          .from("lights_job_tasks")
+          .select(`
+            *,
+            assigned_to (
+              first_name,
+              last_name
+            ),
+            task_documents(*)
+          `)
+          .eq("job_id", jobId);
+        if (error) throw error;
+        return data;
+      },
+      enabled: department === "lights",
+      retry: 3,
+      retryDelay: 1000
+    });
+  }
 
-  const updateFolderStatus = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from("jobs")
-        .update({ flex_folders_created: true })
-        .eq("id", job.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["jobs"] });
-    }
-  });
+  function useVideoTasks(jobId: string, department: string) {
+    return useQuery({
+      queryKey: ["video-tasks", jobId],
+      queryFn: async () => {
+        if (department !== "video") return null;
+        const { data, error } = await supabase
+          .from("video_job_tasks")
+          .select(`
+            *,
+            assigned_to (
+              first_name,
+              last_name
+            ),
+            task_documents(*)
+          `)
+          .eq("job_id", jobId);
+        if (error) throw error;
+        return data;
+      },
+      enabled: department === "video",
+      retry: 3,
+      retryDelay: 1000
+    });
+  }
 
-  const createFlexFoldersHandler = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    if (job.flex_folders_created) {
-      toast({
-        title: "Folders already created",
-        description: "Flex folders have already been created for this job.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const startDate = new Date(job.start_time);
-      const documentNumber = startDate
-        .toISOString()
-        .slice(2, 10)
-        .replace(/-/g, "");
-
-      const formattedStartDate =
-        new Date(job.start_time).toISOString().split(".")[0] + ".000Z";
-      const formattedEndDate =
-        new Date(job.end_time).toISOString().split(".")[0] + ".000Z";
-
-      await createAllFoldersForJob(job, formattedStartDate, formattedEndDate, documentNumber);
-      await updateFolderStatus.mutateAsync();
-
-      toast({
-        title: "Success",
-        description: "Flex folders have been created successfully."
-      });
-    } catch (error: any) {
-      console.error("Error creating Flex folders:", error);
-      toast({
-        title: "Error creating folders",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const calculateTotalProgress = () => {
-    if (!soundTasks?.length) return 0;
-    const totalProgress = soundTasks.reduce((acc, task) => acc + (task.progress || 0), 0);
-    return Math.round(totalProgress / soundTasks.length);
-  };
-
-  const getCompletedTasks = () => {
-    if (!soundTasks?.length) return 0;
-    return soundTasks.filter((task: any) => task.status === "completed").length;
-  };
-
-  const getTotalPersonnel = () => {
-    if (!personnel) return 0;
-    return (
-      (personnel.foh_engineers || 0) +
-      (personnel.mon_engineers || 0) +
-      (personnel.pa_techs || 0) +
-      (personnel.rf_techs || 0)
-    );
-  };
+  const { data: soundTasks } = useSoundTasks(job.id, department);
+  const { data: lightsTasks } = useLightsTasks(job.id, department);
+  const { data: videoTasks } = useVideoTasks(job.id, department);
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -667,7 +541,6 @@ export const JobCardNew = ({
 
   const handleDeleteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-
     if (!["admin", "management"].includes(userRole || "")) {
       toast({
         title: "Permission denied",
@@ -676,14 +549,9 @@ export const JobCardNew = ({
       });
       return;
     }
-
-    if (!window.confirm("Are you sure you want to delete this job?")) {
-      return;
-    }
-
+    if (!window.confirm("Are you sure you want to delete this job?")) return;
     try {
       console.log("Deleting job:", job.id);
-
       const { data: soundTaskIds } = await supabase
         .from("sound_job_tasks")
         .select("id")
@@ -724,50 +592,42 @@ export const JobCardNew = ({
         supabase.from("lights_job_tasks").delete().eq("job_id", job.id),
         supabase.from("video_job_tasks").delete().eq("job_id", job.id)
       ]);
-
       await Promise.all([
         supabase.from("sound_job_personnel").delete().eq("job_id", job.id),
         supabase.from("lights_job_personnel").delete().eq("job_id", job.id),
         supabase.from("video_job_personnel").delete().eq("job_id", job.id)
       ]);
-
       if (job.job_documents?.length > 0) {
         const { error: storageError } = await supabase.storage
           .from("job_documents")
           .remove(job.job_documents.map((doc: JobDocument) => doc.file_path));
         if (storageError) throw storageError;
       }
-
       const { error: jobDocsError } = await supabase
         .from("job_documents")
         .delete()
         .eq("job_id", job.id);
       if (jobDocsError) throw jobDocsError;
-
       const { error: assignmentsError } = await supabase
         .from("job_assignments")
         .delete()
         .eq("job_id", job.id);
       if (assignmentsError) throw assignmentsError;
-
       const { error: departmentsError } = await supabase
         .from("job_departments")
         .delete()
         .eq("job_id", job.id);
       if (departmentsError) throw departmentsError;
-
       const { error: jobError } = await supabase
         .from("jobs")
         .delete()
         .eq("id", job.id);
       if (jobError) throw jobError;
-
       onDeleteClick(job.id);
       toast({
         title: "Success",
         description: "Job deleted successfully"
       });
-
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
     } catch (error: any) {
       console.error("Error deleting job:", error);
@@ -787,17 +647,14 @@ export const JobCardNew = ({
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
     const file = e.target.files?.[0];
-    if (!file || !department) return;
-
+    if (!file) return;
     try {
       const fileExt = file.name.split(".").pop();
-      const filePath = `${department}/${job.id}/${crypto.randomUUID()}.${fileExt}`;
-
+      const filePath = `${job.id}/${crypto.randomUUID()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage
         .from("job_documents")
         .upload(filePath, file);
       if (uploadError) throw uploadError;
-
       const { error: dbError } = await supabase
         .from("job_documents")
         .insert({
@@ -808,9 +665,7 @@ export const JobCardNew = ({
           file_size: file.size
         });
       if (dbError) throw dbError;
-
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
-
       toast({
         title: "Document uploaded",
         description: "The document has been successfully uploaded."
@@ -826,23 +681,16 @@ export const JobCardNew = ({
 
   const handleViewDocument = async (doc: JobDocument) => {
     try {
-      console.log("Attempting to view document:", doc);
       const { data, error } = await supabase.storage
         .from("job_documents")
         .createSignedUrl(doc.file_path, 60);
-
-      if (error) {
-        console.error("Error creating signed URL:", error);
-        throw error;
-      }
-
-      console.log("Signed URL created:", data.signedUrl);
+      if (error) throw error;
       window.open(data.signedUrl, "_blank");
-    } catch (err: any) {
-      console.error("Error in handleViewDocument:", err);
+    } catch (error) {
+      console.error("Error viewing document:", error);
       toast({
-        title: "Error viewing document",
-        description: err.message,
+        title: "Error",
+        description: "Failed to view document",
         variant: "destructive"
       });
     }
@@ -851,36 +699,25 @@ export const JobCardNew = ({
   const handleDeleteDocument = async (doc: JobDocument) => {
     if (!window.confirm("Are you sure you want to delete this document?")) return;
     try {
-      console.log("Starting document deletion:", doc);
       const { error: storageError } = await supabase.storage
         .from("job_documents")
         .remove([doc.file_path]);
-      
-      if (storageError) {
-        console.error("Storage deletion error:", storageError);
-        throw storageError;
-      }
-
+      if (storageError) throw storageError;
       const { error: dbError } = await supabase
         .from("job_documents")
         .delete()
         .eq("id", doc.id);
-      
-      if (dbError) {
-        console.error("Database deletion error:", dbError);
-        throw dbError;
-      }
-
+      if (dbError) throw dbError;
+      setDocuments(documents.filter((d) => d.id !== doc.id));
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
-
       toast({
         title: "Document deleted",
         description: "The document has been successfully deleted."
       });
     } catch (err: any) {
-      console.error("Error in handleDeleteDocument:", err);
+      console.error("Error deleting document:", err);
       toast({
-        title: "Error deleting document",
+        title: "Error",
         description: err.message,
         variant: "destructive"
       });
@@ -889,12 +726,36 @@ export const JobCardNew = ({
 
   const canEdit = userRole !== "logistics";
 
+  const assignedTechnicians = assignments
+    .map((assignment: any) => {
+      let role = null;
+      switch (department) {
+        case "sound":
+          role = assignment.sound_role;
+          break;
+        case "lights":
+          role = assignment.lights_role;
+          break;
+        case "video":
+          role = assignment.video_role;
+          break;
+        default:
+          role = assignment.sound_role || assignment.lights_role || assignment.video_role;
+      }
+      if (!role) return null;
+      return {
+        id: assignment.technician_id,
+        name: `${assignment.profiles?.first_name || ""} ${assignment.profiles?.last_name || ""}`.trim(),
+        role
+      };
+    })
+    .filter(Boolean);
+
   const refreshData = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await queryClient.invalidateQueries({ queryKey: ["jobs"] });
     await queryClient.invalidateQueries({ queryKey: ["sound-tasks", job.id] });
     await queryClient.invalidateQueries({ queryKey: ["sound-personnel", job.id] });
-
     toast({
       title: "Data refreshed",
       description: "The job information has been updated."
@@ -912,21 +773,19 @@ export const JobCardNew = ({
       case "tourdate":
         return <Badge variant="secondary" className="ml-2">Tour Date</Badge>;
       case "dryhire":
-        return <Badge variant="secondary" className="ml-2">Dry Hire</Badge>;
+        return <Badge variant="secondary" className="ml-2 bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">Dry Hire</Badge>;
       default:
         return null;
     }
   };
 
   const handleJobClick = () => {
-    if (job.job_type === "dryhire") {
-      return;
-    }
+    if (job.job_type === "dryhire") return;
     onJobClick(job.id);
   };
 
   return (
-    <>
+    <div className="space-y-6">
       <Card
         className={cn(
           "mb-4 hover:shadow-md transition-shadow",
@@ -982,17 +841,15 @@ export const JobCardNew = ({
                 </Button>
               </>
             )}
-            {/* Create Flex Folders button is always shown */}
             <Button
               variant="ghost"
               size="icon"
-              onClick={createFlexFoldersHandler}
+              onClick={createFlexFolders}
               disabled={job.flex_folders_created}
               title={job.flex_folders_created ? "Folders already created" : "Create Flex folders"}
             >
               <img src={createFolderIcon} alt="Create Flex folders" className="h-4 w-4" />
             </Button>
-            {/* Show file upload only for non-dryhire jobs */}
             {job.job_type !== "dryhire" && showUpload && (
               <div className="relative">
                 <input
@@ -1029,7 +886,6 @@ export const JobCardNew = ({
                 {job.location.name}
               </div>
             )}
-            {/* For non-dryhire jobs only, display assigned technicians and documents */}
             {job.job_type !== "dryhire" && (
               <>
                 {assignedTechnicians.length > 0 && (
@@ -1085,7 +941,6 @@ export const JobCardNew = ({
             )}
           </div>
 
-          {/* Expanded details: Only for non-dryhire jobs */}
           {!collapsed && job.job_type !== "dryhire" && (
             <>
               {department === "sound" && personnel && (
@@ -1101,6 +956,47 @@ export const JobCardNew = ({
                   </div>
                 </div>
               )}
+
+              {/* Tasks Section: only for non-dryhire jobs */}
+              <div className="mt-6 border p-4 rounded-lg">
+                <h2 className="text-xl font-semibold mb-2">Tasks</h2>
+                {department === "sound" && soundTasks && soundTasks.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-medium">Sound Tasks</h3>
+                    {soundTasks.map((task: any) => (
+                      <div key={task.id} className="border p-2 rounded">
+                        <p><strong>Task:</strong> {task.title || "Untitled Task"}</p>
+                        <p><strong>Status:</strong> {task.status}</p>
+                        <p><strong>Progress:</strong> {task.progress}%</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {department === "lights" && lightsTasks && lightsTasks.length > 0 && (
+                  <div className="space-y-2 mt-4">
+                    <h3 className="text-lg font-medium">Lights Tasks</h3>
+                    {lightsTasks.map((task: any) => (
+                      <div key={task.id} className="border p-2 rounded">
+                        <p><strong>Task:</strong> {task.title || "Untitled Task"}</p>
+                        <p><strong>Status:</strong> {task.status}</p>
+                        <p><strong>Progress:</strong> {task.progress}%</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {department === "video" && videoTasks && videoTasks.length > 0 && (
+                  <div className="space-y-2 mt-4">
+                    <h3 className="text-lg font-medium">Video Tasks</h3>
+                    {videoTasks.map((task: any) => (
+                      <div key={task.id} className="border p-2 rounded">
+                        <p><strong>Task:</strong> {task.title || "Untitled Task"}</p>
+                        <p><strong>Status:</strong> {task.status}</p>
+                        <p><strong>Progress:</strong> {task.progress}%</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </CardContent>
@@ -1116,7 +1012,7 @@ export const JobCardNew = ({
           end_time={job.end_time}
         />
       )}
-    </>
+    </div>
   );
 };
 
