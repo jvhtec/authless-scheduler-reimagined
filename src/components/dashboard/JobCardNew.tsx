@@ -327,7 +327,27 @@ async function createAllFoldersForJob(
           await createFlexFolder(subPayload);
         }
       }
+if (dept === "sound") {
+        const soundSubfolders = [
+          { name: `${job.title} - Tour Pack`, suffix: "TP" },
+          { name: `${job.title} - PA`, suffix: "TP" },
+        ];
 
+        for (const sf of soundSubfolders) {
+          const subPayload = {
+            definitionId: FLEX_FOLDER_IDS.pullSheet,
+            parentElementId: childRow.element_id,
+            open: true,
+            locked: false,
+            name: sf.name,
+            plannedStartDate: formattedStartDate,
+            plannedEndDate: formattedEndDate,
+            locationId: FLEX_FOLDER_IDS.location,
+            documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
+            departmentId: DEPARTMENT_IDS[dept],
+            personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
+          };
+          
       if (dept === "personnel") {
         const personnelSubfolders = [
           { name: `Gastos de Personal - ${job.title}`, suffix: "GP" },  ];
