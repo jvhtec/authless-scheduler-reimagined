@@ -330,7 +330,7 @@ async function createAllFoldersForJob(
       if (dept === "sound") {
         const soundSubfolders = [
           { name: `${job.title} - Tour Pack`, suffix: "TP" },
-          { name: `${job.title} - PA`, suffix: "TP" },
+          { name: `${job.title} - PA`, suffix: "PA" },
         ];
 
         for (const sf of soundSubfolders) {
