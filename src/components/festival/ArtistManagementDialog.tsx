@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
-// Optional: a helper to generate a list of dates between two dates
+// Helper function to generate dates between two Date objects (inclusive)
 const getDatesBetween = (start: Date, end: Date): string[] => {
   const dates = [];
   const current = new Date(start);
@@ -36,11 +36,24 @@ export const ArtistManagementDialog = ({
 
   useEffect(() => {
     if (open) {
-      // Instead of fetching a "dates" field, compute dates from the start_time and end_time
+      console.log("ArtistManagementDialog opened with start_time:", start_time, "end_time:", end_time);
       const startDate = new Date(start_time);
       const endDate = new Date(end_time);
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        console.error("Invalid start_time or end_time:", start_time, end_time);
+        toast({
+          title: "Error",
+          description: "Invalid job timing data.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const computedDates = getDatesBetween(startDate, endDate);
+      console.log("Computed dates:", computedDates);
       setDates(computedDates);
+
       fetchArtists();
     }
   }, [open, start_time, end_time]);
@@ -53,6 +66,7 @@ export const ArtistManagementDialog = ({
         .eq("job_id", jobId)
         .order("date", { ascending: true });
       if (error) throw error;
+      console.log("Fetched artists:", data);
       setArtists(data || []);
     } catch (error: any) {
       console.error("Error fetching artists in ArtistManagementDialog:", error);
@@ -78,13 +92,16 @@ export const ArtistManagementDialog = ({
             </p>
             <div className="mb-4">
               <h3 className="font-medium">Job Dates</h3>
-              <ul className="list-disc ml-5">
-                {dates.map((date) => (
-                  <li key={date}>{date}</li>
-                ))}
-              </ul>
+              {dates.length === 0 ? (
+                <p>No dates available.</p>
+              ) : (
+                <ul className="list-disc ml-5">
+                  {dates.map((date) => (
+                    <li key={date}>{date}</li>
+                  ))}
+                </ul>
+              )}
             </div>
-            {/* Render additional UI here to assign artists to dates, etc. */}
             <div className="mb-4">
               <h3 className="font-medium">Assigned Artists</h3>
               {artists.length === 0 ? (
