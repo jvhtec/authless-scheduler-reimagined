@@ -102,7 +102,6 @@ const iemModels = ["Shure PSM1000", "Sennheiser 2050"];
 export const ArtistTable = ({ jobId }: ArtistTableProps) => {
   const [artists, setArtists] = useState<Artist[]>([]);
   const [jobDates, setJobDates] = useState<string[]>([]);
-  // For inline editing an artist
   const [editingArtistId, setEditingArtistId] = useState<string | null>(null);
   const [editArtistData, setEditArtistData] = useState<Partial<Artist>>({});
   const { toast } = useToast();
