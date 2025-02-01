@@ -255,9 +255,10 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     const jobTitle = selectedJob?.title || "Unnamed_Job";
 
     // Filter jobs based on selected job types
-    const filteredJobs = jobs.filter(job => 
-      job.job_type && printSettings.jobTypes[job.job_type.toLowerCase() as keyof typeof printSettings.jobTypes]
-    );
+    const filteredJobs = jobs.filter(job => {
+  const jobType = job.job_type?.toLowerCase();
+  return jobType && printSettings.jobTypes[jobType]; // Ensure only checked job types are included
+});
 
     const doc = new jsPDF('landscape');
     const currentDate = date || new Date();
