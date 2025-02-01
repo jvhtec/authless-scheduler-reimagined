@@ -32,6 +32,13 @@ const RESPONSIBLE_PERSON_IDS = {
   production: "4ce97ce3-5159-401a-9cf8-542d3e479ade",
   personnel: "4b618540-e700-11ea-97d0-2a0a4490a7fb"
 };
+const DEPARTMENT_SUFFIXES = {
+  sound: "S",
+  lights: "L",
+  video: "V",
+  production: "P",
+  personnel: "HR"
+};
 
 interface TourCreationData {
   title: string;
