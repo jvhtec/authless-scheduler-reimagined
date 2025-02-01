@@ -49,8 +49,7 @@ export const DepartmentTabs = ({
                   userRole={userRole}
                   onDeleteDocument={onDeleteDocument}
                   showUpload={true}
-                  showManageArtists={true}
-                  isProjectManagementPage={true} // Add this prop
+                  isProjectManagementPage={true}
                 />
               ))}
             </div>
