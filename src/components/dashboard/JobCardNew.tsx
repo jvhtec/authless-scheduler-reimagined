@@ -1,6 +1,3 @@
-import { SoundTaskDialog } from "@/components/sound/SoundTaskDialog";
-import { LightsTaskDialog } from "@/components/lights/LightsTaskDialog";
-import { VideoTaskDialog } from "@/components/video/VideoTaskDialog";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,17 +44,6 @@ export interface JobCardNewProps {
   showManageArtists?: boolean;
   isProjectManagementPage?: boolean;
 }
-export function JobCardNew({
-  job,
-  department,
-  userRole,
-  isProjectManagementPage = false,
-  onJobClick,
-  ...
-}: JobCardNewProps) {
-  const [soundTaskDialogOpen, setSoundTaskDialogOpen] = useState(false);
-  const [lightsTaskDialogOpen, setLightsTaskDialogOpen] = useState(false);
-  const [videoTaskDialogOpen, setVideoTaskDialogOpen] = useState(false);
 
 // Constants used in folder creation
 const FLEX_FOLDER_IDS = {
@@ -942,60 +928,6 @@ export const JobCardNew = ({
 
   return (
     <>
-      <Card
-      className="mb-4 hover:shadow-md transition-shadow cursor-pointer"
-      onClick={() => {
-        // If project mgmt page, open the tasks dialog for the current dept
-        if (isProjectManagementPage) {
-          if (department === "sound") {
-            setSoundTaskDialogOpen(true);
-          } else if (department === "lights") {
-            setLightsTaskDialogOpen(true);
-          } else if (department === "video") {
-            setVideoTaskDialogOpen(true);
-          } else {
-            if (userRole !== "logistics") {
-              onJobClick(job.id);
-            }
-          }
-        } else {
-          // Not in project mgmt, do the default
-          if (userRole !== "logistics") {
-            onJobClick(job.id);
-          }
-        }
-      }}
-      style={{
-        borderColor: `${job.color}30` || "#7E69AB30",
-        backgroundColor: `${job.color}05` || "#7E69AB05"
-      }}
-    >
-      <CardHeader> ... </CardHeader>
-      <CardContent> ... </CardContent>
-
-      {/* Render the relevant dialogs */}
-      {department === "sound" && (
-        <SoundTaskDialog
-          open={soundTaskDialogOpen}
-          onOpenChange={setSoundTaskDialogOpen}
-          jobId={job.id}
-        />
-      )}
-      {department === "lights" && (
-        <LightsTaskDialog
-          open={lightsTaskDialogOpen}
-          onOpenChange={setLightsTaskDialogOpen}
-          jobId={job.id}
-        />
-      )}
-      {department === "video" && (
-        <VideoTaskDialog
-          open={videoTaskDialogOpen}
-          onOpenChange={setVideoTaskDialogOpen}
-          jobId={job.id}
-        />
-      )}
-    </Card>
       <Card
         className={cn(
           "mb-4 hover:shadow-md transition-shadow",
