@@ -102,34 +102,37 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
   // ----------------------
   // Fetch job dates by querying start_time and end_time and computing dates
   // ----------------------
-  const fetchJobDates = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("jobs")
-        .select("start_time, end_time")
-        .eq("id", jobId)
-        .single();
-      if (error) {
-        console.error("Error fetching job dates:", error);
-        throw error;
-      }
-      if (data && data.start_time && data.end_time) {
-        const startDate = new Date(data.start_time);
-        const endDate = new Date(data.end_time);
-        const computedDates = getDatesBetween(startDate, endDate);
-        setJobDates(computedDates);
-      } else {
-        setJobDates([]);
-      }
-    } catch (error) {
-      console.error("Error in fetchJobDates:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch job dates",
-        variant: "destructive",
-      });
+
+const fetchJobDates = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('start_time, end_time')
+      .eq('id', jobId)
+      .single();
+    
+    if (error) {
+      console.error("Error fetching job dates:", error);
+      throw error;
     }
-  };
+    
+    if (data && data.start_time && data.end_time) {
+      const startDate = new Date(data.start_time);
+      const endDate = new Date(data.end_time);
+      const computedDates = getDatesBetween(startDate, endDate);
+      setJobDates(computedDates);
+    } else {
+      setJobDates([]);
+    }
+  } catch (error) {
+    console.error("Error in fetchJobDates:", error);
+    toast({
+      title: "Error",
+      description: "Failed to fetch job dates",
+      variant: "destructive",
+    });
+  }
+};
 
   // ----------------------
   // Fetch artists and their files
