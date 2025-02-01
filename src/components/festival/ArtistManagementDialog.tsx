@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 // Optional: a helper to generate a list of dates between two dates
 const getDatesBetween = (start: Date, end: Date): string[] => {
