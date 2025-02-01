@@ -20,6 +20,17 @@ interface CalendarSectionProps {
   department?: string;
 }
 
+interface PrintSettings {
+  range: 'month' | 'quarter' | 'year';
+  jobTypes: {
+    tourdate: boolean;
+    tour: boolean;
+    single: boolean;
+    dryhire: boolean;
+    festival: boolean;
+  }
+}
+
 export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], department }: CalendarSectionProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [dateTypes, setDateTypes] = useState<Record<string, any>>({});
@@ -30,10 +41,8 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { toast } = useToast();
 
-  // Add currentMonth state
   const currentMonth = date || new Date();
 
-  // Calculate calendar days
   const firstDayOfMonth = startOfMonth(currentMonth);
   const lastDayOfMonth = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth });
@@ -230,11 +239,27 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   };
 
   const generatePDF = async (range: 'month' | 'quarter' | 'year') => {
+    if (!selectedJob) {
+      toast({
+        title: "Error",
+        description: "Please select a job before generating the document.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedJob = jobs?.find(job => job.id === selectedJob.id);
+    const jobTitle = selectedJob?.title || "Unnamed_Job";
+
+    // Filter jobs based on selected job types
+    const filteredJobs = jobs.filter(job => 
+      job.job_type && printSettings.jobTypes[job.job_type.toLowerCase() as keyof typeof printSettings.jobTypes]
+    );
+
     const doc = new jsPDF('landscape');
     const currentDate = date || new Date();
     let startDate: Date, endDate: Date;
 
-    // Load logo first
     const logo = await new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -243,7 +268,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
       img.onerror = (err) => reject(err);
     }).catch(() => null);
 
-    // Calculate logo dimensions
     const logoWidth = 50;
     const logoHeight = logo ? logoWidth * (logo.height / logo.width) : 0;
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -269,9 +293,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
 
     const months = eachMonthOfInterval({ start: startDate, end: endDate });
 
-    // Filter jobs based on selected job types before generating PDF
-    const filteredJobs = jobs.filter(job => selectedJobTypes.length === 0 || selectedJobTypes.includes(job.job_type));
-
     const cellWidth = 40;
     const cellHeight = 30;
     const startX = 10;
@@ -289,12 +310,10 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     for (const [pageIndex, monthStart] of months.entries()) {
       if (pageIndex > 0) doc.addPage('landscape');
 
-      // Add logo to top center
       if (logo) {
         doc.addImage(logo, 'PNG', logoX, 10, logoWidth, logoHeight);
       }
 
-      // Add month title below logo
       doc.setFontSize(16);
       doc.text(
         format(monthStart, 'MMMM yyyy'), 
@@ -303,7 +322,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
         { align: 'center' }
       );
 
-      // Days of week headers
       daysOfWeek.forEach((day, index) => {
         doc.setFillColor(41, 128, 185);
         doc.rect(startX + (index * cellWidth), startY, cellWidth, 10, 'F');
@@ -389,7 +407,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     setShowPrintDialog(false);
   };
 
-  // Color utilities
   const hexToRgb = (hex: string): [number, number, number] => {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
@@ -503,6 +520,17 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
     onDateSelect(new Date());
   };
 
+  const [printSettings, setPrintSettings] = useState<PrintSettings>({
+    range: 'month',
+    jobTypes: {
+      tourdate: true,
+      tour: true,
+      single: true,
+      dryhire: true,
+      festival: true
+    }
+  });
+
   return (
     <Card className="h-full flex flex-col">
       <CardContent className="flex-grow p-4">
@@ -523,7 +551,32 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
                 <DialogHeader>
                   <DialogTitle>Select Print Range</DialogTitle>
                 </DialogHeader>
-                <div className="flex flex-col gap-4 mt-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Job Types to Include:</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.entries(printSettings.jobTypes).map(([type, checked]) => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`print-${type}`}
+                            checked={checked}
+                            onCheckedChange={(checked) => {
+                              setPrintSettings(prev => ({
+                                ...prev,
+                                jobTypes: {
+                                  ...prev.jobTypes,
+                                  [type]: !!checked
+                                }
+                              }));
+                            }}
+                          />
+                          <Label htmlFor={`print-${type}`} className="capitalize">
+                            {type}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                   <Button onClick={() => generatePDF('month')}>
                     Current Month ({format(currentMonth, 'MMMM yyyy')})
                   </Button>
