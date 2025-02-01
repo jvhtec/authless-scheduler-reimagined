@@ -24,6 +24,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import createFolderIcon from "@/assets/icons/icon.png";
 import { Department } from "@/types/department";
 import { ArtistManagementDialog } from "../festival/ArtistManagementDialog";
+import { createAllFoldersForJob } from "@/utils/flexFolders";
 
 export interface JobDocument {
   id: string;
