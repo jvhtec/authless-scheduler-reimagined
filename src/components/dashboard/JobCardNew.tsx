@@ -330,14 +330,31 @@ async function createAllFoldersForJob(
 
       if (dept === "personnel") {
         const personnelSubfolders = [
-          { name: `Crew Call Sonido - ${job.title}`, suffix: "CCS" },
-          { name: `Crew Call Luces - ${job.title}`, suffix: "CCL" },
-          { name: `Gastos de Personal - ${job.title}`, suffix: "GP" },
-        ];
+          { name: `Gastos de Personal - ${job.title}`, suffix: "GP" },  ];
 
         for (const sf of personnelSubfolders) {
           const subPayload = {
             definitionId: FLEX_FOLDER_IDS.subFolder,
+            parentElementId: childRow.element_id,
+            open: true,
+            locked: false,
+            name: sf.name,
+            plannedStartDate: formattedStartDate,
+            plannedEndDate: formattedEndDate,
+            locationId: FLEX_FOLDER_IDS.location,
+            documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
+            departmentId: DEPARTMENT_IDS[dept],
+            personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
+          };
+ 
+          const personnelcrewCall = [
+             { name: `Crew Call Sonido - ${job.title}`, suffix: "CCS" },  
+             { name: `Crew Call Luces - ${job.title}`, suffix: "CCL" },
+            ];
+
+          for (const sf of personnelcrewCall) {
+          const subPayload = {
+            definitionId: FLEX_FOLDER_IDS.crewCall,
             parentElementId: childRow.element_id,
             open: true,
             locked: false,
