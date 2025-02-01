@@ -1,14 +1,28 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import React, { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Calendar, MapPin, Plus, Trash2, FolderPlus } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Plus,
+  Trash2,
+  FolderPlus,
+  Edit,
+} from "lucide-react";
 import { useLocationManagement } from "@/hooks/useLocationManagement";
 
-const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
+const BASE_URL =
+  "https://sectorpro.flexrentalsolutions.com/f5/api/element";
 const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
 
 const FLEX_FOLDER_IDS = {
@@ -16,7 +30,7 @@ const FLEX_FOLDER_IDS = {
   location: "2f49c62c-b139-11df-b8d5-00e08175e43e",
   documentacionTecnica: "3787806c-af2d-11df-b8d5-00e08175e43e",
   presupuestosRecibidos: "3787806c-af2d-11df-b8d5-00e08175e43e",
-  hojaGastos: "566d32e0-1a1e-11e0-a472-00e08175e43e"
+  hojaGastos: "566d32e0-1a1e-11e0-a472-00e08175e43e",
 };
 
 const DEPARTMENT_IDS = {
@@ -24,7 +38,7 @@ const DEPARTMENT_IDS = {
   lights: "d5af7892-d124-11e1-bba1-00e08175e43e",
   video: "a89d124d-7a95-4384-943e-49f5c0f46b23",
   production: "890811c3-fe3f-45d7-af6b-7ca4a807e84d",
-  personnel: "b972d682-598d-4802-a390-82e28dc4480e"
+  personnel: "b972d682-598d-4802-a390-82e28dc4480e",
 };
 
 const RESPONSIBLE_PERSON_IDS = {
@@ -32,7 +46,7 @@ const RESPONSIBLE_PERSON_IDS = {
   lights: "4b559e60-e700-11ea-97d0-2a0a4490a7fb",
   video: "bb9690ac-f22e-4bc4-94a2-6d341ca0138d",
   production: "4ce97ce3-5159-401a-9cf8-542d3e479ade",
-  personnel: "4b618540-e700-11ea-97d0-2a0a4490a7fb"
+  personnel: "4b618540-e700-11ea-97d0-2a0a4490a7fb",
 };
 
 const DEPARTMENT_SUFFIXES = {
@@ -40,7 +54,7 @@ const DEPARTMENT_SUFFIXES = {
   lights: "L",
   video: "V",
   production: "P",
-  personnel: "HR"
+  personnel: "HR",
 };
 
 interface TourDateManagementDialogProps {
@@ -50,40 +64,51 @@ interface TourDateManagementDialogProps {
   tourDates: any[];
 }
 
-export const TourDateManagementDialog = ({
+export const TourDateManagementDialog: React.FC<TourDateManagementDialogProps> = ({
   open,
   onOpenChange,
   tourId,
   tourDates = [],
-}: TourDateManagementDialogProps) => {
+}) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { getOrCreateLocation } = useLocationManagement();
 
-  const createFoldersForDate = async (date: any, skipExistingCheck = false) => {
+  // State for inline editing of a tour date
+  const [editingTourDate, setEditingTourDate] = useState<any>(null);
+  const [editDateValue, setEditDateValue] = useState<string>("");
+  const [editLocationValue, setEditLocationValue] = useState<string>("");
+
+  // Creates folders for a specific tour date.
+  // If skipExistingCheck is false the function first checks via supabase if folders exist.
+  const createFoldersForDate = async (
+    dateObj: any,
+    skipExistingCheck = false
+  ) => {
     try {
-      console.log('Creating folders for date:', date);
+      console.log("Creating folders for date:", dateObj);
 
       if (!skipExistingCheck) {
         const { data: jobs, error: jobsError } = await supabase
-          .from('jobs')
-          .select('flex_folders_created')
-          .eq('tour_date_id', date.id);
+          .from("jobs")
+          .select("flex_folders_created")
+          .eq("tour_date_id", dateObj.id);
 
         if (jobsError) {
-          console.error('Error checking existing jobs:', jobsError);
+          console.error("Error checking existing jobs:", jobsError);
           throw jobsError;
         }
 
-        const hasExistingFolders = jobs.some(j => j.flex_folders_created);
+        // If folders are already created, skip creation.
+        const hasExistingFolders = jobs.some((j) => j.flex_folders_created);
         if (hasExistingFolders) {
-          console.log('Skipping date - folders already exist:', date.date);
+          console.log("Skipping date - folders already exist:", dateObj.date);
           return false;
         }
       }
 
       const { data: tourData, error: tourError } = await supabase
-        .from('tours')
+        .from("tours")
         .select(`
           name,
           flex_main_folder_id,
@@ -93,52 +118,65 @@ export const TourDateManagementDialog = ({
           flex_production_folder_id,
           flex_personnel_folder_id
         `)
-        .eq('id', tourId)
+        .eq("id", tourId)
         .single();
 
       if (tourError) {
-        console.error('Error fetching tour:', tourError);
+        console.error("Error fetching tour:", tourError);
         throw tourError;
       }
 
       if (!tourData || !tourData.flex_main_folder_id) {
-        throw new Error('Parent tour folders not found. Please create tour folders first.');
+        throw new Error(
+          "Parent tour folders not found. Please create tour folders first."
+        );
       }
 
-      const formattedStartDate = new Date(date.date).toISOString().split('.')[0] + '.000Z';
-      const formattedEndDate = new Date(date.date).toISOString().split('.')[0] + '.000Z';
-      const documentNumber = new Date(date.date).toISOString().slice(2, 10).replace(/-/g, '');
-      const formattedDate = format(new Date(date.date), 'MMM d');
-      const locationName = date.location?.name || 'No Location';
+      const formattedStartDate =
+        new Date(dateObj.date).toISOString().split(".")[0] + ".000Z";
+      const formattedEndDate =
+        new Date(dateObj.date).toISOString().split(".")[0] + ".000Z";
+      const documentNumber = new Date(dateObj.date)
+        .toISOString()
+        .slice(2, 10)
+        .replace(/-/g, "");
+      const formattedDate = format(new Date(dateObj.date), "MMM d");
+      const locationName = dateObj.location?.name || "No Location";
 
-      const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
-      
+      const departments = [
+        "sound",
+        "lights",
+        "video",
+        "production",
+        "personnel",
+      ] as const;
+
       for (const dept of departments) {
         const parentFolderId = tourData[`flex_${dept}_folder_id`];
         const capitalizedDept = dept.charAt(0).toUpperCase() + dept.slice(1);
-        
+
         if (!parentFolderId) {
           console.warn(`No parent folder ID found for ${dept} department`);
           continue;
         }
 
-        if (dept !== 'personnel') {
+        if (dept !== "personnel") {
           const subfolders = [
             {
               name: `Documentación Técnica - ${capitalizedDept}`,
-              suffix: 'DT',
-              definitionId: FLEX_FOLDER_IDS.documentacionTecnica
+              suffix: "DT",
+              definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
             },
             {
               name: `Presupuestos Recibidos - ${capitalizedDept}`,
-              suffix: 'PR',
-              definitionId: FLEX_FOLDER_IDS.presupuestosRecibidos
+              suffix: "PR",
+              definitionId: FLEX_FOLDER_IDS.presupuestosRecibidos,
             },
             {
               name: `Hoja de Gastos - ${capitalizedDept}`,
-              suffix: 'HG',
-              definitionId: FLEX_FOLDER_IDS.hojaGastos
-            }
+              suffix: "HG",
+              definitionId: FLEX_FOLDER_IDS.hojaGastos,
+            },
           ];
 
           for (const sf of subfolders) {
@@ -153,23 +191,29 @@ export const TourDateManagementDialog = ({
               locationId: FLEX_FOLDER_IDS.location,
               departmentId: DEPARTMENT_IDS[dept],
               documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
-              personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
+              personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
             };
 
-            console.log(`Creating ${sf.name} subfolder with payload:`, subSubFolderPayload);
+            console.log(
+              `Creating ${sf.name} subfolder with payload:`,
+              subSubFolderPayload
+            );
 
             const subSubResponse = await fetch(BASE_URL, {
-              method: 'POST',
+              method: "POST",
               headers: {
-                'Content-Type': 'application/json',
-                'X-Auth-Token': API_KEY
+                "Content-Type": "application/json",
+                "X-Auth-Token": API_KEY,
               },
-              body: JSON.stringify(subSubFolderPayload)
+              body: JSON.stringify(subSubFolderPayload),
             });
 
             if (!subSubResponse.ok) {
               const errorData = await subSubResponse.json();
-              console.error(`Error creating ${sf.name} subfolder:`, errorData);
+              console.error(
+                `Error creating ${sf.name} subfolder:`,
+                errorData
+              );
               continue;
             }
 
@@ -179,22 +223,23 @@ export const TourDateManagementDialog = ({
       }
 
       const { error: updateError } = await supabase
-        .from('jobs')
+        .from("jobs")
         .update({ flex_folders_created: true })
-        .eq('tour_date_id', date.id);
+        .eq("tour_date_id", dateObj.id);
 
       if (updateError) {
-        console.error('Error updating jobs:', updateError);
+        console.error("Error updating jobs:", updateError);
         throw updateError;
       }
 
       return true;
     } catch (error: any) {
-      console.error('Error creating folders:', error);
+      console.error("Error creating folders:", error);
       throw error;
     }
   };
 
+  // Handler for adding a new tour date
   const handleAddDate = async (date: string, location: string) => {
     try {
       if (!tourId) {
@@ -224,11 +269,11 @@ export const TourDateManagementDialog = ({
         .single();
 
       if (tourDateError) {
-        console.error('Error creating tour date:', tourDateError);
+        console.error("Error creating tour date:", tourDateError);
         throw tourDateError;
       }
 
-      console.log('Tour date created:', newTourDate);
+      console.log("Tour date created:", newTourDate);
 
       const { data: tourData, error: tourError } = await supabase
         .from("tours")
@@ -244,42 +289,43 @@ export const TourDateManagementDialog = ({
             )
           )
         `)
-        .eq('id', tourId)
+        .eq("id", tourId)
         .single();
 
       if (tourError) {
-        console.error('Error fetching tour:', tourError);
+        console.error("Error fetching tour:", tourError);
         throw tourError;
       }
 
       const { data: newJob, error: jobError } = await supabase
-        .from('jobs')
+        .from("jobs")
         .insert({
           title: `${tourData.name} (Tour Date)`,
           start_time: `${date}T00:00:00`,
           end_time: `${date}T23:59:59`,
           location_id: locationId,
           tour_date_id: newTourDate.id,
-          color: tourData.color || '#7E69AB',
-          job_type: 'single'
+          color: tourData.color || "#7E69AB",
+          job_type: "single",
         })
         .select()
         .single();
 
       if (jobError) {
-        console.error('Error creating job:', jobError);
+        console.error("Error creating job:", jobError);
         throw jobError;
       }
 
-      console.log('Job created:', newJob);
+      console.log("Job created:", newJob);
 
-      const departments = tourData.tour_dates?.[0]?.jobs?.[0]?.job_departments?.map(
-        (dept: any) => dept.department
-      ) || ['sound', 'lights', 'video'];
+      const departments =
+        tourData.tour_dates?.[0]?.jobs?.[0]?.job_departments?.map(
+          (dept: any) => dept.department
+        ) || ["sound", "lights", "video"];
 
-      const jobDepartments = departments.map(department => ({
+      const jobDepartments = departments.map((department) => ({
         job_id: newJob.id,
-        department
+        department,
       }));
 
       const { error: deptError } = await supabase
@@ -287,23 +333,17 @@ export const TourDateManagementDialog = ({
         .insert(jobDepartments);
 
       if (deptError) {
-        console.error('Error creating job departments:', deptError);
+        console.error("Error creating job departments:", deptError);
         throw deptError;
       }
 
       await queryClient.invalidateQueries({ queryKey: ["tours"] });
       await queryClient.invalidateQueries({ queryKey: ["jobs"] });
-      
-      toast({ 
-        title: "Success", 
-        description: "Tour date and job created successfully" 
-      });
 
-      // Reset form
-      const form = document.querySelector('form') as HTMLFormElement;
-      if (form) {
-        form.reset();
-      }
+      toast({
+        title: "Success",
+        description: "Tour date and job created successfully",
+      });
     } catch (error: any) {
       console.error("Error adding date:", error);
       toast({
@@ -314,6 +354,54 @@ export const TourDateManagementDialog = ({
     }
   };
 
+  // Handler for editing an existing tour date
+  const handleEditDate = async (
+    dateId: string,
+    newDate: string,
+    newLocation: string
+  ) => {
+    try {
+      if (!tourId) {
+        throw new Error("Tour ID is required");
+      }
+      console.log("Editing tour date:", { dateId, newDate, newLocation });
+      const locationId = await getOrCreateLocation(newLocation);
+      const { data, error } = await supabase
+        .from("tour_dates")
+        .update({
+          date: newDate,
+          location_id: locationId,
+        })
+        .eq("id", dateId)
+        .select(`
+          id,
+          date,
+          location:locations (
+            id,
+            name
+          )
+        `)
+        .single();
+      if (error) {
+        console.error("Error updating tour date:", error);
+        throw error;
+      }
+      toast({
+        title: "Success",
+        description: "Tour date updated successfully",
+      });
+      await queryClient.invalidateQueries({ queryKey: ["tours"] });
+    } catch (error: any) {
+      console.error("Error editing date:", error);
+      toast({
+        title: "Error editing date",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handler for deleting a tour date
   const handleDeleteDate = async (dateId: string) => {
     try {
       console.log("Starting deletion of tour date:", dateId);
@@ -329,21 +417,21 @@ export const TourDateManagementDialog = ({
         const { error: assignmentsError } = await supabase
           .from("job_assignments")
           .delete()
-          .in("job_id", jobs.map(j => j.id));
+          .in("job_id", jobs.map((j) => j.id));
 
         if (assignmentsError) throw assignmentsError;
 
         const { error: departmentsError } = await supabase
           .from("job_departments")
           .delete()
-          .in("job_id", jobs.map(j => j.id));
+          .in("job_id", jobs.map((j) => j.id));
 
         if (departmentsError) throw departmentsError;
 
         const { error: jobsDeleteError } = await supabase
           .from("jobs")
           .delete()
-          .in("id", jobs.map(j => j.id));
+          .in("id", jobs.map((j) => j.id));
 
         if (jobsDeleteError) throw jobsDeleteError;
       }
@@ -366,37 +454,65 @@ export const TourDateManagementDialog = ({
     }
   };
 
+  // Handler to create folders for all tour dates, skipping those already created.
   const createAllFolders = async () => {
     try {
       let successCount = 0;
       let skipCount = 0;
 
-      for (const date of tourDates) {
+      for (const dateObj of tourDates) {
+        // Skip if folders are already created (assuming the property "flex_folders_created" exists)
+        if (dateObj.flex_folders_created) {
+          skipCount++;
+          continue;
+        }
         try {
-          const created = await createFoldersForDate(date);
+          const created = await createFoldersForDate(dateObj);
           if (created) {
             successCount++;
           } else {
             skipCount++;
           }
         } catch (error) {
-          console.error(`Error creating folders for date ${date.date}:`, error);
+          console.error(
+            `Error creating folders for date ${dateObj.date}:`,
+            error
+          );
           continue;
         }
       }
-      
+
       toast({
         title: "Folders Creation Complete",
-        description: `Successfully created folders for ${successCount} dates. ${skipCount} dates were skipped (already had folders).`,
+        description: `Folders created for ${successCount} dates. ${skipCount} dates were skipped.`,
       });
     } catch (error: any) {
-      console.error('Error creating folders for all dates:', error);
+      console.error("Error creating folders for all dates:", error);
       toast({
         title: "Error creating folders",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     }
+  };
+
+  // Inline editing handlers
+  const startEditing = (dateObj: any) => {
+    setEditingTourDate(dateObj);
+    // Assuming the stored date is in ISO format
+    setEditDateValue(dateObj.date.split("T")[0]);
+    setEditLocationValue(dateObj.location?.name || "");
+  };
+
+  const cancelEditing = () => {
+    setEditingTourDate(null);
+    setEditDateValue("");
+    setEditLocationValue("");
+  };
+
+  const submitEditing = async (dateId: string) => {
+    await handleEditDate(dateId, editDateValue, editLocationValue);
+    cancelEditing();
   };
 
   return (
@@ -405,10 +521,10 @@ export const TourDateManagementDialog = ({
         <DialogHeader>
           <DialogTitle>Manage Tour Dates</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           {tourDates.length > 0 && (
-            <Button 
+            <Button
               onClick={createAllFolders}
               className="w-full"
               variant="outline"
@@ -419,40 +535,85 @@ export const TourDateManagementDialog = ({
           )}
 
           <div className="space-y-4">
-            {tourDates?.map((date) => (
-              <div
-                key={date.id}
-                className="flex items-center justify-between p-3 border rounded-lg"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4" />
-                    <span>{format(new Date(date.date), "MMM d, yyyy")}</span>
-                  </div>
-                  {date.location?.name && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span>{date.location.name}</span>
+            {tourDates?.map((dateObj) => (
+              <div key={dateObj.id} className="p-3 border rounded-lg">
+                {editingTourDate && editingTourDate.id === dateObj.id ? (
+                  // Inline edit form for the tour date
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      <Input
+                        type="date"
+                        value={editDateValue}
+                        onChange={(e) => setEditDateValue(e.target.value)}
+                        required
+                      />
                     </div>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => createFoldersForDate(date, true)}
-                    title="Create Flex folders"
-                  >
-                    <FolderPlus className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteDate(date.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      <Input
+                        type="text"
+                        value={editLocationValue}
+                        onChange={(e) => setEditLocationValue(e.target.value)}
+                        placeholder="Location"
+                        required
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => submitEditing(dateObj.id)}>
+                        Save
+                      </Button>
+                      <Button variant="outline" onClick={cancelEditing}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  // Display tour date details
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-4 w-4" />
+                        <span>{format(new Date(dateObj.date), "MMM d, yyyy")}</span>
+                      </div>
+                      {dateObj.location?.name && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          <span>{dateObj.location.name}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          createFoldersForDate(dateObj, true)
+                        }
+                        title="Create Flex folders"
+                        disabled={!!dateObj.flex_folders_created}
+                      >
+                        <FolderPlus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => startEditing(dateObj)}
+                        title="Edit Date"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteDate(dateObj.id)}
+                        title="Delete Date"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -463,7 +624,7 @@ export const TourDateManagementDialog = ({
               const formData = new FormData(e.currentTarget);
               const date = formData.get("date") as string;
               const location = formData.get("location") as string;
-              
+
               if (!date || !location) {
                 toast({
                   title: "Error",
@@ -472,17 +633,14 @@ export const TourDateManagementDialog = ({
                 });
                 return;
               }
-              
+
               handleAddDate(date, location);
+              e.currentTarget.reset();
             }}
             className="space-y-4"
           >
             <div className="grid grid-cols-2 gap-4">
-              <Input
-                type="date"
-                name="date"
-                required
-              />
+              <Input type="date" name="date" required />
               <Input
                 type="text"
                 name="location"
