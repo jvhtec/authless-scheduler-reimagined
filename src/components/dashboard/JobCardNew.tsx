@@ -14,18 +14,13 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
-  Plane,
-  Wrench,
-  Star,
-  Moon,
-  Mic
 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { JobDocuments } from "./JobDocuments";
+import { JobDocument } from "@/types/job";
 import { Progress } from "@/components/ui/progress";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import createFolderIcon from "@/assets/icons/icon.png";
 import { Department } from "@/types/department";
 import { ArtistManagementDialog } from "../festival/ArtistManagementDialog";
@@ -943,20 +938,6 @@ async function createAllFoldersForJob(
 
           {!collapsed && job.job_type !== "dryhire" && (
             <>
-              {department === "sound" && personnel && (
-                <div className="mt-2 p-2 bg-accent/20 rounded-md">
-                  <div className="text-xs font-medium mb-1">
-                    Required Personnel: {getTotalPersonnel()}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>FOH Engineers: {personnel.foh_engineers || 0}</div>
-                    <div>MON Engineers: {personnel.mon_engineers || 0}</div>
-                    <div>PA Techs: {personnel.pa_techs || 0}</div>
-                    <div>RF Techs: {personnel.rf_techs || 0}</div>
-                  </div>
-                </div>
-              )}
-
               {/* Tasks Section: only for non-dryhire jobs */}
               <div className="mt-6 border p-4 rounded-lg">
                 <h2 className="text-xl font-semibold mb-2">Tasks</h2>
