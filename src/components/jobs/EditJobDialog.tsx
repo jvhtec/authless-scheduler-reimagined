@@ -152,7 +152,7 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] md:max-h-none md:h-auto overflow-y-auto md:overflow-visible">
         <DialogHeader>
           <DialogTitle>Edit Job</DialogTitle>
         </DialogHeader>
@@ -213,7 +213,9 @@ export const EditJobDialog = ({ open, onOpenChange, job }: EditJobDialogProps) =
               <SelectContent>
                 <SelectItem value="single">Single</SelectItem>
                 <SelectItem value="tour">Tour</SelectItem>
+                <SelectItem value="tourdate">Tour Date</SelectItem>
                 <SelectItem value="festival">Festival</SelectItem>
+                <SelectItem value="dryhire">Dry Hire</SelectItem>
               </SelectContent>
             </Select>
           </div>

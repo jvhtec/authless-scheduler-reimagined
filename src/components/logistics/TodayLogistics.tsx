@@ -24,8 +24,16 @@ export const TodayLogistics = ({ selectedDate }: TodayLogisticsProps) => {
       const { data, error } = await supabase
         .from('logistics_events')
         .select(`
-          *,
-          job:jobs(title),
+          id,
+          job_id,
+          event_type,
+          transport_type,
+          event_date,
+          event_time,
+          loading_bay,
+          notes,
+          license_plate,
+          job:jobs(id, title),
           departments:logistics_event_departments(department)
         `)
         .eq('event_date', formattedDate)

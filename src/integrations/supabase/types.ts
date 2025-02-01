@@ -145,6 +145,7 @@ export type Database = {
         Row: {
           created_at: string | null
           crew: string | null
+          date: string | null
           extras_df: boolean | null
           extras_djbooth: boolean | null
           extras_sf: boolean | null
@@ -155,10 +156,10 @@ export type Database = {
           iem_band: string | null
           iem_model: string | null
           iem_quantity: number | null
-          infras_analog: number | null
-          infras_cat6: boolean | null
-          infras_coax: boolean | null
-          infras_hma: boolean | null
+          infra_analog: number | null
+          infra_cat6: boolean | null
+          infra_coax: boolean | null
+          infra_hma: boolean | null
           job_id: string | null
           mic_pack: string | null
           mon_console: string | null
@@ -175,6 +176,7 @@ export type Database = {
           soundcheck: boolean | null
           soundcheck_end: string | null
           soundcheck_start: string | null
+          stage: string | null
           updated_at: string | null
           wireless_band: string | null
           wireless_model: string | null
@@ -183,6 +185,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           crew?: string | null
+          date?: string | null
           extras_df?: boolean | null
           extras_djbooth?: boolean | null
           extras_sf?: boolean | null
@@ -193,10 +196,10 @@ export type Database = {
           iem_band?: string | null
           iem_model?: string | null
           iem_quantity?: number | null
-          infras_analog?: number | null
-          infras_cat6?: boolean | null
-          infras_coax?: boolean | null
-          infras_hma?: boolean | null
+          infra_analog?: number | null
+          infra_cat6?: boolean | null
+          infra_coax?: boolean | null
+          infra_hma?: boolean | null
           job_id?: string | null
           mic_pack?: string | null
           mon_console?: string | null
@@ -213,6 +216,7 @@ export type Database = {
           soundcheck?: boolean | null
           soundcheck_end?: string | null
           soundcheck_start?: string | null
+          stage?: string | null
           updated_at?: string | null
           wireless_band?: string | null
           wireless_model?: string | null
@@ -221,6 +225,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           crew?: string | null
+          date?: string | null
           extras_df?: boolean | null
           extras_djbooth?: boolean | null
           extras_sf?: boolean | null
@@ -231,10 +236,10 @@ export type Database = {
           iem_band?: string | null
           iem_model?: string | null
           iem_quantity?: number | null
-          infras_analog?: number | null
-          infras_cat6?: boolean | null
-          infras_coax?: boolean | null
-          infras_hma?: boolean | null
+          infra_analog?: number | null
+          infra_cat6?: boolean | null
+          infra_coax?: boolean | null
+          infra_hma?: boolean | null
           job_id?: string | null
           mic_pack?: string | null
           mon_console?: string | null
@@ -251,6 +256,7 @@ export type Database = {
           soundcheck?: boolean | null
           soundcheck_end?: string | null
           soundcheck_start?: string | null
+          stage?: string | null
           updated_at?: string | null
           wireless_band?: string | null
           wireless_model?: string | null
@@ -259,6 +265,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "festival_artists_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flex_folders: {
+        Row: {
+          created_at: string
+          department: string | null
+          element_id: string
+          folder_type: string
+          id: string
+          job_id: string | null
+          parent_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          element_id: string
+          folder_type: string
+          id?: string
+          job_id?: string | null
+          parent_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          element_id?: string
+          folder_type?: string
+          id?: string
+          job_id?: string | null
+          parent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flex_folders_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
@@ -542,6 +586,7 @@ export type Database = {
           status: Database["public"]["Enums"]["job_status"] | null
           title: string
           tour_date_id: string | null
+          tour_id: string | null
         }
         Insert: {
           color?: string | null
@@ -557,6 +602,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["job_status"] | null
           title: string
           tour_date_id?: string | null
+          tour_id?: string | null
         }
         Update: {
           color?: string | null
@@ -572,6 +618,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["job_status"] | null
           title?: string
           tour_date_id?: string | null
+          tour_id?: string | null
         }
         Relationships: [
           {
@@ -676,18 +723,33 @@ export type Database = {
       locations: {
         Row: {
           created_at: string
+          formatted_address: string | null
+          google_place_id: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           name: string
+          photo_reference: string | null
         }
         Insert: {
           created_at?: string
+          formatted_address?: string | null
+          google_place_id?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           name: string
+          photo_reference?: string | null
         }
         Update: {
           created_at?: string
+          formatted_address?: string | null
+          google_place_id?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           name?: string
+          photo_reference?: string | null
         }
         Relationships: []
       }
@@ -725,6 +787,7 @@ export type Database = {
           license_plate: string | null
           loading_bay: string | null
           notes: string | null
+          title: string | null
           transport_type: Database["public"]["Enums"]["transport_type"]
           updated_at: string | null
         }
@@ -738,6 +801,7 @@ export type Database = {
           license_plate?: string | null
           loading_bay?: string | null
           notes?: string | null
+          title?: string | null
           transport_type: Database["public"]["Enums"]["transport_type"]
           updated_at?: string | null
         }
@@ -751,6 +815,7 @@ export type Database = {
           license_plate?: string | null
           loading_bay?: string | null
           notes?: string | null
+          title?: string | null
           transport_type?: Database["public"]["Enums"]["transport_type"]
           updated_at?: string | null
         }
@@ -884,7 +949,9 @@ export type Database = {
           phone: string | null
           residencia: string | null
           role: Database["public"]["Enums"]["user_role"]
+          selected_job_types: string[] | null
           time_span: string | null
+          tours_expanded: boolean | null
         }
         Insert: {
           created_at?: string
@@ -899,7 +966,9 @@ export type Database = {
           phone?: string | null
           residencia?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          selected_job_types?: string[] | null
           time_span?: string | null
+          tours_expanded?: boolean | null
         }
         Update: {
           created_at?: string
@@ -914,7 +983,30 @@ export type Database = {
           phone?: string | null
           residencia?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          selected_job_types?: string[] | null
           time_span?: string | null
+          tours_expanded?: boolean | null
+        }
+        Relationships: []
+      }
+      secrets: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          value?: string
         }
         Relationships: []
       }
@@ -1304,7 +1396,7 @@ export type Database = {
       direct_message_status: "unread" | "read"
       job_date_type: "travel" | "setup" | "show" | "off" | "rehearsal"
       job_status: "pending" | "in_progress" | "completed" | "cancelled"
-      job_type: "single" | "tour" | "festival"
+      job_type: "single" | "tour" | "festival" | "dryhire" | "tourdate"
       logistics_event_type: "load" | "unload"
       message_status: "unread" | "read"
       milestone_category:

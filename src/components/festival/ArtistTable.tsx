@@ -1,15 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -17,13 +7,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
+import {
+  ChevronDown,
+  Plus,
+  Upload,
+  Trash2,
+  FileText,
+  Edit,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
-interface Artist {
+// ----------------------
+// Data Interfaces
+// ----------------------
+interface ArtistFile {
+  id: string;
+  file_name: string;
+  file_path: string;
+  artist_id: string;
+  file_type?: string;
+  file_size?: number;
+}
+
+export interface Artist {
   id?: string;
-  job_id: string;
+  job_id?: string;
   name: string;
+  date: string;
+  stage: string;
   show_start: string;
   show_end: string;
   soundcheck: boolean;
@@ -39,92 +61,169 @@ interface Artist {
   iem_model: string;
   iem_quantity: number;
   iem_band: string;
-  monitors_enabled: boolean;
-  monitors_quantity: number;
   extras_sf: boolean;
   extras_df: boolean;
   extras_djbooth: boolean;
   extras_wired: string;
-  mic_pack: string;
-  rf_festival_mics: number;
-  rf_festival_wireless: number;
-  rf_festival_url: string;
-  infras_cat6: boolean;
-  infras_hma: boolean;
-  infras_coax: boolean;
-  infras_analog: number;
-  notes: string;
-  crew: string;
+  infra_cat6: boolean;
+  infra_hma: boolean;
+  infra_coax: boolean;
+  infra_analog: number;
+  festival_artist_files?: ArtistFile[];
 }
 
 interface ArtistTableProps {
   jobId: string;
 }
 
+// ----------------------
+// Helper: Compute dates between two dates (inclusive)
+// ----------------------
+const getDatesBetween = (start: Date, end: Date): string[] => {
+  const dates = [];
+  const current = new Date(start);
+  while (current <= end) {
+    dates.push(new Date(current).toISOString().split("T")[0]);
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+};
+
+// ----------------------
+// Component
+// ----------------------
 export const ArtistTable = ({ jobId }: ArtistTableProps) => {
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [jobDates, setJobDates] = useState<string[]>([]);
+  const [editingArtistId, setEditingArtistId] = useState<string | null>(null);
+  const [editArtistData, setEditArtistData] = useState<Partial<Artist>>({});
   const { toast } = useToast();
 
-  // Dropdown options
-  const consoleModels = ['SD5', 'SD10', 'CL5', 'PM5D'];
-  const wirelessModels = ['SLX-D', 'QLX-D', 'ULX-D'];
-  const iemModels = ['PSM900', 'PSM1000'];
-  const micPacks = ['Festival', 'Artist'];
-  const crewOptions = ['A', 'B', 'C'];
-
-  const addArtist = async () => {
-    const newArtist: Artist = {
-      job_id: jobId,
-      name: '',
-      show_start: '',
-      show_end: '',
-      soundcheck: false,
-      soundcheck_start: '',
-      soundcheck_end: '',
-      foh_console: '',
-      foh_tech: false,
-      mon_console: '',
-      mon_tech: false,
-      wireless_model: '',
-      wireless_quantity: 0,
-      wireless_band: '',
-      iem_model: '',
-      iem_quantity: 0,
-      iem_band: '',
-      monitors_enabled: false,
-      monitors_quantity: 0,
-      extras_sf: false,
-      extras_df: false,
-      extras_djbooth: false,
-      extras_wired: '',
-      mic_pack: '',
-      rf_festival_mics: 0,
-      rf_festival_wireless: 0,
-      rf_festival_url: '',
-      infras_cat6: false,
-      infras_hma: false,
-      infras_coax: false,
-      infras_analog: 0,
-      notes: '',
-      crew: '',
-    };
-
+  // ----------------------
+  // Fetch job dates by querying start_time and end_time and computing dates
+  // ----------------------
+  const fetchJobDates = async () => {
     try {
       const { data, error } = await supabase
-        .from('festival_artists')
+        .from("jobs")
+        .select("start_time, end_time")
+        .eq("id", jobId)
+        .single();
+      if (error) {
+        console.error("Error fetching job dates:", error);
+        throw error;
+      }
+      if (data && data.start_time && data.end_time) {
+        const startDate = new Date(data.start_time);
+        const endDate = new Date(data.end_time);
+        const computedDates = getDatesBetween(startDate, endDate);
+        setJobDates(computedDates);
+      } else {
+        setJobDates([]);
+      }
+    } catch (error) {
+      console.error("Error in fetchJobDates:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch job dates",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // ----------------------
+  // Fetch artists and their files
+  // ----------------------
+  const fetchArtists = async () => {
+    try {
+      console.log("Fetching artists for job:", jobId);
+      const { data: artistsData, error: artistsError } = await supabase
+        .from("festival_artists")
+        .select("*")
+        .eq("job_id", jobId)
+        .order("date", { ascending: true });
+      if (artistsError) {
+        console.error("Error fetching artists:", artistsError);
+        throw artistsError;
+      }
+      if (!artistsData?.length) {
+        setArtists([]);
+        return;
+      }
+      const { data: filesData, error: filesError } = await supabase
+        .from("festival_artist_files")
+        .select("*")
+        .in("artist_id", artistsData.map((artist) => artist.id));
+      if (filesError) {
+        console.error("Error fetching files:", filesError);
+        throw filesError;
+      }
+      const artistsWithFiles = artistsData.map((artist) => ({
+        ...artist,
+        festival_artist_files:
+          filesData?.filter((file) => file.artist_id === artist.id) || [],
+      }));
+      setArtists(artistsWithFiles);
+    } catch (error) {
+      console.error("Error in fetchArtists:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch artists",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (jobId) {
+      fetchJobDates();
+      fetchArtists();
+    }
+  }, [jobId]);
+
+  // ----------------------
+  // Artist CRUD Operations
+  // ----------------------
+  const addArtist = async (date: string) => {
+    try {
+      const newArtist: Artist = {
+        job_id: jobId,
+        name: "",
+        date,
+        stage: "",
+        show_start: "12:00",
+        show_end: "13:00",
+        soundcheck: false,
+        soundcheck_start: "10:00",
+        soundcheck_end: "11:00",
+        foh_console: "",
+        foh_tech: false,
+        mon_console: "",
+        mon_tech: false,
+        wireless_model: "",
+        wireless_quantity: 0,
+        wireless_band: "",
+        iem_model: "",
+        iem_quantity: 0,
+        iem_band: "",
+        extras_sf: false,
+        extras_df: false,
+        extras_djbooth: false,
+        extras_wired: "",
+        infra_cat6: false,
+        infra_hma: false,
+        infra_coax: false,
+        infra_analog: 0,
+      };
+      const { data, error } = await supabase
+        .from("festival_artists")
         .insert([newArtist])
         .select()
         .single();
-
       if (error) throw error;
-
       setArtists([...artists, data]);
-      toast({
-        title: "Success",
-        description: "Artist added successfully",
-      });
     } catch (error) {
-      console.error('Error adding artist:', error);
+      console.error("Error adding artist:", error);
       toast({
         title: "Error",
         description: "Failed to add artist",
@@ -133,23 +232,43 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     }
   };
 
-  const updateArtist = async (index: number, key: keyof Artist, value: any) => {
-    const updatedArtist = { ...artists[index], [key]: value };
-    const artistId = updatedArtist.id;
-
+  const removeArtist = async (artistId: string) => {
     try {
       const { error } = await supabase
-        .from('festival_artists')
-        .update(updatedArtist)
-        .eq('id', artistId);
-
+        .from("festival_artists")
+        .delete()
+        .eq("id", artistId);
       if (error) throw error;
-
-      const updatedArtists = [...artists];
-      updatedArtists[index] = updatedArtist;
-      setArtists(updatedArtists);
+      setArtists(artists.filter((artist) => artist.id !== artistId));
+      toast({
+        title: "Success",
+        description: "Artist removed successfully",
+      });
     } catch (error) {
-      console.error('Error updating artist:', error);
+      console.error("Error removing artist:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove artist",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateArtist = async (artistId: string, field: keyof Artist, value: any) => {
+    try {
+      const updatedArtist = artists.find((a) => a.id === artistId);
+      if (!updatedArtist) return;
+      const newArtist = { ...updatedArtist, [field]: value };
+      const { error } = await supabase
+        .from("festival_artists")
+        .update(newArtist)
+        .eq("id", newArtist.id);
+      if (error) throw error;
+      setArtists((prev) =>
+        prev.map((a) => (a.id === artistId ? newArtist : a))
+      );
+    } catch (error) {
+      console.error("Error updating artist:", error);
       toast({
         title: "Error",
         description: "Failed to update artist",
@@ -158,205 +277,270 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     }
   };
 
+  // ----------------------
+  // File upload/view/delete functions
+  // ----------------------
+  const handleFileUpload = async (artistId: string, file: File) => {
+    try {
+      const fileExt = file.name.split(".").pop();
+      const filePath = `${artistId}/${crypto.randomUUID()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("artist_files")
+        .upload(filePath, file);
+      if (uploadError) throw uploadError;
+      const { error: dbError } = await supabase
+        .from("festival_artist_files")
+        .insert({
+          artist_id: artistId,
+          file_name: file.name,
+          file_path: filePath,
+          file_type: file.type,
+          file_size: file.size,
+        });
+      if (dbError) throw dbError;
+      toast({
+        title: "Success",
+        description: "File uploaded successfully",
+      });
+      fetchArtists();
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast({
+        title: "Error",
+        description: "Failed to upload file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFileDelete = async (fileId: string, filePath: string) => {
+    try {
+      const { error: storageError } = await supabase.storage
+        .from("artist_files")
+        .remove([filePath]);
+      if (storageError) throw storageError;
+      const { error: dbError } = await supabase
+        .from("festival_artist_files")
+        .delete()
+        .eq("id", fileId);
+      if (dbError) throw dbError;
+      toast({
+        title: "Success",
+        description: "File deleted successfully",
+      });
+      fetchArtists();
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewFile = async (filePath: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("artist_files")
+        .createSignedUrl(filePath, 60);
+      if (error) throw error;
+      window.open(data.signedUrl, "_blank");
+    } catch (error) {
+      console.error("Error viewing file:", error);
+      toast({
+        title: "Error",
+        description: "Failed to view file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // ----------------------
+  // Render: Group by each job date (computed from start_time/end_time)
+  // ----------------------
   return (
-    <div className="space-y-4">
-      <Button onClick={addArtist} className="mb-4">
-        Add Artist
-      </Button>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Artist Name</TableHead>
-              <TableHead>Show Time</TableHead>
-              <TableHead>Soundcheck</TableHead>
-              <TableHead>FOH</TableHead>
-              <TableHead>MON</TableHead>
-              <TableHead>RF</TableHead>
-              <TableHead>Monitors</TableHead>
-              <TableHead>Extras</TableHead>
-              <TableHead>Notes</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {artists.map((artist, index) => (
-              <TableRow key={artist.id}>
-                <TableCell>
-                  <Input
-                    value={artist.name}
-                    onChange={(e) => updateArtist(index, 'name', e.target.value)}
-                    placeholder="Artist name"
-                  />
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Input
-                      type="time"
-                      value={artist.show_start}
-                      onChange={(e) => updateArtist(index, 'show_start', e.target.value)}
-                    />
-                    <Input
-                      type="time"
-                      value={artist.show_end}
-                      onChange={(e) => updateArtist(index, 'show_end', e.target.value)}
-                    />
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-2">
-                    <Checkbox
-                      checked={artist.soundcheck}
-                      onCheckedChange={(checked) => updateArtist(index, 'soundcheck', checked)}
-                    />
-                    {artist.soundcheck && (
-                      <div className="flex gap-2">
-                        <Input
-                          type="time"
-                          value={artist.soundcheck_start}
-                          onChange={(e) => updateArtist(index, 'soundcheck_start', e.target.value)}
-                        />
-                        <Input
-                          type="time"
-                          value={artist.soundcheck_end}
-                          onChange={(e) => updateArtist(index, 'soundcheck_end', e.target.value)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-2">
-                    <Select
-                      value={artist.foh_console}
-                      onValueChange={(value) => updateArtist(index, 'foh_console', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select console" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {consoleModels.map((model) => (
-                          <SelectItem key={model} value={model}>
-                            {model}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Checkbox
-                      checked={artist.foh_tech}
-                      onCheckedChange={(checked) => updateArtist(index, 'foh_tech', checked)}
-                    />
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-2">
-                    <Select
-                      value={artist.mon_console}
-                      onValueChange={(value) => updateArtist(index, 'mon_console', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select console" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {consoleModels.map((model) => (
-                          <SelectItem key={model} value={model}>
-                            {model}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Checkbox
-                      checked={artist.mon_tech}
-                      onCheckedChange={(checked) => updateArtist(index, 'mon_tech', checked)}
-                    />
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-2">
-                    <Input
-                      value={artist.wireless_model}
-                      onChange={(e) => updateArtist(index, 'wireless_model', e.target.value)}
-                      placeholder="Wireless Model"
-                    />
-                    <Input
-                      type="number"
-                      value={artist.wireless_quantity}
-                      onChange={(e) => updateArtist(index, 'wireless_quantity', Number(e.target.value))}
-                      placeholder="Wireless Quantity"
-                    />
-                    <Input
-                      value={artist.wireless_band}
-                      onChange={(e) => updateArtist(index, 'wireless_band', e.target.value)}
-                      placeholder="Wireless Band"
-                    />
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-2">
-                    <Input
-                      value={artist.iem_model}
-                      onChange={(e) => updateArtist(index, 'iem_model', e.target.value)}
-                      placeholder="IEM Model"
-                    />
-                    <Input
-                      type="number"
-                      value={artist.iem_quantity}
-                      onChange={(e) => updateArtist(index, 'iem_quantity', Number(e.target.value))}
-                      placeholder="IEM Quantity"
-                    />
-                    <Input
-                      value={artist.iem_band}
-                      onChange={(e) => updateArtist(index, 'iem_band', e.target.value)}
-                      placeholder="IEM Band"
-                    />
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-2">
-                    <Checkbox
-                      checked={artist.monitors_enabled}
-                      onCheckedChange={(checked) => updateArtist(index, 'monitors_enabled', checked)}
-                    />
-                    <Input
-                      type="number"
-                      value={artist.monitors_quantity}
-                      onChange={(e) => updateArtist(index, 'monitors_quantity', Number(e.target.value))}
-                      placeholder="Monitors Quantity"
-                    />
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-2">
-                    <Checkbox
-                      checked={artist.extras_sf}
-                      onCheckedChange={(checked) => updateArtist(index, 'extras_sf', checked)}
-                    />
-                    <Checkbox
-                      checked={artist.extras_df}
-                      onCheckedChange={(checked) => updateArtist(index, 'extras_df', checked)}
-                    />
-                    <Checkbox
-                      checked={artist.extras_djbooth}
-                      onCheckedChange={(checked) => updateArtist(index, 'extras_djbooth', checked)}
-                    />
-                    <Input
-                      value={artist.extras_wired}
-                      onChange={(e) => updateArtist(index, 'extras_wired', e.target.value)}
-                      placeholder="Extras Wired"
-                    />
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Input
-                    value={artist.notes}
-                    onChange={(e) => updateArtist(index, 'notes', e.target.value)}
-                    placeholder="Notes"
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-4 p-2">
+        <Button onClick={() => { /* PDF production sheet generation code */ }}>
+          Generate PDF Production Sheet
+        </Button>
       </div>
+      {jobDates.map((dateStr) => {
+        const artistsForDate = artists.filter((artist) => artist.date === dateStr);
+        return (
+          <div key={dateStr} className="border p-4 rounded-lg space-y-4">
+            <h2 className="text-xl font-semibold">
+              {new Date(dateStr).toLocaleDateString()}
+            </h2>
+            {artistsForDate.length === 0 ? (
+              <p className="text-muted-foreground">
+                No artists assigned for this date.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {artistsForDate.map((artist) => (
+                  <Collapsible key={artist.id} className="rounded-lg border p-4 bg-card">
+                    <CollapsibleTrigger className="w-full">
+                      <div className="flex justify-between items-center">
+                        <h3 className="font-medium">
+                          {artist.name || "New Artist"}
+                        </h3>
+                        <ChevronDown className="h-4 w-4" />
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-4 pt-4">
+                      {/* Inline edit form or display details */}
+                      {editingArtistId === artist.id ? (
+                        <div className="flex flex-col gap-2">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Artist Name</Label>
+                              <Input
+                                value={editArtistData.name || ""}
+                                onChange={(e) =>
+                                  setEditArtistData((prev) => ({
+                                    ...prev,
+                                    name: e.target.value,
+                                  }))
+                                }
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Stage</Label>
+                              <Input
+                                value={editArtistData.stage || ""}
+                                onChange={(e) =>
+                                  setEditArtistData((prev) => ({
+                                    ...prev,
+                                    stage: e.target.value,
+                                  }))
+                                }
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Show Start</Label>
+                              <Input
+                                type="time"
+                                value={editArtistData.show_start || "12:00"}
+                                onChange={(e) =>
+                                  setEditArtistData((prev) => ({
+                                    ...prev,
+                                    show_start: e.target.value,
+                                  }))
+                                }
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Show End</Label>
+                              <Input
+                                type="time"
+                                value={editArtistData.show_end || "13:00"}
+                                onChange={(e) =>
+                                  setEditArtistData((prev) => ({
+                                    ...prev,
+                                    show_end: e.target.value,
+                                  }))
+                                }
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button onClick={() => {
+                              // Loop over editArtistData fields to update
+                              Object.entries(editArtistData).forEach(([field, value]) => {
+                                // @ts-ignore
+                                updateArtist(artist.id!, field, value);
+                              });
+                              setEditingArtistId(null);
+                              setEditArtistData({});
+                            }}>
+                              Save
+                            </Button>
+                            <Button variant="outline" onClick={() => {
+                              setEditingArtistId(null);
+                              setEditArtistData({});
+                            }}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <p><strong>Name:</strong> {artist.name || "New Artist"}</p>
+                          <p><strong>Stage:</strong> {artist.stage}</p>
+                          <p>
+                            <strong>Show Time:</strong> {artist.show_start} - {artist.show_end}
+                          </p>
+                          <p><strong>FOH Console:</strong> {artist.foh_console}</p>
+                          <p><strong>Monitor Console:</strong> {artist.mon_console}</p>
+                        </div>
+                      )}
+                      <div className="flex gap-2 flex-wrap">
+                        {editingArtistId !== artist.id && (
+                          <>
+                            <Button variant="ghost" size="icon" onClick={() => setEditingArtistId(artist.id!)} title="Edit Artist">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => artist.id && removeArtist(artist.id)} title="Remove Artist">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => artist.id && generateArtistSpecSheet(artist)} title="Print Spec Sheet">
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        <div className="flex flex-col gap-2">
+                          <div className="relative">
+                            <input
+                              type="file"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file && artist.id) {
+                                  handleFileUpload(artist.id, file);
+                                }
+                              }}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            <Button variant="outline" className="w-full">
+                              <Upload className="h-4 w-4 mr-2" />
+                              Upload Document
+                            </Button>
+                          </div>
+                          {artist.festival_artist_files?.map((file) => (
+                            <div key={file.id} className="flex items-center justify-between p-2 bg-accent/20 rounded">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4" />
+                                <span className="text-sm">{file.file_name}</span>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button variant="ghost" size="icon" onClick={() => handleViewFile(file.file_path)}>
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleFileDelete(file.id, file.file_path)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+            )}
+            <Button onClick={() => addArtist(dateStr)} className="mt-4" variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Artist for {new Date(dateStr).toLocaleDateString()}
+            </Button>
+          </div>
+        );
+      })}
     </div>
   );
 };
+
+export default ArtistTable;

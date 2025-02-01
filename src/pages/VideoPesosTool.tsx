@@ -13,7 +13,8 @@ import { useNavigate } from 'react-router-dom';
 const videoComponentDatabase = [
   { id: 1, name: 'Pantalla Central', weight: 32 },
   { id: 2, name: 'IMAGE Left', weight: 32 },
-  { id: 3, name: 'IMAGE Right', weight: 32 }
+  { id: 3, name: 'IMAGE Right', weight: 32 },
+  { id: 4, name: 'LED Screen', weight: 32 }
 ];
 
 interface TableRow {

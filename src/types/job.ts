@@ -5,7 +5,7 @@ export interface JobDocument {
   uploaded_at: string;
 }
 
-export type JobType = "single" | "tour" | "festival";
+export type JobType = "single" | "tour" | "tourdate" | "festival" | "dryhire";
 
 export interface Job {
   id: string;
