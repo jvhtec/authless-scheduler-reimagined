@@ -74,7 +74,7 @@ export interface Artist {
   festival_artist_files?: ArtistFile[];
 }
 
-interface Job {
+interface JobTableRow {
   id: string;
   dates: string[]; // Array of ISO date strings
 }
@@ -112,7 +112,7 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
   const fetchJobDates = async () => {
     try {
       const { data, error } = await supabase
-        .from<"jobs", Database["public"]["Tables"]["jobs"]["Row"]>("jobs")
+        .from<"jobs", JobTableRow>("jobs")
         .select("dates")
         .eq("id", jobId)
         .single();
@@ -433,7 +433,11 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     doc.text(`Artist Spec Sheet`, 14, 20);
     doc.setFontSize(12);
     doc.text(`Name: ${artist.name}`, 14, 30);
-    doc.text(`Stage: ${artist.stage}`, 14, 38);
+    doc.text(
+      `Stage: ${artist.stage}`,
+      14,
+      38
+    );
     doc.text(
       `Show Time: ${artist.show_start} - ${artist.show_end}`,
       14,
