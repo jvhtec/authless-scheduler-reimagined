@@ -1,9 +1,10 @@
+// ArtistManagementDialog.tsx
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
-// Helper to generate dates between two dates (inclusive)
+// Helper function to generate dates between two Date objects (inclusive)
 const getDatesBetween = (start: Date, end: Date): string[] => {
   const dates = [];
   const current = new Date(start);
@@ -27,7 +28,7 @@ export const ArtistManagementDialog = ({
   onOpenChange,
   jobId,
   start_time,
-  end_time,
+  end_time
 }: ArtistManagementDialogProps) => {
   const { toast } = useToast();
   const [dates, setDates] = useState<string[]>([]);
@@ -44,7 +45,7 @@ export const ArtistManagementDialog = ({
         toast({
           title: "Error",
           description: "Invalid job timing data.",
-          variant: "destructive",
+          variant: "destructive"
         });
         return;
       }
@@ -72,7 +73,7 @@ export const ArtistManagementDialog = ({
       toast({
         title: "Error",
         description: "Failed to fetch artists",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
