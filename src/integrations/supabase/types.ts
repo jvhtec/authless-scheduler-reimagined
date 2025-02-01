@@ -950,6 +950,7 @@ export type Database = {
           residencia: string | null
           role: Database["public"]["Enums"]["user_role"]
           time_span: string | null
+          tours_expanded: boolean | null
         }
         Insert: {
           created_at?: string
@@ -965,6 +966,7 @@ export type Database = {
           residencia?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           time_span?: string | null
+          tours_expanded?: boolean | null
         }
         Update: {
           created_at?: string
@@ -980,6 +982,7 @@ export type Database = {
           residencia?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           time_span?: string | null
+          tours_expanded?: boolean | null
         }
         Relationships: []
       }
