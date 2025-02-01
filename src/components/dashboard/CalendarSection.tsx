@@ -251,14 +251,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   };
 
   const generatePDF = async (range: 'month' | 'quarter' | 'year') => {
-    if (!selectedJob) {
-      toast({
-        title: "Error",
-        description: "Please select a job before generating the document.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     const jobTitle = selectedJob?.title || "Unnamed_Job";
 
