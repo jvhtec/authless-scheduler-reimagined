@@ -12,6 +12,8 @@ import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface CalendarSectionProps {
   date: Date | undefined;
@@ -39,6 +41,16 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [selectedJobTypes, setSelectedJobTypes] = useState<string[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [printSettings, setPrintSettings] = useState<PrintSettings>({
+    range: 'month',
+    jobTypes: {
+      tourdate: true,
+      tour: true,
+      single: true,
+      dryhire: true,
+      festival: true
+    }
+  });
   const { toast } = useToast();
 
   const currentMonth = date || new Date();
@@ -248,7 +260,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
       return;
     }
 
-    const selectedJob = jobs?.find(job => job.id === selectedJob.id);
     const jobTitle = selectedJob?.title || "Unnamed_Job";
 
     // Filter jobs based on selected job types
@@ -519,17 +530,6 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const handleTodayClick = () => {
     onDateSelect(new Date());
   };
-
-  const [printSettings, setPrintSettings] = useState<PrintSettings>({
-    range: 'month',
-    jobTypes: {
-      tourdate: true,
-      tour: true,
-      single: true,
-      dryhire: true,
-      festival: true
-    }
-  });
 
   return (
     <Card className="h-full flex flex-col">
