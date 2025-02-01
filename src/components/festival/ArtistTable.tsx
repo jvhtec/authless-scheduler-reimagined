@@ -27,6 +27,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import { Database } from "@/integrations/supabase/types";
 
 // ----------------------
 // Data Interfaces
@@ -112,7 +113,7 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
   const fetchJobDates = async () => {
     try {
       const { data, error } = await supabase
-        .from<Job>("jobs")
+        .from<"jobs", Database["public"]["Tables"]["jobs"]["Row"]>("jobs")
         .select("dates")
         .eq("id", jobId)
         .single();
