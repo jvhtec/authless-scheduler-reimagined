@@ -30,6 +30,31 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { toast } = useToast();
 
+  // Add currentMonth state
+  const currentMonth = date || new Date();
+
+  // Calculate calendar days
+  const firstDayOfMonth = startOfMonth(currentMonth);
+  const lastDayOfMonth = endOfMonth(currentMonth);
+  const daysInMonth = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth });
+  const startDay = firstDayOfMonth.getDay();
+  const paddingDays = startDay === 0 ? 6 : startDay - 1;
+
+  const prefixDays = Array.from({ length: paddingDays }).map((_, i) => {
+    const day = new Date(firstDayOfMonth);
+    day.setDate(day.getDate() - (paddingDays - i));
+    return day;
+  });
+
+  const totalDaysNeeded = 42;
+  const suffixDays = Array.from({ length: totalDaysNeeded - (prefixDays.length + daysInMonth.length) }).map((_, i) => {
+    const day = new Date(lastDayOfMonth);
+    day.setDate(day.getDate() + (i + 1));
+    return day;
+  });
+
+  const allDays = [...prefixDays, ...daysInMonth, ...suffixDays];
+
   const distinctJobTypes = jobs ? Array.from(new Set(jobs.map(job => job.job_type).filter(Boolean))) : [];
 
   useEffect(() => {
