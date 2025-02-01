@@ -13,12 +13,7 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
-  Eye,
-  Plane,
-  Wrench,
-  Star,
-  Moon,
-  Mic
+  Eye
 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase";
@@ -60,7 +55,7 @@ const FLEX_FOLDER_IDS = {
   presupuestosRecibidos: "3787806c-af2d-11df-b8d5-00e08175e43e",
   hojaGastos: "566d32e0-1a1e-11e0-a472-00e08175e43e",
   crewCall: "253878cc-af31-11df-b8d5-00e08175e43e",
-  pullSheet:"a220432c-af33-11df-b8d5-00e08175e43e"
+  pullSheet: "a220432c-af33-11df-b8d5-00e08175e43e"
 };
 
 const DRYHIRE_PARENT_IDS = {
@@ -243,7 +238,7 @@ export const JobCardNew = ({
   const createFlexFolders = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    // Note: This action should show for all jobs, including dryhire.
+    // The Create Flex Folders button is always visible for all job types.
     if (job.flex_folders_created) {
       toast({
         title: "Folders already created",
@@ -611,7 +606,6 @@ export const JobCardNew = ({
             <Button variant="ghost" size="icon" onClick={refreshData} title="Refresh">
               <RefreshCw className="h-4 w-4" />
             </Button>
-            {/* Always show edit and delete buttons */}
             {canEdit && (
               <>
                 <Button
@@ -627,7 +621,7 @@ export const JobCardNew = ({
                 </Button>
               </>
             )}
-            {/* Always show Create Flex Folders button for all job types */}
+            {/* Create Flex Folders button is always shown */}
             <Button
               variant="ghost"
               size="icon"
@@ -751,12 +745,15 @@ export const JobCardNew = ({
         </CardContent>
       </Card>
 
-      {/* Render Artist Management Dialog (for festival jobs) */}
+      {/* Render Artist Management Dialog for festival jobs.
+          Note: Instead of trying to fetch a "dates" field, we now pass start_time and end_time. */}
       {artistManagementOpen && (
         <ArtistManagementDialog
           open={artistManagementOpen}
           onOpenChange={setArtistManagementOpen}
           jobId={job.id}
+          start_time={job.start_time}
+          end_time={job.end_time}
         />
       )}
     </>
