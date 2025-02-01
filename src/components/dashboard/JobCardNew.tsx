@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
@@ -1100,6 +1101,41 @@ export const JobCardNew = ({
                     <div>RF Techs: {personnel.rf_techs || 0}</div>
                   </div>
                 </div>
+{department === "sound" && soundTasks?.length > 0 && (
+  <div className="mt-4 space-y-2">
+    {/* Overall progress bar and counts */}
+    <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <span>
+        Task Progress ({getCompletedTasks()}/{soundTasks.length} completed)
+      </span>
+      <span>{calculateTotalProgress()}%</span>
+    </div>
+    <Progress value={calculateTotalProgress()} className="h-1" />
+
+    {/* Individual tasks */}
+    <div className="space-y-1">
+      {soundTasks.map((task: any) => (
+        <div key={task.id} className="flex items-center justify-between text-xs">
+          <span>{task.task_type}</span>
+          <div className="flex items-center gap-2">
+            {task.assigned_to && (
+              <span className="text-muted-foreground">
+                {task.assigned_to.first_name} {task.assigned_to.last_name}
+              </span>
+            )}
+            <Badge variant={task.status === "completed" ? "default" : "secondary"}>
+              {task.status === "not_started"
+                ? "Not Started"
+                : task.status === "in_progress"
+                ? "In Progress"
+                : "Completed"}
+            </Badge>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
               )}
             </>
           )}
