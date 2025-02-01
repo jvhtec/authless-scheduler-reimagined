@@ -360,6 +360,7 @@ async function createAllFoldersForJob(
   // Default Logic: Full Folder Structure for non-dryhire/non-tourdate jobs
   console.log("Default job type detected. Creating full folder structure.");
 
+  // Create the top (main) folder
   const topPayload = {
     definitionId: FLEX_FOLDER_IDS.mainFolder,
     open: true,
@@ -374,6 +375,12 @@ async function createAllFoldersForJob(
 
   const topFolder = await createFlexFolder(topPayload);
   const topFolderId = topFolder.elementId;
+
+  // If this is a tour, we want to collect these IDs so we can update the tour record
+  const tourFolders: Record<string, string> = {};
+  if (job.job_type === "tour") {
+    tourFolders.flex_main_folder_id = topFolderId;
+  }
 
   await supabase
     .from("flex_folders")
@@ -401,6 +408,11 @@ async function createAllFoldersForJob(
 
     const deptFolder = await createFlexFolder(deptPayload);
     const deptFolderId = deptFolder.elementId;
+
+    // For tour jobs, collect the department folder IDs for updating the tour record
+    if (job.job_type === "tour") {
+      tourFolders[`flex_${dept}_folder_id`] = deptFolderId;
+    }
 
     await supabase
       .from("flex_folders")
@@ -474,6 +486,18 @@ async function createAllFoldersForJob(
 
         await createFlexFolder(subPayload);
       }
+    }
+  }
+
+  // If the job is a tour, update the tour record with the created folder IDs so that tour dates can later use them.
+  if (job.job_type === "tour") {
+    const { error: tourUpdateError } = await supabase
+      .from("tours")
+      .update(tourFolders)
+      .eq("id", job.id); // Adjust this if the tour record uses a different ID field
+    if (tourUpdateError) {
+      console.error("Error updating tour record with folder IDs:", tourUpdateError);
+      throw new Error("Failed to update tour record with folder IDs");
     }
   }
 }
@@ -1168,7 +1192,6 @@ export const JobCardNew = ({
           open={soundTaskDialogOpen}
           onOpenChange={setSoundTaskDialogOpen}
           jobId={job.id}
-          // add any additional props required by SoundTaskDialog here
         />
       )}
       {lightsTaskDialogOpen && (
@@ -1176,7 +1199,6 @@ export const JobCardNew = ({
           open={lightsTaskDialogOpen}
           onOpenChange={setLightsTaskDialogOpen}
           jobId={job.id}
-          // add any additional props required by LightsTaskDialog here
         />
       )}
       {videoTaskDialogOpen && (
@@ -1184,7 +1206,6 @@ export const JobCardNew = ({
           open={videoTaskDialogOpen}
           onOpenChange={setVideoTaskDialogOpen}
           jobId={job.id}
-          // add any additional props required by VideoTaskDialog here
         />
       )}
 
