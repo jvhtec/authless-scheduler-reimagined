@@ -256,8 +256,8 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
 
     // Filter jobs based on selected job types
     const filteredJobs = jobs.filter(job => {
-  const jobType = job.job_type?.toLowerCase();
-  return jobType && printSettings.jobTypes[jobType]; // Ensure only checked job types are included
+  const jobType = job.job_type?.toLowerCase(); 
+  return jobType && printSettings.jobTypes[jobType] === true; // Explicitly check for true
 });
 
     const doc = new jsPDF('landscape');
@@ -554,14 +554,14 @@ export const CalendarSection = ({ date = new Date(), onDateSelect, jobs = [], de
                             id={`print-${type}`}
                             checked={checked}
                             onCheckedChange={(checked) => {
-                              setPrintSettings(prev => ({
-                                ...prev,
-                                jobTypes: {
-                                  ...prev.jobTypes,
-                                  [type]: !!checked
-                                }
-                              }));
-                            }}
+  setPrintSettings((prev) => ({
+    ...prev,
+    jobTypes: {
+      ...prev.jobTypes,
+      [type]: !!checked, // Ensure the correct boolean value is stored
+    }
+  }));
+}}
                           />
                           <Label htmlFor={`print-${type}`} className="capitalize">
                             {type}
