@@ -58,7 +58,7 @@ const FLEX_FOLDER_IDS = {
   presupuestosRecibidos: "3787806c-af2d-11df-b8d5-00e08175e43e",
   hojaGastos: "566d32e0-1a1e-11e0-a472-00e08175e43e",
   crewCall: "253878cc-af31-11df-b8d5-00e08175e43e",
-  pullSheet:"a220432c-af33-11df-b8d5-00e08175e43e"
+  pullSheet: "a220432c-af33-11df-b8d5-00e08175e43e"
 };
 
 const DRYHIRE_PARENT_IDS = {
@@ -327,7 +327,7 @@ async function createAllFoldersForJob(
           await createFlexFolder(subPayload);
         }
       }
-if (dept === "sound") {
+      if (dept === "sound") {
         const soundSubfolders = [
           { name: `${job.title} - Tour Pack`, suffix: "TP" },
           { name: `${job.title} - PA`, suffix: "TP" },
@@ -518,7 +518,7 @@ if (dept === "sound") {
 // ----------------------------------------------------------------
 // JobCardNew Component
 // ----------------------------------------------------------------
-export const JobCardNew = ({
+const JobCardNew = ({
   job,
   onEditClick,
   onDeleteClick,
