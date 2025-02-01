@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -106,9 +107,9 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     try {
       const { data, error } = await supabase
         .from('jobs')
-        .select<'jobs', { start_time: string; end_time: string }>('start_time, end_time')
+        .select('start_time, end_time')
         .eq('id', jobId)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       
@@ -355,6 +356,16 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
     }
   };
 
+  const generateArtistSpecSheet = async (artist: Artist) => {
+    const doc = new jsPDF();
+    doc.text(`Artist Specification Sheet - ${artist.name}`, 20, 20);
+    doc.text(`Stage: ${artist.stage}`, 20, 30);
+    doc.text(`Show Time: ${artist.show_start} - ${artist.show_end}`, 20, 40);
+    doc.text(`FOH Console: ${artist.foh_console}`, 20, 50);
+    doc.text(`Monitor Console: ${artist.mon_console}`, 20, 60);
+    doc.save(`${artist.name}_spec_sheet.pdf`);
+  };
+
   // ----------------------
   // Render: Group by each job date (computed from start_time/end_time)
   // ----------------------
@@ -389,7 +400,6 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
                       </div>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-4 pt-4">
-                      {/* Inline edit form or display details */}
                       {editingArtistId === artist.id ? (
                         <div className="flex flex-col gap-2">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -448,10 +458,8 @@ export const ArtistTable = ({ jobId }: ArtistTableProps) => {
                           </div>
                           <div className="flex gap-2">
                             <Button onClick={() => {
-                              // Loop over editArtistData fields to update
                               Object.entries(editArtistData).forEach(([field, value]) => {
-                                // @ts-ignore
-                                updateArtist(artist.id!, field, value);
+                                updateArtist(artist.id!, field as keyof Artist, value);
                               });
                               setEditingArtistId(null);
                               setEditArtistData({});
