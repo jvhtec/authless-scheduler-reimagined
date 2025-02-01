@@ -1161,6 +1161,15 @@ export const JobCardNew = ({
           )}
         </CardContent>
       </Card>
+      <JobCardNew
+  job={job}
+  department="sound" // or "lights"/"video"
+  userRole={userRole}
+  onJobClick={(id) => handleJobClick(id)}
+  isProjectManagementPage={true} // <-- crucial
+  ...
+/>
+
 
       {artistManagementOpen && (
         <ArtistManagementDialog
