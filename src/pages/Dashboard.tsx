@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { TourChips } from "@/components/dashboard/TourChips";
-import { MessageSquare, Send, ChevronDown, ChevronUp } from "lucide-react";
+import { MessageSquare, Send } from "lucide-react";
 import { MessagesList } from "@/components/messages/MessagesList";
 import { DirectMessagesList } from "@/components/messages/DirectMessagesList";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,6 @@ const Dashboard = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [showMessages, setShowMessages] = useState(false);
   const [newMessageDialogOpen, setNewMessageDialogOpen] = useState(false);
-  const [showTours, setShowTours] = useState(true);
   
   const { data: jobs, isLoading } = useJobs();
   const { toast } = useToast();
@@ -183,30 +182,20 @@ const Dashboard = () => {
       )}
 
       <Card className="w-full bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader>
           <CardTitle className="flex items-center gap-2">
             Tours {new Date().getFullYear()}
           </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowTours(!showTours)}
-            className="h-8 w-8 p-0"
-          >
-            {showTours ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
         </CardHeader>
-        {showTours && (
-          <CardContent>
-            <TourChips 
-              onTourClick={(tourId) => {
-                if (userRole === 'logistics') return;
-                const tour = jobs?.find(job => job.id === tourId);
-                if (tour) handleEditClick(tour);
-              }} 
-            />
-          </CardContent>
-        )}
+        <CardContent>
+          <TourChips 
+            onTourClick={(tourId) => {
+              if (userRole === 'logistics') return;
+              const tour = jobs?.find(job => job.id === tourId);
+              if (tour) handleEditClick(tour);
+            }} 
+          />
+        </CardContent>
       </Card>
 
       <DashboardContent

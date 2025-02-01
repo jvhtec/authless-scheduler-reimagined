@@ -2,32 +2,6 @@ import { supabase } from "@/lib/supabase";
 import { Department } from "@/types/department";
 import { useLocationManagement } from "@/hooks/useLocationManagement";
 
-const BASE_URL = "https://sectorpro.flexrentalsolutions.com/f5/api/element";
-const API_KEY = "82b5m0OKgethSzL1YbrWMUFvxdNkNMjRf82E";
-
-const FLEX_FOLDER_IDS = {
-  mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
-  subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
-  location: "2f49c62c-b139-11df-b8d5-00e08175e43e",
-  mainResponsible: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb"
-};
-
-const DEPARTMENT_IDS = {
-  sound: "cdd5e372-d124-11e1-bba1-00e08175e43e",
-  lights: "d5af7892-d124-11e1-bba1-00e08175e43e",
-  video: "a89d124d-7a95-4384-943e-49f5c0f46b23",
-  production: "890811c3-fe3f-45d7-af6b-7ca4a807e84d",
-  personnel: "b972d682-598d-4802-a390-82e28dc4480e"
-};
-
-const RESPONSIBLE_PERSON_IDS = {
-  sound: "4b0d98e0-e700-11ea-97d0-2a0a4490a7fb",
-  lights: "4b559e60-e700-11ea-97d0-2a0a4490a7fb",
-  video: "bb9690ac-f22e-4bc4-94a2-6d341ca0138d",
-  production: "4ce97ce3-5159-401a-9cf8-542d3e479ade",
-  personnel: "4b618540-e700-11ea-97d0-2a0a4490a7fb"
-};
-
 interface TourCreationData {
   title: string;
   description: string;
@@ -40,127 +14,6 @@ interface TourCreationData {
 
 export const useTourCreationMutation = () => {
   const { getOrCreateLocation } = useLocationManagement();
-
-  const createFlexFolders = async (tour: any, startDate: string, endDate: string) => {
-    console.log("Creating Flex folders for tour:", tour.id);
-    
-    try {
-      const formattedStartDate = new Date(startDate).toISOString().split('.')[0] + '.000Z';
-      const formattedEndDate = new Date(endDate).toISOString().split('.')[0] + '.000Z';
-      const documentNumber = new Date(startDate).toISOString().slice(2, 10).replace(/-/g, '');
-
-      // Create main folder
-      const mainFolderPayload = {
-        definitionId: FLEX_FOLDER_IDS.mainFolder,
-        parentElementId: null,
-        open: true,
-        locked: false,
-        name: tour.name,
-        plannedStartDate: formattedStartDate,
-        plannedEndDate: formattedEndDate,
-        locationId: FLEX_FOLDER_IDS.location,
-        notes: "Automated folder creation from Web App",
-        documentNumber,
-        personResponsibleId: FLEX_FOLDER_IDS.mainResponsible
-      };
-
-      console.log('Creating main folder with payload:', mainFolderPayload);
-
-      const mainResponse = await fetch(BASE_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Auth-Token': API_KEY
-        },
-        body: JSON.stringify(mainFolderPayload)
-      });
-
-      if (!mainResponse.ok) {
-        const errorData = await mainResponse.json();
-        console.error('Flex API error creating main folder:', errorData);
-        throw new Error(errorData.exceptionMessage || 'Failed to create main folder');
-      }
-
-      const mainFolder = await mainResponse.json();
-      console.log('Main folder created:', mainFolder);
-
-      // Store folder IDs
-      const folderUpdates: any = {
-        flex_main_folder_id: mainFolder.elementId,
-        flex_main_folder_number: mainFolder.elementNumber,
-        flex_folders_created: true
-      };
-
-      // Create department subfolders
-      const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
-      
-      for (const dept of departments) {
-        const subFolderPayload = {
-          definitionId: FLEX_FOLDER_IDS.subFolder,
-          parentElementId: mainFolder.elementId,
-          open: true,
-          locked: false,
-          name: `${tour.name} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
-          plannedStartDate: formattedStartDate,
-          plannedEndDate: formattedEndDate,
-          locationId: FLEX_FOLDER_IDS.location,
-          departmentId: DEPARTMENT_IDS[dept],
-          notes: `Automated subfolder creation for ${dept}`,
-          documentNumber: `${documentNumber}${dept.charAt(0).toUpperCase()}`,
-          personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
-        };
-
-        console.log(`Creating subfolder for ${dept} with payload:`, subFolderPayload);
-
-        const subResponse = await fetch(BASE_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Auth-Token': API_KEY
-          },
-          body: JSON.stringify(subFolderPayload)
-        });
-
-        if (!subResponse.ok) {
-          const errorData = await subResponse.json();
-          console.error(`Error creating ${dept} subfolder:`, errorData);
-          continue;
-        }
-
-        const subFolder = await subResponse.json();
-        console.log(`${dept} subfolder created:`, subFolder);
-
-        folderUpdates[`flex_${dept}_folder_id`] = subFolder.elementId;
-        folderUpdates[`flex_${dept}_folder_number`] = subFolder.elementNumber;
-
-        await supabase
-          .from('flex_folders')
-          .insert({
-            job_id: null,
-            parent_id: mainFolder.elementId,
-            element_id: subFolder.elementId,
-            department: dept,
-            folder_type: 'tour_department'
-          });
-      }
-
-      // Update tour with all folder IDs
-      const { error: updateError } = await supabase
-        .from('tours')
-        .update(folderUpdates)
-        .eq('id', tour.id);
-
-      if (updateError) {
-        console.error('Error updating tour with folder info:', updateError);
-        throw updateError;
-      }
-
-      return folderUpdates;
-    } catch (error) {
-      console.error('Error creating Flex folders:', error);
-      throw error;
-    }
-  };
 
   const createTourWithDates = async ({
     title,
@@ -175,94 +28,138 @@ export const useTourCreationMutation = () => {
     
     const validDates = dates.filter(date => date.date);
 
-    if (validDates.length === 0) {
-      throw new Error("At least one valid date is required");
-    }
-
-    // Sort dates chronologically
-    validDates.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
     // Create the tour
+    console.log("Creating main tour record...");
     const { data: tour, error: tourError } = await supabase
       .from("tours")
       .insert({
         name: title,
         description,
-        start_date: startDate || validDates[0].date,
-        end_date: endDate || validDates[validDates.length - 1].date,
-        color
+        start_date: startDate || null,
+        end_date: endDate || null,
+        color,
       })
       .select()
       .single();
 
-    if (tourError) throw tourError;
+    if (tourError) {
+      console.error("Error creating tour:", tourError);
+      throw tourError;
+    }
 
-    try {
-      // Create Flex folders first
-      await createFlexFolders(
-        tour,
-        startDate || validDates[0].date,
-        endDate || validDates[validDates.length - 1].date
-      );
+    // Create the main tour job if there are valid dates
+    if (validDates.length > 0) {
+      // Sort dates chronologically
+      validDates.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      // Process each tour date
-      for (const dateInfo of validDates) {
-        let locationId = null;
-        if (dateInfo.location) {
-          locationId = await getOrCreateLocation(dateInfo.location);
-        }
-        
-        const { data: tourDate, error: tourDateError } = await supabase
-          .from("tour_dates")
-          .insert({
-            tour_id: tour.id,
-            date: dateInfo.date,
-            location_id: locationId
-          })
-          .select()
-          .single();
+      console.log("Creating main tour job...");
+      const { data: mainTourJob, error: mainJobError } = await supabase
+        .from("jobs")
+        .insert({
+          title,
+          description,
+          start_time: `${validDates[0].date}T00:00:00`,
+          end_time: `${validDates[validDates.length - 1].date}T23:59:59`,
+          job_type: "tour",
+          color,
+        })
+        .select()
+        .single();
 
-        if (tourDateError) throw tourDateError;
-
-        // Create job for this tour date
-        const { data: dateJob, error: dateJobError } = await supabase
-          .from("jobs")
-          .insert({
-            title: `${title} (Tour Date)`,
-            description,
-            start_time: `${dateInfo.date}T00:00:00`,
-            end_time: `${dateInfo.date}T23:59:59`,
-            location_id: locationId,
-            job_type: "tourdate",
-            tour_date_id: tourDate.id,
-            tour_id: tour.id,
-            color,
-          })
-          .select()
-          .single();
-
-        if (dateJobError) throw dateJobError;
-
-        // Create department associations for this date's job
-        const dateDepartments = departments.map(department => ({
-          job_id: dateJob.id,
-          department
-        }));
-
-        const { error: dateDeptError } = await supabase
-          .from("job_departments")
-          .insert(dateDepartments);
-
-        if (dateDeptError) throw dateDeptError;
+      if (mainJobError) {
+        console.error("Error creating main tour job:", mainJobError);
+        throw mainJobError;
       }
 
-      return tour;
-    } catch (error) {
-      console.error("Error processing tour creation:", error);
-      // If there's an error, attempt to delete the tour
-      await supabase.from("tours").delete().eq("id", tour.id);
-      throw error;
+      // Create department associations for main tour job
+      console.log("Creating department associations for main tour job...");
+      const mainJobDepartments = departments.map(department => ({
+        job_id: mainTourJob.id,
+        department
+      }));
+
+      const { error: mainDeptError } = await supabase
+        .from("job_departments")
+        .insert(mainJobDepartments);
+
+      if (mainDeptError) {
+        console.error("Error creating main job departments:", mainDeptError);
+        throw mainDeptError;
+      }
+
+      // Process each tour date
+      console.log("Processing tour dates...");
+      for (const dateInfo of validDates) {
+        try {
+          // Get or create location
+          console.log(`Processing location: ${dateInfo.location}`);
+          let locationId = null;
+          if (dateInfo.location) {
+            locationId = await getOrCreateLocation(dateInfo.location);
+          }
+          
+          // Create tour date entry
+          console.log("Creating tour date entry...");
+          const { data: tourDate, error: tourDateError } = await supabase
+            .from("tour_dates")
+            .insert({
+              tour_id: tour.id,
+              date: dateInfo.date,
+              location_id: locationId
+            })
+            .select()
+            .single();
+
+          if (tourDateError) {
+            console.error("Error creating tour date:", tourDateError);
+            throw tourDateError;
+          }
+
+          // Create job for this tour date
+          console.log("Creating job for tour date...");
+          const { data: dateJob, error: dateJobError } = await supabase
+            .from("jobs")
+            .insert({
+              title: `${title} (Tour Date)`,
+              description,
+              start_time: `${dateInfo.date}T00:00:00`,
+              end_time: `${dateInfo.date}T23:59:59`,
+              location_id: locationId,
+              job_type: "single",
+              tour_date_id: tourDate.id,
+              color,
+            })
+            .select()
+            .single();
+
+          if (dateJobError) {
+            console.error("Error creating date job:", dateJobError);
+            throw dateJobError;
+          }
+
+          // Create department associations for this date's job
+          console.log("Creating department associations for date job...");
+          const dateDepartments = departments.map(department => ({
+            job_id: dateJob.id,
+            department
+          }));
+
+          const { error: dateDeptError } = await supabase
+            .from("job_departments")
+            .insert(dateDepartments);
+
+          if (dateDeptError) {
+            console.error("Error creating date job departments:", dateDeptError);
+            throw dateDeptError;
+          }
+        } catch (error) {
+          console.error("Error processing tour date:", error);
+          throw error;
+        }
+      }
     }
+
+    return tour;
   };
 
   return {

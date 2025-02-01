@@ -1,15 +1,17 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { JobCardNew } from "@/components/dashboard/JobCardNew";
+import { Music2, Lightbulb, Video } from "lucide-react";
 import { Department } from "@/types/department";
-import { Loader2 } from "lucide-react";
+import { DepartmentTabContent } from "@/components/dashboard/DepartmentTabContent";
+import { JobDocument } from "@/types/job";
 
 interface DepartmentTabsProps {
   selectedDepartment: Department;
   onDepartmentChange: (value: string) => void;
   jobs: any[];
   jobsLoading: boolean;
-  onDeleteDocument?: (jobId: string, document: any) => void;
-  userRole?: string | null;
+  onDeleteDocument: (jobId: string, document: JobDocument) => Promise<void>;
+  userRole: string | null;
 }
 
 export const DepartmentTabs = ({
@@ -18,42 +20,41 @@ export const DepartmentTabs = ({
   jobs,
   jobsLoading,
   onDeleteDocument,
-  userRole
+  userRole,
 }: DepartmentTabsProps) => {
   return (
-    <Tabs value={selectedDepartment} onValueChange={onDepartmentChange} className="mt-4">
-      <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
-        <TabsTrigger value="sound">Sound</TabsTrigger>
-        <TabsTrigger value="lights">Lights</TabsTrigger>
-        <TabsTrigger value="video">Video</TabsTrigger>
+    <Tabs defaultValue={selectedDepartment} onValueChange={onDepartmentChange}>
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="sound" className="flex items-center gap-2">
+          <Music2 className="h-4 w-4" />
+          Sound
+        </TabsTrigger>
+        <TabsTrigger value="lights" className="flex items-center gap-2">
+          <Lightbulb className="h-4 w-4" />
+          Lights
+        </TabsTrigger>
+        <TabsTrigger value="video" className="flex items-center gap-2">
+          <Video className="h-4 w-4" />
+          Video
+        </TabsTrigger>
       </TabsList>
 
       {["sound", "lights", "video"].map((dept) => (
         <TabsContent key={dept} value={dept}>
-          {jobsLoading ? (
-            <div className="flex justify-center">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : jobs.length === 0 ? (
-            <p className="text-center text-muted-foreground">No jobs found</p>
-          ) : (
-            <div className="space-y-4">
-              {jobs.map((job) => (
-                <JobCardNew
-                  key={job.id}
-                  job={job}
-                  onEditClick={() => {}}
-                  onDeleteClick={() => {}}
-                  onJobClick={() => {}}
-                  department={dept as Department}
-                  userRole={userRole}
-                  onDeleteDocument={onDeleteDocument}
-                  showUpload={true}
-                  isProjectManagementPage={true}
-                />
-              ))}
-            </div>
-          )}
+          <Card>
+            <CardHeader>
+              <CardTitle className="capitalize">{dept} Jobs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DepartmentTabContent
+                department={dept as Department}
+                jobs={jobs}
+                isLoading={jobsLoading}
+                onDeleteDocument={onDeleteDocument}
+                userRole={userRole}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
       ))}
     </Tabs>
