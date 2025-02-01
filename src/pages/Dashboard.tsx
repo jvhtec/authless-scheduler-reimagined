@@ -44,57 +44,64 @@ const Dashboard = () => {
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  // Default tours section to expanded (true) if no user preference exists.
+  const [showTours, setShowTours] = useState(true);
   const [showMessages, setShowMessages] = useState(false);
   const [newMessageDialogOpen, setNewMessageDialogOpen] = useState(false);
-  const [showTours, setShowTours] = useState(true);
-  
+
   const { data: jobs, isLoading } = useJobs();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const fetchUserRole = async () => {
+    const fetchUserRoleAndPrefs = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.id) {
+        setUserId(session.user.id);
         const { data, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
+          .from("profiles")
+          .select("role, tours_expanded")
+          .eq("id", session.user.id)
           .single();
 
         if (error) {
-          console.error('Error fetching user role:', error);
+          console.error("Error fetching user role and preferences:", error);
+          // In case of an error, we keep the default values.
           return;
         }
 
         if (data) {
           setUserRole(data.role);
+          // If tours_expanded is null or undefined, default to true.
+          setShowTours(data.tours_expanded !== null && data.tours_expanded !== undefined ? data.tours_expanded : true);
+
           const params = new URLSearchParams(window.location.search);
-          if (params.get('showMessages') === 'true') {
+          if (params.get("showMessages") === "true") {
             setShowMessages(true);
           }
         }
       }
     };
 
-    fetchUserRole();
+    fetchUserRoleAndPrefs();
   }, []);
 
   const handleJobClick = (jobId: string) => {
-    if (userRole === 'logistics') return;
+    if (userRole === "logistics") return;
     setSelectedJobId(jobId);
     setIsAssignmentDialogOpen(true);
   };
 
   const handleEditClick = (job: any) => {
-    if (userRole === 'logistics') return;
+    if (userRole === "logistics") return;
     setSelectedJob(job);
     setIsEditDialogOpen(true);
   };
 
   const handleDeleteClick = async (jobId: string) => {
-    if (userRole === 'logistics') return;
-    
+    if (userRole === "logistics") return;
+
     if (!window.confirm("Are you sure you want to delete this job?")) return;
 
     try {
@@ -125,7 +132,7 @@ const Dashboard = () => {
         title: "Job deleted successfully",
         description: "The job and all related records have been removed.",
       });
-      
+
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
     } catch (error: any) {
       console.error("Error in deletion process:", error);
@@ -139,11 +146,26 @@ const Dashboard = () => {
 
   const selectedDateJobs = getSelectedDateJobs(date, jobs);
 
+  // Handle toggling the tours section and update the user preference.
+  const handleToggleTours = async () => {
+    const newValue = !showTours;
+    setShowTours(newValue);
+    if (userId) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ tours_expanded: newValue })
+        .eq("id", userId);
+      if (error) {
+        console.error("Error updating tours preference:", error);
+      }
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-6 space-y-8">
       <DashboardHeader timeSpan={timeSpan} onTimeSpanChange={setTimeSpan} />
-      
-      {userRole === 'management' && (
+
+      {userRole === "management" && (
         <Card className="w-full">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
@@ -164,7 +186,7 @@ const Dashboard = () => {
                 onClick={() => setShowMessages(!showMessages)}
                 className="text-sm text-muted-foreground hover:text-foreground"
               >
-                {showMessages ? 'Hide' : 'Show'}
+                {showMessages ? "Hide" : "Show"}
               </button>
             </div>
           </CardHeader>
@@ -190,7 +212,7 @@ const Dashboard = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setShowTours(!showTours)}
+            onClick={handleToggleTours}
             className="h-8 w-8 p-0"
           >
             {showTours ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -198,12 +220,12 @@ const Dashboard = () => {
         </CardHeader>
         {showTours && (
           <CardContent>
-            <TourChips 
+            <TourChips
               onTourClick={(tourId) => {
-                if (userRole === 'logistics') return;
-                const tour = jobs?.find(job => job.id === tourId);
+                if (userRole === "logistics") return;
+                const tour = jobs?.find((job) => job.id === tourId);
                 if (tour) handleEditClick(tour);
-              }} 
+              }}
             />
           </CardContent>
         )}
