@@ -10,8 +10,6 @@ const FLEX_FOLDER_IDS = {
   subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
   location: "2f49c62c-b139-11df-b8d5-00e08175e43e",
   mainResponsible: "4bc2df20-e700-11ea-97d0-2a0a4490a7fb",
-  // The following remain defined but are not used in this simplified version.
-  // pullSheet: "a220432c-af33-11df-b8d5-00e08175e43e",
   documentacionTecnica: "3787806c-af2d-11df-b8d5-00e08175e43e",
   presupuestosRecibidos: "3787806c-af2d-11df-b8d5-00e08175e43e",
   hojaGastos: "566d32e0-1a1e-11e0-a472-00e08175e43e"
@@ -32,6 +30,7 @@ const RESPONSIBLE_PERSON_IDS = {
   production: "4ce97ce3-5159-401a-9cf8-542d3e479ade",
   personnel: "4b618540-e700-11ea-97d0-2a0a4490a7fb"
 };
+
 const DEPARTMENT_SUFFIXES = {
   sound: "S",
   lights: "L",
@@ -53,9 +52,6 @@ interface TourCreationData {
 export const useTourCreationMutation = () => {
   const { getOrCreateLocation } = useLocationManagement();
 
-  /**
-   * Helper function to call the Flex API and create a folder.
-   */
   const createFlexFolder = async (payload: Record<string, any>) => {
     console.log("Creating Flex folder with payload:", payload);
     const response = await fetch(BASE_URL, {
@@ -78,15 +74,6 @@ export const useTourCreationMutation = () => {
     return data;
   };
 
-  /**
-   * Creates the Flex folder structure for a tour.
-   *
-   * For each department the following folder structure is created:
-   * 1. A department folder under the main folder.
-   * 2. Two child folders inside the department folder:
-   *    - Presupuestos Recibidos
-   *    - Hoja de Gastos
-   */
   const createFlexFolders = async (tour: any, startDate: string, endDate: string) => {
     console.log("Creating Flex folders for tour:", tour.id);
     
@@ -95,7 +82,6 @@ export const useTourCreationMutation = () => {
       const formattedEndDate = new Date(endDate).toISOString().split('.')[0] + '.000Z';
       const documentNumber = new Date(startDate).toISOString().slice(2, 10).replace(/-/g, '');
 
-      // Create main folder
       const mainFolderPayload = {
         definitionId: FLEX_FOLDER_IDS.mainFolder,
         parentElementId: null,
@@ -130,18 +116,15 @@ export const useTourCreationMutation = () => {
       const mainFolder = await mainResponse.json();
       console.log("Main folder created:", mainFolder);
 
-      // Store folder IDs to update the tour record later
       const folderUpdates: any = {
         flex_main_folder_id: mainFolder.elementId,
         flex_main_folder_number: mainFolder.elementNumber,
         flex_folders_created: true
       };
 
-      // Create department subfolders
       const departments = ['sound', 'lights', 'video', 'production', 'personnel'] as const;
       
       for (const dept of departments) {
-        // Create the department folder (child of main folder)
         const subFolderPayload = {
           definitionId: FLEX_FOLDER_IDS.subFolder,
           parentElementId: mainFolder.elementId,
@@ -153,7 +136,7 @@ export const useTourCreationMutation = () => {
           locationId: FLEX_FOLDER_IDS.location,
           departmentId: DEPARTMENT_IDS[dept],
           notes: `Automated subfolder creation for ${dept}`,
-          documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[department]`,
+          documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`,
           personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
         };
 
@@ -190,9 +173,6 @@ export const useTourCreationMutation = () => {
             folder_type: "tour_department"
           });
 
-        // Create two additional child folders inside the department folder:
-        // - Presupuestos Recibidos
-        // - Hoja de Gastos
         const additionalSubfolders = [
           {
             definitionId: FLEX_FOLDER_IDS.presupuestosRecibidos,
@@ -217,7 +197,7 @@ export const useTourCreationMutation = () => {
             plannedEndDate: formattedEndDate,
             locationId: FLEX_FOLDER_IDS.location,
             departmentId: DEPARTMENT_IDS[dept],
-            documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[department]${sf.suffix}`,
+            documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
             personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
           };
           console.log(`Creating additional subfolder for ${dept} with payload:`, childPayload);
@@ -244,7 +224,6 @@ export const useTourCreationMutation = () => {
         }
       }
 
-      // Update tour record with all folder IDs
       const { error: updateError } = await supabase
         .from("tours")
         .update(folderUpdates)
@@ -262,18 +241,6 @@ export const useTourCreationMutation = () => {
     }
   };
 
-  /**
-   * Creates a tour with dates.
-   *
-   * 1. Validates and sorts the provided dates.
-   * 2. Inserts the tour record.
-   * 3. Creates the Flex folder structure.
-   * 4. For each tour date:
-   *    - Gets (or creates) the location.
-   *    - Inserts a tour_date record.
-   *    - Creates a job for that tour date.
-   *    - Inserts job department associations.
-   */
   const createTourWithDates = async ({
     title,
     description,
@@ -291,12 +258,10 @@ export const useTourCreationMutation = () => {
       throw new Error("At least one valid date is required");
     }
 
-    // Sort dates chronologically
     validDates.sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    // Create the tour record in Supabase
     const { data: tour, error: tourError } = await supabase
       .from("tours")
       .insert({
@@ -312,14 +277,12 @@ export const useTourCreationMutation = () => {
     if (tourError) throw tourError;
 
     try {
-      // Create Flex folders first
       await createFlexFolders(
         tour,
         startDate || validDates[0].date,
         endDate || validDates[validDates.length - 1].date
       );
 
-      // Process each tour date
       for (const dateInfo of validDates) {
         let locationId = null;
         if (dateInfo.location) {
@@ -338,7 +301,6 @@ export const useTourCreationMutation = () => {
 
         if (tourDateError) throw tourDateError;
 
-        // Create job for this tour date
         const { data: dateJob, error: dateJobError } = await supabase
           .from("jobs")
           .insert({
@@ -357,7 +319,6 @@ export const useTourCreationMutation = () => {
 
         if (dateJobError) throw dateJobError;
 
-        // Create department associations for this date's job
         const dateDepartments = departments.map((department) => ({
           job_id: dateJob.id,
           department,
@@ -373,7 +334,6 @@ export const useTourCreationMutation = () => {
       return tour;
     } catch (error) {
       console.error("Error processing tour creation:", error);
-      // If there's an error, attempt to delete the tour
       await supabase.from("tours").delete().eq("id", tour.id);
       throw error;
     }
