@@ -281,7 +281,6 @@ export type Database = {
           id: string
           job_id: string | null
           parent_id: string | null
-          tour_date_id: string | null
         }
         Insert: {
           created_at?: string
@@ -291,7 +290,6 @@ export type Database = {
           id?: string
           job_id?: string | null
           parent_id?: string | null
-          tour_date_id?: string | null
         }
         Update: {
           created_at?: string
@@ -301,7 +299,6 @@ export type Database = {
           id?: string
           job_id?: string | null
           parent_id?: string | null
-          tour_date_id?: string | null
         }
         Relationships: [
           {
@@ -309,13 +306,6 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "flex_folders_tour_date_id_fkey"
-            columns: ["tour_date_id"]
-            isOneToOne: false
-            referencedRelation: "tour_dates"
             referencedColumns: ["id"]
           },
         ]
