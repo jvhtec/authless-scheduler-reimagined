@@ -1,12 +1,18 @@
-import { SoundTaskDialog } from "@/components/sound/SoundTaskDialog";
-import { LightsTaskDialog } from "@/components/lights/LightsTaskDialog";
-import { VideoTaskDialog } from "@/components/video/VideoTaskDialog";
 import { useState } from "react";
+import { useTheme } from "next-themes";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { Department } from "@/types/department";
+import createFolderIcon from "@/assets/icons/icon.png";
+
+// UI Components & Icons
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import {
   Clock,
   MapPin,
@@ -19,14 +25,16 @@ import {
   ChevronUp,
   Eye
 } from "lucide-react";
-import { format } from "date-fns";
-import { supabase } from "@/lib/supabase";
-import { useToast } from "@/hooks/use-toast";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import createFolderIcon from "@/assets/icons/icon.png";
-import { Department } from "@/types/department";
+
+// Dialogs
+import { SoundTaskDialog } from "@/components/sound/SoundTaskDialog";
+import { LightsTaskDialog } from "@/components/lights/LightsTaskDialog";
+import { VideoTaskDialog } from "@/components/video/VideoTaskDialog";
 import { ArtistManagementDialog } from "../festival/ArtistManagementDialog";
 
+// -------------------------
+// Types & Props
+// -------------------------
 export interface JobDocument {
   id: string;
   file_name: string;
@@ -48,7 +56,9 @@ export interface JobCardNewProps {
   isProjectManagementPage?: boolean;
 }
 
+// -------------------------
 // Constants used in folder creation
+// -------------------------
 const FLEX_FOLDER_IDS = {
   mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
   subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
@@ -330,7 +340,7 @@ async function createAllFoldersForJob(
       if (dept === "sound") {
         const soundSubfolders = [
           { name: `${job.title} - Tour Pack`, suffix: "TP" },
-          { name: `${job.title} - PA`, suffix: "TP" },
+          { name: `${job.title} - PA`, suffix: "PA" },
         ];
 
         for (const sf of soundSubfolders) {
@@ -523,7 +533,7 @@ async function createAllFoldersForJob(
 }
 
 // ----------------------------------------------------------------
-// JobCardNew Component
+// JobCardNew Component – Preview Look with Dark Mode
 // ----------------------------------------------------------------
 export function JobCardNew({
   job,
@@ -539,6 +549,23 @@ export function JobCardNew({
 }: JobCardNewProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  // Compute dynamic inline styles that change in dark mode.
+  const borderColor = job.color
+    ? job.color
+    : "#7E69AB";
+  // For dark mode, you may optionally have a job.darkColor property
+  const appliedBorderColor = isDark
+    ? (job.darkColor ? job.darkColor : borderColor)
+    : borderColor;
+  const bgColor = job.color
+    ? `${job.color}05`
+    : "#7E69AB05";
+  const appliedBgColor = isDark
+    ? (job.darkColor ? `${job.darkColor}15` : bgColor)
+    : bgColor;
 
   const [collapsed, setCollapsed] = useState(true);
   const [assignments, setAssignments] = useState(job.job_assignments || []);
@@ -572,9 +599,7 @@ export function JobCardNew({
             if (!role) return null;
             return {
               id: assignment.technician_id,
-              name: `${assignment.profiles?.first_name || ""} ${
-                assignment.profiles?.last_name || ""
-              }`.trim(),
+              name: `${assignment.profiles?.first_name || ""} ${assignment.profiles?.last_name || ""}`.trim(),
               role
             };
           })
@@ -977,9 +1002,9 @@ export function JobCardNew({
   };
 
   return (
-    <>
+    <div className="p-4 bg-gray-50 dark:bg-gray-900">
       <Card
-        className="mb-4 hover:shadow-md transition-shadow cursor-pointer"
+        className="mb-4 hover:shadow-md transition-all duration-200 cursor-pointer border-l-4 overflow-hidden"
         onClick={() => {
           // If on the project management page, open the tasks dialog for the current department
           if (isProjectManagementPage) {
@@ -1002,80 +1027,106 @@ export function JobCardNew({
           }
         }}
         style={{
-          borderColor: `${job.color}30` || "#7E69AB30",
-          backgroundColor: `${job.color}05` || "#7E69AB05"
+          borderLeftColor: appliedBorderColor,
+          backgroundColor: appliedBgColor
         }}
       >
-        <CardHeader> 
-          <div className="flex items-center flex-grow">
-            <div className="font-medium">
-              {job.title}
-              {getBadgeForJobType(job.job_type)}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleCollapse}
-              title="Toggle Details"
-              className="ml-2"
-            >
-              {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-            </Button>
-          </div>
-          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-            {job.job_type === "festival" && isProjectManagementPage && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setArtistManagementOpen(true)}
-              >
-                Manage Artists
-              </Button>
-            )}
-            <Button variant="ghost" size="icon" onClick={refreshData} title="Refresh">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            {canEdit && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleEditClick}
-                  title="Edit job details, dates, and location"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={handleDeleteClick}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={createFlexFoldersHandler}
-              disabled={job.flex_folders_created}
-              title={job.flex_folders_created ? "Folders already created" : "Create Flex folders"}
-            >
-              <img src={createFolderIcon} alt="Create Flex folders" className="h-4 w-4" />
-            </Button>
-            {job.job_type !== "dryhire" && showUpload && (
-              <div className="relative">
-                <input
-                  type="file"
-                  onChange={handleFileUpload}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  onClick={(ev) => ev.stopPropagation()}
-                />
-                <Button variant="ghost" size="icon">
-                  <Upload className="h-4 w-4" />
-                </Button>
+        {/* Header Section */}
+        <div className="p-6 pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="font-medium text-lg truncate">
+                {job.title}
+                {getBadgeForJobType(job.job_type)}
               </div>
-            )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleCollapse}
+                title="Toggle Details"
+                className="ml-2 hover:bg-accent/50 shrink-0"
+              >
+                {collapsed ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronUp className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+              {job.job_type === "festival" && isProjectManagementPage && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setArtistManagementOpen(true)}
+                  className="hover:bg-accent/50"
+                >
+                  Manage Artists
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={refreshData}
+                title="Refresh"
+                className="hover:bg-accent/50"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+              {canEdit && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleEditClick}
+                    title="Edit job details, dates, and location"
+                    className="hover:bg-accent/50"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleDeleteClick}
+                    className="hover:bg-accent/50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={createFlexFoldersHandler}
+                disabled={job.flex_folders_created}
+                title={
+                  job.flex_folders_created
+                    ? "Folders already created"
+                    : "Create Flex folders"
+                }
+                className="hover:bg-accent/50"
+              >
+                <img src={createFolderIcon} alt="Create Flex folders" className="h-4 w-4" />
+              </Button>
+              {job.job_type !== "dryhire" && showUpload && (
+                <div className="relative">
+                  <input
+                    type="file"
+                    onChange={handleFileUpload}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onClick={(ev) => ev.stopPropagation()}
+                  />
+                  <Button variant="ghost" size="icon" className="hover:bg-accent/50">
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent>
+        {/* Content Section */}
+        <div className="px-6 pb-6">
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
@@ -1092,7 +1143,7 @@ export function JobCardNew({
             {job.location?.name && (
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground" />
-                {job.location.name}
+                <span className="font-medium">{job.location.name}</span>
               </div>
             )}
             {job.job_type !== "dryhire" && (
@@ -1116,7 +1167,7 @@ export function JobCardNew({
                       {documents.map((doc) => (
                         <div
                           key={doc.id}
-                          className="flex items-center justify-between p-2 rounded-md bg-accent/20"
+                          className="flex items-center justify-between p-2 rounded-md bg-accent/20 hover:bg-accent/30 transition-colors"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="flex flex-col">
@@ -1150,6 +1201,7 @@ export function JobCardNew({
             )}
           </div>
 
+          {/* Collapsible Details */}
           {!collapsed && job.job_type !== "dryhire" && (
             <>
               {department === "sound" && personnel && (
@@ -1175,7 +1227,6 @@ export function JobCardNew({
                         <span>{calculateTotalProgress()}%</span>
                       </div>
                       <Progress value={calculateTotalProgress()} className="h-1" />
-
                       <div className="space-y-1">
                         {soundTasks.map((task: any) => (
                           <div key={task.id} className="flex items-center justify-between text-xs">
@@ -1203,16 +1254,15 @@ export function JobCardNew({
               )}
             </>
           )}
-        </CardContent>
+        </div>
       </Card>
 
-      {/* Conditionally render the task dialogs based on department */}
+      {/* Dialogs */}
       {soundTaskDialogOpen && (
         <SoundTaskDialog
           open={soundTaskDialogOpen}
           onOpenChange={setSoundTaskDialogOpen}
           jobId={job.id}
-          // add any additional props required by SoundTaskDialog here
         />
       )}
       {lightsTaskDialogOpen && (
@@ -1220,7 +1270,6 @@ export function JobCardNew({
           open={lightsTaskDialogOpen}
           onOpenChange={setLightsTaskDialogOpen}
           jobId={job.id}
-          // add any additional props required by LightsTaskDialog here
         />
       )}
       {videoTaskDialogOpen && (
@@ -1228,10 +1277,8 @@ export function JobCardNew({
           open={videoTaskDialogOpen}
           onOpenChange={setVideoTaskDialogOpen}
           jobId={job.id}
-          // add any additional props required by VideoTaskDialog here
         />
       )}
-
       {artistManagementOpen && (
         <ArtistManagementDialog
           open={artistManagementOpen}
@@ -1241,6 +1288,6 @@ export function JobCardNew({
           end_time={job.end_time}
         />
       )}
-    </>
+    </div>
   );
 }
