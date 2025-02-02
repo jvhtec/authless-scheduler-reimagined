@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { SimplifiedJobColorPicker } from "../jobs/SimplifiedJobColorPicker";
 import { Palette } from "lucide-react";
 
@@ -15,6 +15,25 @@ export const TourColorSection: React.FC<TourColorSectionProps> = ({
   onColorChange,
   onNameChange,
 }) => {
+  // Use local state so that the input is editable immediately.
+  const [localName, setLocalName] = useState(tourName);
+
+  // If the parent updates the tourName prop, update our local state.
+  useEffect(() => {
+    setLocalName(tourName);
+  }, [tourName]);
+
+  // When the input loses focus, call onNameChange to persist the change.
+  const handleBlur = async () => {
+    if (localName !== tourName) {
+      try {
+        await onNameChange(localName);
+      } catch (error) {
+        console.error("Error updating tour name:", error);
+      }
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Tour Color Section */}
@@ -33,8 +52,9 @@ export const TourColorSection: React.FC<TourColorSectionProps> = ({
         </div>
         <input
           type="text"
-          value={tourName}
-          onChange={(e) => onNameChange(e.target.value)}
+          value={localName}
+          onChange={(e) => setLocalName(e.target.value)}
+          onBlur={handleBlur}
           className="w-full border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
