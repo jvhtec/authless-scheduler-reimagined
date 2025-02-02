@@ -1,3 +1,4 @@
+import { useState } from "react"
 import {
   HoverCard,
   HoverCardContent,
@@ -5,19 +6,40 @@ import {
 } from "@/components/ui/hover-card"
 import { Button } from "@/components/ui/button"
 import { Info } from "lucide-react"
-import { useState } from "react"
 
 // Get the version from Vite's env variables
-const version = import.meta.env.VITE_APP_VERSION || 'dev';
+const version = import.meta.env.VITE_APP_VERSION || "dev"
+
+// An array of image URLs to choose from
+const images = [
+  "/lovable-uploads/7bd0c1d7-3226-470d-bea4-5cd7222e3248.png",
+  "/lovable-uploads/some-other-image.png",
+  "/lovable-uploads/another-image.png",
+]
 
 export const AboutCard = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false)
+  const [currentImage, setCurrentImage] = useState(images[0])
+
+  // Selects a random image from the images array.
+  const selectRandomImage = () => {
+    const randomIndex = Math.floor(Math.random() * images.length)
+    return images[randomIndex]
+  }
+
+  // When the card is opened, update the image to a random one.
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open)
+    if (open) {
+      setCurrentImage(selectRandomImage())
+    }
+  }
 
   return (
-    <HoverCard open={isOpen} onOpenChange={setIsOpen}>
+    <HoverCard open={isOpen} onOpenChange={handleOpenChange}>
       <HoverCardTrigger asChild>
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           className="w-full justify-start gap-2"
           onClick={() => setIsOpen(true)}
         >
@@ -28,8 +50,8 @@ export const AboutCard = () => {
       <HoverCardContent className="w-80">
         <div className="flex flex-col gap-4">
           <img
-            src="/lovable-uploads/7bd0c1d7-3226-470d-bea4-5cd7222e3248.png"
-            alt="JVH"
+            src={currentImage}
+            alt="About Image"
             className="rounded-lg w-full h-auto"
           />
           <div className="space-y-2">
