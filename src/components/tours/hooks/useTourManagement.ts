@@ -61,6 +61,32 @@ export const useTourManagement = (tour: any, onClose: () => void) => {
     }
   };
 
+  const handleNameChange = async (name: string) => {
+    try {
+      console.log("Updating name for tour:", tour.id);
+      
+      const { error: tourError } = await supabase
+        .from("tours")
+        .update({ name })
+        .eq("id", tour.id);
+
+      if (tourError) {
+        console.error("Error updating tour name:", tourError);
+        throw tourError;
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["tours-with-dates"] });
+      toast({ title: "Tour name updated successfully" });
+    } catch (error: any) {
+      console.error("Error updating tour name:", error);
+      toast({
+        title: "Error updating tour name",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDelete = async () => {
     try {
       console.log("Starting tour deletion process for tour:", tour.id);
@@ -79,6 +105,17 @@ export const useTourManagement = (tour: any, onClose: () => void) => {
       console.log("Found tour dates:", tourDates);
 
       if (tourDates && tourDates.length > 0) {
+        // First delete flex folders
+        const { error: flexFoldersError } = await supabase
+          .from("flex_folders")
+          .delete()
+          .in("tour_date_id", tourDates.map(td => td.id));
+
+        if (flexFoldersError) {
+          console.error("Error deleting flex folders:", flexFoldersError);
+          throw flexFoldersError;
+        }
+
         // Get all jobs associated with these tour dates
         const { data: jobs, error: jobsError } = await supabase
           .from("jobs")
@@ -167,6 +204,7 @@ export const useTourManagement = (tour: any, onClose: () => void) => {
 
   return {
     handleColorChange,
+    handleNameChange,
     handleDelete,
   };
 };
