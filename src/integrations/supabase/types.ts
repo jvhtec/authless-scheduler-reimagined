@@ -1189,6 +1189,7 @@ export type Database = {
         Row: {
           created_at: string
           date: string
+          flex_folders_created: boolean | null
           id: string
           location_id: string | null
           tour_id: string | null
@@ -1196,6 +1197,7 @@ export type Database = {
         Insert: {
           created_at?: string
           date: string
+          flex_folders_created?: boolean | null
           id?: string
           location_id?: string | null
           tour_id?: string | null
@@ -1203,6 +1205,7 @@ export type Database = {
         Update: {
           created_at?: string
           date?: string
+          flex_folders_created?: boolean | null
           id?: string
           location_id?: string | null
           tour_id?: string | null

@@ -667,50 +667,6 @@ export const TourDateManagementDialog: React.FC<TourDateManagementDialogInternal
     }
   };
 
-  // Handler: Bulk create folders for all tour dates.
-  const createAllFolders = async () => {
-    if (isCreatingFolders) return;
-    setIsCreatingFolders(true);
-    try {
-      let successCount = 0;
-      let skipCount = 0;
-      for (const dateObj of tourDates) {
-        if (dateObj.flex_folders_created || createdTourDateIds.includes(dateObj.id)) {
-          skipCount++;
-          continue;
-        }
-        try {
-          const created = await createFoldersForDate(dateObj, tourId, true);
-          if (created) {
-            setCreatedTourDateIds((prev) => [...prev, dateObj.id]);
-            successCount++;
-          } else {
-            skipCount++;
-          }
-        } catch (error) {
-          console.error(
-            `Error creating folders for date ${dateObj.date}:`,
-            error
-          );
-          continue;
-        }
-      }
-      toast({
-        title: "Folders Creation Complete",
-        description: `Folders created for ${successCount} dates. ${skipCount} dates were skipped.`,
-      });
-    } catch (error: any) {
-      console.error("Error creating folders for all dates:", error);
-      toast({
-        title: "Error creating folders",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreatingFolders(false);
-    }
-  };
-
   // Inline editing handlers.
   const startEditing = (dateObj: any) => {
     setEditingTourDate(dateObj);
