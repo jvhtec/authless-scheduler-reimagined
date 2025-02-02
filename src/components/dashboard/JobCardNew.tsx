@@ -4,18 +4,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { ChevronDown, ChevronUp, RefreshCcw } from "lucide-react";
 import { format } from "date-fns";
 import { Job } from "@/types/job";
 import { Department } from "@/types/department";
 import { JobDocumentSection } from "./job-card/JobDocumentSection";
 import { JobFolderSection } from "./job-card/JobFolderSection";
+import { cn } from "@/lib/utils";
 
 interface JobCardNewProps {
   job: Job;
   department?: Department;
-  userRole?: string;
+  userRole?: string | null;
   onJobClick?: (jobId: string) => void;
   onEditClick?: (job: any) => void;
   onDeleteClick?: (jobId: string) => void;
@@ -67,82 +67,103 @@ export const JobCardNew = ({
 
   const refreshData = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    await queryClient.invalidateQueries({ queryKey: ["jobs"] });
-    toast({
-      title: "Refreshed",
-      description: "The job data has been refreshed."
-    });
+    try {
+      console.log(`Refreshing job ${job.id} data...`);
+      await queryClient.invalidateQueries({ 
+        queryKey: ["jobs"],
+        refetchType: "active",
+        exact: false
+      });
+      toast({
+        title: "Refreshed",
+        description: "The job data has been refreshed."
+      });
+    } catch (error) {
+      console.error("Error refreshing job data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh job data",
+        variant: "destructive"
+      });
+    }
   };
 
   const canEdit = ["admin", "management"].includes(userRole || "");
 
   return (
-    <>
-      <Card
-        className={`w-full mb-4 cursor-pointer hover:bg-accent/50 transition-colors ${
-          !collapsed ? "bg-accent/25" : ""
-        }`}
-        onClick={handleCardClick}
-      >
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCollapseToggle}
-                className="p-0 hover:bg-transparent"
-              >
-                {collapsed ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronUp className="h-4 w-4" />
-                )}
-              </Button>
-              <span className="ml-2 font-medium">{job.title}</span>
-              {getBadgeForJobType(job.job_type)}
-            </div>
-            <div className="flex items-center">
-              <JobFolderSection job={job} canEdit={canEdit} />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-2"
-                onClick={refreshData}
-              >
-                <RefreshCcw className="h-4 w-4" />
-              </Button>
-            </div>
+    <Card
+      className={cn(
+        "w-full mb-4 cursor-pointer hover:bg-accent/50 transition-colors",
+        !collapsed && "bg-accent/25",
+        job.color && `border-l-4`,
+        job.color && `border-l-[${job.color}]`
+      )}
+      onClick={handleCardClick}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCollapseToggle}
+              className="p-0 hover:bg-transparent"
+            >
+              {collapsed ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronUp className="h-4 w-4" />
+              )}
+            </Button>
+            <span className="ml-2 font-medium">{job.title}</span>
+            {getBadgeForJobType(job.job_type)}
           </div>
+          <div className="flex items-center gap-2">
+            <JobFolderSection job={job} canEdit={canEdit} />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refreshData}
+              className="ml-2"
+            >
+              <RefreshCcw className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
 
-          {!collapsed && (
-            <div className="mt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-sm font-medium">Start:</span>
-                  <span className="text-sm ml-2">
-                    {format(new Date(job.start_time), "PPp")}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-sm font-medium">End:</span>
-                  <span className="text-sm ml-2">
-                    {format(new Date(job.end_time), "PPp")}
-                  </span>
-                </div>
+        {!collapsed && (
+          <div className="mt-4 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm font-medium">Start:</span>
+                <span className="text-sm ml-2">
+                  {format(new Date(job.start_time), "PPp")}
+                </span>
               </div>
-
-              <JobDocumentSection
-                jobId={job.id}
-                department={department}
-                documents={job.documents || []}
-                showUpload={showUpload}
-                jobType={job.job_type}
-              />
+              <div>
+                <span className="text-sm font-medium">End:</span>
+                <span className="text-sm ml-2">
+                  {format(new Date(job.end_time), "PPp")}
+                </span>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </>
+
+            {job.description && (
+              <div className="text-sm text-muted-foreground">
+                {job.description}
+              </div>
+            )}
+
+            <JobDocumentSection
+              jobId={job.id}
+              department={department}
+              documents={job.documents || []}
+              showUpload={showUpload}
+              jobType={job.job_type}
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
