@@ -13,8 +13,18 @@ const version = import.meta.env.VITE_APP_VERSION || "dev"
 // An array of image URLs to choose from
 const images = [
   "/lovable-uploads/7bd0c1d7-3226-470d-bea4-5cd7222e3248.png",
-  "/lovable-uploads/78EA43B6-3727-454E-BB54-257619F40C1E.jpeg",
-  "/lovable-uploads/another-image.png",
+  "/lovable-uploads/77dcfa7b-e05a-48e3-b662-03242aa8e853.png",
+  "/lovable-uploads/642b8d57-4a23-490e-b7c6-fe8de9eafc63.png",
+  "/lovable-uploads/5624e847-e131-4bdf-b4a9-2058fe294ead.png",
+  "/lovable-uploads/44b5a76b-8a09-4270-b439-9e7976926b18.png",
+  "/lovable-uploads/3c5cf97c-840a-48fd-b781-098c27729d90.png",
+  "/lovable-uploads/39daae92-fbe9-4d38-ae04-8e929d2b1e6f.png",
+  "/lovable-uploads/14f2fcca-4286-46dc-8d87-4aad90d42e27.png",
+  "/lovable-uploads/8466df54-7094-4c62-b9b7-0fef374409f4.png",
+  "/lovable-uploads/d6d934d3-85f4-4e22-8c5e-bb25acfae3a3.png",
+  "/lovable-uploads/f795edb1-b35c-4b89-9d0a-be90d35833ec.png",
+  "/lovable-uploads/fb2052e9-73ee-4e18-bc9e-933669280d89.png",
+  
 ]
 
 export const AboutCard = () => {
