@@ -629,39 +629,72 @@ export const TourDateManagementDialog: React.FC<TourDateManagementDialogInternal
   const handleDeleteDate = async (dateId: string) => {
     try {
       console.log("Starting deletion of tour date:", dateId);
+      
+      // First, delete associated flex_folders records
+      const { error: flexFoldersError } = await supabase
+        .from("flex_folders")
+        .delete()
+        .eq("tour_date_id", dateId);
+        
+      if (flexFoldersError) {
+        console.error("Error deleting flex folders:", flexFoldersError);
+        throw flexFoldersError;
+      }
+
+      // Then delete associated jobs and their dependencies
       const { data: jobs, error: jobsError } = await supabase
         .from("jobs")
         .select("id")
         .eq("tour_date_id", dateId);
+        
       if (jobsError) throw jobsError;
+      
       if (jobs && jobs.length > 0) {
+        const jobIds = jobs.map(j => j.id);
+        
+        // Delete job assignments
         const { error: assignmentsError } = await supabase
           .from("job_assignments")
           .delete()
-          .in("job_id", jobs.map((j) => j.id));
+          .in("job_id", jobIds);
+          
         if (assignmentsError) throw assignmentsError;
+        
+        // Delete job departments
         const { error: departmentsError } = await supabase
           .from("job_departments")
           .delete()
-          .in("job_id", jobs.map((j) => j.id));
+          .in("job_id", jobIds);
+          
         if (departmentsError) throw departmentsError;
+        
+        // Delete jobs
         const { error: jobsDeleteError } = await supabase
           .from("jobs")
           .delete()
-          .in("id", jobs.map((j) => j.id));
+          .in("id", jobIds);
+          
         if (jobsDeleteError) throw jobsDeleteError;
       }
+
+      // Finally delete the tour date
       const { error: dateError } = await supabase
         .from("tour_dates")
         .delete()
         .eq("id", dateId);
+        
       if (dateError) throw dateError;
+      
       await queryClient.invalidateQueries({ queryKey: ["tours"] });
-      toast({ title: "Date deleted successfully" });
+      toast({ 
+        title: "Success",
+        description: "Tour date deleted successfully" 
+      });
     } catch (error: any) {
       console.error("Error deleting date:", error);
       toast({
         title: "Error deleting date",
+        description: error.message,
         variant: "destructive",
       });
     }
