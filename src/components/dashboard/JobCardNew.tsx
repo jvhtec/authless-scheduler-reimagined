@@ -1,12 +1,18 @@
-import { SoundTaskDialog } from "@/components/sound/SoundTaskDialog";
-import { LightsTaskDialog } from "@/components/lights/LightsTaskDialog";
-import { VideoTaskDialog } from "@/components/video/VideoTaskDialog";
 import { useState } from "react";
+import { useTheme } from "next-themes";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { Department } from "@/types/department";
+import createFolderIcon from "@/assets/icons/icon.png";
+
+// UI Components & Icons
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import {
   Clock,
   MapPin,
@@ -19,14 +25,16 @@ import {
   ChevronUp,
   Eye
 } from "lucide-react";
-import { format } from "date-fns";
-import { supabase } from "@/lib/supabase";
-import { useToast } from "@/hooks/use-toast";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import createFolderIcon from "@/assets/icons/icon.png";
-import { Department } from "@/types/department";
+
+// Dialogs
+import { SoundTaskDialog } from "@/components/sound/SoundTaskDialog";
+import { LightsTaskDialog } from "@/components/lights/LightsTaskDialog";
+import { VideoTaskDialog } from "@/components/video/VideoTaskDialog";
 import { ArtistManagementDialog } from "../festival/ArtistManagementDialog";
 
+// -------------------------
+// Types & Props
+// -------------------------
 export interface JobDocument {
   id: string;
   file_name: string;
@@ -525,7 +533,7 @@ async function createAllFoldersForJob(
 }
 
 // ----------------------------------------------------------------
-// JobCardNew Component – New Visual Design (Preview Look)
+// JobCardNew Component – Preview Look with Dark Mode
 // ----------------------------------------------------------------
 export function JobCardNew({
   job,
@@ -541,6 +549,23 @@ export function JobCardNew({
 }: JobCardNewProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  // Compute dynamic inline styles that change in dark mode.
+  const borderColor = job.color
+    ? job.color
+    : "#7E69AB";
+  // For dark mode, you may optionally have a job.darkColor property
+  const appliedBorderColor = isDark
+    ? (job.darkColor ? job.darkColor : borderColor)
+    : borderColor;
+  const bgColor = job.color
+    ? `${job.color}05`
+    : "#7E69AB05";
+  const appliedBgColor = isDark
+    ? (job.darkColor ? `${job.darkColor}15` : bgColor)
+    : bgColor;
 
   const [collapsed, setCollapsed] = useState(true);
   const [assignments, setAssignments] = useState(job.job_assignments || []);
@@ -977,7 +1002,7 @@ export function JobCardNew({
   };
 
   return (
-    <div className="p-4 bg-gray-50">
+    <div className="p-4 bg-gray-50 dark:bg-gray-900">
       <Card
         className="mb-4 hover:shadow-md transition-all duration-200 cursor-pointer border-l-4 overflow-hidden"
         onClick={() => {
@@ -1002,8 +1027,8 @@ export function JobCardNew({
           }
         }}
         style={{
-          borderLeftColor: job.color ? job.color : "#7E69AB",
-          backgroundColor: job.color ? `${job.color}05` : "#7E69AB05"
+          borderLeftColor: appliedBorderColor,
+          backgroundColor: appliedBgColor
         }}
       >
         {/* Header Section */}
