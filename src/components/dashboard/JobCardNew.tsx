@@ -1147,59 +1147,58 @@ export function JobCardNew({
               </div>
             )}
             {job.job_type !== "dryhire" && (
-  <>
-    {assignedTechnicians.length > 0 && (
-      <div className="flex items-center gap-2">
-        <Users className="h-4 w-4 text-muted-foreground" />
-        <div className="flex flex-wrap gap-1">
-          {assignedTechnicians.map((tech) => (
-            <Badge key={tech.id} variant="secondary" className="text-xs">
-              {tech.name} {tech.role && `(${tech.role})`}
-            </Badge>
-          ))}
-        </div>
-      </div>
-    )}
-    {isProjectManagementPage && documents.length > 0 && (
-      <div className="mt-4 space-y-2">
-        <div className="text-sm font-medium">Documents</div>
-        <div className="space-y-2">
-          {documents.map((doc) => (
-            <div
-              key={doc.id}
-              className="flex items-center justify-between p-2 rounded-md bg-accent/20 hover:bg-accent/30 transition-colors"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">{doc.file_name}</span>
-                <span className="text-xs text-muted-foreground">
-                  Uploaded {format(new Date(doc.uploaded_at), "MMM d, yyyy")}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleViewDocument(doc)}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDeleteDocument(doc)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
-  </>
-)}
-
+              <>
+                {assignedTechnicians.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex flex-wrap gap-1">
+                      {assignedTechnicians.map((tech) => (
+                        <Badge key={tech.id} variant="secondary" className="text-xs">
+                          {tech.name} {tech.role && `(${tech.role})`}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {documents.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <div className="text-sm font-medium">Documents</div>
+                    <div className="space-y-2">
+                      {documents.map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="flex items-center justify-between p-2 rounded-md bg-accent/20 hover:bg-accent/30 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">{doc.file_name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              Uploaded {format(new Date(doc.uploaded_at), "MMM d, yyyy")}
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewDocument(doc)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteDocument(doc)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {/* Collapsible Details */}
