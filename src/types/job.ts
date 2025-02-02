@@ -21,6 +21,4 @@ export interface Job {
   created_at: string;
   job_type: JobType;
   flex_folders_created?: boolean;
-  tour_id?: string;
-  documents?: JobDocument[];
 }
