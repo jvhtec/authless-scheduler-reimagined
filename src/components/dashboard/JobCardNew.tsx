@@ -12,6 +12,7 @@ import createFolderIcon from "@/assets/icons/icon.png";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Plane, Wrench, Star, Moon, Mic } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
   Clock,
@@ -571,9 +572,45 @@ export function JobCardNew({
   const [assignments, setAssignments] = useState(job.job_assignments || []);
   const [documents, setDocuments] = useState<JobDocument[]>(job.job_documents || []);
   const [artistManagementOpen, setArtistManagementOpen] = useState(false);
+  const [dateTypes, setDateTypes] = useState<Record<string, any>>({});
   const [soundTaskDialogOpen, setSoundTaskDialogOpen] = useState(false);
   const [lightsTaskDialogOpen, setLightsTaskDialogOpen] = useState(false);
   const [videoTaskDialogOpen, setVideoTaskDialogOpen] = useState(false);
+  const getDateTypeIcon = (jobId: string, date: Date, dateTypes: Record<string, any>) => {
+  const key = `${jobId}-${format(date, "yyyy-MM-dd")}`;
+  const dateType = dateTypes[key]?.type;
+  switch (dateType) {
+    case "travel":
+      return <Plane className="h-3 w-3 text-blue-500" />;
+    case "setup":
+      return <Wrench className="h-3 w-3 text-yellow-500" />;
+    case "show":
+      return <Star className="h-3 w-3 text-green-500" />;
+    case "off":
+      return <Moon className="h-3 w-3 text-gray-500" />;
+    case "rehearsal":
+      return <Mic className="h-3 w-3 text-violet-500" />;
+    default:
+      return null;
+  }
+};
+
+
+   useEffect(() => {
+    async function fetchDateTypes() {
+      const { data, error } = await supabase
+        .from("job_date_types")
+        .select("*")
+        .eq("job_id", job.id);
+      if (!error && data && data.length > 0) {
+        // Create a key using the job id and the formatted start date.
+        const key = `${job.id}-${format(new Date(job.start_time), "yyyy-MM-dd")}`;
+        // For simplicity, we use the first returned date type.
+        setDateTypes({ [key]: data[0] });
+      }
+    }
+    fetchDateTypes();
+  }, [job.id, job.start_time]);
 
   const assignedTechnicians =
     job.job_type !== "dryhire"
@@ -1035,10 +1072,12 @@ export function JobCardNew({
         <div className="p-6 pb-3">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="font-medium text-lg truncate">
-                {job.title}
-                {getBadgeForJobType(job.job_type)}
-              </div>
+              <div className="flex items-center gap-1">
+  {getDateTypeIcon(job.id, new Date(job.start_time), dateTypes)}
+  <span className="font-medium text-lg truncate">{job.title}</span>
+  {getBadgeForJobType(job.job_type)}
+</div>
+
               <Button
                 variant="ghost"
                 size="icon"
