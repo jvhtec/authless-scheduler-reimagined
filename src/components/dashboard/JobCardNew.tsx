@@ -6,13 +6,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { ChevronDown, ChevronUp, RefreshCcw } from "lucide-react";
-import { SoundTaskDialog } from "@/components/sound/SoundTaskDialog";
-import { LightsTaskDialog } from "@/components/lights/LightsTaskDialog";
-import { VideoTaskDialog } from "@/components/video/VideoTaskDialog";
 import { format } from "date-fns";
 import { Job } from "@/types/job";
 import { Department } from "@/types/department";
-import { ArtistManagementDialog } from "../festival/ArtistManagementDialog";
 import { JobDocumentSection } from "./job-card/JobDocumentSection";
 import { JobFolderSection } from "./job-card/JobFolderSection";
 
@@ -21,6 +17,12 @@ interface JobCardNewProps {
   department?: Department;
   userRole?: string;
   onJobClick?: (jobId: string) => void;
+  onEditClick?: (job: any) => void;
+  onDeleteClick?: (jobId: string) => void;
+  onDeleteDocument?: (jobId: string, document: any) => void;
+  showUpload?: boolean;
+  showManageArtists?: boolean;
+  isProjectManagementPage?: boolean;
 }
 
 export const JobCardNew = ({
@@ -28,10 +30,16 @@ export const JobCardNew = ({
   department,
   userRole,
   onJobClick,
+  onEditClick,
+  onDeleteClick,
+  onDeleteDocument,
+  showUpload = false,
+  showManageArtists = false,
+  isProjectManagementPage = false,
 }: JobCardNewProps) => {
   const [collapsed, setCollapsed] = useState(true);
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const { toast } = useToast();
 
   const handleCardClick = () => {
     if (onJobClick) {
@@ -125,9 +133,11 @@ export const JobCardNew = ({
               </div>
 
               <JobDocumentSection
-                job={job}
+                jobId={job.id}
                 department={department}
-                canEdit={canEdit}
+                documents={job.documents || []}
+                showUpload={showUpload}
+                jobType={job.job_type}
               />
             </div>
           )}
