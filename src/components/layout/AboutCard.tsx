@@ -13,7 +13,7 @@ const version = import.meta.env.VITE_APP_VERSION || "dev"
 // An array of image URLs to choose from
 const images = [
   "/lovable-uploads/7bd0c1d7-3226-470d-bea4-5cd7222e3248.png",
-  "/lovable-uploads/some-other-image.png",
+  "/lovable-uploads/78EA43B6-3727-454E-BB54-257619F40C1E.jpeg",
   "/lovable-uploads/another-image.png",
 ]
 
