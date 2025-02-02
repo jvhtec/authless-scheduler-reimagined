@@ -784,15 +784,16 @@ export const TourDateManagementDialog: React.FC<TourDateManagementDialogInternal
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleCreateFoldersForDate(dateObj)}
-                        title="Create Flex folders"
-                        disabled={dateObj.flex_folders_created || createdTourDateIds.includes(dateObj.id)}
-                      >
-                        <FolderPlus className="h-4 w-4" />
-                      </Button>
+                    <Button
+  variant="ghost"
+  size="icon"
+  onClick={() => handleCreateFoldersForDate(dateObj)}
+  title="Create Flex folders"
+  disabled={dateObj.flex_folders_created || createdTourDateIds.includes(dateObj.id)}
+  className={(dateObj.flex_folders_created || createdTourDateIds.includes(dateObj.id)) ? "opacity-50 cursor-not-allowed" : ""}
+>
+  <FolderPlus className="h-4 w-4" />
+</Button>
                       <Button
                         variant="ghost"
                         size="icon"
