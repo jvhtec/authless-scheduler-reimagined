@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -77,7 +77,7 @@ const DRYHIRE_PARENT_IDS = {
     "01": "43b1f259-420e-4d12-b76d-1675ce6ddbfd",
     "02": "6d21b607-7c3a-43fe-bdb4-75a77a8ac4fa",
     "03": "b8f1c60a-8fa2-44a5-ac83-40012e73f639",
-    "04": "68d9ff6c-8313-4ff9-844d-47873d958b9b",
+    "04": "68d9ff6c-8313-4ff9-844e-47873d958b9b",
     "05": "a19204e0-4b8c-4f2d-a86b-a07fa189f44c",
     "06": "27229f82-d759-4f7d-800a-1793e8c2b514",
     "07": "73b16d86-db32-4b91-bbe2-f11149db4aa5",
@@ -596,7 +596,7 @@ export function JobCardNew({
 };
 
 
-   useEffect(() => {
+  useEffect(() => {
     async function fetchDateTypes() {
       const { data, error } = await supabase
         .from("job_date_types")
@@ -1331,3 +1331,4 @@ export function JobCardNew({
     </div>
   );
 }
+
