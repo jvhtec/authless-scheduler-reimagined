@@ -630,7 +630,7 @@ export const TourDateManagementDialog: React.FC<TourDateManagementDialogInternal
     try {
       console.log("Starting deletion of tour date:", dateId);
       
-      // First, delete associated flex_folders records
+      // First, delete flex_folders records
       const { error: flexFoldersError } = await supabase
         .from("flex_folders")
         .delete()
@@ -641,7 +641,7 @@ export const TourDateManagementDialog: React.FC<TourDateManagementDialogInternal
         throw flexFoldersError;
       }
 
-      // Then delete associated jobs and their dependencies
+      // Then get and delete jobs and their dependencies
       const { data: jobs, error: jobsError } = await supabase
         .from("jobs")
         .select("id")
