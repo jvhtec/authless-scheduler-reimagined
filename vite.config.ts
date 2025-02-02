@@ -20,6 +20,6 @@ export default defineConfig(({ mode }) => ({
     },
   },
   define: {
-    'import.meta.env.VITE_APP_VERSION': JSON.stringify('0.1'),
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify('0.9b'),
   },
 }));
