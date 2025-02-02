@@ -31,19 +31,20 @@ const images = [
   "/lovable-uploads/be8e98ed-c0bb-49d3-bed1-9cb76f19c3b1.png",
   "/lovable-uploads/c582372d-4e74-45db-833e-29b8f557a4ba.png",
 ]
+
 // Define an interface that includes the userRole prop.
 interface AboutCardProps {
-  userRole: string; // e.g. "management", "admin", etc.
+  userRole?: string; // e.g. "management", "admin", etc.
 }
 
 export const AboutCard = ({ userRole }: AboutCardProps) => {
-  // Only allow management-level users to see the carousel.
-  if (userRole !== "management") {
-    return null;
-  }
-export const AboutCard = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [currentImage, setCurrentImage] = useState(images[0])
+
+  // Only allow management-level users to see the carousel.
+  if (userRole === "management") {
+    return null;
+  }
 
   // Selects a random image from the images array.
   const selectRandomImage = () => {
