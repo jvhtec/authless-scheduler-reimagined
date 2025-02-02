@@ -260,7 +260,7 @@ async function createFoldersForDate(
             locationId: FLEX_FOLDER_IDS.location,
             departmentId: DEPARTMENT_IDS[dept],
             documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
-            personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
+            personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
           };
           console.log(`Creating subfolder ${sf.name} for ${dept}:`, subPayload);
           const subResponse = await createFlexFolder(subPayload);
