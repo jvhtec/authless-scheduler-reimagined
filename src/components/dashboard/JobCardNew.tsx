@@ -27,6 +27,7 @@ import createFolderIcon from "@/assets/icons/icon.png";
 import { Department } from "@/types/department";
 import { ArtistManagementDialog } from "../festival/ArtistManagementDialog";
 import { JobDocumentSection } from "./job-card/JobDocumentSection";
+import { createAllFoldersForJob } from "@/utils/flexFolders";
 
 export interface JobDocument {
   id: string;
@@ -430,6 +431,70 @@ export function JobCardNew({
     setCollapsed(!collapsed);
   };
 
+  const getBadgeForJobType = (jobType: string) => {
+    switch (jobType) {
+      case "festival":
+        return <Badge className="ml-2">Festival</Badge>;
+      case "dryhire":
+        return <Badge variant="outline" className="ml-2">Dry Hire</Badge>;
+      case "tourdate":
+        return <Badge variant="secondary" className="ml-2">Tour Date</Badge>;
+      default:
+        return null;
+    }
+  };
+
+  const refreshData = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    toast({
+      title: "Refreshed",
+      description: "The job data has been refreshed."
+    });
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.stopPropagation();
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const filePath = `${department}/${job.id}/${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("job_documents")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase
+        .from("job_documents")
+        .insert({
+          job_id: job.id,
+          file_name: file.name,
+          file_path: filePath,
+          file_type: file.type,
+          file_size: file.size
+        });
+
+      if (dbError) throw dbError;
+
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      toast({
+        title: "Success",
+        description: "Document uploaded successfully"
+      });
+    } catch (error: any) {
+      console.error("Error uploading document:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload document",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const canEdit = ["admin", "management"].includes(userRole || "");
+
   return (
     <>
       <Card
@@ -636,7 +701,6 @@ export function JobCardNew({
           open={soundTaskDialogOpen}
           onOpenChange={setSoundTaskDialogOpen}
           jobId={job.id}
-          // add any additional props required by SoundTaskDialog here
         />
       )}
       {lightsTaskDialogOpen && (
@@ -644,7 +708,6 @@ export function JobCardNew({
           open={lightsTaskDialogOpen}
           onOpenChange={setLightsTaskDialogOpen}
           jobId={job.id}
-          // add any additional props required by LightsTaskDialog here
         />
       )}
       {videoTaskDialogOpen && (
@@ -652,7 +715,6 @@ export function JobCardNew({
           open={videoTaskDialogOpen}
           onOpenChange={setVideoTaskDialogOpen}
           jobId={job.id}
-          // add any additional props required by VideoTaskDialog here
         />
       )}
 
