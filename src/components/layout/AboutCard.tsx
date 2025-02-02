@@ -24,23 +24,9 @@ const images = [
   "/lovable-uploads/d6d934d3-85f4-4e22-8c5e-bb25acfae3a3.png",
   "/lovable-uploads/f795edb1-b35c-4b89-9d0a-be90d35833ec.png",
   "/lovable-uploads/fb2052e9-73ee-4e18-bc9e-933669280d89.png",
-  "/lovable-uploads/044c8ba4-6679-4cee-8382-05a73a7c8d63.png",
-  "/lovable-uploads/14ea7bcf-97c7-4625-bc03-d096da7250ca.png",
-  "/lovable-uploads/ad11634a-0d49-487b-830f-f78c308989aa.png",
-  "/lovable-uploads/b2a0dcfd-7da0-43e8-a27f-25db4c89c8e2.png",
-  "/lovable-uploads/be8e98ed-c0bb-49d3-bed1-9cb76f19c3b1.png",
-  "/lovable-uploads/c582372d-4e74-45db-833e-29b8f557a4ba.png",
+  
 ]
-// Define an interface that includes the userRole prop.
-interface AboutCardProps {
-  userRole: string; // e.g. "management", "admin", etc.
-}
 
-export const AboutCard = ({ userRole }: AboutCardProps) => {
-  // Only allow management-level users to see the carousel.
-  if (userRole !== "management") {
-    return null;
-  }
 export const AboutCard = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [currentImage, setCurrentImage] = useState(images[0])
