@@ -32,6 +32,13 @@ const RESPONSIBLE_PERSON_IDS = {
   production: "4ce97ce3-5159-401a-9cf8-542d3e479ade",
   personnel: "4b618540-e700-11ea-97d0-2a0a4490a7fb"
 };
+const DEPARTMENT_SUFFIXES = {
+  sound: "S",
+  lights: "L",
+  video: "V",
+  production: "P",
+  personnel: "HR"
+};
 
 interface TourCreationData {
   title: string;
@@ -146,7 +153,7 @@ export const useTourCreationMutation = () => {
           locationId: FLEX_FOLDER_IDS.location,
           departmentId: DEPARTMENT_IDS[dept],
           notes: `Automated subfolder creation for ${dept}`,
-          documentNumber: `${documentNumber}${dept.charAt(0).toUpperCase()}`,
+          documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[department]`,
           personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
         };
 
@@ -210,7 +217,7 @@ export const useTourCreationMutation = () => {
             plannedEndDate: formattedEndDate,
             locationId: FLEX_FOLDER_IDS.location,
             departmentId: DEPARTMENT_IDS[dept],
-            documentNumber: `${documentNumber}${dept.charAt(0).toUpperCase()}${sf.suffix}`,
+            documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[department]${sf.suffix}`,
             personResponsibleId: RESPONSIBLE_PERSON_IDS[dept]
           };
           console.log(`Creating additional subfolder for ${dept} with payload:`, childPayload);
