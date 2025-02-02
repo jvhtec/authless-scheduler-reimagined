@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, RefreshCcw } from "lucide-react";
-import { format } from "date-fns";
+import { RefreshCcw } from "lucide-react";
 import { Job } from "@/types/job";
 import { Department } from "@/types/department";
 import { JobDocumentSection } from "./job-card/JobDocumentSection";
 import { JobFolderSection } from "./job-card/JobFolderSection";
+import { JobHeader } from "./job-card/JobHeader";
+import { JobDateSection } from "./job-card/JobDateSection";
 import { cn } from "@/lib/utils";
 
 interface JobCardNewProps {
@@ -17,7 +17,7 @@ interface JobCardNewProps {
   department?: Department;
   userRole?: string | null;
   onJobClick?: (jobId: string) => void;
-  onEditClick?: (job: any) => void;
+  onEditClick?: (job: Job) => void;
   onDeleteClick?: (jobId: string) => void;
   onDeleteDocument?: (jobId: string, document: any) => void;
   showUpload?: boolean;
@@ -52,19 +52,6 @@ export const JobCardNew = ({
     setCollapsed(!collapsed);
   };
 
-  const getBadgeForJobType = (jobType: string) => {
-    switch (jobType) {
-      case "festival":
-        return <Badge className="ml-2">Festival</Badge>;
-      case "dryhire":
-        return <Badge variant="outline" className="ml-2">Dry Hire</Badge>;
-      case "tourdate":
-        return <Badge variant="secondary" className="ml-2">Tour Date</Badge>;
-      default:
-        return null;
-    }
-  };
-
   const refreshData = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -90,34 +77,24 @@ export const JobCardNew = ({
 
   const canEdit = ["admin", "management"].includes(userRole || "");
 
+  const cardStyle = cn(
+    "w-full mb-4 cursor-pointer transition-all duration-200",
+    "hover:bg-accent/50 active:bg-accent/70",
+    !collapsed && "bg-accent/25",
+    job.color && `border-l-[6px]`,
+    job.color && `border-l-[${job.color}]`
+  );
+
   return (
-    <Card
-      className={cn(
-        "w-full mb-4 cursor-pointer hover:bg-accent/50 transition-colors",
-        !collapsed && "bg-accent/25",
-        job.color && `border-l-4`,
-        job.color && `border-l-[${job.color}]`
-      )}
-      onClick={handleCardClick}
-    >
+    <Card className={cardStyle} onClick={handleCardClick}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCollapseToggle}
-              className="p-0 hover:bg-transparent"
-            >
-              {collapsed ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronUp className="h-4 w-4" />
-              )}
-            </Button>
-            <span className="ml-2 font-medium">{job.title}</span>
-            {getBadgeForJobType(job.job_type)}
-          </div>
+          <JobHeader
+            title={job.title}
+            jobType={job.job_type}
+            collapsed={collapsed}
+            onCollapseToggle={handleCollapseToggle}
+          />
           <div className="flex items-center gap-2">
             <JobFolderSection job={job} canEdit={canEdit} />
             <Button
@@ -133,20 +110,7 @@ export const JobCardNew = ({
 
         {!collapsed && (
           <div className="mt-4 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="text-sm font-medium">Start:</span>
-                <span className="text-sm ml-2">
-                  {format(new Date(job.start_time), "PPp")}
-                </span>
-              </div>
-              <div>
-                <span className="text-sm font-medium">End:</span>
-                <span className="text-sm ml-2">
-                  {format(new Date(job.end_time), "PPp")}
-                </span>
-              </div>
-            </div>
+            <JobDateSection startTime={job.start_time} endTime={job.end_time} />
 
             {job.description && (
               <div className="text-sm text-muted-foreground">
