@@ -14,7 +14,7 @@ export const TourManagementDialog = ({
   onOpenChange,
   tour,
 }: TourManagementDialogProps) => {
-  const { handleColorChange, handleDelete } = useTourManagement(tour, () => onOpenChange(false));
+  const { handleColorChange, handleNameChange, handleDelete } = useTourManagement(tour, () => onOpenChange(false));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -26,7 +26,9 @@ export const TourManagementDialog = ({
         <div className="space-y-6">
           <TourColorSection 
             color={tour.color} 
+            tourName={tour.name}
             onColorChange={handleColorChange}
+            onNameChange={handleNameChange}
           />
           <TourDeleteSection onDelete={handleDelete} />
         </div>
