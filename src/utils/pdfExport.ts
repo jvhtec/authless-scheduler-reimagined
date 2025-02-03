@@ -1,22 +1,55 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+export interface ExportTableRow {
+  // Existing properties for weight/power tables…
+  quantity?: string;
+  componentName?: string;
+  weight?: string;
+  watts?: string;
+  totalWeight?: number;
+  totalWatts?: number;
+  // New optional properties for tour dates export.
+  date?: string;
+  location?: string;
+}
+
+export interface ExportTable {
+  name: string;
+  rows: ExportTableRow[];
+  totalWeight?: number;
+  dualMotors?: boolean;
+  totalWatts?: number;
+  currentPerPhase?: number;
+  toolType?: "pesos" | "consumos";
+  pduType?: string;
+  customPduType?: string;
+  includesHoist?: boolean;
+}
+
+export interface SummaryRow {
+  clusterName: string;
+  riggingPoints: string;
+  clusterWeight: number;
+}
+
 /**
- * Existing exportToPDF function – unchanged.
+ * exportToPDF now supports an additional type "tour" to export tour dates.
  *
- * @param projectName
- * @param tables
- * @param type ('weight' | 'power')
- * @param jobName
- * @param jobDate (the date of the job)
- * @param summaryRows (optional) – used for "pesos" reports
- * @param powerSummary (optional)
- * @param safetyMargin (optional)
+ * Function signature:
+ * 1. projectName
+ * 2. tables
+ * 3. type ('weight' | 'power' | 'tour')
+ * 4. jobName
+ * 5. jobDate (the date of the job)
+ * 6. summaryRows (optional) – used for "pesos" reports
+ * 7. powerSummary (optional)
+ * 8. safetyMargin (optional)
  */
 export const exportToPDF = (
   projectName: string,
   tables: ExportTable[],
-  type: "weight" | "power",
+  type: "weight" | "power" | "tour",
   jobName: string,
   jobDate: string,
   summaryRows?: SummaryRow[],
@@ -29,7 +62,96 @@ export const exportToPDF = (
     const pageHeight = doc.internal.pageSize.height;
     const createdDate = new Date().toLocaleDateString("en-GB");
 
-    // === HEADER SECTION (for main tables) ===
+    if (type === "tour") {
+      // ---------------------------
+      // New "Tour Dates Report" PDF
+      // ---------------------------
+      doc.setFillColor(0, 102, 204);
+      doc.rect(0, 0, pageWidth, 40, "F");
+
+      doc.setFontSize(24);
+      doc.setTextColor(255, 255, 255);
+      const title = "Tour Dates Report";
+      doc.text(title, pageWidth / 2, 20, { align: "center" });
+
+      doc.setFontSize(16);
+      doc.text(jobName || "Untitled Tour", pageWidth / 2, 30, { align: "center" });
+      doc.setFontSize(12);
+      doc.text(`Tour Date: ${jobDate}`, pageWidth / 2, 38, { align: "center" });
+
+      let yPosition = 50;
+
+      // We assume that tables[0] contains the tour dates.
+      const tourTable = tables[0];
+      const headers = [["No.", "Date", "Location"]];
+      const tableRows = tourTable.rows.map((row, index) => [
+        (index + 1).toString(),
+        row.date || "",
+        row.location || "",
+      ]);
+
+      autoTable(doc, {
+        head: headers,
+        body: tableRows,
+        startY: yPosition,
+        theme: "grid",
+        styles: {
+          fontSize: 10,
+          cellPadding: 5,
+          lineColor: [220, 220, 230],
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: [0, 102, 204],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+        },
+        bodyStyles: { textColor: [51, 51, 51] },
+        alternateRowStyles: { fillColor: [250, 250, 255] },
+      });
+
+      // Add logo and created date on every page.
+      const logo = new Image();
+      logo.crossOrigin = "anonymous";
+      logo.src = "/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png";
+      logo.onload = () => {
+        const logoWidth = 50;
+        const logoHeight = logoWidth * (logo.height / logo.width);
+        const totalPages = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+          doc.setPage(i);
+          const xPosition = (pageWidth - logoWidth) / 2;
+          const yLogo = pageHeight - 20;
+          try {
+            doc.addImage(logo, "PNG", xPosition, yLogo - logoHeight, logoWidth, logoHeight);
+          } catch (error) {
+            console.error(`Error adding logo on page ${i}:`, error);
+          }
+        }
+        doc.setPage(totalPages);
+        doc.setFontSize(10);
+        doc.setTextColor(51, 51, 51);
+        doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: "right" });
+        const blob = doc.output("blob");
+        resolve(blob);
+      };
+
+      logo.onerror = () => {
+        console.error("Failed to load logo");
+        const totalPages = doc.internal.getNumberOfPages();
+        doc.setPage(totalPages);
+        doc.setFontSize(10);
+        doc.setTextColor(51, 51, 51);
+        doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: "right" });
+        const blob = doc.output("blob");
+        resolve(blob);
+      };
+      return;
+    }
+
+    // ---------------------------
+    // Existing PDF generation logic for "weight" and "power"
+    // ---------------------------
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, "F");
 
@@ -43,7 +165,6 @@ export const exportToPDF = (
 
     doc.setFontSize(16);
     doc.text(jobName || "Untitled Job", pageWidth / 2, 30, { align: "center" });
-    // Print job date below the job name.
     doc.setFontSize(12);
     doc.text(`Job Date: ${jobDate}`, pageWidth / 2, 38, { align: "center" });
 
@@ -53,17 +174,11 @@ export const exportToPDF = (
       doc.text(`Safety Margin Applied: ${safetyMargin}%`, 14, 50);
     }
     doc.setFontSize(10);
-    doc.text(
-      `Generated: ${new Date().toLocaleDateString("en-GB")}`,
-      14,
-      60
-    );
+    doc.text(`Generated: ${new Date().toLocaleDateString("en-GB")}`, 14, 60);
 
     let yPosition = 70;
 
-    // === MAIN TABLES SECTION ===
     tables.forEach((table, index) => {
-      // Section header background for each table.
       doc.setFillColor(245, 245, 250);
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, "F");
 
@@ -78,7 +193,7 @@ export const exportToPDF = (
       yPosition += 10;
 
       const tableRows = table.rows.map((row) => [
-        row.quantity,
+        row.quantity || "",
         row.componentName || "",
         type === "weight" ? row.weight || "" : row.watts || "",
         type === "weight"
@@ -132,11 +247,7 @@ export const exportToPDF = (
 
           if (table.currentPerPhase !== undefined) {
             yPosition += 7;
-            doc.text(
-              `Current per Phase: ${table.currentPerPhase.toFixed(2)} A`,
-              14,
-              yPosition
-            );
+            doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition);
           }
           yPosition += 10;
         }
@@ -161,11 +272,9 @@ export const exportToPDF = (
       }
     });
 
-    // === SUMMARY PAGE ===
-    // Always add a new page for the summary.
+    // Summary page (only for non-tour exports)
     doc.addPage();
 
-    // Reprint header on the summary page.
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, "F");
 
@@ -188,14 +297,12 @@ export const exportToPDF = (
 
     yPosition = 70;
 
-    // For "consumos" tool, print summary as text lines with additional followspot notes.
     if (tables[0]?.toolType === "consumos") {
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
       yPosition += 10;
 
-      // First, print a summary line for each table.
       tables.forEach((table) => {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
@@ -224,27 +331,18 @@ export const exportToPDF = (
         }
       });
 
-      // Next, count followspot ("cañón") elements across all tables.
       let followspotCount = 0;
       tables.forEach((table) => {
         table.rows.forEach((row) => {
-          if (
-            row.componentName &&
-            row.componentName.toLowerCase().includes("cañón")
-          ) {
+          if (row.componentName && row.componentName.toLowerCase().includes("cañón")) {
             followspotCount++;
           }
         });
       });
-      // For each followspot, print the required note with an enumeration.
       for (let i = 1; i <= followspotCount; i++) {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
-        doc.text(
-          `CEE16A 1P+N+G required at followspot position #${i}`,
-          14,
-          yPosition
-        );
+        doc.text(`CEE16A 1P+N+G required at followspot position #${i}`, 14, yPosition);
         yPosition += 7;
         if (yPosition > pageHeight - 40) {
           doc.addPage();
@@ -255,13 +353,11 @@ export const exportToPDF = (
           yPosition += 10;
         }
       }
-      // Finally, always add a note for FoH.
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text("16A Schuko Power required at FoH position", 14, yPosition);
       yPosition += 7;
     } else if (summaryRows && summaryRows.length > 0) {
-      // For other tool types, print summary as table.
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
@@ -295,7 +391,6 @@ export const exportToPDF = (
       yPosition = (doc as any).lastAutoTable.finalY + 10;
     }
 
-    // === LOGO & CREATED DATE SECTION ===
     const logo = new Image();
     logo.crossOrigin = "anonymous";
     logo.src = "/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png";
@@ -303,7 +398,6 @@ export const exportToPDF = (
       const logoWidth = 50;
       const logoHeight = logoWidth * (logo.height / logo.width);
       const totalPages = doc.internal.getNumberOfPages();
-      // Loop through every page to add the logo.
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         const xPosition = (pageWidth - logoWidth) / 2;
@@ -314,7 +408,6 @@ export const exportToPDF = (
           console.error(`Error adding logo on page ${i}:`, error);
         }
       }
-      // On the last page, add the created date at the bottom right.
       doc.setPage(totalPages);
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
@@ -335,128 +428,3 @@ export const exportToPDF = (
     };
   });
 };
-
-/**
- * New function to export tour dates (and locations) to a simple PDF table.
- *
- * @param tourName - The name of the tour.
- * @param tourDates - Array of tour date records (each should have at least a "date" and a "location" field).
- */
-export const exportTourDatesToPDF = (
-  tourName: string,
-  tourDates: any[]
-): Promise<Blob> => {
-  return new Promise((resolve) => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
-    const createdDate = new Date().toLocaleDateString("en-GB");
-
-    // HEADER SECTION
-    doc.setFillColor(125, 1, 1);
-    doc.rect(0, 0, pageWidth, 30, "F");
-
-    doc.setFontSize(20);
-    doc.setTextColor(255, 255, 255);
-    const title = `Tour Dates for ${tourName}`;
-    doc.text(title, pageWidth / 2, 15, { align: "center" });
-
-    doc.setFontSize(10);
-    doc.setTextColor(255, 255, 255);
-    doc.text(`Generated: ${createdDate}`, pageWidth - 10, 25, { align: "right" });
-
-    let yPosition = 40;
-
-    // Prepare table rows: each row contains Date and Location.
-    const rows = tourDates.map((item) => {
-      const dateStr = new Date(item.date).toLocaleDateString("en-GB");
-      return [dateStr, item.location || ""];
-    });
-
-    const headers = [["Date", "Location"]];
-
-    autoTable(doc, {
-      head: headers,
-      body: rows,
-      startY: yPosition,
-      theme: "grid",
-      styles: {
-        fontSize: 10,
-        cellPadding: 5,
-        lineColor: [220, 220, 230],
-        lineWidth: 0.1,
-      },
-      headStyles: {
-        fillColor: [125, 1, 1],
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-      },
-      bodyStyles: { textColor: [51, 51, 51] },
-      alternateRowStyles: { fillColor: [250, 250, 255] },
-    });
-
-    // Optionally add a logo at the bottom.
-    const logo = new Image();
-    logo.crossOrigin = "anonymous";
-    logo.src = "/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png";
-    logo.onload = () => {
-      const logoWidth = 50;
-      const logoHeight = logoWidth * (logo.height / logo.width);
-      const xPosition = (pageWidth - logoWidth) / 2;
-      const yLogo = pageHeight - logoHeight - 10;
-      try {
-        doc.addImage(logo, "PNG", xPosition, yLogo, logoWidth, logoHeight);
-      } catch (error) {
-        console.error("Error adding logo:", error);
-      }
-      // Add created date on bottom right.
-      doc.setFontSize(10);
-      doc.setTextColor(51, 51, 51);
-      doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 5, {
-        align: "right",
-      });
-      const blob = doc.output("blob");
-      resolve(blob);
-    };
-
-    logo.onerror = () => {
-      console.error("Failed to load logo");
-      doc.setFontSize(10);
-      doc.setTextColor(51, 51, 51);
-      doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 5, {
-        align: "right",
-      });
-      const blob = doc.output("blob");
-      resolve(blob);
-    };
-  });
-};
-
-/* Interfaces for the exportToPDF function */
-export interface ExportTableRow {
-  quantity: string;
-  componentName?: string;
-  weight?: string;
-  watts?: string;
-  totalWeight?: number;
-  totalWatts?: number;
-}
-
-export interface ExportTable {
-  name: string;
-  rows: ExportTableRow[];
-  totalWeight?: number;
-  dualMotors?: boolean;
-  totalWatts?: number;
-  currentPerPhase?: number;
-  toolType?: "pesos" | "consumos";
-  pduType?: string;
-  customPduType?: string;
-  includesHoist?: boolean;
-}
-
-export interface SummaryRow {
-  clusterName: string;
-  riggingPoints: string;
-  clusterWeight: number;
-}
