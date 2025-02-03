@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Edit2, FolderPlus } from "lucide-react";
+import { Calendar, Edit2, FileText } from "lucide-react";
 import { useState } from "react";
 import { TourManagementDialog } from "./TourManagementDialog";
 
@@ -9,10 +9,10 @@ interface TourCardProps {
   tour: any;
   onTourClick: (tourId: string) => void;
   onManageDates: (tourId: string) => void;
-  onCreateFlexFolders: (tourId: string) => void;
+  onPrint: (tour: any) => Promise<void>;
 }
 
-export const TourCard = ({ tour, onTourClick, onManageDates, onCreateFlexFolders }: TourCardProps) => {
+export const TourCard = ({ tour, onTourClick, onManageDates, onPrint }: TourCardProps) => {
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
   return (
@@ -62,11 +62,11 @@ export const TourCard = ({ tour, onTourClick, onManageDates, onCreateFlexFolders
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              onCreateFlexFolders(tour.id);
+              onPrint(tour);
             }}
-            title="Create Flex Folders"
+            title="Print Tour"
           >
-            <FolderPlus className="h-4 w-4" />
+            <FileText className="h-4 w-4" />
           </Button>
         </div>
         {tour.description && (

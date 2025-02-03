@@ -7,7 +7,7 @@ import { TourDateManagementDialog } from "../tours/TourDateManagementDialog";
 import { TourCard } from "../tours/TourCard";
 import CreateTourDialog from "../tours/CreateTourDialog";
 import { useToast } from "@/hooks/use-toast";
-import { exportTourPDF } from "@/lib/tourpdfexport";
+import { exportTourPDF } from "@/lib/tourPdfExport";
 
 interface TourChipsProps {
   onTourClick: (tourId: string) => void;
@@ -114,9 +114,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
           open={isDatesDialogOpen}
           onOpenChange={setIsDatesDialogOpen}
           tourId={selectedTourId}
-          tourDates={
-            tours.find((t: any) => t.id === selectedTourId)?.tour_dates || []
-          }
+          tourDates={tours.find((t: any) => t.id === selectedTourId)?.tour_dates || []}
         />
       )}
 

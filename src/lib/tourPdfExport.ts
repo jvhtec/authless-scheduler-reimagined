@@ -1,22 +1,21 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+interface TourRow {
+  date: string;
+  location: string;
+}
+
 /**
  * Exports a tour report PDF.
- *
- * The report header contains the tour name and the date span.
- * The table lists tour dates and their associated locations.
- * The table’s bottom margin is set so that it does not overlap the logo.
- *
- * @param tourName - The tour name to be displayed in the header.
- * @param dateSpan - The tour date span (e.g. "01/01/2025 - 01/15/2025").
- * @param rows - An array of objects with keys "date" and "location".
- * @returns A Promise that resolves to a Blob containing the PDF.
+ * @param tourName - The name of the tour
+ * @param dateSpan - The date span of the tour (e.g. "01/01/2024 - 01/31/2024")
+ * @param rows - Array of tour dates and locations
  */
 export const exportTourPDF = (
   tourName: string,
   dateSpan: string,
-  rows: { date: string; location: string }[]
+  rows: TourRow[]
 ): Promise<Blob> => {
   return new Promise((resolve) => {
     const doc = new jsPDF();
@@ -25,25 +24,21 @@ export const exportTourPDF = (
     const createdDate = new Date().toLocaleDateString("en-GB");
 
     // ----- HEADER SECTION -----
-    // Tour Name
     doc.setFontSize(24);
     doc.setTextColor(0, 0, 0);
     doc.text(tourName, pageWidth / 2, 20, { align: "center" });
 
-    // Date span below the tour name
     doc.setFontSize(16);
     doc.text(dateSpan, pageWidth / 2, 30, { align: "center" });
 
     // ----- TABLE SECTION -----
-    // Set the starting y position below the header.
-    const yStart = 40;
     const tableHeaders = [["Date", "Location"]];
     const tableRows = rows.map((row) => [row.date, row.location]);
 
     autoTable(doc, {
       head: tableHeaders,
       body: tableRows,
-      startY: yStart,
+      startY: 40,
       theme: "grid",
       styles: {
         fontSize: 10,
@@ -66,30 +61,25 @@ export const exportTourPDF = (
     logo.onload = () => {
       const logoWidth = 50;
       const logoHeight = logoWidth * (logo.height / logo.width);
-      const totalPages = doc.internal.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        const xPosition = (pageWidth - logoWidth) / 2;
-        const yLogo = pageHeight - 20;
-        try {
-          doc.addImage(logo, "PNG", xPosition, yLogo - logoHeight, logoWidth, logoHeight);
-        } catch (error) {
-          console.error(`Error adding logo on page ${i}:`, error);
-        }
+      const xPosition = (pageWidth - logoWidth) / 2;
+      const yLogo = pageHeight - 20;
+      
+      try {
+        doc.addImage(logo, "PNG", xPosition, yLogo - logoHeight, logoWidth, logoHeight);
+      } catch (error) {
+        console.error("Error adding logo:", error);
       }
-      // Add created date on the last page.
-      doc.setPage(totalPages);
+
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
       doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: "right" });
+      
       const blob = doc.output("blob");
       resolve(blob);
     };
 
     logo.onerror = () => {
       console.error("Failed to load logo");
-      const totalPages = doc.internal.getNumberOfPages();
-      doc.setPage(totalPages);
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
       doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: "right" });
