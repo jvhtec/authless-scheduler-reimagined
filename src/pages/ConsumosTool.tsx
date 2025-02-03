@@ -62,7 +62,7 @@ const ConsumosTool: React.FC = () => {
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
-  const [safetyMargin, setSafetyMargin] = useState(0); // Safety margin in %
+  const [safetyMargin, setSafetyMargin] = useState(0);
 
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
@@ -104,9 +104,9 @@ const ConsumosTool: React.FC = () => {
   };
 
   const calculatePhaseCurrents = (totalWatts: number) => {
-    const adjustedWatts = totalWatts * (1 + safetyMargin / 100); // Apply safety margin
-    const wattsPerPhase = adjustedWatts / PHASES; // Split wattage across 3 phases
-    const currentPerPhase = wattsPerPhase / (VOLTAGE_3PHASE * POWER_FACTOR); // Calculate current
+    const adjustedWatts = totalWatts * (1 + safetyMargin / 100);
+    const wattsPerPhase = adjustedWatts / PHASES;
+    const currentPerPhase = wattsPerPhase / (VOLTAGE_3PHASE * POWER_FACTOR);
     return { wattsPerPhase, currentPerPhase };
   };
 
@@ -186,12 +186,11 @@ const ConsumosTool: React.FC = () => {
     };
 
     setTables((prev) => [...prev, newTable]);
-    
-    // Save to database if job is selected
+
     if (selectedJobId) {
       savePowerRequirementTable(newTable);
     }
-    
+
     resetCurrentTable();
   };
 
@@ -255,7 +254,6 @@ const ConsumosTool: React.FC = () => {
         description: 'PDF has been generated and uploaded successfully.',
       });
 
-      // Download the file locally as well
       const url = window.URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -286,7 +284,6 @@ const ConsumosTool: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Safety Margin Selector */}
           <div className="space-y-2">
             <Label htmlFor="safetyMargin">Safety Margin</Label>
             <Select
@@ -306,7 +303,6 @@ const ConsumosTool: React.FC = () => {
             </Select>
           </div>
 
-          {/* Job Selector */}
           <div className="space-y-2">
             <Label htmlFor="jobSelect">Select Job</Label>
             <Select value={selectedJobId} onValueChange={handleJobSelect}>
@@ -323,7 +319,6 @@ const ConsumosTool: React.FC = () => {
             </Select>
           </div>
 
-          {/* Table Input */}
           <div className="space-y-2">
             <Label htmlFor="tableName">Table Name</Label>
             <Input
@@ -406,15 +401,13 @@ const ConsumosTool: React.FC = () => {
             <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
               <div className="bg-muted px-4 py-3 flex justify-between items-center">
                 <h3 className="font-semibold">{table.name}</h3>
-                <div className="flex gap-2">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => table.id && removeTable(table.id)}
-                  >
-                    Remove Table
-                  </Button>
-                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => table.id && removeTable(table.id)}
+                >
+                  Remove Table
+                </Button>
               </div>
               
               <div className="p-4 bg-muted/50 space-y-4">
@@ -433,10 +426,10 @@ const ConsumosTool: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Label>Override PDU Type:</Label>
                     <Select
-                      value={table.customPduType || ''}
+                      value={table.customPduType || 'default'}
                       onValueChange={(value) => 
                         table.id && updateTableSettings(table.id, { 
-                          customPduType: value || undefined 
+                          customPduType: value === 'default' ? undefined : value 
                         })
                       }
                     >
@@ -444,7 +437,7 @@ const ConsumosTool: React.FC = () => {
                         <SelectValue placeholder="Use suggested PDU" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Use suggested PDU</SelectItem>
+                        <SelectItem value="default">Use suggested PDU</SelectItem>
                         {PDU_TYPES.map((type) => (
                           <SelectItem key={type} value={type}>
                             {type}
