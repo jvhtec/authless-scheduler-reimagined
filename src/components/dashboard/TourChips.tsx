@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Plus, Printer } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { TourDateManagementDialog } from "../tours/TourDateManagementDialog";
 import { TourCard } from "../tours/TourCard";
 import CreateTourDialog from "../tours/CreateTourDialog";
 import { useToast } from "@/hooks/use-toast";
-import { exportToPDF } from "@/lib/pdfexport";
+import { exportToPDF } from "@/utils/pdfExport";
 
 interface TourChipsProps {
   onTourClick: (tourId: string) => void;
