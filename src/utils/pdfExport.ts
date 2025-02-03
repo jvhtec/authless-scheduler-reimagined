@@ -18,7 +18,7 @@ export const exportToPDF = (
   tables: ExportTable[],
   type: "weight" | "power",
   jobName: string,
-  jobDate: string,
+  jobDate?: string,
   summaryRows?: SummaryRow[],
   powerSummary?: { totalSystemWatts: number; totalSystemAmps: number },
   safetyMargin?: number

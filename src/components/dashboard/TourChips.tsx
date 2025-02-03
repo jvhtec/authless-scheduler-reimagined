@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Edit2, Printer } from "lucide-react";
 import { useState } from "react";
-import { TourManagementDialog } from "./TourManagementDialog";
-import { exportTourDatesToPDF } from "@/lib/pdfexport";
+import { TourManagementDialog } from "@/components/tours/TourManagementDialog";
+import { exportTourDatesToPDF } from "@/utils/pdfExport";
 import { supabase } from "@/lib/supabase";
 
 interface TourCardProps {
@@ -20,25 +20,26 @@ export const TourCard = ({ tour, onTourClick, onManageDates }: TourCardProps) =>
   const handlePrintPDF = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsPrinting(true);
-    // Retrieve all dates and locations for the tour from the "tour_dates" table.
+    
     const { data, error } = await supabase
       .from("tour_dates")
       .select("*")
       .eq("tour_id", tour.id);
+
     if (error) {
       console.error("Error fetching tour dates:", error);
       setIsPrinting(false);
       return;
     }
+
     if (!data || data.length === 0) {
       console.warn("No tour dates found for this tour.");
       setIsPrinting(false);
       return;
     }
+
     try {
-      // Call the new PDF export function.
       const blob = await exportTourDatesToPDF(tour.name, data);
-      // Create a temporary download link.
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -120,3 +121,6 @@ export const TourCard = ({ tour, onTourClick, onManageDates }: TourCardProps) =>
     </Card>
   );
 };
+
+// For backward compatibility
+export const TourChips = TourCard;

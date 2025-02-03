@@ -235,6 +235,8 @@ const ConsumosTool: React.FC = () => {
         tables.map((table) => ({ ...table, toolType: 'consumos' })),
         'power',
         selectedJob.title,
+        new Date().toLocaleDateString('en-GB'),
+        [],
         undefined,
         safetyMargin
       );
