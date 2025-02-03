@@ -23,13 +23,20 @@ interface ExportTable {
   includesHoist?: boolean;
 }
 
+export interface SummaryRow {
+  clusterName: string;
+  riggingPoints: string;
+  clusterWeight: number;
+}
+
 export const exportToPDF = (
   projectName: string,
   tables: ExportTable[],
   type: 'weight' | 'power',
   jobName: string,
   powerSummary?: { totalSystemWatts: number; totalSystemAmps: number },
-  safetyMargin?: number
+  safetyMargin?: number,
+  summaryRows?: SummaryRow[]
 ): Promise<Blob> => {
   return new Promise((resolve) => {
     const doc = new jsPDF();
@@ -65,6 +72,7 @@ export const exportToPDF = (
 
     let yPosition = 70;
 
+    // Process each table
     tables.forEach((table, index) => {
       // Section header with PDU type if applicable
       doc.setFillColor(245, 245, 250);
@@ -73,7 +81,7 @@ export const exportToPDF = (
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
       
-      // Add PDU type to table name for power reports
+      // Add PDU type to table name for power reports if provided
       let displayName = table.name;
       if (type === 'power' && (table.customPduType || table.pduType)) {
         displayName = `${table.name} (${table.customPduType || table.pduType})`;
@@ -82,17 +90,17 @@ export const exportToPDF = (
       doc.text(displayName, 14, yPosition);
       yPosition += 10;
 
-      // Table data
+      // Build table data rows
       const tableRows = table.rows.map((row) => [
         row.quantity,
         row.componentName || '',
         type === 'weight' ? row.weight || '' : row.watts || '',
         type === 'weight'
-          ? row.totalWeight?.toFixed(2) || ''
-          : row.totalWatts?.toFixed(2) || ''
+          ? row.totalWeight !== undefined ? row.totalWeight.toFixed(2) : ''
+          : row.totalWatts !== undefined ? row.totalWatts.toFixed(2) : ''
       ]);
 
-      // Add total weight row
+      // Add total row for weight reports
       if (type === 'weight' && table.totalWeight !== undefined) {
         tableRows.push([
           '',
@@ -161,14 +169,59 @@ export const exportToPDF = (
         }
       }
 
-      // Add a new page if needed
+      // Add a new page if needed between tables
       if (yPosition > pageHeight - 40 && index < tables.length - 1) {
         doc.addPage();
         yPosition = 20;
       }
     });
 
-    // Add logo
+    // If summary rows are provided, add a summary table at the end.
+    if (summaryRows && summaryRows.length > 0) {
+      // Add a header for the summary section
+      if (yPosition > 40) {
+        yPosition += 10;
+      }
+      doc.setFontSize(16);
+      doc.setTextColor(125, 1, 1);
+      doc.text("Summary", 14, yPosition);
+      yPosition += 6;
+
+      // Build summary table data: columns for Cluster Name, Rigging Points, and Cluster Weight
+      const summaryData = summaryRows.map((row) => [
+        row.clusterName,
+        row.riggingPoints,
+        row.clusterWeight.toFixed(2)
+      ]);
+
+      autoTable(doc, {
+        head: [['Cluster Name', 'Rigging Points', 'Cluster Weight']],
+        body: summaryData,
+        startY: yPosition,
+        theme: 'grid',
+        styles: {
+          fontSize: 10,
+          cellPadding: 5,
+          lineColor: [220, 220, 230],
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: [125, 1, 1],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+        bodyStyles: {
+          textColor: [51, 51, 51],
+        },
+        alternateRowStyles: {
+          fillColor: [250, 250, 255],
+        },
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // Add logo at the bottom of the last page
     const logo = new Image();
     logo.crossOrigin = 'anonymous';
     logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
@@ -189,7 +242,7 @@ export const exportToPDF = (
       }
     };
 
-    // If the image fails to load, still resolve with the PDF without the logo
+    // If the image fails to load, resolve with the PDF without the logo.
     logo.onerror = () => {
       console.error('Failed to load logo');
       const blob = doc.output('blob');
