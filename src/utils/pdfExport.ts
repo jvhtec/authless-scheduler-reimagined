@@ -40,7 +40,6 @@ export interface SummaryRow {
  * @param summaryRows - (Optional) Summary rows for "pesos" reports.
  * @param powerSummary - (Optional) Total power system details.
  * @param safetyMargin - (Optional) The safety margin applied.
- * @param options - (Optional) Extra options. When options.isTourReport is true, a custom header and table layout are used.
  * @returns A Promise that resolves to a Blob containing the PDF.
  */
 export const exportToPDF = (
@@ -51,8 +50,7 @@ export const exportToPDF = (
   jobDate: string,
   summaryRows?: SummaryRow[],
   powerSummary?: { totalSystemWatts: number; totalSystemAmps: number },
-  safetyMargin?: number,
-  options?: { isTourReport?: boolean; dateSpan?: string }
+  safetyMargin?: number
 ): Promise<Blob> => {
   return new Promise((resolve) => {
     const doc = new jsPDF();
@@ -60,89 +58,7 @@ export const exportToPDF = (
     const pageHeight = doc.internal.pageSize.height;
     const createdDate = new Date().toLocaleDateString("en-GB");
 
-    // ----- CUSTOM TOUR REPORT BRANCH -----
-    if (options?.isTourReport) {
-      // Draw a simple header with the tour name and its date span.
-      doc.setFontSize(24);
-      doc.setTextColor(0, 0, 0);
-      doc.text(projectName, pageWidth / 2, 20, { align: "center" });
-
-      doc.setFontSize(16);
-      const dateSpan = options.dateSpan || jobDate;
-      doc.text(dateSpan, pageWidth / 2, 30, { align: "center" });
-
-      // Start the table below the header.
-      const yStart = 40;
-      // Use fixed headers for tour reports.
-      const tableHeaders = [["Date", "Location"]];
-      // Map table rows to use only the two desired columns.
-      const tableRows = tables[0].rows.map((row) => [
-        row.quantity,
-        row.componentName || "",
-      ]);
-
-      autoTable(doc, {
-        head: tableHeaders,
-        body: tableRows,
-        startY: yStart,
-        theme: "grid",
-        styles: {
-          fontSize: 10,
-          cellPadding: 5,
-          lineColor: [220, 220, 230],
-          lineWidth: 0.1,
-        },
-        headStyles: {
-          fillColor: [125, 1, 1],
-          textColor: [255, 255, 255],
-          fontStyle: "bold",
-        },
-        // Ensure a bottom margin so the table never overlaps the logo.
-        margin: { bottom: 40 },
-      });
-
-      // ----- ADD THE LOGO (same as default) -----
-      const logo = new Image();
-      logo.crossOrigin = "anonymous";
-      logo.src = "/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png";
-      logo.onload = () => {
-        const logoWidth = 50;
-        const logoHeight = logoWidth * (logo.height / logo.width);
-        const totalPages = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-          doc.setPage(i);
-          const xPosition = (pageWidth - logoWidth) / 2;
-          const yLogo = pageHeight - 20;
-          try {
-            doc.addImage(logo, "PNG", xPosition, yLogo - logoHeight, logoWidth, logoHeight);
-          } catch (error) {
-            console.error(`Error adding logo on page ${i}:`, error);
-          }
-        }
-        doc.setPage(totalPages);
-        doc.setFontSize(10);
-        doc.setTextColor(51, 51, 51);
-        doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: "right" });
-        const blob = doc.output("blob");
-        resolve(blob);
-      };
-
-      logo.onerror = () => {
-        console.error("Failed to load logo");
-        const totalPages = doc.internal.getNumberOfPages();
-        doc.setPage(totalPages);
-        doc.setFontSize(10);
-        doc.setTextColor(51, 51, 51);
-        doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: "right" });
-        const blob = doc.output("blob");
-        resolve(blob);
-      };
-
-      return; // Exit after handling the tour report branch.
-    }
-
-    // ----- DEFAULT REPORT (unchanged) -----
-    // HEADER SECTION (for main tables)
+    // === HEADER SECTION (for main tables) ===
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, "F");
 
@@ -170,8 +86,9 @@ export const exportToPDF = (
 
     let yPosition = 70;
 
-    // MAIN TABLES SECTION
+    // === MAIN TABLES SECTION ===
     tables.forEach((table, index) => {
+      // Section header background for each table.
       doc.setFillColor(245, 245, 250);
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, "F");
 
@@ -180,7 +97,9 @@ export const exportToPDF = (
 
       let displayName = table.name;
       if (type === "power" && (table.customPduType || table.pduType)) {
-        displayName = `${table.name} (${table.customPduType || table.pduType})`;
+        displayName = `${table.name} (${
+          table.customPduType || table.pduType
+        })`;
       }
       doc.text(displayName, 14, yPosition);
       yPosition += 10;
@@ -240,7 +159,11 @@ export const exportToPDF = (
 
           if (table.currentPerPhase !== undefined) {
             yPosition += 7;
-            doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition);
+            doc.text(
+              `Current per Phase: ${table.currentPerPhase.toFixed(2)} A`,
+              14,
+              yPosition
+            );
           }
           yPosition += 10;
         }
@@ -249,7 +172,11 @@ export const exportToPDF = (
           doc.setFontSize(10);
           doc.setTextColor(51, 51, 51);
           doc.setFont(undefined, "italic");
-          doc.text(`Additional Hoist Power Required for ${table.name}: CEE32A 3P+N+G`, 14, yPosition);
+          doc.text(
+            `Additional Hoist Power Required for ${table.name}: CEE32A 3P+N+G`,
+            14,
+            yPosition
+          );
           yPosition += 10;
           doc.setFont(undefined, "normal");
         }
@@ -261,9 +188,11 @@ export const exportToPDF = (
       }
     });
 
-    // SUMMARY PAGE
+    // === SUMMARY PAGE ===
+    // Always add a new page for the summary.
     doc.addPage();
 
+    // Reprint header on the summary page.
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, "F");
 
@@ -302,7 +231,11 @@ export const exportToPDF = (
         if (table.includesHoist) {
           doc.setFontSize(10);
           doc.setTextColor(80, 80, 80);
-          doc.text(`Additional Hoist Power Required for ${table.name}: CEE32A 3P+N+G`, 14, yPositionSummary);
+          doc.text(
+            `Additional Hoist Power Required for ${table.name}: CEE32A 3P+N+G`,
+            14,
+            yPositionSummary
+          );
           yPositionSummary += 7;
         }
         yPositionSummary += 5;
@@ -319,7 +252,10 @@ export const exportToPDF = (
       let followspotCount = 0;
       tables.forEach((table) => {
         table.rows.forEach((row) => {
-          if (row.componentName && row.componentName.toLowerCase().includes("cañón")) {
+          if (
+            row.componentName &&
+            row.componentName.toLowerCase().includes("cañón")
+          ) {
             followspotCount++;
           }
         });
@@ -327,7 +263,11 @@ export const exportToPDF = (
       for (let i = 1; i <= followspotCount; i++) {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
-        doc.text(`CEE16A 1P+N+G required at followspot position #${i}`, 14, yPositionSummary);
+        doc.text(
+          `CEE16A 1P+N+G required at followspot position #${i}`,
+          14,
+          yPositionSummary
+        );
         yPositionSummary += 7;
         if (yPositionSummary > pageHeight - 40) {
           doc.addPage();
@@ -340,7 +280,11 @@ export const exportToPDF = (
       }
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
-      doc.text("16A Schuko Power required at FoH position", 14, yPositionSummary);
+      doc.text(
+        "16A Schuko Power required at FoH position",
+        14,
+        yPositionSummary
+      );
       yPositionSummary += 7;
     } else if (summaryRows && summaryRows.length > 0) {
       doc.setFontSize(16);
@@ -376,7 +320,6 @@ export const exportToPDF = (
       yPositionSummary = (doc as any).lastAutoTable.finalY + 10;
     }
 
-    // LOGO & CREATED DATE SECTION
     const logo = new Image();
     logo.crossOrigin = "anonymous";
     logo.src = "/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png";
