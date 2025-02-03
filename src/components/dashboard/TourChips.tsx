@@ -22,9 +22,10 @@ export const TourCard = ({
 }: TourCardProps) => {
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
+  // This function retrieves the tour dates from Supabase and calls exportToPDF
   const handlePrintPDF = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    // Retrieve all dates and locations from tour_dates table for the given tour id
+    // Retrieve all dates and locations from the tour_dates table for the given tour id.
     const { data: tourDates, error } = await supabase
       .from("tour_dates")
       .select("date, location")
@@ -35,7 +36,8 @@ export const TourCard = ({
       return;
     }
 
-    // Prepare the table data for the PDF export.
+    // Prepare the table data for PDF export.
+    // The table data is structured to match the new "tour" export type.
     const tableData = {
       name: "Tour Dates & Locations",
       rows: tourDates.map((row: any) => ({
@@ -45,21 +47,21 @@ export const TourCard = ({
     };
 
     try {
-      // Use the tour name as the job name and the first tour date as the job date.
+      // Use the tour name as jobName and the first tour date as jobDate (if available)
       const jobDate =
         tourDates && tourDates.length > 0
           ? new Date(tourDates[0].date).toLocaleDateString("en-GB")
           : new Date().toLocaleDateString("en-GB");
 
       const blob = await exportToPDF(
-        tour.name,       // projectName
-        [tableData],     // tables
-        "tour",          // report type
-        tour.name,       // jobName
-        jobDate          // jobDate
+        tour.name,   // projectName
+        [tableData], // tables (with our tour dates table as the only element)
+        "tour",      // report type – new type for tour dates
+        tour.name,   // jobName
+        jobDate      // jobDate
       );
 
-      // Trigger the download
+      // Create a temporary URL for the blob and trigger a download.
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -74,14 +76,14 @@ export const TourCard = ({
   return (
     <div className="inline-block w-fit m-2">
       <Card
-        className="hover:shadow-md transition-shadow cursor-pointer p-3"
+        className="relative hover:shadow-md transition-shadow cursor-pointer p-3"
         onClick={() => onTourClick(tour.id)}
         style={{
           borderColor: tour.color ? `${tour.color}30` : "#7E69AB30",
           backgroundColor: tour.color ? `${tour.color}05` : "#7E69AB05",
         }}
       >
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xl font-semibold flex items-center gap-2">
             {tour.name}
             {tour.flex_main_folder_id && (
@@ -91,7 +93,7 @@ export const TourCard = ({
         </CardHeader>
 
         <CardContent className="relative">
-          {/* Top-right action buttons */}
+          {/* Action buttons positioned at the top-right of the card */}
           <div className="absolute top-2 right-2 flex gap-1">
             <Button
               variant="secondary"
