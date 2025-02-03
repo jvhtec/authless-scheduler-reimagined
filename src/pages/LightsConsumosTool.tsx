@@ -218,8 +218,8 @@ const LightsConsumosTool: React.FC = () => {
 
     try {
       const powerSummary = {
-        totalSystemWatts: safetyMargin,
-        totalSystemAmps: safetyMargin
+        totalSystemWatts: tables.reduce((sum, table) => sum + (table.totalWatts || 0), 0),
+        totalSystemAmps: tables.reduce((sum, table) => sum + (table.currentPerPhase || 0), 0)
       };
 
       const pdfBlob = await exportToPDF(
@@ -440,6 +440,7 @@ const LightsConsumosTool: React.FC = () => {
         </div>
       </CardContent>
     </Card>
+  );
 };
 
 export default LightsConsumosTool;
