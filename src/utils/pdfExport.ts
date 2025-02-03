@@ -193,17 +193,17 @@ export const exportToPDF = (
 
     yPosition = 70;
 
-    if (type === 'consumos') {
-      // For consumostool summary, print non-table text lines.
+    // For "consumos" tool, print summary as text lines; otherwise, use table format.
+    if (tables[0]?.toolType === 'consumos') {
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
       yPosition += 10;
 
-      // For each table, print its name with selected PDU type.
       tables.forEach((table) => {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
+        // Use the custom PDU type override if provided; otherwise, use the suggested PDU.
         let pduText = table.customPduType ? table.customPduType : table.pduType;
         let line = `${table.name} - PDU: ${pduText || 'N/A'}`;
         doc.text(line, 14, yPosition);
@@ -224,41 +224,38 @@ export const exportToPDF = (
           yPosition += 10;
         }
       });
-    } else {
-      // For other types (e.g. "pesos"), print summary in table format if summaryRows provided.
-      if (summaryRows && summaryRows.length > 0) {
-        doc.setFontSize(16);
-        doc.setTextColor(125, 1, 1);
-        doc.text("Summary", 14, yPosition);
-        yPosition += 6;
+    } else if (summaryRows && summaryRows.length > 0) {
+      doc.setFontSize(16);
+      doc.setTextColor(125, 1, 1);
+      doc.text("Summary", 14, yPosition);
+      yPosition += 6;
 
-        const summaryData = summaryRows.map((row) => [
-          row.clusterName,
-          row.riggingPoints,
-          row.clusterWeight.toFixed(2)
-        ]);
+      const summaryData = summaryRows.map((row) => [
+        row.clusterName,
+        row.riggingPoints,
+        row.clusterWeight.toFixed(2)
+      ]);
 
-        autoTable(doc, {
-          head: [['Cluster Name', 'Rigging Points', 'Cluster Weight']],
-          body: summaryData,
-          startY: yPosition,
-          theme: 'grid',
-          styles: {
-            fontSize: 10,
-            cellPadding: 5,
-            lineColor: [220, 220, 230],
-            lineWidth: 0.1,
-          },
-          headStyles: {
-            fillColor: [125, 1, 1],
-            textColor: [255, 255, 255],
-            fontStyle: 'bold',
-          },
-          bodyStyles: { textColor: [51, 51, 51] },
-          alternateRowStyles: { fillColor: [250, 250, 255] },
-        });
-        yPosition = (doc as any).lastAutoTable.finalY + 10;
-      }
+      autoTable(doc, {
+        head: [['Cluster Name', 'Rigging Points', 'Cluster Weight']],
+        body: summaryData,
+        startY: yPosition,
+        theme: 'grid',
+        styles: {
+          fontSize: 10,
+          cellPadding: 5,
+          lineColor: [220, 220, 230],
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: [125, 1, 1],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+        bodyStyles: { textColor: [51, 51, 51] },
+        alternateRowStyles: { fillColor: [250, 250, 255] },
+      });
+      yPosition = (doc as any).lastAutoTable.finalY + 10;
     }
 
     // === LOGO SECTION (at the bottom of the last page) ===
