@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useNavigate } from 'react-router-dom';
 
+// Database for sound components.
 const soundComponentDatabase = [
   { id: 1, name: ' K1 ', weight: 106 },
   { id: 2, name: ' K2 ', weight: 56 },
@@ -40,10 +41,12 @@ const soundComponentDatabase = [
   { id: 25, name: ' BUMPER TFS900 ', weight: 20 },
   { id: 26, name: ' TFS900>TFA600 ', weight: 14 },
   { id: 27, name: ' TFS900>TFS550 ', weight: 14 },
-  { id: 28, name: ' CABLEADO L ', weight: 100 },
-  { id: 29, name: ' CABLEADO H ', weight: 250 },
+  { id: 28, name: ' BUMPER TFS550 ', weight: 16 },
+  { id: 29, name: ' CABLEADO L ', weight: 100 },
+  { id: 30, name: ' CABLEADO H ', weight: 250 },
 ];
 
+// Global counter for generating SX numbers.
 let soundTableCounter = 0;
 
 interface TableRow {
@@ -60,13 +63,20 @@ interface Table {
   totalWeight?: number;
   id?: number;
   dualMotors?: boolean;
+  riggingPoints?: string; // New property to store the SX suffix(es)
+}
+
+interface SummaryRow {
+  clusterName: string;
+  riggingPoints: string;
+  clusterWeight: number;
 }
 
 const PesosTool: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
-  const department = 'sound'; // Department definition
+  const department = 'sound';
 
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
@@ -75,13 +85,17 @@ const PesosTool: React.FC = () => {
   const [useDualMotors, setUseDualMotors] = useState(false);
   const [mirroredCluster, setMirroredCluster] = useState(false);
 
+  // State for Cable Pick option.
+  const [cablePick, setCablePick] = useState(false);
+  const [cablePickWeight, setCablePickWeight] = useState('100');
+
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
     rows: [{ quantity: '', componentId: '', weight: '' }],
   });
 
   // Helper to generate an SX suffix.
-  // Returns just the SX text (e.g., "SX01" or "SX01, SX02").
+  // Returns just the SX text (for example "SX01" or "SX01, SX02").
   const getSuffix = () => {
     if (department === 'sound') {
       if (useDualMotors) {
@@ -161,13 +175,13 @@ const PesosTool: React.FC = () => {
 
     if (mirroredCluster) {
       // For mirrored clusters, generate two tables.
-      // Left table: table name with "L" immediately after the name, then the SX suffix in parentheses.
+      // Left table: name is "<tableName> L (SXxx)" and store the SX suffix as riggingPoints.
       const leftSuffix = getSuffix();
-      // Right table: similar, with "R" inserted.
       const rightSuffix = getSuffix();
 
       const leftTable: Table = {
         name: `${tableName} L (${leftSuffix})`,
+        riggingPoints: leftSuffix,
         rows: calculatedRows,
         totalWeight,
         id: Date.now(),
@@ -176,6 +190,7 @@ const PesosTool: React.FC = () => {
 
       const rightTable: Table = {
         name: `${tableName} R (${rightSuffix})`,
+        riggingPoints: rightSuffix,
         rows: calculatedRows,
         totalWeight,
         id: Date.now() + 1,
@@ -184,10 +199,11 @@ const PesosTool: React.FC = () => {
 
       setTables((prev) => [...prev, leftTable, rightTable]);
     } else {
-      // Single table: simply add the SX suffix in parentheses.
+      // Single table.
       const suffix = getSuffix();
       const newTable: Table = {
         name: `${tableName} (${suffix})`,
+        riggingPoints: suffix,
         rows: calculatedRows,
         totalWeight,
         id: Date.now(),
@@ -222,12 +238,32 @@ const PesosTool: React.FC = () => {
       return;
     }
 
+    // Build summary rows from the generated tables.
+    const summaryRows: SummaryRow[] = tables.map((table) => ({
+      clusterName: table.name,
+      riggingPoints: table.riggingPoints || '',
+      clusterWeight: table.totalWeight || 0,
+    }));
+
+    // If Cable Pick is enabled, add an extra summary row.
+    if (cablePick) {
+      const weightNum = parseFloat(cablePickWeight);
+      summaryRows.push({
+        clusterName: 'CABLE PICK',
+        riggingPoints: `CP${cablePickWeight}`,
+        clusterWeight: weightNum,
+      });
+    }
+
     try {
+      // Pass the summaryRows as an extra parameter to exportToPDF.
+      // (You may need to adjust your exportToPDF utility to render the summary table.)
       const pdfBlob = await exportToPDF(
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'pesos' })),
         'weight',
-        selectedJob.title
+        selectedJob.title,
+        summaryRows
       );
 
       const fileName = `Pesos Report - ${selectedJob.title}.pdf`;
@@ -316,6 +352,30 @@ const PesosTool: React.FC = () => {
                 Mirrored Cluster
               </Label>
             </div>
+            <div className="flex items-center space-x-2 mt-2">
+              <Checkbox
+                id="cablePick"
+                checked={cablePick}
+                onCheckedChange={(checked) => setCablePick(checked as boolean)}
+              />
+              <Label htmlFor="cablePick" className="text-sm font-medium">
+                Cable Pick
+              </Label>
+              {cablePick && (
+                <Select value={cablePickWeight} onValueChange={(value) => setCablePickWeight(value)}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Select weight" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['100', '200', '300', '400', '500'].map((w) => (
+                      <SelectItem key={w} value={w}>
+                        {w} kg
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           <div className="border rounded-lg overflow-hidden">
@@ -376,7 +436,7 @@ const PesosTool: React.FC = () => {
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
                 <FileText className="w-4 h-4" />
-                Export & Upload PDF
+                Export &amp; Upload PDF
               </Button>
             )}
           </div>
