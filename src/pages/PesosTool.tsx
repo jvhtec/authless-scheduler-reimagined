@@ -10,8 +10,10 @@ import { exportToPDF } from '@/utils/pdfExport';
 import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useNavigate } from 'react-router-dom';
 
+// Database for sound components.
 const soundComponentDatabase = [
   { id: 1, name: ' K1 ', weight: 106 },
   { id: 2, name: ' K2 ', weight: 56 },
@@ -45,6 +47,9 @@ const soundComponentDatabase = [
   { id: 30, name: ' CABLEADO H ', weight: 250 },
 ];
 
+// Global counter for generating SX numbers.
+let soundTableCounter = 0;
+
 interface TableRow {
   quantity: string;
   componentId: string;
@@ -62,6 +67,12 @@ interface Table {
   riggingPoints?: string; // Stores the generated SX suffix(es)
 }
 
+interface SummaryRow {
+  clusterName: string;
+  riggingPoints: string;
+  clusterWeight: number;
+}
+
 const PesosTool: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -73,10 +84,35 @@ const PesosTool: React.FC = () => {
   const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [useDualMotors, setUseDualMotors] = useState(false);
+  const [mirroredCluster, setMirroredCluster] = useState(false);
+
+  // State for Cable Pick option.
+  const [cablePick, setCablePick] = useState(false);
+  const [cablePickWeight, setCablePickWeight] = useState('100');
+
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
     rows: [{ quantity: '', componentId: '', weight: '' }],
   });
+
+  // Helper to generate an SX suffix.
+  // Returns a string such as "SX01" or "SX01, SX02" depending on useDualMotors.
+  const getSuffix = () => {
+    if (department === 'sound') {
+      if (useDualMotors) {
+        soundTableCounter++;
+        const num1 = soundTableCounter.toString().padStart(2, '0');
+        soundTableCounter++;
+        const num2 = soundTableCounter.toString().padStart(2, '0');
+        return `SX${num1}, SX${num2}`;
+      } else {
+        soundTableCounter++;
+        const num = soundTableCounter.toString().padStart(2, '0');
+        return `SX${num}`;
+      }
+    }
+    return '';
+  };
 
   const addRow = () => {
     setCurrentTable((prev) => ({
@@ -122,6 +158,7 @@ const PesosTool: React.FC = () => {
       return;
     }
 
+    // Calculate each row's total weight.
     const calculatedRows = currentTable.rows.map((row) => {
       const component = soundComponentDatabase.find((c) => c.id.toString() === row.componentId);
       const totalWeight =
@@ -137,17 +174,47 @@ const PesosTool: React.FC = () => {
 
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
 
-    const newTable: Table = {
-      name: tableName,
-      rows: calculatedRows,
-      totalWeight,
-      id: Date.now(),
-      dualMotors: useDualMotors
-    };
+    if (mirroredCluster) {
+      // For mirrored clusters, generate two tables.
+      // Left table: name is "<tableName> L (SXxx)" and store the SX suffix as riggingPoints.
+      const leftSuffix = getSuffix();
+      const rightSuffix = getSuffix();
 
-    setTables((prev) => [...prev, newTable]);
+      const leftTable: Table = {
+        name: `${tableName} L (${leftSuffix})`,
+        riggingPoints: leftSuffix,
+        rows: calculatedRows,
+        totalWeight,
+        id: Date.now(),
+        dualMotors: useDualMotors,
+      };
+
+      const rightTable: Table = {
+        name: `${tableName} R (${rightSuffix})`,
+        riggingPoints: rightSuffix,
+        rows: calculatedRows,
+        totalWeight,
+        id: Date.now() + 1,
+        dualMotors: useDualMotors,
+      };
+
+      setTables((prev) => [...prev, leftTable, rightTable]);
+    } else {
+      // Single table.
+      const suffix = getSuffix();
+      const newTable: Table = {
+        name: `${tableName} (${suffix})`,
+        riggingPoints: suffix,
+        rows: calculatedRows,
+        totalWeight,
+        id: Date.now(),
+        dualMotors: useDualMotors,
+      };
+      setTables((prev) => [...prev, newTable]);
+    }
     resetCurrentTable();
     setUseDualMotors(false);
+    setMirroredCluster(false);
   };
 
   const resetCurrentTable = () => {
@@ -172,7 +239,29 @@ const PesosTool: React.FC = () => {
       return;
     }
 
+    // Build summary rows from the generated tables.
+    // For the cluster name, remove the SX suffix portion by taking the part before the first "(".
+    const summaryRows: SummaryRow[] = tables.map((table) => ({
+      clusterName: table.name.split('(')[0].trim(),
+      riggingPoints: table.riggingPoints || '',
+      clusterWeight: table.totalWeight || 0,
+    }));
+
+    // If Cable Pick is enabled, add one cable pick summary row per table.
+    if (cablePick) {
+      let cablePickCounter = 0;
+      tables.forEach(() => {
+        cablePickCounter++;
+        summaryRows.push({
+          clusterName: 'CABLE PICK',
+          riggingPoints: `CP${cablePickCounter.toString().padStart(2, '0')}`,
+          clusterWeight: parseFloat(cablePickWeight),
+        });
+      });
+    }
+
     try {
+      // Pass the summaryRows as the 5th parameter (matching the new exportToPDF signature).
       const jobDate = selectedJob?.start_time 
         ? format(new Date(selectedJob.start_time), "MMMM dd, yyyy")
         : format(new Date(), "MMMM dd, yyyy");
@@ -183,9 +272,7 @@ const PesosTool: React.FC = () => {
         'weight',
         selectedJob.title,
         jobDate,
-        [],
-        undefined,
-        undefined
+        summaryRows
       );
 
       const fileName = `Pesos Report - ${selectedJob.title}.pdf`;
@@ -254,6 +341,50 @@ const PesosTool: React.FC = () => {
               onChange={(e) => setTableName(e.target.value)}
               placeholder="Enter table name"
             />
+            <div className="flex items-center space-x-2 mt-2">
+              <Checkbox
+                id="dualMotors"
+                checked={useDualMotors}
+                onCheckedChange={(checked) => setUseDualMotors(checked as boolean)}
+              />
+              <Label htmlFor="dualMotors" className="text-sm font-medium">
+                Dual Motors Configuration
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2 mt-2">
+              <Checkbox
+                id="mirroredCluster"
+                checked={mirroredCluster}
+                onCheckedChange={(checked) => setMirroredCluster(checked as boolean)}
+              />
+              <Label htmlFor="mirroredCluster" className="text-sm font-medium">
+                Mirrored Cluster
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2 mt-2">
+              <Checkbox
+                id="cablePick"
+                checked={cablePick}
+                onCheckedChange={(checked) => setCablePick(checked as boolean)}
+              />
+              <Label htmlFor="cablePick" className="text-sm font-medium">
+                Cable Pick
+              </Label>
+              {cablePick && (
+                <Select value={cablePickWeight} onValueChange={(value) => setCablePickWeight(value)}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Select weight" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['100', '200', '300', '400', '500'].map((w) => (
+                      <SelectItem key={w} value={w}>
+                        {w} kg
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           <div className="border rounded-lg overflow-hidden">
@@ -295,7 +426,12 @@ const PesosTool: React.FC = () => {
                       </Select>
                     </td>
                     <td className="p-4">
-                      <Input type="number" value={row.weight} readOnly className="w-full bg-muted" />
+                      <Input
+                        type="number"
+                        value={row.weight}
+                        readOnly
+                        className="w-full bg-muted"
+                      />
                     </td>
                   </tr>
                 ))}
@@ -314,7 +450,7 @@ const PesosTool: React.FC = () => {
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
                 <FileText className="w-4 h-4" />
-                Export PDF
+                Export & Upload PDF
               </Button>
             )}
           </div>
