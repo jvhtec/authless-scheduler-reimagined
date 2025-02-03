@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Edit2, Printer } from "lucide-react";
 import { useState } from "react";
-import { TourManagementDialog } from "./TourManagementDialog";
+import { TourManagementDialog } from "@/components/tours/TourManagementDialog";
 import { exportTourDatesToPDF } from "@/utils/pdfExport";
 import { supabase } from "@/lib/supabase";
 
@@ -20,9 +20,7 @@ export const TourCard = ({ tour, onTourClick, onManageDates }: TourCardProps) =>
   const handlePrintPDF = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsPrinting(true);
-    console.log(`Printing PDF for tour id: ${tour.id}`);
     
-    // Retrieve all dates and locations for the tour from the "tour_dates" table.
     const { data, error } = await supabase
       .from("tour_dates")
       .select("*")
@@ -33,11 +31,13 @@ export const TourCard = ({ tour, onTourClick, onManageDates }: TourCardProps) =>
       setIsPrinting(false);
       return;
     }
+
     if (!data || data.length === 0) {
       console.warn("No tour dates found for this tour.");
       setIsPrinting(false);
       return;
     }
+
     try {
       const blob = await exportTourDatesToPDF(tour.name, data);
       const url = URL.createObjectURL(blob);
@@ -48,7 +48,6 @@ export const TourCard = ({ tour, onTourClick, onManageDates }: TourCardProps) =>
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      console.log("PDF export complete.");
     } catch (err) {
       console.error("Error exporting PDF:", err);
     }
@@ -57,22 +56,20 @@ export const TourCard = ({ tour, onTourClick, onManageDates }: TourCardProps) =>
 
   return (
     <Card
-      className="hover:shadow-md transition-shadow cursor-pointer m-2 max-w-xs" // max-width only, not height-limited
+      className="hover:shadow-md transition-shadow cursor-pointer p-4"
       onClick={() => onTourClick(tour.id)}
       style={{
         borderColor: tour.color ? `${tour.color}30` : "#7E69AB30",
         backgroundColor: tour.color ? `${tour.color}05` : "#7E69AB05",
       }}
     >
-      <CardHeader className="flex flex-col items-start pb-2">
-        <CardTitle className="text-xl font-semibold">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-xl font-semibold flex items-center gap-2">
           {tour.name}
+          {tour.flex_main_folder_id && (
+            <Badge variant="secondary">Flex Folders Created</Badge>
+          )}
         </CardTitle>
-        {tour.flex_main_folder_id && (
-          <Badge variant="secondary" className="mt-1">
-            Flex Folders Created
-          </Badge>
-        )}
       </CardHeader>
 
       <CardContent className="relative">
@@ -110,9 +107,7 @@ export const TourCard = ({ tour, onTourClick, onManageDates }: TourCardProps) =>
           </Button>
         </div>
         {tour.description && (
-          <p className="text-muted-foreground mt-2">
-            {tour.description}
-          </p>
+          <p className="text-muted-foreground mt-2">{tour.description}</p>
         )}
       </CardContent>
 
@@ -126,3 +121,6 @@ export const TourCard = ({ tour, onTourClick, onManageDates }: TourCardProps) =>
     </Card>
   );
 };
+
+// For backward compatibility
+export const TourChips = TourCard;
