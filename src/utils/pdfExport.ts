@@ -18,6 +18,9 @@ interface ExportTable {
   totalWatts?: number;
   currentPerPhase?: number;
   toolType?: 'pesos' | 'consumos';
+  pduType?: string;
+  customPduType?: string;
+  includesHoist?: boolean;
 }
 
 export const exportToPDF = (
@@ -63,13 +66,20 @@ export const exportToPDF = (
     let yPosition = 70;
 
     tables.forEach((table, index) => {
-      // Section header
+      // Section header with PDU type if applicable
       doc.setFillColor(245, 245, 250);
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
 
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text(table.name, 14, yPosition);
+      
+      // Add PDU type to table name for power reports
+      let displayName = table.name;
+      if (type === 'power' && (table.customPduType || table.pduType)) {
+        displayName = `${table.name} (${table.customPduType || table.pduType})`;
+      }
+      
+      doc.text(displayName, 14, yPosition);
       yPosition += 10;
 
       // Table data
@@ -123,20 +133,32 @@ export const exportToPDF = (
 
       yPosition = (doc as any).lastAutoTable.finalY + 10;
 
-      if (type === 'power' && table.totalWatts !== undefined) {
-        doc.setFillColor(245, 245, 250);
-        doc.rect(14, yPosition - 6, pageWidth - 28, 20, 'F');
+      if (type === 'power') {
+        if (table.totalWatts !== undefined) {
+          doc.setFillColor(245, 245, 250);
+          doc.rect(14, yPosition - 6, pageWidth - 28, 20, 'F');
 
-        doc.setFontSize(11);
-        doc.setTextColor(125, 1, 1);
-        doc.text(`Total Power: ${table.totalWatts.toFixed(2)} W`, 14, yPosition);
-        
-        if (table.currentPerPhase !== undefined) {
-          yPosition += 7;
-          doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition);
+          doc.setFontSize(11);
+          doc.setTextColor(125, 1, 1);
+          doc.text(`Total Power: ${table.totalWatts.toFixed(2)} W`, 14, yPosition);
+          
+          if (table.currentPerPhase !== undefined) {
+            yPosition += 7;
+            doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition);
+          }
+          
+          yPosition += 10;
         }
-        
-        yPosition += 10;
+
+        // Add hoist power requirement note if enabled
+        if (table.includesHoist) {
+          doc.setFontSize(10);
+          doc.setTextColor(51, 51, 51);
+          doc.setFont(undefined, 'italic');
+          doc.text(`Additional Hoist Power Required for ${table.name}: CEE32A 3P+N+G`, 14, yPosition);
+          yPosition += 10;
+          doc.setFont(undefined, 'normal');
+        }
       }
 
       // Add a new page if needed
@@ -157,7 +179,7 @@ export const exportToPDF = (
       const xPosition = (pageWidth - logoWidth) / 2;
       const yPosition = pageHeight - 20;
       try {
-        doc.addImage(logo, 'PNG', xPosition, yPosition, logoWidth, logoHeight);
+        doc.addImage(logo, 'PNG', xPosition, yPosition - logoHeight, logoWidth, logoHeight);
         const blob = doc.output('blob');
         resolve(blob);
       } catch (error) {
