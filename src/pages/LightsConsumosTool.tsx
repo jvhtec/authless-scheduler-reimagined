@@ -215,9 +215,10 @@ const LightsConsumosTool: React.FC = () => {
     const { currentPerPhase } = calculatePhaseCurrents(totalWatts);
     const pduSuggestion = recommendPDU(currentPerPhase);
 
-    // Clean the table name to remove any existing PDU info (parentheses and content)
+    // Clean the table name to remove any trailing parenthesized text.
     const baseTableName = tableName.replace(/\s*\(.*\)$/, "");
     const finalPduType = selectedPduType === 'Custom' ? customPduType : pduSuggestion;
+    // Build the display name only once using the base table name.
     const displayName = `${baseTableName} (${finalPduType})${selectedPduType === 'Custom' ? ' - Custom PDU' : ''}`;
 
     const newTable = {
@@ -253,16 +254,18 @@ const LightsConsumosTool: React.FC = () => {
   };
 
   const updateTableSettings = (tableId: number, updates: Partial<Table>) => {
-    setTables(prev => prev.map(table => {
-      if (table.id === tableId) {
-        const updatedTable = { ...table, ...updates };
-        if (selectedJobId) {
-          savePowerRequirementTable(updatedTable);
+    setTables((prev) =>
+      prev.map((table) => {
+        if (table.id === tableId) {
+          const updatedTable = { ...table, ...updates };
+          if (selectedJobId) {
+            savePowerRequirementTable(updatedTable);
+          }
+          return updatedTable;
         }
-        return updatedTable;
-      }
-      return table;
-    }));
+        return table;
+      })
+    );
   };
 
   const handleExportPDF = async () => {
