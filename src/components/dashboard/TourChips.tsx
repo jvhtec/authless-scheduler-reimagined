@@ -55,6 +55,8 @@ export const TourCard = ({ tour, onTourClick, onManageDates }: TourCardProps) =>
     setIsPrinting(false);
   };
 
+  if (!tour) return null;
+
   return (
     <Card
       className="hover:shadow-md transition-shadow cursor-pointer m-2 max-w-xs" // max-width only, not height-limited
