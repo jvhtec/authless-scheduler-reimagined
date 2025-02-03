@@ -48,6 +48,8 @@ interface Table {
   currentPerPhase?: number;
   pduType?: string;
   id?: number;
+  includesHoist?: boolean;
+  customPduType?: string;
 }
 
 const ConsumosTool: React.FC = () => {
@@ -123,7 +125,9 @@ const ConsumosTool: React.FC = () => {
           table_name: table.name,
           total_watts: table.totalWatts || 0,
           current_per_phase: table.currentPerPhase || 0,
-          pdu_type: table.pduType || ''
+          pdu_type: table.customPduType || table.pduType || '',
+          includes_hoist: table.includesHoist || false,
+          custom_pdu_type: table.customPduType
         });
 
       if (error) throw error;
@@ -170,12 +174,14 @@ const ConsumosTool: React.FC = () => {
     const pduSuggestion = recommendPDU(currentPerPhase);
 
     const newTable = {
-      name: `${tableName} (${pduSuggestion})`,
+      name: tableName,
       rows: calculatedRows,
       totalWatts,
       currentPerPhase,
       pduType: pduSuggestion,
       id: Date.now(),
+      includesHoist: false,
+      customPduType: undefined,
     };
 
     setTables((prev) => [...prev, newTable]);
@@ -198,6 +204,19 @@ const ConsumosTool: React.FC = () => {
 
   const removeTable = (tableId: number) => {
     setTables((prev) => prev.filter((table) => table.id !== tableId));
+  };
+
+  const updateTableSettings = (tableId: number, updates: Partial<Table>) => {
+    setTables(prev => prev.map(table => {
+      if (table.id === tableId) {
+        const updatedTable = { ...table, ...updates };
+        if (selectedJobId) {
+          savePowerRequirementTable(updatedTable);
+        }
+        return updatedTable;
+      }
+      return table;
+    }));
   };
 
   const handleExportPDF = async () => {
@@ -386,14 +405,56 @@ const ConsumosTool: React.FC = () => {
             <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
               <div className="bg-muted px-4 py-3 flex justify-between items-center">
                 <h3 className="font-semibold">{table.name}</h3>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => table.id && removeTable(table.id)}
-                >
-                  Remove Table
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => table.id && removeTable(table.id)}
+                  >
+                    Remove Table
+                  </Button>
+                </div>
               </div>
+              
+              <div className="p-4 bg-muted/50 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id={`hoist-${table.id}`}
+                      checked={table.includesHoist}
+                      onCheckedChange={(checked) => 
+                        table.id && updateTableSettings(table.id, { includesHoist: !!checked })
+                      }
+                    />
+                    <Label htmlFor={`hoist-${table.id}`}>Include Hoist Power (CEE32A 3P+N+G)</Label>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Label>Override PDU Type:</Label>
+                    <Select
+                      value={table.customPduType || ''}
+                      onValueChange={(value) => 
+                        table.id && updateTableSettings(table.id, { 
+                          customPduType: value || undefined 
+                        })
+                      }
+                    >
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Use suggested PDU" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Use suggested PDU</SelectItem>
+                        {PDU_TYPES.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
               <table className="w-full">
                 <thead className="bg-muted/50">
                   <tr>
@@ -418,21 +479,36 @@ const ConsumosTool: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
                   </tr>
-                  <tr className="bg-muted/50 font-medium">
+                  <tr className="border-t bg-muted/50 font-medium">
                     <td colSpan={3} className="px-4 py-3 text-right">
                       Current per Phase:
                     </td>
                     <td className="px-4 py-3">{table.currentPerPhase?.toFixed(2)} A</td>
                   </tr>
+                  <tr className="border-t bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-right">
+                      Suggested PDU:
+                    </td>
+                    <td className="px-4 py-3">{table.pduType}</td>
+                  </tr>
+                  {table.customPduType && (
+                    <tr className="border-t bg-muted/50 font-medium text-primary">
+                      <td colSpan={3} className="px-4 py-3 text-right">
+                        Selected PDU Override:
+                      </td>
+                      <td className="px-4 py-3">{table.customPduType}</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
-              {table.pduType && (
+              {table.includesHoist && (
                 <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
-                  Recommended PDU: {table.pduType}
+                  Additional Hoist Power Required: CEE32A 3P+N+G
                 </div>
               )}
             </div>
           ))}
+
         </div>
       </CardContent>
     </Card>

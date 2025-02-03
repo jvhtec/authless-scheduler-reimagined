@@ -911,7 +911,9 @@ export type Database = {
         Row: {
           created_at: string | null
           current_per_phase: number
+          custom_pdu_type: string | null
           id: string
+          includes_hoist: boolean | null
           job_id: string | null
           pdu_type: string
           table_name: string
@@ -920,7 +922,9 @@ export type Database = {
         Insert: {
           created_at?: string | null
           current_per_phase: number
+          custom_pdu_type?: string | null
           id?: string
+          includes_hoist?: boolean | null
           job_id?: string | null
           pdu_type: string
           table_name: string
@@ -929,7 +933,9 @@ export type Database = {
         Update: {
           created_at?: string | null
           current_per_phase?: number
+          custom_pdu_type?: string | null
           id?: string
+          includes_hoist?: boolean | null
           job_id?: string | null
           pdu_type?: string
           table_name?: string
