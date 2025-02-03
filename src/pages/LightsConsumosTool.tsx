@@ -370,7 +370,7 @@ const LightsConsumosTool: React.FC = () => {
                 <SelectValue placeholder="Use recommended PDU type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Use recommended PDU type</SelectItem>
+                <SelectItem value="default">Use recommended PDU type</SelectItem>
                 {PDU_TYPES.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type}
