@@ -7,7 +7,7 @@ import { TourDateManagementDialog } from "../tours/TourDateManagementDialog";
 import { TourCard } from "../tours/TourCard";
 import CreateTourDialog from "../tours/CreateTourDialog";
 import { useToast } from "@/hooks/use-toast";
-import { exportToPDF } from "@/lib/pdfexport"; // Adjust the path if needed
+import { exportToPDF } from "@/lib/pdfexport";
 
 interface TourChipsProps {
   onTourClick: (tourId: string) => void;
@@ -40,7 +40,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
           )
         `)
         .order("created_at", { ascending: false })
-        .eq("deleted", false); // filter out deleted tours
+        .eq("deleted", false);
 
       if (toursError) {
         console.error("Error fetching tours:", toursError);
@@ -59,7 +59,6 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
   const handlePrint = async (tour: any) => {
     try {
-      // Prepare table rows from tour_dates. Each row will include a formatted date and its location name.
       const rows = tour.tour_dates.map((td: any) => ({
         quantity: new Date(td.date).toLocaleDateString(),
         componentName: td.location?.name || "",
@@ -70,15 +69,13 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         rows,
       };
 
-      // For the PDF export, we use the tour name as both the project name and job name.
-      // The tour start_date is formatted as the job date.
       const jobDate = new Date(tour.start_date).toLocaleDateString();
       const pdfBlob = await exportToPDF(
-        tour.name,    // projectName
-        [exportTable],// tables
-        "weight",     // type (using 'weight' as a default type)
-        tour.name,    // jobName
-        jobDate       // jobDate
+        tour.name,
+        [exportTable],
+        "weight",
+        tour.name,
+        jobDate
       );
 
       const url = URL.createObjectURL(pdfBlob);
@@ -107,13 +104,11 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
       <div className="space-y-4">
         {tours.map((tour: any) => (
-          // Wrap each TourCard in a container with a reduced max-width.
           <div key={tour.id} className="max-w-md">
             <TourCard
               tour={tour}
               onTourClick={() => onTourClick(tour.id)}
               onManageDates={() => handleManageDates(tour.id)}
-              // Instead of the create-flex-folders button, we now supply an onPrint prop.
               onPrint={() => handlePrint(tour)}
             />
           </div>
