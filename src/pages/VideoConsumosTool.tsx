@@ -10,6 +10,7 @@ import { useJobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const videoComponentDatabase = [
   { id: 1, name: 'Pantalla Central', watts: 700 },
@@ -38,7 +39,9 @@ interface Table {
   totalWatts?: number;
   currentPerPhase?: number;
   pduType?: string;
+  customPduType?: string;
   id?: number;
+  includesHoist?: boolean;
 }
 
 const VideoConsumosTool: React.FC = () => {
@@ -51,6 +54,9 @@ const VideoConsumosTool: React.FC = () => {
   const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [safetyMargin, setSafetyMargin] = useState(0);
+  const [selectedPduType, setSelectedPduType] = useState<string>('default');
+  const [customPduType, setCustomPduType] = useState('');
+  const [includesHoist, setIncludesHoist] = useState(false);
 
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
@@ -115,7 +121,9 @@ const VideoConsumosTool: React.FC = () => {
           table_name: table.name,
           total_watts: table.totalWatts || 0,
           current_per_phase: table.currentPerPhase || 0,
-          pdu_type: table.pduType || ''
+          pdu_type: selectedPduType === 'default' ? table.pduType : selectedPduType,
+          custom_pdu_type: customPduType,
+          includes_hoist: includesHoist
         });
 
       if (error) throw error;
@@ -162,11 +170,13 @@ const VideoConsumosTool: React.FC = () => {
     const pduSuggestion = recommendPDU(currentPerPhase);
 
     const newTable = {
-      name: `${tableName} (${pduSuggestion})- \n+CEE32A 3P+N+G (MOTORES)`,
+      name: tableName,
       rows: calculatedRows,
       totalWatts,
       currentPerPhase,
-      pduType: pduSuggestion,
+      pduType: selectedPduType === 'default' ? pduSuggestion : selectedPduType,
+      customPduType: customPduType,
+      includesHoist,
       id: Date.now(),
     };
 
@@ -186,6 +196,9 @@ const VideoConsumosTool: React.FC = () => {
       rows: [{ quantity: '', componentId: '', watts: '' }],
     });
     setTableName('');
+    setSelectedPduType('default');
+    setCustomPduType('');
+    setIncludesHoist(false);
   };
 
   const removeTable = (tableId: number) => {
@@ -277,6 +290,41 @@ const VideoConsumosTool: React.FC = () => {
               onChange={(e) => setTableName(e.target.value)}
               placeholder="Enter table name"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>PDU Type Override</Label>
+            <Select value={selectedPduType} onValueChange={setSelectedPduType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Use recommended PDU type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Use recommended PDU type</SelectItem>
+                {PDU_TYPES.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+                <SelectItem value="custom">Custom PDU Type</SelectItem>
+              </SelectContent>
+            </Select>
+            {selectedPduType === 'custom' && (
+              <Input
+                placeholder="Enter custom PDU type"
+                value={customPduType}
+                onChange={(e) => setCustomPduType(e.target.value)}
+                className="mt-2"
+              />
+            )}
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="hoistPower"
+              checked={includesHoist}
+              onCheckedChange={(checked) => setIncludesHoist(checked as boolean)}
+            />
+            <Label htmlFor="hoistPower">Requires additional hoist power (CEE32A 3P+N+G)</Label>
           </div>
 
           <div className="border rounded-lg overflow-hidden">
@@ -378,6 +426,27 @@ const VideoConsumosTool: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
                   </tr>
+                  <tr className="border-t bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-right">
+                      Current per Phase:
+                    </td>
+                    <td className="px-4 py-3">{table.currentPerPhase?.toFixed(2)} A</td>
+                  </tr>
+                  <tr className="border-t bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-right">
+                      PDU Type:
+                    </td>
+                    <td className="px-4 py-3">
+                      {table.customPduType || table.pduType}
+                    </td>
+                  </tr>
+                  {table.includesHoist && (
+                    <tr className="border-t bg-muted/50 font-medium">
+                      <td colSpan={4} className="px-4 py-3">
+                        Additional Hoist Power Required: CEE32A 3P+N+G
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
