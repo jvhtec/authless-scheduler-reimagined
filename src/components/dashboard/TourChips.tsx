@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, Edit2, Printer } from "lucide-react";
 import { useState } from "react";
 import { TourManagementDialog } from "./TourManagementDialog";
-import { exportTourDatesToPDF } from "@/lib/pdfexport";
+import { exportTourDatesToPDF } from "@/utils/pdfExport";
 import { supabase } from "@/lib/supabase";
 
 interface TourCardProps {
