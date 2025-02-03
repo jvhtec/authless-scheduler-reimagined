@@ -64,7 +64,6 @@ interface Table {
   id?: number;
   dualMotors?: boolean;
   riggingPoints?: string; // Stores the generated SX suffix(es)
-  clusterId?: string;     // New property to group tables (e.g. mirrored pair)
 }
 
 interface SummaryRow {
@@ -174,11 +173,9 @@ const PesosTool: React.FC = () => {
 
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
 
-    // For grouping cable pick later, assign a new clusterId for this generation.
-    const newClusterId = Date.now().toString();
-
     if (mirroredCluster) {
-      // For mirrored clusters, generate two tables sharing the same clusterId.
+      // For mirrored clusters, generate two tables.
+      // Left table: name is "<tableName> L (SXxx)" and store the SX suffix as riggingPoints.
       const leftSuffix = getSuffix();
       const rightSuffix = getSuffix();
 
@@ -189,7 +186,6 @@ const PesosTool: React.FC = () => {
         totalWeight,
         id: Date.now(),
         dualMotors: useDualMotors,
-        clusterId: newClusterId,
       };
 
       const rightTable: Table = {
@@ -199,12 +195,11 @@ const PesosTool: React.FC = () => {
         totalWeight,
         id: Date.now() + 1,
         dualMotors: useDualMotors,
-        clusterId: newClusterId,
       };
 
       setTables((prev) => [...prev, leftTable, rightTable]);
     } else {
-      // Single table: assign the newClusterId to it.
+      // Single table.
       const suffix = getSuffix();
       const newTable: Table = {
         name: `${tableName} (${suffix})`,
@@ -213,7 +208,6 @@ const PesosTool: React.FC = () => {
         totalWeight,
         id: Date.now(),
         dualMotors: useDualMotors,
-        clusterId: newClusterId,
       };
       setTables((prev) => [...prev, newTable]);
     }
@@ -244,38 +238,29 @@ const PesosTool: React.FC = () => {
       return;
     }
 
-    // Group tables by clusterId so that mirrored pairs (or single tables) are grouped together.
-    const clusterMap = new Map<string, { clusterName: string; riggingPoints: string; clusterWeight: number }>();
-    tables.forEach((table) => {
-      const cid = table.clusterId || table.id.toString();
-      // Remove the SX suffix portion from the table name.
-      const cleanName = table.name.split('(')[0].trim();
-      if (!clusterMap.has(cid)) {
-        clusterMap.set(cid, {
-          clusterName: cleanName,
-          riggingPoints: table.riggingPoints || '',
-          clusterWeight: table.totalWeight || 0,
-        });
-      }
-    });
+    // Build summary rows from the generated tables.
+    // For the cluster name, remove the SX suffix portion by taking the part before the first "(".
+    const summaryRows: SummaryRow[] = tables.map((table) => ({
+      clusterName: table.name.split('(')[0].trim(),
+      riggingPoints: table.riggingPoints || '',
+      clusterWeight: table.totalWeight || 0,
+    }));
 
-    // Build summary rows array from the grouped clusters.
-    let summaryRows: SummaryRow[] = Array.from(clusterMap.values());
-
-    // If Cable Pick is enabled, add one cable pick summary row per cluster.
+    // If Cable Pick is enabled, add one cable pick summary row per table.
     if (cablePick) {
-      // For each cluster, add an extra row with CP01 (cable pick resets per cluster).
-      clusterMap.forEach(() => {
+      let cablePickCounter = 0;
+      tables.forEach(() => {
+        cablePickCounter++;
         summaryRows.push({
           clusterName: 'CABLE PICK',
-          riggingPoints: 'CP01',
+          riggingPoints: `CP${cablePickCounter.toString().padStart(2, '0')}`,
           clusterWeight: parseFloat(cablePickWeight),
         });
       });
     }
 
     try {
-      // Pass the summaryRows as the 5th parameter to exportToPDF.
+      // Pass the summaryRows as the 5th parameter (matching the new exportToPDF signature).
       const pdfBlob = await exportToPDF(
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'pesos' })),
@@ -463,7 +448,11 @@ const PesosTool: React.FC = () => {
             <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
               <div className="bg-muted px-4 py-3 flex justify-between items-center">
                 <h3 className="font-semibold">{table.name}</h3>
-                <Button variant="destructive" size="sm" onClick={() => table.id && removeTable(table.id)}>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => table.id && removeTable(table.id)}
+                >
                   Remove Table
                 </Button>
               </div>
