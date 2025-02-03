@@ -30,7 +30,7 @@ export interface SummaryRow {
 }
 
 /**
- * Function signature updated so that:
+ * Updated function signature:
  * 1. projectName
  * 2. tables
  * 3. type ('weight' | 'power')
@@ -53,55 +53,45 @@ export const exportToPDF = (
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
 
-    // HEADER SECTION
-    // Header background
+    // === HEADER SECTION (for main tables) ===
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, 'F');
 
-    // Title
     doc.setFontSize(24);
     doc.setTextColor(255, 255, 255);
     const title = type === 'weight' ? "Weight Distribution Report" : "Power Distribution Report";
     doc.text(title, pageWidth / 2, 20, { align: 'center' });
 
-    // Subtitle (Job Name)
     doc.setFontSize(16);
-    doc.setTextColor(255, 255, 255);
     doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
 
-    // Safety Margin (if applicable)
     if (safetyMargin !== undefined) {
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
       doc.text(`Safety Margin Applied: ${safetyMargin}%`, 14, 50);
     }
 
-    // Date
     doc.setFontSize(10);
-    doc.setTextColor(51, 51, 51);
     doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 60);
 
     let yPosition = 70;
 
-    // PROCESS EACH TABLE
+    // === MAIN TABLES SECTION ===
     tables.forEach((table, index) => {
-      // Section header background for each table
+      // Section header background for each table.
       doc.setFillColor(245, 245, 250);
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
 
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      
-      // For power reports, append PDU type if provided.
+
       let displayName = table.name;
       if (type === 'power' && (table.customPduType || table.pduType)) {
         displayName = `${table.name} (${table.customPduType || table.pduType})`;
       }
-      
       doc.text(displayName, 14, yPosition);
       yPosition += 10;
 
-      // Build the rows for the table.
       const tableRows = table.rows.map((row) => [
         row.quantity,
         row.componentName || '',
@@ -111,7 +101,6 @@ export const exportToPDF = (
           : row.totalWatts !== undefined ? row.totalWatts.toFixed(2) : ''
       ]);
 
-      // Add total row for weight reports if available.
       if (type === 'weight' && table.totalWeight !== undefined) {
         tableRows.push([
           '',
@@ -142,12 +131,8 @@ export const exportToPDF = (
           textColor: [255, 255, 255],
           fontStyle: 'bold',
         },
-        bodyStyles: {
-          textColor: [51, 51, 51],
-        },
-        alternateRowStyles: {
-          fillColor: [250, 250, 255],
-        },
+        bodyStyles: { textColor: [51, 51, 51] },
+        alternateRowStyles: { fillColor: [250, 250, 255] },
       });
 
       yPosition = (doc as any).lastAutoTable.finalY + 10;
@@ -165,11 +150,9 @@ export const exportToPDF = (
             yPosition += 7;
             doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition);
           }
-          
           yPosition += 10;
         }
 
-        // If the table includes hoist power requirement, add the note.
         if (table.includesHoist) {
           doc.setFontSize(10);
           doc.setTextColor(51, 51, 51);
@@ -180,27 +163,43 @@ export const exportToPDF = (
         }
       }
 
-      // If near the bottom of the page and more tables remain, add a new page.
       if (yPosition > pageHeight - 40 && index < tables.length - 1) {
         doc.addPage();
         yPosition = 20;
       }
     });
 
-    // SUMMARY TABLE SECTION
+    // === SUMMARY PAGE ===
+    // Always add a new page for the summary.
+    doc.addPage();
+    // Reprint header on the summary page.
+    doc.setFillColor(125, 1, 1);
+    doc.rect(0, 0, pageWidth, 40, 'F');
+
+    doc.setFontSize(24);
+    doc.setTextColor(255, 255, 255);
+    doc.text(title, pageWidth / 2, 20, { align: 'center' });
+
+    doc.setFontSize(16);
+    doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
+
+    if (safetyMargin !== undefined) {
+      doc.setFontSize(10);
+      doc.setTextColor(51, 51, 51);
+      doc.text(`Safety Margin Applied: ${safetyMargin}%`, 14, 50);
+    }
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 60);
+
+    // Set yPosition for summary page content.
+    yPosition = 70;
+
     if (summaryRows && summaryRows.length > 0) {
-      // If there's not enough room on the current page, add a new page.
-      if (yPosition > pageHeight - 40) {
-        doc.addPage();
-        yPosition = 20;
-      }
-      // Print summary header.
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
       yPosition += 6;
 
-      // Build summary table rows.
       const summaryData = summaryRows.map((row) => [
         row.clusterName,
         row.riggingPoints,
@@ -223,18 +222,14 @@ export const exportToPDF = (
           textColor: [255, 255, 255],
           fontStyle: 'bold',
         },
-        bodyStyles: {
-          textColor: [51, 51, 51],
-        },
-        alternateRowStyles: {
-          fillColor: [250, 250, 255],
-        },
+        bodyStyles: { textColor: [51, 51, 51] },
+        alternateRowStyles: { fillColor: [250, 250, 255] },
       });
-
+      // Update yPosition (if needed) from summary table.
       yPosition = (doc as any).lastAutoTable.finalY + 10;
     }
 
-    // LOGO SECTION
+    // === LOGO SECTION (added at the bottom of the last page) ===
     const logo = new Image();
     logo.crossOrigin = 'anonymous';
     logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
@@ -255,7 +250,6 @@ export const exportToPDF = (
       }
     };
 
-    // In case the logo image fails to load, resolve with the PDF anyway.
     logo.onerror = () => {
       console.error('Failed to load logo');
       const blob = doc.output('blob');
