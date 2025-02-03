@@ -29,20 +29,31 @@ export interface SummaryRow {
   clusterWeight: number;
 }
 
+/**
+ * Function signature updated so that:
+ * 1. projectName
+ * 2. tables
+ * 3. type ('weight' | 'power')
+ * 4. jobName
+ * 5. summaryRows (optional)
+ * 6. powerSummary (optional)
+ * 7. safetyMargin (optional)
+ */
 export const exportToPDF = (
   projectName: string,
   tables: ExportTable[],
   type: 'weight' | 'power',
   jobName: string,
+  summaryRows?: SummaryRow[],
   powerSummary?: { totalSystemWatts: number; totalSystemAmps: number },
-  safetyMargin?: number,
-  summaryRows?: SummaryRow[]
+  safetyMargin?: number
 ): Promise<Blob> => {
   return new Promise((resolve) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
 
+    // HEADER SECTION
     // Header background
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, 'F');
@@ -72,24 +83,25 @@ export const exportToPDF = (
 
     let yPosition = 70;
 
+    // PROCESS EACH TABLE
     tables.forEach((table, index) => {
-      // Section header with PDU type if applicable
+      // Section header background for each table
       doc.setFillColor(245, 245, 250);
       doc.rect(14, yPosition - 6, pageWidth - 28, 10, 'F');
 
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-
-      // Add PDU type to table name for power reports if provided
+      
+      // For power reports, append PDU type if provided.
       let displayName = table.name;
       if (type === 'power' && (table.customPduType || table.pduType)) {
         displayName = `${table.name} (${table.customPduType || table.pduType})`;
       }
-
+      
       doc.text(displayName, 14, yPosition);
       yPosition += 10;
 
-      // Build table data rows
+      // Build the rows for the table.
       const tableRows = table.rows.map((row) => [
         row.quantity,
         row.componentName || '',
@@ -99,7 +111,7 @@ export const exportToPDF = (
           : row.totalWatts !== undefined ? row.totalWatts.toFixed(2) : ''
       ]);
 
-      // Add total row for weight reports
+      // Add total row for weight reports if available.
       if (type === 'weight' && table.totalWeight !== undefined) {
         tableRows.push([
           '',
@@ -148,16 +160,16 @@ export const exportToPDF = (
           doc.setFontSize(11);
           doc.setTextColor(125, 1, 1);
           doc.text(`Total Power: ${table.totalWatts.toFixed(2)} W`, 14, yPosition);
-
+          
           if (table.currentPerPhase !== undefined) {
             yPosition += 7;
             doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition);
           }
-
+          
           yPosition += 10;
         }
 
-        // Add hoist power requirement note if enabled
+        // If the table includes hoist power requirement, add the note.
         if (table.includesHoist) {
           doc.setFontSize(10);
           doc.setTextColor(51, 51, 51);
@@ -168,27 +180,27 @@ export const exportToPDF = (
         }
       }
 
-      // Add a new page if needed between tables
+      // If near the bottom of the page and more tables remain, add a new page.
       if (yPosition > pageHeight - 40 && index < tables.length - 1) {
         doc.addPage();
         yPosition = 20;
       }
     });
 
-    // If summary rows are provided, add a summary table at the end.
+    // SUMMARY TABLE SECTION
     if (summaryRows && summaryRows.length > 0) {
-      // If there's not enough room for the summary, add a new page.
+      // If there's not enough room on the current page, add a new page.
       if (yPosition > pageHeight - 40) {
         doc.addPage();
         yPosition = 20;
       }
-      // Add a header for the summary section.
+      // Print summary header.
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
       yPosition += 6;
 
-      // Build summary table data.
+      // Build summary table rows.
       const summaryData = summaryRows.map((row) => [
         row.clusterName,
         row.riggingPoints,
@@ -222,7 +234,7 @@ export const exportToPDF = (
       yPosition = (doc as any).lastAutoTable.finalY + 10;
     }
 
-    // Add logo at the bottom of the last page.
+    // LOGO SECTION
     const logo = new Image();
     logo.crossOrigin = 'anonymous';
     logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
@@ -231,9 +243,9 @@ export const exportToPDF = (
       const logoWidth = 50;
       const logoHeight = logoWidth * (logo.height / logo.width);
       const xPosition = (pageWidth - logoWidth) / 2;
-      const yPosition = pageHeight - 20;
+      const yLogo = pageHeight - 20;
       try {
-        doc.addImage(logo, 'PNG', xPosition, yPosition - logoHeight, logoWidth, logoHeight);
+        doc.addImage(logo, 'PNG', xPosition, yLogo - logoHeight, logoWidth, logoHeight);
         const blob = doc.output('blob');
         resolve(blob);
       } catch (error) {
@@ -243,7 +255,7 @@ export const exportToPDF = (
       }
     };
 
-    // If the image fails to load, still resolve with the PDF without the logo.
+    // In case the logo image fails to load, resolve with the PDF anyway.
     logo.onerror = () => {
       console.error('Failed to load logo');
       const blob = doc.output('blob');
