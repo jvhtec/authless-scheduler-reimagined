@@ -6,6 +6,12 @@ interface TourRow {
   location: string;
 }
 
+/**
+ * Exports a tour report PDF.
+ * @param tourName - The name of the tour
+ * @param dateSpan - The date span of the tour (e.g. "01/01/2024 - 01/31/2024")
+ * @param rows - Array of tour dates and locations
+ */
 export const exportTourPDF = (
   tourName: string,
   dateSpan: string,
@@ -15,7 +21,7 @@ export const exportTourPDF = (
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
-    const createdDate = new Date().toLocaleDateString();
+    const createdDate = new Date().toLocaleDateString("en-GB");
 
     // ----- HEADER SECTION -----
     doc.setFontSize(24);
@@ -48,7 +54,7 @@ export const exportTourPDF = (
       margin: { bottom: 40 },
     });
 
-    // ----- LOGO & CREATED DATE SECTION -----
+    // ----- LOGO SECTION -----
     const logo = new Image();
     logo.crossOrigin = "anonymous";
     logo.src = "/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png";
