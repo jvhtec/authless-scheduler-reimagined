@@ -10,6 +10,7 @@ import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const lightComponentDatabase = [
   { id: 1, name: 'CAMEO OPUS S5', watts: 650 },
@@ -69,7 +70,7 @@ const VOLTAGE_3PHASE = 400;
 const POWER_FACTOR = 0.85;
 const PHASES = 3;
 
-const PDU_TYPES = ['CEE32A 3P+N+G', 'CEE63A 3P+N+G','Powerlock 400A 3P+N+G'];
+const PDU_TYPES = ['CEE32A 3P+N+G', 'CEE63A 3P+N+G', 'Powerlock 400A 3P+N+G', 'Custom'];
 
 interface TableRow {
   quantity: string;
@@ -85,6 +86,8 @@ interface Table {
   totalWatts?: number;
   currentPerPhase?: number;
   pduType?: string;
+  customPduType?: string;
+  includesHoist?: boolean;
   id?: number;
 }
 
@@ -98,6 +101,9 @@ const LightsConsumosTool: React.FC = () => {
   const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [safetyMargin, setSafetyMargin] = useState(0);
+  const [includesHoist, setIncludesHoist] = useState(false);
+  const [selectedPduType, setSelectedPduType] = useState<string>('');
+  const [customPduType, setCustomPduType] = useState<string>('');
 
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
@@ -145,12 +151,11 @@ const LightsConsumosTool: React.FC = () => {
     return { wattsPerPhase, currentPerPhase };
   };
 
-  // Update the recommendPDU function
-const recommendPDU = (current: number) => {
-  if (current < 32) return PDU_TYPES[0];
-  if (current < 63) return PDU_TYPES[1];
-  if (current > 63) return PDU_TYPES[2];
-};
+  const recommendPDU = (current: number) => {
+    if (current < 32) return PDU_TYPES[0];
+    if (current < 63) return PDU_TYPES[1];
+    return PDU_TYPES[2];
+  };
 
   const savePowerRequirementTable = async (table: Table) => {
     try {
@@ -162,7 +167,9 @@ const recommendPDU = (current: number) => {
           table_name: table.name,
           total_watts: table.totalWatts || 0,
           current_per_phase: table.currentPerPhase || 0,
-          pdu_type: table.pduType || ''
+          pdu_type: table.pduType || '',
+          custom_pdu_type: table.customPduType,
+          includes_hoist: table.includesHoist
         });
 
       if (error) throw error;
@@ -206,20 +213,24 @@ const recommendPDU = (current: number) => {
 
     const totalWatts = calculatedRows.reduce((sum, row) => sum + (row.totalWatts || 0), 0);
     const { currentPerPhase } = calculatePhaseCurrents(totalWatts);
-    const pduSuggestion = recommendPDU(currentPerPhase);
+    const pduSuggestion = selectedPduType || recommendPDU(currentPerPhase);
+
+    const finalPduType = selectedPduType === 'Custom' ? customPduType : pduSuggestion;
+    const displayName = `${tableName} (${finalPduType})${selectedPduType === 'Custom' ? ' - Custom PDU' : ''}`;
 
     const newTable = {
-      name: `${tableName} (${pduSuggestion}) - \nCEE32A 3P+N+G (MOTORES)`,
+      name: displayName,
       rows: calculatedRows,
       totalWatts,
       currentPerPhase,
-      pduType: pduSuggestion,
+      pduType: finalPduType,
+      customPduType: selectedPduType === 'Custom' ? customPduType : undefined,
+      includesHoist,
       id: Date.now(),
     };
 
     setTables((prev) => [...prev, newTable]);
     
-    // Save to database if job is selected
     if (selectedJobId) {
       savePowerRequirementTable(newTable);
     }
@@ -233,6 +244,9 @@ const recommendPDU = (current: number) => {
       rows: [{ quantity: '', componentId: '', watts: '' }],
     });
     setTableName('');
+    setIncludesHoist(false);
+    setSelectedPduType('');
+    setCustomPduType('');
   };
 
   const removeTable = (tableId: number) => {
@@ -349,6 +363,43 @@ const recommendPDU = (current: number) => {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label>PDU Type Override</Label>
+            <Select value={selectedPduType} onValueChange={setSelectedPduType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Use recommended PDU type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Use recommended PDU type</SelectItem>
+                {PDU_TYPES.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedPduType === 'Custom' && (
+            <div className="space-y-2">
+              <Label>Custom PDU Type</Label>
+              <Input
+                value={customPduType}
+                onChange={(e) => setCustomPduType(e.target.value)}
+                placeholder="Enter custom PDU type"
+              />
+            </div>
+          )}
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="hoistPower"
+              checked={includesHoist}
+              onCheckedChange={(checked) => setIncludesHoist(checked as boolean)}
+            />
+            <Label htmlFor="hoistPower">Requires Additional Hoist Power (CEE32A 3P+N+G)</Label>
+          </div>
+
           <div className="border rounded-lg overflow-hidden">
             <table className="w-full">
               <thead className="bg-muted">
@@ -461,9 +512,9 @@ const recommendPDU = (current: number) => {
                   </tr>
                 </tbody>
               </table>
-              {table.pduType && (
+              {table.includesHoist && (
                 <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
-                  Recommended PDU: {table.pduType}
+                  Additional Hoist Power Required: CEE32A 3P+N+G
                 </div>
               )}
             </div>
