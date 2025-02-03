@@ -239,7 +239,6 @@ const PesosTool: React.FC = () => {
     }
 
     // Build summary rows from the generated tables.
-    // For the cluster name, remove the SX suffix portion by taking the part before the first "(".
     const summaryRows: SummaryRow[] = tables.map((table) => ({
       clusterName: table.name.split('(')[0].trim(),
       riggingPoints: table.riggingPoints || '',
@@ -253,19 +252,19 @@ const PesosTool: React.FC = () => {
         cablePickCounter++;
         summaryRows.push({
           clusterName: 'CABLE PICK',
-          riggingPoints: `CP${cablePickCounter.toString().padStart(2, '0')}`,
+          riggingPoints: `CP${cablePickCounter.toString().padStart(2, 0)}`,
           clusterWeight: parseFloat(cablePickWeight),
         });
       });
     }
 
     try {
-      // Pass the summaryRows as the 5th parameter (matching the new exportToPDF signature).
       const pdfBlob = await exportToPDF(
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'pesos' })),
         'weight',
         selectedJob.title,
+        new Date().toLocaleDateString('en-GB'),
         summaryRows
       );
 
@@ -439,7 +438,7 @@ const PesosTool: React.FC = () => {
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
                 <FileText className="w-4 h-4" />
-                Export &amp; Upload PDF
+                Export & Upload PDF
               </Button>
             )}
           </div>
