@@ -321,12 +321,6 @@ export const exportToPDF = (
   });
 };
 
-/**
- * New function to export tour dates (and locations) to a simple PDF table.
- *
- * @param tourName - The name of the tour.
- * @param tourDates - Array of tour date records (each should have at least a "date" and a "location" field).
- */
 export const exportTourDatesToPDF = (
   tourName: string,
   tourDates: any[]
@@ -380,7 +374,7 @@ export const exportTourDatesToPDF = (
       alternateRowStyles: { fillColor: [250, 250, 255] },
     });
 
-    // Optionally add a logo at the bottom.
+    // Add logo at the bottom
     const logo = new Image();
     logo.crossOrigin = "anonymous";
     logo.src = "/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png";

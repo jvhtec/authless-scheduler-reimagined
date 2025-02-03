@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Edit2, Printer } from "lucide-react";
 import { useState } from "react";
-import { TourManagementDialog } from "./TourManagementDialog";
+import { TourManagementDialog } from "@/components/tours/TourManagementDialog";
 import { exportTourDatesToPDF } from "@/utils/pdfExport";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 interface TourCardProps {
   tour: any;
@@ -16,6 +17,7 @@ interface TourCardProps {
 export const TourCard = ({ tour, onTourClick, onManageDates }: TourCardProps) => {
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const { toast } = useToast();
 
   const handlePrintPDF = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -30,14 +32,26 @@ export const TourCard = ({ tour, onTourClick, onManageDates }: TourCardProps) =>
 
     if (error) {
       console.error("Error fetching tour dates:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch tour dates",
+        variant: "destructive"
+      });
       setIsPrinting(false);
       return;
     }
+
     if (!data || data.length === 0) {
       console.warn("No tour dates found for this tour.");
+      toast({
+        title: "Warning",
+        description: "No tour dates found for this tour",
+        variant: "destructive"
+      });
       setIsPrinting(false);
       return;
     }
+
     try {
       const blob = await exportTourDatesToPDF(tour.name, data);
       const url = URL.createObjectURL(blob);
@@ -49,8 +63,17 @@ export const TourCard = ({ tour, onTourClick, onManageDates }: TourCardProps) =>
       link.remove();
       URL.revokeObjectURL(url);
       console.log("PDF export complete.");
+      toast({
+        title: "Success",
+        description: "Tour dates PDF has been generated"
+      });
     } catch (err) {
       console.error("Error exporting PDF:", err);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF",
+        variant: "destructive"
+      });
     }
     setIsPrinting(false);
   };
@@ -59,7 +82,7 @@ export const TourCard = ({ tour, onTourClick, onManageDates }: TourCardProps) =>
 
   return (
     <Card
-      className="hover:shadow-md transition-shadow cursor-pointer m-2 max-w-xs" // max-width only, not height-limited
+      className="hover:shadow-md transition-shadow cursor-pointer m-2 max-w-xs"
       onClick={() => onTourClick(tour.id)}
       style={{
         borderColor: tour.color ? `${tour.color}30` : "#7E69AB30",
