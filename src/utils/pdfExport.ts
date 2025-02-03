@@ -424,5 +424,9 @@ interface ExtendedJsPDF extends jsPDF {
       height: number;
       getHeight: () => number;
     };
+    events: any;
+    scaleFactor: number;
+    pages: number[];
+    getEncryptor: (objectId: number) => (data: string) => string;
   };
 }

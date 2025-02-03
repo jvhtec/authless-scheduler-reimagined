@@ -217,13 +217,19 @@ const LightsConsumosTool: React.FC = () => {
     }
 
     try {
+      const powerSummary = {
+        totalSystemWatts: safetyMargin,
+        totalSystemAmps: safetyMargin
+      };
+
       const pdfBlob = await exportToPDF(
         selectedJob.title,
-        tables.map((table) => ({ ...table, toolType: 'pesos' })),
-        'weight',
+        tables.map((table) => ({ ...table, toolType: 'consumos' })),
+        'power',
         selectedJob.title,
         undefined,
         [],
+        powerSummary,
         safetyMargin
       );
 
@@ -434,7 +440,6 @@ const LightsConsumosTool: React.FC = () => {
         </div>
       </CardContent>
     </Card>
-  );
 };
 
 export default LightsConsumosTool;
