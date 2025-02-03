@@ -63,7 +63,8 @@ interface Table {
   totalWeight?: number;
   id?: number;
   dualMotors?: boolean;
-  riggingPoints?: string; // New property to store the SX suffix(es)
+  riggingPoints?: string; // Stores the generated SX suffix(es)
+  clusterId?: string;     // New property to group tables (e.g. mirrored pair)
 }
 
 interface SummaryRow {
@@ -95,7 +96,7 @@ const PesosTool: React.FC = () => {
   });
 
   // Helper to generate an SX suffix.
-  // Returns just the SX text (for example "SX01" or "SX01, SX02").
+  // Returns a string such as "SX01" or "SX01, SX02" depending on useDualMotors.
   const getSuffix = () => {
     if (department === 'sound') {
       if (useDualMotors) {
@@ -173,9 +174,11 @@ const PesosTool: React.FC = () => {
 
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
 
+    // For grouping cable pick later, assign a new clusterId for this generation.
+    const newClusterId = Date.now().toString();
+
     if (mirroredCluster) {
-      // For mirrored clusters, generate two tables.
-      // Left table: name is "<tableName> L (SXxx)" and store the SX suffix as riggingPoints.
+      // For mirrored clusters, generate two tables sharing the same clusterId.
       const leftSuffix = getSuffix();
       const rightSuffix = getSuffix();
 
@@ -186,6 +189,7 @@ const PesosTool: React.FC = () => {
         totalWeight,
         id: Date.now(),
         dualMotors: useDualMotors,
+        clusterId: newClusterId,
       };
 
       const rightTable: Table = {
@@ -195,11 +199,12 @@ const PesosTool: React.FC = () => {
         totalWeight,
         id: Date.now() + 1,
         dualMotors: useDualMotors,
+        clusterId: newClusterId,
       };
 
       setTables((prev) => [...prev, leftTable, rightTable]);
     } else {
-      // Single table.
+      // Single table: assign the newClusterId to it.
       const suffix = getSuffix();
       const newTable: Table = {
         name: `${tableName} (${suffix})`,
@@ -208,6 +213,7 @@ const PesosTool: React.FC = () => {
         totalWeight,
         id: Date.now(),
         dualMotors: useDualMotors,
+        clusterId: newClusterId,
       };
       setTables((prev) => [...prev, newTable]);
     }
@@ -238,26 +244,38 @@ const PesosTool: React.FC = () => {
       return;
     }
 
-    // Build summary rows from the generated tables.
-    const summaryRows: SummaryRow[] = tables.map((table) => ({
-      clusterName: table.name,
-      riggingPoints: table.riggingPoints || '',
-      clusterWeight: table.totalWeight || 0,
-    }));
+    // Group tables by clusterId so that mirrored pairs (or single tables) are grouped together.
+    const clusterMap = new Map<string, { clusterName: string; riggingPoints: string; clusterWeight: number }>();
+    tables.forEach((table) => {
+      const cid = table.clusterId || table.id.toString();
+      // Remove the SX suffix portion from the table name.
+      const cleanName = table.name.split('(')[0].trim();
+      if (!clusterMap.has(cid)) {
+        clusterMap.set(cid, {
+          clusterName: cleanName,
+          riggingPoints: table.riggingPoints || '',
+          clusterWeight: table.totalWeight || 0,
+        });
+      }
+    });
 
-    // If Cable Pick is enabled, add an extra summary row.
+    // Build summary rows array from the grouped clusters.
+    let summaryRows: SummaryRow[] = Array.from(clusterMap.values());
+
+    // If Cable Pick is enabled, add one cable pick summary row per cluster.
     if (cablePick) {
-      const weightNum = parseFloat(cablePickWeight);
-      summaryRows.push({
-        clusterName: 'CABLE PICK',
-        riggingPoints: `CP${cablePickWeight}`,
-        clusterWeight: weightNum,
+      // For each cluster, add an extra row with CP01 (cable pick resets per cluster).
+      clusterMap.forEach(() => {
+        summaryRows.push({
+          clusterName: 'CABLE PICK',
+          riggingPoints: 'CP01',
+          clusterWeight: parseFloat(cablePickWeight),
+        });
       });
     }
 
     try {
-      // Pass the summaryRows as an extra parameter to exportToPDF.
-      // (You may need to adjust your exportToPDF utility to render the summary table.)
+      // Pass the summaryRows as the 5th parameter to exportToPDF.
       const pdfBlob = await exportToPDF(
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'pesos' })),
@@ -445,11 +463,7 @@ const PesosTool: React.FC = () => {
             <div key={table.id} className="border rounded-lg overflow-hidden mt-6">
               <div className="bg-muted px-4 py-3 flex justify-between items-center">
                 <h3 className="font-semibold">{table.name}</h3>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => table.id && removeTable(table.id)}
-                >
+                <Button variant="destructive" size="sm" onClick={() => table.id && removeTable(table.id)}>
                   Remove Table
                 </Button>
               </div>
