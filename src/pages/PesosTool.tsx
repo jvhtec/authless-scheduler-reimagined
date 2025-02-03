@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { format } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -262,16 +261,11 @@ const PesosTool: React.FC = () => {
 
     try {
       // Pass the summaryRows as the 5th parameter (matching the new exportToPDF signature).
-      const jobDate = selectedJob?.start_time 
-        ? format(new Date(selectedJob.start_time), "MMMM dd, yyyy")
-        : format(new Date(), "MMMM dd, yyyy");
-
       const pdfBlob = await exportToPDF(
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'pesos' })),
         'weight',
         selectedJob.title,
-        jobDate,
         summaryRows
       );
 
@@ -296,7 +290,7 @@ const PesosTool: React.FC = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
-      console.error('PDF Export Error:', error);
+      console.error(error);
       toast({
         title: 'Error',
         description: 'Failed to generate or upload the PDF.',
@@ -426,12 +420,7 @@ const PesosTool: React.FC = () => {
                       </Select>
                     </td>
                     <td className="p-4">
-                      <Input
-                        type="number"
-                        value={row.weight}
-                        readOnly
-                        className="w-full bg-muted"
-                      />
+                      <Input type="number" value={row.weight} readOnly className="w-full bg-muted" />
                     </td>
                   </tr>
                 ))}
@@ -450,7 +439,7 @@ const PesosTool: React.FC = () => {
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
                 <FileText className="w-4 h-4" />
-                Export & Upload PDF
+                Export &amp; Upload PDF
               </Button>
             )}
           </div>
@@ -493,6 +482,11 @@ const PesosTool: React.FC = () => {
                   </tr>
                 </tbody>
               </table>
+              {table.dualMotors && (
+                <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
+                  *This configuration uses dual motors. Load is distributed between two motors for safety and redundancy.
+                </div>
+              )}
             </div>
           ))}
         </div>

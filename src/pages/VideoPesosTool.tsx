@@ -158,9 +158,7 @@ const VideoPesosTool: React.FC = () => {
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'pesos' })),
         'weight',
-        selectedJob.title,
-        undefined,
-        [],
+        selectedJob.title
       );
 
       const fileName = `Video Weight Report - ${selectedJob.title}.pdf`;
