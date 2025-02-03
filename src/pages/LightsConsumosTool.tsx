@@ -188,55 +188,58 @@ const LightsConsumosTool: React.FC = () => {
     }
   };
 
-  const generateTable = () => {
-    if (!tableName) {
-      toast({
-        title: 'Missing table name',
-        description: 'Please enter a name for the table',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const calculatedRows = currentTable.rows.map((row) => {
-      const component = lightComponentDatabase.find((c) => c.id.toString() === row.componentId);
-      const totalWatts =
-        parseFloat(row.quantity) && parseFloat(row.watts)
-          ? parseFloat(row.quantity) * parseFloat(row.watts)
-          : 0;
-      return {
-        ...row,
-        componentName: component?.name || '',
-        totalWatts,
-      };
+ const generateTable = () => {
+  if (!tableName) {
+    toast({
+      title: 'Missing table name',
+      description: 'Please enter a name for the table',
+      variant: 'destructive',
     });
+    return;
+  }
 
-    const totalWatts = calculatedRows.reduce((sum, row) => sum + (row.totalWatts || 0), 0);
-    const { currentPerPhase } = calculatePhaseCurrents(totalWatts);
-    const pduSuggestion = selectedPduType || recommendPDU(currentPerPhase);
-
-    const finalPduType = selectedPduType === 'Custom' ? customPduType : pduSuggestion;
-    const displayName = `${tableName} (${finalPduType})${selectedPduType === 'Custom' ? ' - Custom PDU' : ''}`;
-
-    const newTable = {
-      name: displayName,
-      rows: calculatedRows,
+  const calculatedRows = currentTable.rows.map((row) => {
+    const component = lightComponentDatabase.find((c) => c.id.toString() === row.componentId);
+    const totalWatts =
+      parseFloat(row.quantity) && parseFloat(row.watts)
+        ? parseFloat(row.quantity) * parseFloat(row.watts)
+        : 0;
+    return {
+      ...row,
+      componentName: component?.name || '',
       totalWatts,
-      currentPerPhase,
-      pduType: finalPduType,
-      customPduType: selectedPduType === 'Custom' ? customPduType : undefined,
-      includesHoist,
-      id: Date.now(),
     };
+  });
 
-    setTables((prev) => [...prev, newTable]);
-    
-    if (selectedJobId) {
-      savePowerRequirementTable(newTable);
-    }
-    
-    resetCurrentTable();
+  const totalWatts = calculatedRows.reduce((sum, row) => sum + (row.totalWatts || 0), 0);
+  const { currentPerPhase } = calculatePhaseCurrents(totalWatts);
+  const pduSuggestion = selectedPduType || recommendPDU(currentPerPhase);
+
+  // Use the base table name without any existing appended info.
+  const baseTableName = tableName.split(" (")[0];
+  const finalPduType = selectedPduType === 'Custom' ? customPduType : pduSuggestion;
+  const displayName = `${baseTableName} (${finalPduType})${selectedPduType === 'Custom' ? ' - Custom PDU' : ''}`;
+
+  const newTable = {
+    name: displayName,
+    rows: calculatedRows,
+    totalWatts,
+    currentPerPhase,
+    pduType: finalPduType,
+    customPduType: selectedPduType === 'Custom' ? customPduType : undefined,
+    includesHoist,
+    id: Date.now(),
   };
+
+  setTables((prev) => [...prev, newTable]);
+  
+  if (selectedJobId) {
+    savePowerRequirementTable(newTable);
+  }
+  
+  resetCurrentTable();
+};
+
 
   const resetCurrentTable = () => {
     setCurrentTable({
