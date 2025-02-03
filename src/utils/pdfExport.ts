@@ -35,15 +35,17 @@ export interface SummaryRow {
  * 2. tables
  * 3. type ('weight' | 'power')
  * 4. jobName
- * 5. summaryRows (optional) – used for "pesos" reports
- * 6. powerSummary (optional)
- * 7. safetyMargin (optional)
+ * 5. jobDate (the date of the job)
+ * 6. summaryRows (optional) – used for "pesos" reports
+ * 7. powerSummary (optional)
+ * 8. safetyMargin (optional)
  */
 export const exportToPDF = (
   projectName: string,
   tables: ExportTable[],
   type: 'weight' | 'power',
   jobName: string,
+  jobDate: string,
   summaryRows?: SummaryRow[],
   powerSummary?: { totalSystemWatts: number; totalSystemAmps: number },
   safetyMargin?: number
@@ -52,6 +54,7 @@ export const exportToPDF = (
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
+    const createdDate = new Date().toLocaleDateString('en-GB');
 
     // === HEADER SECTION (for main tables) ===
     doc.setFillColor(125, 1, 1);
@@ -64,6 +67,9 @@ export const exportToPDF = (
 
     doc.setFontSize(16);
     doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
+    // Print job date below the job name.
+    doc.setFontSize(12);
+    doc.text(`Job Date: ${jobDate}`, pageWidth / 2, 38, { align: 'center' });
 
     if (safetyMargin !== undefined) {
       doc.setFontSize(10);
@@ -182,6 +188,8 @@ export const exportToPDF = (
 
     doc.setFontSize(16);
     doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(`Job Date: ${jobDate}`, pageWidth / 2, 38, { align: 'center' });
 
     if (safetyMargin !== undefined) {
       doc.setFontSize(10);
@@ -193,7 +201,7 @@ export const exportToPDF = (
 
     yPosition = 70;
 
-    // For "consumos" tool, print summary as text lines; otherwise, use table format.
+    // For "consumos" tool, print summary as text lines; otherwise, use table format if summaryRows provided.
     if (tables[0]?.toolType === 'consumos') {
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
@@ -203,7 +211,6 @@ export const exportToPDF = (
       tables.forEach((table) => {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
-        // Use the custom PDU type override if provided; otherwise, use the suggested PDU.
         let pduText = table.customPduType ? table.customPduType : table.pduType;
         let line = `${table.name} - PDU: ${pduText || 'N/A'}`;
         doc.text(line, 14, yPosition);
@@ -258,29 +265,44 @@ export const exportToPDF = (
       yPosition = (doc as any).lastAutoTable.finalY + 10;
     }
 
-    // === LOGO SECTION (at the bottom of the last page) ===
+    // === LOGO SECTION: Add the company logo on every page and created date on the last page ===
+    // Load the logo once.
     const logo = new Image();
     logo.crossOrigin = 'anonymous';
     logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
     logo.onload = () => {
-      doc.setPage(doc.getNumberOfPages());
       const logoWidth = 50;
       const logoHeight = logoWidth * (logo.height / logo.width);
-      const xPosition = (pageWidth - logoWidth) / 2;
-      const yLogo = pageHeight - 20;
-      try {
-        doc.addImage(logo, 'PNG', xPosition, yLogo - logoHeight, logoWidth, logoHeight);
-        const blob = doc.output('blob');
-        resolve(blob);
-      } catch (error) {
-        console.error('Error adding logo:', error);
-        const blob = doc.output('blob');
-        resolve(blob);
+      // Loop through every page to add the logo.
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        // Position the logo at the bottom center of each page.
+        const xPosition = (pageWidth - logoWidth) / 2;
+        const yLogo = pageHeight - 20;
+        try {
+          doc.addImage(logo, 'PNG', xPosition, yLogo - logoHeight, logoWidth, logoHeight);
+        } catch (error) {
+          console.error(`Error adding logo on page ${i}:`, error);
+        }
       }
+      // On the last page, add the created date at the bottom right.
+      doc.setPage(totalPages);
+      doc.setFontSize(10);
+      doc.setTextColor(51, 51, 51);
+      doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: 'right' });
+      const blob = doc.output('blob');
+      resolve(blob);
     };
 
     logo.onerror = () => {
       console.error('Failed to load logo');
+      // Even if the logo fails, add the created date on the last page.
+      const totalPages = doc.internal.getNumberOfPages();
+      doc.setPage(totalPages);
+      doc.setFontSize(10);
+      doc.setTextColor(51, 51, 51);
+      doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: 'right' });
       const blob = doc.output('blob');
       resolve(blob);
     };
