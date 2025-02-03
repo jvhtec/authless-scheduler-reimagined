@@ -7,7 +7,7 @@ import { TourDateManagementDialog } from "../tours/TourDateManagementDialog";
 import { TourCard } from "../tours/TourCard";
 import CreateTourDialog from "../tours/CreateTourDialog";
 import { useToast } from "@/hooks/use-toast";
-import { exportTourPDF } from "@/lib/tourpdfexport"; // NEW: using the new tour-specific PDF export
+import { exportTourPDF } from "@/lib/tourpdfexport";
 
 interface TourChipsProps {
   onTourClick: (tourId: string) => void;
@@ -40,7 +40,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
           )
         `)
         .order("created_at", { ascending: false })
-        .eq("deleted", false); // filter out deleted tours
+        .eq("deleted", false);
 
       if (toursError) {
         console.error("Error fetching tours:", toursError);
@@ -59,21 +59,16 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
   const handlePrint = async (tour: any) => {
     try {
-      // Build an array of rows from tour_dates.
-      // Each row contains a formatted date and its linked location name.
       const rows = tour.tour_dates.map((td: any) => ({
         date: new Date(td.date).toLocaleDateString(),
         location: td.location?.name || "",
       }));
 
-      // Build a tour date span from the tour start_date and end_date.
       const start = new Date(tour.start_date).toLocaleDateString();
       const end = new Date(tour.end_date).toLocaleDateString();
       const dateSpan = `${start} - ${end}`;
 
-      // Call the new tour PDF export function.
       const pdfBlob = await exportTourPDF(tour.name, dateSpan, rows);
-
       const url = URL.createObjectURL(pdfBlob);
       window.open(url, "_blank");
     } catch (error: any) {
@@ -88,7 +83,6 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
   return (
     <div className="space-y-4">
-      {/* Header with Create Tour button */}
       <div className="flex justify-between items-center">
         <Button
           onClick={() => setIsCreateDialogOpen(true)}
@@ -99,7 +93,6 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         </Button>
       </div>
 
-      {/* Flex container for tour cards arranged horizontally and wrapping */}
       <div className="flex flex-wrap gap-4">
         {tours.map((tour: any) => (
           <div
