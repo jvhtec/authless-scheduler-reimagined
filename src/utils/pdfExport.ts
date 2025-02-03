@@ -72,7 +72,6 @@ export const exportToPDF = (
 
     let yPosition = 70;
 
-    // Process each table
     tables.forEach((table, index) => {
       // Section header with PDU type if applicable
       doc.setFillColor(245, 245, 250);
@@ -80,13 +79,13 @@ export const exportToPDF = (
 
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      
+
       // Add PDU type to table name for power reports if provided
       let displayName = table.name;
       if (type === 'power' && (table.customPduType || table.pduType)) {
         displayName = `${table.name} (${table.customPduType || table.pduType})`;
       }
-      
+
       doc.text(displayName, 14, yPosition);
       yPosition += 10;
 
@@ -149,12 +148,12 @@ export const exportToPDF = (
           doc.setFontSize(11);
           doc.setTextColor(125, 1, 1);
           doc.text(`Total Power: ${table.totalWatts.toFixed(2)} W`, 14, yPosition);
-          
+
           if (table.currentPerPhase !== undefined) {
             yPosition += 7;
             doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition);
           }
-          
+
           yPosition += 10;
         }
 
@@ -178,16 +177,18 @@ export const exportToPDF = (
 
     // If summary rows are provided, add a summary table at the end.
     if (summaryRows && summaryRows.length > 0) {
-      // Add a header for the summary section
-      if (yPosition > 40) {
-        yPosition += 10;
+      // If there's not enough room for the summary, add a new page.
+      if (yPosition > pageHeight - 40) {
+        doc.addPage();
+        yPosition = 20;
       }
+      // Add a header for the summary section.
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
       yPosition += 6;
 
-      // Build summary table data: columns for Cluster Name, Rigging Points, and Cluster Weight
+      // Build summary table data.
       const summaryData = summaryRows.map((row) => [
         row.clusterName,
         row.riggingPoints,
@@ -221,7 +222,7 @@ export const exportToPDF = (
       yPosition = (doc as any).lastAutoTable.finalY + 10;
     }
 
-    // Add logo at the bottom of the last page
+    // Add logo at the bottom of the last page.
     const logo = new Image();
     logo.crossOrigin = 'anonymous';
     logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
@@ -242,7 +243,7 @@ export const exportToPDF = (
       }
     };
 
-    // If the image fails to load, resolve with the PDF without the logo.
+    // If the image fails to load, still resolve with the PDF without the logo.
     logo.onerror = () => {
       console.error('Failed to load logo');
       const blob = doc.output('blob');
