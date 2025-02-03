@@ -204,7 +204,7 @@ export const exportToPDF = (
 
     yPosition = 70;
 
-    // For "consumos" tool, print summary as text lines with followspot notes.
+    // For "consumos" tool, print summary as text lines.
     if (tables[0]?.toolType === 'consumos') {
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
@@ -236,11 +236,24 @@ export const exportToPDF = (
         }
       });
 
-      // Next, count followspot ("cañón") elements across all tables.
+      // Next, count followspot ("cañón") elements.
+      // For this tool, followspot elements are identified by the specific component names.
+      const followspotComponents = [
+        'ROBERT JULIAT ARAMIS',
+        'ROBERT JULIAT MERLIN',
+        'ROBERT JULIAT CYRANO',
+        'ROBERT JULIAT LANCELOT',
+        'ROBERT JULIAT KORRIGAN'
+      ];
       let followspotCount = 0;
       tables.forEach((table) => {
         table.rows.forEach((row) => {
-          if (row.componentName && row.componentName.toLowerCase().includes('ROBERT JULIAT ARAMIS','ROBERT JULIAT MERLIN','ROBERT JULIAT CYRANO', 'ROBERT JULIAT LANCELOT','ROBERT JULIAT KORRIGAN')) {
+          if (
+            row.componentName &&
+            followspotComponents.some((name) =>
+              row.componentName.toUpperCase().includes(name.toUpperCase())
+            )
+          ) {
             followspotCount++;
           }
         });
@@ -249,7 +262,7 @@ export const exportToPDF = (
       for (let i = 1; i <= followspotCount; i++) {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
-        doc.text(`CEE16A 1P+N+G required at followspot position #${i}`, 14, yPosition);
+        doc.text(`Schuko 16A 1P+N+G required at followspot position #${i}`, 14, yPosition);
         yPosition += 7;
         if (yPosition > pageHeight - 40) {
           doc.addPage();
@@ -265,28 +278,8 @@ export const exportToPDF = (
       doc.setTextColor(0, 0, 0);
       doc.text("16A Schuko Power required at FoH position", 14, yPosition);
       yPosition += 7;
-    } else {
-      // For "pesos" (or other types), generate summaryRows if not provided.
-      if (!summaryRows) {
-        summaryRows = tables.map((table) => {
-          // Extract the rigging points from the table name (text within parentheses).
-          let riggingPoints = "";
-          const match = table.name.match(/\(([^)]+)\)/);
-          if (match) {
-            riggingPoints = match[1];
-          }
-          // Append a dual motor note if applicable.
-          if (table.dualMotors) {
-            riggingPoints += " (Dual Motors)";
-          }
-          const clusterName = table.name.split('(')[0].trim();
-          return {
-            clusterName,
-            riggingPoints,
-            clusterWeight: table.totalWeight || 0,
-          };
-        });
-      }
+    } else if (summaryRows && summaryRows.length > 0) {
+      // For other tool types, print summary as a table.
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
