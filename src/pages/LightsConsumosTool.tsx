@@ -96,14 +96,15 @@ const LightsConsumosTool: React.FC = () => {
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
 
+  // State for job and table settings.
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
-  const [tableName, setTableName] = useState('');
+  const [tableName, setTableName] = useState(''); // raw name as entered by the user
   const [tables, setTables] = useState<Table[]>([]);
   const [safetyMargin, setSafetyMargin] = useState(0);
   const [includesHoist, setIncludesHoist] = useState(false);
-  const [selectedPduType, setSelectedPduType] = useState<string>('');
-  const [customPduType, setCustomPduType] = useState<string>('');
+  const [selectedPduType, setSelectedPduType] = useState<string>(''); // override selection
+  const [customPduType, setCustomPduType] = useState<string>(''); // if custom
 
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
@@ -169,7 +170,7 @@ const LightsConsumosTool: React.FC = () => {
           current_per_phase: table.currentPerPhase || 0,
           pdu_type: table.customPduType || table.pduType || '',
           includes_hoist: table.includesHoist || false,
-          custom_pdu_type: table.customPduType
+          custom_pdu_type: table.customPduType,
         });
 
       if (error) throw error;
@@ -183,11 +184,13 @@ const LightsConsumosTool: React.FC = () => {
       toast({
         title: "Error",
         description: "Failed to save power requirement table",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
+  // In the UI, we do not append any PDU type to the table name.
+  // The raw tableName is stored.
   const generateTable = () => {
     if (!tableName) {
       toast({
@@ -215,18 +218,13 @@ const LightsConsumosTool: React.FC = () => {
     const { currentPerPhase } = calculatePhaseCurrents(totalWatts);
     const pduSuggestion = recommendPDU(currentPerPhase);
 
-    // Clean the table name to remove any trailing parenthesized text.
-    const baseTableName = tableName.replace(/\s*\(.*\)$/, "");
-    const finalPduType = selectedPduType === 'Custom' ? customPduType : pduSuggestion;
-    // Build the display name only once using the base table name.
-    const displayName = `${baseTableName} (${finalPduType})${selectedPduType === 'Custom' ? ' - Custom PDU' : ''}`;
-
-    const newTable = {
-      name: displayName,
+    // In the UI table, we simply use the entered tableName.
+    const newTable: Table = {
+      name: tableName, // do not append PDU info here
       rows: calculatedRows,
       totalWatts,
       currentPerPhase,
-      pduType: finalPduType,
+      pduType: selectedPduType === 'Custom' ? customPduType : pduSuggestion,
       customPduType: selectedPduType === 'Custom' ? customPduType : undefined,
       includesHoist,
       id: Date.now(),
@@ -279,12 +277,13 @@ const LightsConsumosTool: React.FC = () => {
     }
 
     try {
+      // In the PDF export, we want the tool type to be 'consumos'
       const pdfBlob = await exportToPDF(
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'consumos' })),
         'power',
         selectedJob.title,
-        undefined,
+        undefined, // jobDate not passed from UI here (it can be added as needed)
         safetyMargin
       );
 
