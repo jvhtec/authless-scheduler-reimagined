@@ -45,7 +45,6 @@ const Dashboard = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<Department>("sound");
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  // Default tours section to expanded (true) if no user preference exists.
   const [showTours, setShowTours] = useState(true);
   const [showMessages, setShowMessages] = useState(false);
   const [newMessageDialogOpen, setNewMessageDialogOpen] = useState(false);
@@ -67,13 +66,11 @@ const Dashboard = () => {
 
         if (error) {
           console.error("Error fetching user role and preferences:", error);
-          // In case of an error, we keep the default values.
           return;
         }
 
         if (data) {
           setUserRole(data.role);
-          // If tours_expanded is null or undefined, default to true.
           setShowTours(data.tours_expanded !== null && data.tours_expanded !== undefined ? data.tours_expanded : true);
 
           const params = new URLSearchParams(window.location.search);
@@ -146,7 +143,6 @@ const Dashboard = () => {
 
   const selectedDateJobs = getSelectedDateJobs(date, jobs);
 
-  // Handle toggling the tours section and update the user preference.
   const handleToggleTours = async () => {
     const newValue = !showTours;
     setShowTours(newValue);
@@ -159,6 +155,16 @@ const Dashboard = () => {
         console.error("Error updating tours preference:", error);
       }
     }
+  };
+
+  const handleTourClick = (tourId: string) => {
+    if (userRole === "logistics") return;
+    const tour = jobs?.find((job) => job.id === tourId);
+    if (tour) handleEditClick(tour);
+  };
+
+  const handleManageDates = (tourId: string) => {
+    console.log("Managing dates for tour:", tourId);
   };
 
   return (
@@ -221,11 +227,9 @@ const Dashboard = () => {
         {showTours && (
           <CardContent>
             <TourChips
-              onTourClick={(tourId) => {
-                if (userRole === "logistics") return;
-                const tour = jobs?.find((job) => job.id === tourId);
-                if (tour) handleEditClick(tour);
-              }}
+              tour={jobs?.find(job => job.job_type === 'tour') || { id: '', name: '' }}
+              onTourClick={handleTourClick}
+              onManageDates={handleManageDates}
             />
           </CardContent>
         )}

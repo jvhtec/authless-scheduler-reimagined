@@ -2,14 +2,12 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export interface ExportTableRow {
-  // Existing properties for weight/power tables…
   quantity?: string;
   componentName?: string;
   weight?: string;
   watts?: string;
   totalWeight?: number;
   totalWatts?: number;
-  // New optional properties for tour dates export.
   date?: string;
   location?: string;
 }
@@ -33,19 +31,6 @@ export interface SummaryRow {
   clusterWeight: number;
 }
 
-/**
- * exportToPDF now supports an additional type "tour" to export tour dates.
- *
- * Function signature:
- * 1. projectName
- * 2. tables
- * 3. type ('weight' | 'power' | 'tour')
- * 4. jobName
- * 5. jobDate (the date of the job)
- * 6. summaryRows (optional) – used for "pesos" reports
- * 7. powerSummary (optional)
- * 8. safetyMargin (optional)
- */
 export const exportToPDF = (
   projectName: string,
   tables: ExportTable[],
@@ -63,9 +48,6 @@ export const exportToPDF = (
     const createdDate = new Date().toLocaleDateString("en-GB");
 
     if (type === "tour") {
-      // ---------------------------
-      // New "Tour Dates Report" PDF
-      // ---------------------------
       doc.setFillColor(0, 102, 204);
       doc.rect(0, 0, pageWidth, 40, "F");
 
@@ -81,7 +63,6 @@ export const exportToPDF = (
 
       let yPosition = 50;
 
-      // We assume that tables[0] contains the tour dates.
       const tourTable = tables[0];
       const headers = [["No.", "Date", "Location"]];
       const tableRows = tourTable.rows.map((row, index) => [
@@ -110,14 +91,13 @@ export const exportToPDF = (
         alternateRowStyles: { fillColor: [250, 250, 255] },
       });
 
-      // Add logo and created date on every page.
       const logo = new Image();
       logo.crossOrigin = "anonymous";
       logo.src = "/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png";
       logo.onload = () => {
         const logoWidth = 50;
         const logoHeight = logoWidth * (logo.height / logo.width);
-        const totalPages = doc.internal.getNumberOfPages();
+        const totalPages = (doc as any).internal.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
           doc.setPage(i);
           const xPosition = (pageWidth - logoWidth) / 2;
@@ -138,7 +118,7 @@ export const exportToPDF = (
 
       logo.onerror = () => {
         console.error("Failed to load logo");
-        const totalPages = doc.internal.getNumberOfPages();
+        const totalPages = (doc as any).internal.getNumberOfPages();
         doc.setPage(totalPages);
         doc.setFontSize(10);
         doc.setTextColor(51, 51, 51);
@@ -149,9 +129,6 @@ export const exportToPDF = (
       return;
     }
 
-    // ---------------------------
-    // Existing PDF generation logic for "weight" and "power"
-    // ---------------------------
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, "F");
 
@@ -272,7 +249,6 @@ export const exportToPDF = (
       }
     });
 
-    // Summary page (only for non-tour exports)
     doc.addPage();
 
     doc.setFillColor(125, 1, 1);
@@ -397,7 +373,7 @@ export const exportToPDF = (
     logo.onload = () => {
       const logoWidth = 50;
       const logoHeight = logoWidth * (logo.height / logo.width);
-      const totalPages = doc.internal.getNumberOfPages();
+      const totalPages = (doc as any).internal.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         const xPosition = (pageWidth - logoWidth) / 2;
@@ -418,7 +394,7 @@ export const exportToPDF = (
 
     logo.onerror = () => {
       console.error("Failed to load logo");
-      const totalPages = doc.internal.getNumberOfPages();
+      const totalPages = (doc as any).internal.getNumberOfPages();
       doc.setPage(totalPages);
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
