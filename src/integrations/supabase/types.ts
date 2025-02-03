@@ -912,6 +912,7 @@ export type Database = {
           created_at: string | null
           current_per_phase: number
           custom_pdu_type: string | null
+          department: string | null
           id: string
           includes_hoist: boolean | null
           job_id: string | null
@@ -923,6 +924,7 @@ export type Database = {
           created_at?: string | null
           current_per_phase: number
           custom_pdu_type?: string | null
+          department?: string | null
           id?: string
           includes_hoist?: boolean | null
           job_id?: string | null
@@ -934,6 +936,7 @@ export type Database = {
           created_at?: string | null
           current_per_phase?: number
           custom_pdu_type?: string | null
+          department?: string | null
           id?: string
           includes_hoist?: boolean | null
           job_id?: string | null
