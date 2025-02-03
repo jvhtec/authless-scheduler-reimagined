@@ -66,18 +66,38 @@ const PesosTool: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
-  const department = 'sound'; // Add department definition here
+  const department = 'sound'; // Department definition
 
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [useDualMotors, setUseDualMotors] = useState(false);
+  const [mirroredCluster, setMirroredCluster] = useState(false);
 
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
     rows: [{ quantity: '', componentId: '', weight: '' }],
   });
+
+  // Helper to generate an SX suffix.
+  // Returns just the SX text (e.g., "SX01" or "SX01, SX02").
+  const getSuffix = () => {
+    if (department === 'sound') {
+      if (useDualMotors) {
+        soundTableCounter++;
+        const num1 = soundTableCounter.toString().padStart(2, '0');
+        soundTableCounter++;
+        const num2 = soundTableCounter.toString().padStart(2, '0');
+        return `SX${num1}, SX${num2}`;
+      } else {
+        soundTableCounter++;
+        const num = soundTableCounter.toString().padStart(2, '0');
+        return `SX${num}`;
+      }
+    }
+    return '';
+  };
 
   const addRow = () => {
     setCurrentTable((prev) => ({
@@ -123,20 +143,7 @@ const PesosTool: React.FC = () => {
       return;
     }
 
-    // Generate table suffix
-    const suffix = (() => {
-      if (department === 'sound') {
-        soundTableCounter++;
-        const suffixNumber = soundTableCounter.toString().padStart(2, '0');
-        if (useDualMotors) {
-          soundTableCounter++; // Increment counter for dual motors
-          return `(SX${suffixNumber}, SX${soundTableCounter.toString().padStart(2, '0')})`;
-        }
-        return `(SX${suffixNumber})`;
-      }
-      return '';
-    })();
-
+    // Calculate each row's total weight.
     const calculatedRows = currentTable.rows.map((row) => {
       const component = soundComponentDatabase.find((c) => c.id.toString() === row.componentId);
       const totalWeight =
@@ -152,17 +159,45 @@ const PesosTool: React.FC = () => {
 
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
 
-    const newTable: Table = {
-      name: `${tableName} ${suffix}`,
-      rows: calculatedRows,
-      totalWeight,
-      id: Date.now(),
-      dualMotors: useDualMotors,
-    };
+    if (mirroredCluster) {
+      // For mirrored clusters, generate two tables.
+      // Left table: table name with "L" immediately after the name, then the SX suffix in parentheses.
+      const leftSuffix = getSuffix();
+      // Right table: similar, with "R" inserted.
+      const rightSuffix = getSuffix();
 
-    setTables((prev) => [...prev, newTable]);
+      const leftTable: Table = {
+        name: `${tableName} L (${leftSuffix})`,
+        rows: calculatedRows,
+        totalWeight,
+        id: Date.now(),
+        dualMotors: useDualMotors,
+      };
+
+      const rightTable: Table = {
+        name: `${tableName} R (${rightSuffix})`,
+        rows: calculatedRows,
+        totalWeight,
+        id: Date.now() + 1,
+        dualMotors: useDualMotors,
+      };
+
+      setTables((prev) => [...prev, leftTable, rightTable]);
+    } else {
+      // Single table: simply add the SX suffix in parentheses.
+      const suffix = getSuffix();
+      const newTable: Table = {
+        name: `${tableName} (${suffix})`,
+        rows: calculatedRows,
+        totalWeight,
+        id: Date.now(),
+        dualMotors: useDualMotors,
+      };
+      setTables((prev) => [...prev, newTable]);
+    }
     resetCurrentTable();
     setUseDualMotors(false);
+    setMirroredCluster(false);
   };
 
   const resetCurrentTable = () => {
@@ -271,6 +306,16 @@ const PesosTool: React.FC = () => {
                 Dual Motors Configuration
               </Label>
             </div>
+            <div className="flex items-center space-x-2 mt-2">
+              <Checkbox
+                id="mirroredCluster"
+                checked={mirroredCluster}
+                onCheckedChange={(checked) => setMirroredCluster(checked as boolean)}
+              />
+              <Label htmlFor="mirroredCluster" className="text-sm font-medium">
+                Mirrored Cluster
+              </Label>
+            </div>
           </div>
 
           <div className="border rounded-lg overflow-hidden">
@@ -376,8 +421,7 @@ const PesosTool: React.FC = () => {
               </table>
               {table.dualMotors && (
                 <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
-                  *This configuration uses dual motors. Load is distributed between two motors for
-                  safety and redundancy.
+                  *This configuration uses dual motors. Load is distributed between two motors for safety and redundancy.
                 </div>
               )}
             </div>
