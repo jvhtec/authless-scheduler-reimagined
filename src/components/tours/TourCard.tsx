@@ -5,7 +5,7 @@ import { Calendar, Edit2, Printer } from "lucide-react";
 import { useState } from "react";
 import { TourManagementDialog } from "./TourManagementDialog";
 
-interface TourCardProps {
+export interface TourCardProps {
   tour: any;
   onTourClick: (tourId: string) => void;
   onManageDates: (tourId: string) => void;
@@ -16,24 +16,23 @@ export const TourCard = ({ tour, onTourClick, onManageDates, onPrint }: TourCard
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
   return (
-    <Card 
-      className="relative hover:shadow-md transition-shadow cursor-pointer"
+    <Card
+      className="hover:shadow-md transition-shadow cursor-pointer m-2 max-w-xs"
       onClick={() => onTourClick(tour.id)}
-      style={{ 
-        borderColor: `${tour.color}30` || '#7E69AB30',
-        backgroundColor: `${tour.color}05` || '#7E69AB05'
+      style={{
+        borderColor: tour.color ? `${tour.color}30` : "#7E69AB30",
+        backgroundColor: tour.color ? `${tour.color}05` : "#7E69AB05",
       }}
     >
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-xl font-semibold flex items-center gap-2">
-          {tour.name}
-          {tour.flex_main_folder_id && (
-            <Badge variant="secondary">Flex Folders Created</Badge>
-          )}
-        </CardTitle>
+      <CardHeader className="flex flex-col items-start pb-2">
+        <CardTitle className="text-xl font-semibold">{tour.name}</CardTitle>
+        {tour.flex_main_folder_id && (
+          <Badge variant="secondary" className="mt-1">
+            Flex Folders Created
+          </Badge>
+        )}
       </CardHeader>
-      
-      <CardContent>
+      <CardContent className="relative">
         <div className="absolute top-2 right-2 flex gap-1">
           <Button
             variant="secondary"
@@ -73,7 +72,6 @@ export const TourCard = ({ tour, onTourClick, onManageDates, onPrint }: TourCard
           <p className="text-muted-foreground mt-2">{tour.description}</p>
         )}
       </CardContent>
-
       {isManageDialogOpen && (
         <TourManagementDialog
           open={isManageDialogOpen}

@@ -220,14 +220,20 @@ const VideoConsumosTool: React.FC = () => {
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'consumos' })),
         'power',
-        selectedJob.title
+        selectedJob.title,
+        undefined,
+        [],
+        safetyMargin
       );
 
       const fileName = `Video Power Report - ${selectedJob.title}.pdf`;
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
       const filePath = `video/${selectedJobId}/${crypto.randomUUID()}.pdf`;
 
-      const { error: uploadError } = await supabase.storage.from('task_documents').upload(filePath, file);
+      const { error: uploadError } = await supabase.storage
+        .from('task_documents')
+        .upload(filePath, file);
+
       if (uploadError) throw uploadError;
 
       toast({
@@ -235,7 +241,6 @@ const VideoConsumosTool: React.FC = () => {
         description: 'PDF has been generated and uploaded successfully.',
       });
 
-      // Also provide download to user
       const url = window.URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -244,8 +249,8 @@ const VideoConsumosTool: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (error: any) {
-      console.error('Error exporting PDF:', error);
+    } catch (error) {
+      console.error('PDF Export Error:', error);
       toast({
         title: 'Error',
         description: 'Failed to generate or upload the PDF.',
@@ -351,7 +356,7 @@ const VideoConsumosTool: React.FC = () => {
                     <td className="p-4">
                       <Select
                         value={row.componentId}
-                        onValueChange={(value) => value && updateInput(index, 'componentId', value)}
+                        onValueChange={(value) => updateInput(index, 'componentId', value)}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select component" />

@@ -75,7 +75,8 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         [exportTable],
         "weight",
         tour.name,
-        jobDate
+        jobDate,
+        []
       );
 
       const url = URL.createObjectURL(pdfBlob);
