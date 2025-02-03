@@ -201,13 +201,14 @@ export const exportToPDF = (
 
     yPosition = 70;
 
-    // For "consumos" tool, print summary as text lines; otherwise, use table format if summaryRows provided.
+    // For "consumos" tool, print summary as text lines with additional followspot notes.
     if (tables[0]?.toolType === 'consumos') {
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
       yPosition += 10;
 
+      // First, print a summary line for each table.
       tables.forEach((table) => {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
@@ -231,7 +232,40 @@ export const exportToPDF = (
           yPosition += 10;
         }
       });
+
+      // Next, count followspot ("cañón") elements across all tables.
+      // Here we assume that any row whose componentName contains the substring "cañón" (case-insensitive)
+      // qualifies as a followspot.
+      let followspotCount = 0;
+      tables.forEach((table) => {
+        table.rows.forEach((row) => {
+          if (row.componentName && row.componentName.toLowerCase().includes('cañón')) {
+            followspotCount++;
+          }
+        });
+      });
+      // For each followspot, print the required note with an enumeration.
+      for (let i = 1; i <= followspotCount; i++) {
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`CEE16A 1P+N+G required at followspot position #${i}`, 14, yPosition);
+        yPosition += 7;
+        if (yPosition > pageHeight - 40) {
+          doc.addPage();
+          yPosition = 20;
+          doc.setFontSize(16);
+          doc.setTextColor(125, 1, 1);
+          doc.text("Summary (cont'd)", 14, yPosition);
+          yPosition += 10;
+        }
+      }
+      // Finally, always add a note for FoH.
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text("16A Schuko Power required at FoH position", 14, yPosition);
+      yPosition += 7;
     } else if (summaryRows && summaryRows.length > 0) {
+      // For other tool types, print summary as table.
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
@@ -265,19 +299,18 @@ export const exportToPDF = (
       yPosition = (doc as any).lastAutoTable.finalY + 10;
     }
 
-    // === LOGO SECTION: Add the company logo on every page and created date on the last page ===
-    // Load the logo once.
+    // === LOGO & CREATED DATE SECTION ===
+    // Add the company logo on every page and on the last page add the created date.
     const logo = new Image();
     logo.crossOrigin = 'anonymous';
     logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
     logo.onload = () => {
       const logoWidth = 50;
       const logoHeight = logoWidth * (logo.height / logo.width);
-      // Loop through every page to add the logo.
       const totalPages = doc.internal.getNumberOfPages();
+      // Loop through every page to add the logo.
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
-        // Position the logo at the bottom center of each page.
         const xPosition = (pageWidth - logoWidth) / 2;
         const yLogo = pageHeight - 20;
         try {
@@ -297,7 +330,6 @@ export const exportToPDF = (
 
     logo.onerror = () => {
       console.error('Failed to load logo');
-      // Even if the logo fails, add the created date on the last page.
       const totalPages = doc.internal.getNumberOfPages();
       doc.setPage(totalPages);
       doc.setFontSize(10);
