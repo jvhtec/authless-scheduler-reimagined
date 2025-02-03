@@ -86,8 +86,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         dateSpan,
         undefined,
         powerSummary,
-        undefined,
-        { isTourReport: true, dateSpan }
+        undefined
       );
 
       const url = URL.createObjectURL(pdfBlob);

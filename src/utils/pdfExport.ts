@@ -7,6 +7,7 @@ interface PubSub {
   subscribe: (event: string, callback: Function) => void;
   unsubscribe: (event: string, callback: Function) => void;
   publish: (event: string, ...args: any[]) => void;
+  getTopics: () => string[]; // Added missing property
 }
 
 interface ExtendedJsPDF extends jsPDF {
@@ -68,7 +69,7 @@ export const exportToPDF = async (
   powerSummary?: PowerSummary,
   safetyMargin?: number
 ): Promise<Blob> => {
-  const doc = new jsPDF() as ExtendedJsPDF;
+  const doc = new jsPDF() as unknown as ExtendedJsPDF; // Fixed casting
   let yPos = 20;
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 10;

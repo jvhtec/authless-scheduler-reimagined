@@ -10,6 +10,7 @@ import { exportToPDF } from '@/utils/pdfExport';
 import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
 const soundComponentDatabase = [
   { id: 1, name: ' K1 ', weight: 106 },
