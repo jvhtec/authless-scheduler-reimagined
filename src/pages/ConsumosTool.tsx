@@ -230,6 +230,11 @@ const ConsumosTool: React.FC = () => {
     }
 
     try {
+      const powerSummary = {
+        totalSystemWatts: safetyMargin || 0,
+        totalSystemAmps: 0
+      };
+
       const pdfBlob = await exportToPDF(
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'consumos' })),
@@ -237,6 +242,7 @@ const ConsumosTool: React.FC = () => {
         selectedJob.title,
         undefined,
         [],
+        powerSummary,
         safetyMargin
       );
 

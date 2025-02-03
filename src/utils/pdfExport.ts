@@ -55,7 +55,7 @@ export const exportToPDF = (
   options?: { isTourReport?: boolean; dateSpan?: string }
 ): Promise<Blob> => {
   return new Promise((resolve) => {
-    const doc = new jsPDF();
+    const doc = new jsPDF() as ExtendedJsPDF;
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
     const createdDate = new Date().toLocaleDateString("en-GB");
@@ -414,3 +414,15 @@ export const exportToPDF = (
     };
   });
 };
+
+interface ExtendedJsPDF extends jsPDF {
+  internal: {
+    getNumberOfPages: () => number;
+    pageSize: {
+      width: number;
+      getWidth: () => number;
+      height: number;
+      getHeight: () => number;
+    };
+  };
+}
