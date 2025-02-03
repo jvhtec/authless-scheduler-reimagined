@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Edit2, Printer } from "lucide-react";
-import { TourManagementDialog } from "./TourManagementDialog";
+import { TourManagementDialog } from "@/components/tours/TourManagementDialog";
 import { supabase } from "@/lib/supabaseClient";
 import { exportToPDF } from "@/lib/pdfexport";
 
