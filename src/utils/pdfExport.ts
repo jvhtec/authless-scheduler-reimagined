@@ -18,7 +18,7 @@ export const exportToPDF = (
   tables: ExportTable[],
   type: "weight" | "power",
   jobName: string,
-  jobDate?: string,
+  jobDate: string,
   summaryRows?: SummaryRow[],
   powerSummary?: { totalSystemWatts: number; totalSystemAmps: number },
   safetyMargin?: number
@@ -53,11 +53,7 @@ export const exportToPDF = (
       doc.text(`Safety Margin Applied: ${safetyMargin}%`, 14, 50);
     }
     doc.setFontSize(10);
-    doc.text(
-      `Generated: ${new Date().toLocaleDateString("en-GB")}`,
-      14,
-      60
-    );
+    doc.text(`Generated: ${new Date().toLocaleDateString("en-GB")}`, 14, 60);
 
     let yPosition = 70;
 
@@ -162,10 +158,8 @@ export const exportToPDF = (
     });
 
     // === SUMMARY PAGE ===
-    // Always add a new page for the summary.
     doc.addPage();
 
-    // Reprint header on the summary page.
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, "F");
 
@@ -188,14 +182,12 @@ export const exportToPDF = (
 
     yPosition = 70;
 
-    // For "consumos" tool, print summary as text lines with additional followspot notes.
     if (tables[0]?.toolType === "consumos") {
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
       yPosition += 10;
 
-      // First, print a summary line for each table.
       tables.forEach((table) => {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
@@ -224,7 +216,6 @@ export const exportToPDF = (
         }
       });
 
-      // Next, count followspot ("cañón") elements across all tables.
       let followspotCount = 0;
       tables.forEach((table) => {
         table.rows.forEach((row) => {
@@ -236,7 +227,6 @@ export const exportToPDF = (
           }
         });
       });
-      // For each followspot, print the required note with an enumeration.
       for (let i = 1; i <= followspotCount; i++) {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
@@ -255,13 +245,11 @@ export const exportToPDF = (
           yPosition += 10;
         }
       }
-      // Finally, always add a note for FoH.
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text("16A Schuko Power required at FoH position", 14, yPosition);
       yPosition += 7;
     } else if (summaryRows && summaryRows.length > 0) {
-      // For other tool types, print summary as table.
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
@@ -295,7 +283,6 @@ export const exportToPDF = (
       yPosition = (doc as any).lastAutoTable.finalY + 10;
     }
 
-    // === LOGO & CREATED DATE SECTION ===
     const logo = new Image();
     logo.crossOrigin = "anonymous";
     logo.src = "/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png";
@@ -303,7 +290,6 @@ export const exportToPDF = (
       const logoWidth = 50;
       const logoHeight = logoWidth * (logo.height / logo.width);
       const totalPages = doc.internal.getNumberOfPages();
-      // Loop through every page to add the logo.
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         const xPosition = (pageWidth - logoWidth) / 2;
@@ -314,7 +300,6 @@ export const exportToPDF = (
           console.error(`Error adding logo on page ${i}:`, error);
         }
       }
-      // On the last page, add the created date at the bottom right.
       doc.setPage(totalPages);
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
@@ -409,7 +394,6 @@ export const exportTourDatesToPDF = (
       } catch (error) {
         console.error("Error adding logo:", error);
       }
-      // Add created date on bottom right.
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
       doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 5, {
