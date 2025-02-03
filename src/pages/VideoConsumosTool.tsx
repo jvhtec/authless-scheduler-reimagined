@@ -6,16 +6,47 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText, ArrowLeft } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
-import { useJobSelection } from '@/hooks/useJobSelection';
+import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 
-const videoComponentDatabase = [
-  { id: 1, name: 'Pantalla Central', weight: 32 },
-  { id: 2, name: 'IMAGE Left', weight: 32 },
-  { id: 3, name: 'IMAGE Right', weight: 32 },
-  { id: 4, name: 'LED Screen', weight: 32 }
+const soundComponentDatabase = [
+  { id: 1, name: ' K1 ', weight: 106 },
+  { id: 2, name: ' K2 ', weight: 56 },
+  { id: 3, name: ' K3 ', weight: 43 },
+  { id: 4, name: ' KARA II ', weight: 25 },
+  { id: 5, name: ' KIVA ', weight: 14 },
+  { id: 6, name: ' KS28 ', weight: 79 },
+  { id: 7, name: ' K1-SB ', weight: 83 },
+  { id: 8, name: ' BUMPER K1 ', weight: 108 },
+  { id: 9, name: ' BUMPER K2 ', weight: 60 },
+  { id: 10, name: ' BUMPER K3 ', weight: 50 },
+  { id: 11, name: ' BUMPER KARA ', weight: 20 },
+  { id: 12, name: ' BUMPER KIVA ', weight: 13 },
+  { id: 13, name: ' BUMPER KS28 ', weight: 15 },
+  { id: 14, name: ' KARADOWNK1 ', weight: 15 },
+  { id: 15, name: ' KARADOWNK2 ', weight: 15 },
+  { id: 16, name: ' MOTOR 2T ', weight: 90 },
+  { id: 17, name: ' MOTOR 1T ', weight: 70 },
+  { id: 18, name: ' MOTOR 750Kg ', weight: 60 },
+  { id: 19, name: ' MOTOR 500Kg ', weight: 50 },
+  { id: 20, name: ' POLIPASTO 1T ', weight: 10.4 },
+  { id: 21, name: ' TFS900H ', weight: 102 },
+  { id: 22, name: ' TFA600 ', weight: 41 },
+  { id: 23, name: ' TFS550H ', weight: 13.4 },
+  { id: 24, name: ' TFS550L ', weight: 27 },
+  { id: 25, name: ' BUMPER TFS900 ', weight: 20 },
+  { id: 26, name: ' TFS900>TFA600 ', weight: 14 },
+  { id: 27, name: ' TFS900>TFS550 ', weight: 14 },
+  { id: 28, name: ' BUMPER TFS550 ', weight: 16 },
+  { id: 29, name: ' CABLEADO L ', weight: 100 },
+  { id: 30, name: ' CABLEADO H ', weight: 250 },
 ];
+
+let soundTableCounter = 0;
 
 interface TableRow {
   quantity: string;
@@ -31,24 +62,49 @@ interface Table {
   totalWeight?: number;
   id?: number;
   dualMotors?: boolean;
+  riggingPoints?: string;
 }
 
-const VideoPesosTool: React.FC = () => {
+interface SummaryRow {
+  clusterName: string;
+  riggingPoints: string;
+  clusterWeight: number;
+}
+
+const VideoConsumosTool: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
-  const department = 'video';
+  const department = 'sound';
 
   const [selectedJobId, setSelectedJobId] = useState<string>('');
-  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [useDualMotors, setUseDualMotors] = useState(false);
+  const [mirroredCluster, setMirroredCluster] = useState(false);
 
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
     rows: [{ quantity: '', componentId: '', weight: '' }],
   });
+
+  const getSuffix = () => {
+    if (department === 'sound') {
+      if (useDualMotors) {
+        soundTableCounter++;
+        const num1 = soundTableCounter.toString().padStart(2, '0');
+        soundTableCounter++;
+        const num2 = soundTableCounter.toString().padStart(2, '0');
+        return `SX${num1}, SX${num2}`;
+      } else {
+        soundTableCounter++;
+        const num = soundTableCounter.toString().padStart(2, '0');
+        return `SX${num}`;
+      }
+    }
+    return '';
+  };
 
   const addRow = () => {
     setCurrentTable((prev) => ({
@@ -60,7 +116,7 @@ const VideoPesosTool: React.FC = () => {
   const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
     if (field === 'componentId') {
-      const component = videoComponentDatabase.find((c) => c.id.toString() === value);
+      const component = soundComponentDatabase.find((c) => c.id.toString() === value);
       newRows[index] = {
         ...newRows[index],
         [field]: value,
@@ -94,17 +150,8 @@ const VideoPesosTool: React.FC = () => {
       return;
     }
 
-    const suffix = (() => {
-      const tableCount = tables.length + 1;
-      const suffixNumber = tableCount.toString().padStart(2, '0');
-      if (useDualMotors) {
-        return `(VX${suffixNumber}, VX${(tableCount + 1).toString().padStart(2, '0')})`;
-      }
-      return `(VX${suffixNumber})`;
-    })();
-
     const calculatedRows = currentTable.rows.map((row) => {
-      const component = videoComponentDatabase.find((c) => c.id.toString() === row.componentId);
+      const component = soundComponentDatabase.find((c) => c.id.toString() === row.componentId);
       const totalWeight =
         parseFloat(row.quantity) && parseFloat(row.weight)
           ? parseFloat(row.quantity) * parseFloat(row.weight)
@@ -118,17 +165,44 @@ const VideoPesosTool: React.FC = () => {
 
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
 
-    const newTable: Table = {
-      name: `${tableName} ${suffix}`,
-      rows: calculatedRows,
-      totalWeight,
-      id: Date.now(),
-      dualMotors: useDualMotors,
-    };
+    if (mirroredCluster) {
+      const leftSuffix = getSuffix();
+      const rightSuffix = getSuffix();
 
-    setTables((prev) => [...prev, newTable]);
+      const leftTable: Table = {
+        name: `${tableName} L (${leftSuffix})`,
+        riggingPoints: leftSuffix,
+        rows: calculatedRows,
+        totalWeight,
+        id: Date.now(),
+        dualMotors: useDualMotors,
+      };
+
+      const rightTable: Table = {
+        name: `${tableName} R (${rightSuffix})`,
+        riggingPoints: rightSuffix,
+        rows: calculatedRows,
+        totalWeight,
+        id: Date.now() + 1,
+        dualMotors: useDualMotors,
+      };
+
+      setTables((prev) => [...prev, leftTable, rightTable]);
+    } else {
+      const suffix = getSuffix();
+      const newTable: Table = {
+        name: `${tableName} (${suffix})`,
+        riggingPoints: suffix,
+        rows: calculatedRows,
+        totalWeight,
+        id: Date.now(),
+        dualMotors: useDualMotors,
+      };
+      setTables((prev) => [...prev, newTable]);
+    }
     resetCurrentTable();
     setUseDualMotors(false);
+    setMirroredCluster(false);
   };
 
   const resetCurrentTable = () => {
@@ -154,16 +228,37 @@ const VideoPesosTool: React.FC = () => {
     }
 
     try {
+      const powerSummary = {
+        totalSystemWatts: tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0),
+        totalSystemAmps: tables.reduce((sum, table) => sum + (table.totalWeight || 0), 0)
+      };
+
       const pdfBlob = await exportToPDF(
         selectedJob.title,
-        tables.map((table) => ({ ...table, toolType: 'pesos' })),
-        'weight',
+        tables.map((table) => ({ ...table, toolType: 'consumos' })),
+        'power',
         selectedJob.title,
         undefined,
         [],
+        powerSummary,
+        undefined
       );
 
-      const fileName = `Video Weight Report - ${selectedJob.title}.pdf`;
+      const fileName = `Pesos Report - ${selectedJob.title}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('task_documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      toast({
+        title: 'Success',
+        description: 'PDF has been generated and uploaded successfully.',
+      });
+
       const url = window.URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -172,16 +267,11 @@ const VideoPesosTool: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-
-      toast({
-        title: 'Success',
-        description: 'PDF has been generated successfully.',
-      });
     } catch (error) {
-      console.error('Error exporting PDF:', error);
+      console.error('PDF Export Error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to generate the PDF.',
+        description: 'Failed to generate or upload the PDF.',
         variant: 'destructive',
       });
     }
@@ -191,10 +281,10 @@ const VideoPesosTool: React.FC = () => {
     <Card className="w-full max-w-4xl mx-auto my-6">
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/video')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sound')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <CardTitle className="text-2xl font-bold">Video Weight Calculator</CardTitle>
+          <CardTitle className="text-2xl font-bold">Weight Calculator</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
@@ -255,7 +345,7 @@ const VideoPesosTool: React.FC = () => {
                           <SelectValue placeholder="Select component" />
                         </SelectTrigger>
                         <SelectContent>
-                          {videoComponentDatabase.map((component) => (
+                          {soundComponentDatabase.map((component) => (
                             <SelectItem key={component.id} value={component.id.toString()}>
                               {component.name}
                             </SelectItem>
@@ -322,7 +412,7 @@ const VideoPesosTool: React.FC = () => {
                     <td colSpan={3} className="px-4 py-3 text-right">
                       Total Weight:
                     </td>
-                    <td className="px-4 py-3">{table.totalWeight?.toFixed(2)} kg</td>
+                    <td className="px-4 py-3">{table.totalWeight?.toFixed(2)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -334,4 +424,4 @@ const VideoPesosTool: React.FC = () => {
   );
 };
 
-export default VideoPesosTool;
+export default VideoConsumosTool;
