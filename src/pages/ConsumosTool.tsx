@@ -230,19 +230,12 @@ const ConsumosTool: React.FC = () => {
     }
 
     try {
-      const powerSummary = {
-        totalSystemWatts: safetyMargin || 0,
-        totalSystemAmps: 0
-      };
-
       const pdfBlob = await exportToPDF(
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'consumos' })),
         'power',
         selectedJob.title,
         undefined,
-        [],
-        powerSummary,
         safetyMargin
       );
 
@@ -416,6 +409,46 @@ const ConsumosTool: React.FC = () => {
                   Remove Table
                 </Button>
               </div>
+              
+              <div className="p-4 bg-muted/50 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id={`hoist-${table.id}`}
+                      checked={table.includesHoist}
+                      onCheckedChange={(checked) => 
+                        table.id && updateTableSettings(table.id, { includesHoist: !!checked })
+                      }
+                    />
+                    <Label htmlFor={`hoist-${table.id}`}>Include Hoist Power (CEE32A 3P+N+G)</Label>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Label>Override PDU Type:</Label>
+                    <Select
+                      value={table.customPduType || 'default'}
+                      onValueChange={(value) => 
+                        table.id && updateTableSettings(table.id, { 
+                          customPduType: value === 'default' ? undefined : value 
+                        })
+                      }
+                    >
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Use suggested PDU" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Use suggested PDU</SelectItem>
+                        {PDU_TYPES.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
               <table className="w-full">
                 <thead className="bg-muted/50">
                   <tr>
