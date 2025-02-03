@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Printer } from "lucide-react";
 import { useState } from "react";
 import { TourDateManagementDialog } from "../tours/TourDateManagementDialog";
 import { TourCard } from "../tours/TourCard";
 import CreateTourDialog from "../tours/CreateTourDialog";
 import { useToast } from "@/hooks/use-toast";
-import { exportTourPDF } from "@/lib/tourpdfexport"; // NEW: using the new tour-specific PDF export
+import { exportTourPDF } from "@/lib/tourPdfExport"; // New PDF export file for tours
 
 interface TourChipsProps {
   onTourClick: (tourId: string) => void;
@@ -40,7 +40,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
           )
         `)
         .order("created_at", { ascending: false })
-        .eq("deleted", false); // filter out deleted tours
+        .eq("deleted", false);
 
       if (toursError) {
         console.error("Error fetching tours:", toursError);
@@ -59,14 +59,14 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
   const handlePrint = async (tour: any) => {
     try {
-      // Build an array of rows from tour_dates.
-      // Each row contains a formatted date and its linked location name.
+      // Build an export table using the tour_dates.
+      // Here, each row uses the formatted date and location name.
       const rows = tour.tour_dates.map((td: any) => ({
         date: new Date(td.date).toLocaleDateString(),
         location: td.location?.name || "",
       }));
 
-      // Build a tour date span from the tour start_date and end_date.
+      // Build a date span from start_date and end_date.
       const start = new Date(tour.start_date).toLocaleDateString();
       const end = new Date(tour.end_date).toLocaleDateString();
       const dateSpan = `${start} - ${end}`;
@@ -77,10 +77,10 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
       const url = URL.createObjectURL(pdfBlob);
       window.open(url, "_blank");
     } catch (error: any) {
-      console.error("Error exporting PDF:", error);
+      console.error("Error exporting tour PDF:", error);
       toast({
         title: "Error",
-        description: "Failed to export PDF.",
+        description: "Failed to export tour PDF.",
         variant: "destructive",
       });
     }
@@ -99,13 +99,10 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         </Button>
       </div>
 
-      {/* Flex container for tour cards arranged horizontally and wrapping */}
+      {/* Container for tour cards arranged horizontally and vertically */}
       <div className="flex flex-wrap gap-4">
         {tours.map((tour: any) => (
-          <div
-            key={tour.id}
-            className="w-full sm:w-[calc(50%-1rem)] md:w-[calc(33.33%-1rem)] lg:w-[calc(25%-1rem)]"
-          >
+          <div key={tour.id} className="w-full sm:w-[calc(50%-1rem)] md:w-[calc(33.33%-1rem)] lg:w-[calc(25%-1rem)]">
             <TourCard
               tour={tour}
               onTourClick={() => onTourClick(tour.id)}
@@ -116,14 +113,13 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         ))}
       </div>
 
+      {/* Tour Dates management dialog */}
       {selectedTourId && (
         <TourDateManagementDialog
           open={isDatesDialogOpen}
           onOpenChange={setIsDatesDialogOpen}
           tourId={selectedTourId}
-          tourDates={
-            tours.find((t: any) => t.id === selectedTourId)?.tour_dates || []
-          }
+          tourDates={tours.find((t: any) => t.id === selectedTourId)?.tour_dates || []}
         />
       )}
 
