@@ -240,7 +240,7 @@ export const exportToPDF = (
       let followspotCount = 0;
       tables.forEach((table) => {
         table.rows.forEach((row) => {
-          if (row.componentName && row.componentName.toLowerCase().includes('cañón')) {
+          if (row.componentName && row.componentName.toLowerCase().includes('ROBERT JULIAT ARAMIS','ROBERT JULIAT MERLIN','ROBERT JULIAT CYRANO', 'ROBERT JULIAT LANCELOT','ROBERT JULIAT KORRIGAN')) {
             followspotCount++;
           }
         });
