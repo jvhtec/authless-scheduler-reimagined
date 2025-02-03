@@ -213,28 +213,25 @@ const LightsConsumosTool: React.FC = () => {
 
     const totalWatts = calculatedRows.reduce((sum, row) => sum + (row.totalWatts || 0), 0);
     const { currentPerPhase } = calculatePhaseCurrents(totalWatts);
-    const pduSuggestion = selectedPduType || recommendPDU(currentPerPhase);
-
-    const finalPduType = selectedPduType === 'Custom' ? customPduType : pduSuggestion;
-    const displayName = `${tableName} (${finalPduType})${selectedPduType === 'Custom' ? ' - Custom PDU' : ''}`;
+    const pduSuggestion = recommendPDU(currentPerPhase);
 
     const newTable = {
-      name: displayName,
+      name: tableName,
       rows: calculatedRows,
       totalWatts,
       currentPerPhase,
-      pduType: finalPduType,
-      customPduType: selectedPduType === 'Custom' ? customPduType : undefined,
-      includesHoist,
+      pduType: pduSuggestion,
       id: Date.now(),
+      includesHoist: false,
+      customPduType: undefined,
     };
 
     setTables((prev) => [...prev, newTable]);
-    
+
     if (selectedJobId) {
       savePowerRequirementTable(newTable);
     }
-    
+
     resetCurrentTable();
   };
 
@@ -244,13 +241,23 @@ const LightsConsumosTool: React.FC = () => {
       rows: [{ quantity: '', componentId: '', watts: '' }],
     });
     setTableName('');
-    setIncludesHoist(false);
-    setSelectedPduType('');
-    setCustomPduType('');
   };
 
   const removeTable = (tableId: number) => {
     setTables((prev) => prev.filter((table) => table.id !== tableId));
+  };
+
+  const updateTableSettings = (tableId: number, updates: Partial<Table>) => {
+    setTables(prev => prev.map(table => {
+      if (table.id === tableId) {
+        const updatedTable = { ...table, ...updates };
+        if (selectedJobId) {
+          savePowerRequirementTable(updatedTable);
+        }
+        return updatedTable;
+      }
+      return table;
+    }));
   };
 
   const handleExportPDF = async () => {
@@ -270,6 +277,7 @@ const LightsConsumosTool: React.FC = () => {
         'power',
         selectedJob.title,
         undefined,
+        [],
         safetyMargin
       );
 
@@ -504,12 +512,26 @@ const LightsConsumosTool: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
                   </tr>
-                  <tr className="bg-muted/50 font-medium">
+                  <tr className="border-t bg-muted/50 font-medium">
                     <td colSpan={3} className="px-4 py-3 text-right">
                       Current per Phase:
                     </td>
                     <td className="px-4 py-3">{table.currentPerPhase?.toFixed(2)} A</td>
                   </tr>
+                  <tr className="border-t bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-right">
+                      Suggested PDU:
+                    </td>
+                    <td className="px-4 py-3">{table.pduType}</td>
+                  </tr>
+                  {table.customPduType && (
+                    <tr className="border-t bg-muted/50 font-medium text-primary">
+                      <td colSpan={3} className="px-4 py-3 text-right">
+                        Selected PDU Override:
+                      </td>
+                      <td className="px-4 py-3">{table.customPduType}</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
               {table.includesHoist && (

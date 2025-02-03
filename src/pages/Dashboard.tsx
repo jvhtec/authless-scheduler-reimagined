@@ -219,7 +219,7 @@ const Dashboard = () => {
           </Button>
         </CardHeader>
         {showTours && (
-          <CardContent>
+        <CardContent className="flex flex-wrap gap-4">
             <TourChips
               onTourClick={(tourId) => {
                 if (userRole === "logistics") return;
