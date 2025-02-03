@@ -1,128 +1,141 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Edit2, Printer } from "lucide-react";
-import { useState } from "react";
-import { TourManagementDialog } from "./TourManagementDialog";
-import { exportTourDatesToPDF } from "@/utils/pdfExport";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
+import { Plus, Printer } from "lucide-react";
+import { useState } from "react";
+import { TourDateManagementDialog } from "../tours/TourDateManagementDialog";
+import { TourCard } from "../tours/TourCard";
+import CreateTourDialog from "../tours/CreateTourDialog";
+import { useToast } from "@/hooks/use-toast";
+import { exportToPDF } from "@/lib/pdfexport"; // Adjust the path if needed
 
-interface TourCardProps {
-  tour: any;
+interface TourChipsProps {
   onTourClick: (tourId: string) => void;
-  onManageDates: (tourId: string) => void;
 }
 
-export const TourCard = ({ tour, onTourClick, onManageDates }: TourCardProps) => {
-  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
-  const [isPrinting, setIsPrinting] = useState(false);
+export const TourChips = ({ onTourClick }: TourChipsProps) => {
+  const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
+  const [isDatesDialogOpen, setIsDatesDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const { toast } = useToast();
 
-  const handlePrintPDF = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsPrinting(true);
-    console.log(`Printing PDF for tour id: ${tour.id}`);
-    
-    // Retrieve all dates and locations for the tour from the "tour_dates" table.
-    const { data, error } = await supabase
-      .from("tour_dates")
-      .select("*")
-      .eq("tour_id", tour.id);
+  const { data: tours = [] } = useQuery({
+    queryKey: ["tours"],
+    queryFn: async () => {
+      console.log("Fetching tours...");
+      const { data: toursData, error: toursError } = await supabase
+        .from("tours")
+        .select(`
+          id,
+          name,
+          description,
+          start_date,
+          end_date,
+          color,
+          flex_folders_created,
+          tour_dates (
+            id,
+            date,
+            location:locations (name)
+          )
+        `)
+        .order("created_at", { ascending: false })
+        .eq("deleted", false); // filter out deleted tours
 
-    if (error) {
-      console.error("Error fetching tour dates:", error);
-      setIsPrinting(false);
-      return;
-    }
-    if (!data || data.length === 0) {
-      console.warn("No tour dates found for this tour.");
-      setIsPrinting(false);
-      return;
-    }
+      if (toursError) {
+        console.error("Error fetching tours:", toursError);
+        throw toursError;
+      }
+
+      console.log("Tours fetched successfully");
+      return toursData;
+    },
+  });
+
+  const handleManageDates = (tourId: string) => {
+    setSelectedTourId(tourId);
+    setIsDatesDialogOpen(true);
+  };
+
+  const handlePrint = async (tour: any) => {
     try {
-      const blob = await exportTourDatesToPDF(tour.name, data);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${tour.name}-tour-dates.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      console.log("PDF export complete.");
-    } catch (err) {
-      console.error("Error exporting PDF:", err);
+      // Prepare table rows from tour_dates. Each row will include a formatted date and its location name.
+      const rows = tour.tour_dates.map((td: any) => ({
+        quantity: new Date(td.date).toLocaleDateString(),
+        componentName: td.location?.name || "",
+      }));
+
+      const exportTable = {
+        name: "Tour Dates",
+        rows,
+      };
+
+      // For the PDF export, we use the tour name as both the project name and job name.
+      // The tour start_date is formatted as the job date.
+      const jobDate = new Date(tour.start_date).toLocaleDateString();
+      const pdfBlob = await exportToPDF(
+        tour.name,    // projectName
+        [exportTable],// tables
+        "weight",     // type (using 'weight' as a default type)
+        tour.name,    // jobName
+        jobDate       // jobDate
+      );
+
+      const url = URL.createObjectURL(pdfBlob);
+      window.open(url, "_blank");
+    } catch (error: any) {
+      console.error("Error exporting PDF:", error);
+      toast({
+        title: "Error",
+        description: "Failed to export PDF.",
+        variant: "destructive",
+      });
     }
-    setIsPrinting(false);
   };
 
   return (
-    <Card
-      className="hover:shadow-md transition-shadow cursor-pointer m-2 max-w-xs" // max-width only, not height-limited
-      onClick={() => onTourClick(tour.id)}
-      style={{
-        borderColor: tour.color ? `${tour.color}30` : "#7E69AB30",
-        backgroundColor: tour.color ? `${tour.color}05` : "#7E69AB05",
-      }}
-    >
-      <CardHeader className="flex flex-col items-start pb-2">
-        <CardTitle className="text-xl font-semibold">
-          {tour.name}
-        </CardTitle>
-        {tour.flex_main_folder_id && (
-          <Badge variant="secondary" className="mt-1">
-            Flex Folders Created
-          </Badge>
-        )}
-      </CardHeader>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <Button
+          onClick={() => setIsCreateDialogOpen(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Create Tour
+        </Button>
+      </div>
 
-      <CardContent className="relative">
-        <div className="absolute top-2 right-2 flex gap-1">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onManageDates(tour.id);
-            }}
-            title="Manage Dates"
-          >
-            <Calendar className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsManageDialogOpen(true);
-            }}
-            title="Edit Tour"
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handlePrintPDF}
-            title="Print to PDF"
-            disabled={isPrinting}
-          >
-            <Printer className="h-4 w-4" />
-          </Button>
-        </div>
-        {tour.description && (
-          <p className="text-muted-foreground mt-2">
-            {tour.description}
-          </p>
-        )}
-      </CardContent>
+      <div className="space-y-4">
+        {tours.map((tour: any) => (
+          // Wrap each TourCard in a container with a reduced max-width.
+          <div key={tour.id} className="max-w-md">
+            <TourCard
+              tour={tour}
+              onTourClick={() => onTourClick(tour.id)}
+              onManageDates={() => handleManageDates(tour.id)}
+              // Instead of the create-flex-folders button, we now supply an onPrint prop.
+              onPrint={() => handlePrint(tour)}
+            />
+          </div>
+        ))}
+      </div>
 
-      {isManageDialogOpen && (
-        <TourManagementDialog
-          open={isManageDialogOpen}
-          onOpenChange={setIsManageDialogOpen}
-          tour={tour}
+      {selectedTourId && (
+        <TourDateManagementDialog
+          open={isDatesDialogOpen}
+          onOpenChange={setIsDatesDialogOpen}
+          tourId={selectedTourId}
+          tourDates={
+            tours.find((t: any) => t.id === selectedTourId)?.tour_dates || []
+          }
         />
       )}
-    </Card>
+
+      <CreateTourDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        currentDepartment="sound"
+      />
+    </div>
   );
 };

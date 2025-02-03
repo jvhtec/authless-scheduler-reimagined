@@ -269,8 +269,6 @@ const LightsConsumosTool: React.FC = () => {
         tables.map((table) => ({ ...table, toolType: 'consumos' })),
         'power',
         selectedJob.title,
-        new Date().toLocaleDateString('en-GB'),
-        [],
         undefined,
         safetyMargin
       );
@@ -506,26 +504,12 @@ const LightsConsumosTool: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
                   </tr>
-                  <tr className="border-t bg-muted/50 font-medium">
+                  <tr className="bg-muted/50 font-medium">
                     <td colSpan={3} className="px-4 py-3 text-right">
                       Current per Phase:
                     </td>
                     <td className="px-4 py-3">{table.currentPerPhase?.toFixed(2)} A</td>
                   </tr>
-                  <tr className="border-t bg-muted/50 font-medium">
-                    <td colSpan={3} className="px-4 py-3 text-right">
-                      Suggested PDU:
-                    </td>
-                    <td className="px-4 py-3">{table.pduType}</td>
-                  </tr>
-                  {table.customPduType && (
-                    <tr className="border-t bg-muted/50 font-medium text-primary">
-                      <td colSpan={3} className="px-4 py-3 text-right">
-                        Selected PDU Override:
-                      </td>
-                      <td className="px-4 py-3">{table.customPduType}</td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
               {table.includesHoist && (
