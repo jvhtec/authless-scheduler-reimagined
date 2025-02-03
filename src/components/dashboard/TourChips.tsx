@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Printer } from "lucide-react";
 import { useState } from "react";
 import { TourDateManagementDialog } from "../tours/TourDateManagementDialog";
 import { TourCard } from "../tours/TourCard";
 import CreateTourDialog from "../tours/CreateTourDialog";
 import { useToast } from "@/hooks/use-toast";
-import { exportToPDF } from "@/utils/pdfExport";
+import { exportToPDF } from "@/lib/pdfexport"; // Adjust the path if needed
 
 interface TourChipsProps {
   onTourClick: (tourId: string) => void;
@@ -40,7 +40,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
           )
         `)
         .order("created_at", { ascending: false })
-        .eq("deleted", false);
+        .eq("deleted", false); // filter out deleted tours
 
       if (toursError) {
         console.error("Error fetching tours:", toursError);
@@ -59,6 +59,9 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
   const handlePrint = async (tour: any) => {
     try {
+      // Build an export table using the tour_dates.
+      // Here we assume each row's "quantity" is the formatted date
+      // and "componentName" holds the location name.
       const rows = tour.tour_dates.map((td: any) => ({
         quantity: new Date(td.date).toLocaleDateString(),
         componentName: td.location?.name || "",
@@ -69,14 +72,22 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         rows,
       };
 
-      const jobDate = new Date(tour.start_date).toLocaleDateString();
+      // Build a date span string from the tour start and end dates.
+      const start = new Date(tour.start_date).toLocaleDateString();
+      const end = new Date(tour.end_date).toLocaleDateString();
+      const dateSpan = `${start} - ${end}`;
+
+      // Call exportToPDF passing an extra options parameter for tour reports.
       const pdfBlob = await exportToPDF(
-        tour.name,
+        tour.name,    // projectName (will be used as header)
         [exportTable],
-        "weight",
-        tour.name,
-        jobDate,
-        []
+        "weight",     // type (this value is ignored when isTourReport is true)
+        tour.name,    // jobName (ignored in tour report)
+        dateSpan,     // jobDate (will be replaced by dateSpan in header)
+        undefined,    // summaryRows
+        undefined,    // powerSummary
+        undefined,    // safetyMargin
+        { isTourReport: true, dateSpan } // extra options for tour reports
       );
 
       const url = URL.createObjectURL(pdfBlob);
@@ -105,11 +116,13 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
       <div className="space-y-4">
         {tours.map((tour: any) => (
+          // Wrap each TourCard in a container with a reduced max-width.
           <div key={tour.id} className="max-w-md">
             <TourCard
               tour={tour}
               onTourClick={() => onTourClick(tour.id)}
               onManageDates={() => handleManageDates(tour.id)}
+              // Replace the create-flex-folders action with a print action.
               onPrint={() => handlePrint(tour)}
             />
           </div>
