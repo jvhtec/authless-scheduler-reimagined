@@ -30,12 +30,12 @@ export interface SummaryRow {
 }
 
 /**
- * Updated function signature:
+ * Function signature:
  * 1. projectName
  * 2. tables
  * 3. type ('weight' | 'power')
  * 4. jobName
- * 5. summaryRows (optional)
+ * 5. summaryRows (optional) – used for "pesos" reports
  * 6. powerSummary (optional)
  * 7. safetyMargin (optional)
  */
@@ -70,7 +70,6 @@ export const exportToPDF = (
       doc.setTextColor(51, 51, 51);
       doc.text(`Safety Margin Applied: ${safetyMargin}%`, 14, 50);
     }
-
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 60);
 
@@ -172,6 +171,7 @@ export const exportToPDF = (
     // === SUMMARY PAGE ===
     // Always add a new page for the summary.
     doc.addPage();
+
     // Reprint header on the summary page.
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, 'F');
@@ -191,45 +191,77 @@ export const exportToPDF = (
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 60);
 
-    // Set yPosition for summary page content.
     yPosition = 70;
 
-    if (summaryRows && summaryRows.length > 0) {
+    if (type === 'consumos') {
+      // For consumostool summary, print non-table text lines.
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
-      yPosition += 6;
+      yPosition += 10;
 
-      const summaryData = summaryRows.map((row) => [
-        row.clusterName,
-        row.riggingPoints,
-        row.clusterWeight.toFixed(2)
-      ]);
-
-      autoTable(doc, {
-        head: [['Cluster Name', 'Rigging Points', 'Cluster Weight']],
-        body: summaryData,
-        startY: yPosition,
-        theme: 'grid',
-        styles: {
-          fontSize: 10,
-          cellPadding: 5,
-          lineColor: [220, 220, 230],
-          lineWidth: 0.1,
-        },
-        headStyles: {
-          fillColor: [125, 1, 1],
-          textColor: [255, 255, 255],
-          fontStyle: 'bold',
-        },
-        bodyStyles: { textColor: [51, 51, 51] },
-        alternateRowStyles: { fillColor: [250, 250, 255] },
+      // For each table, print its name with selected PDU type.
+      tables.forEach((table) => {
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        let pduText = table.customPduType ? table.customPduType : table.pduType;
+        let line = `${table.name} - PDU: ${pduText || 'N/A'}`;
+        doc.text(line, 14, yPosition);
+        yPosition += 7;
+        if (table.includesHoist) {
+          doc.setFontSize(10);
+          doc.setTextColor(80, 80, 80);
+          doc.text(`Additional Hoist Power Required for ${table.name}: CEE32A 3P+N+G`, 14, yPosition);
+          yPosition += 7;
+        }
+        yPosition += 5;
+        if (yPosition > pageHeight - 40) {
+          doc.addPage();
+          yPosition = 20;
+          doc.setFontSize(16);
+          doc.setTextColor(125, 1, 1);
+          doc.text("Summary (cont'd)", 14, yPosition);
+          yPosition += 10;
+        }
       });
-      // Update yPosition (if needed) from summary table.
-      yPosition = (doc as any).lastAutoTable.finalY + 10;
+    } else {
+      // For other types (e.g. "pesos"), print summary in table format if summaryRows provided.
+      if (summaryRows && summaryRows.length > 0) {
+        doc.setFontSize(16);
+        doc.setTextColor(125, 1, 1);
+        doc.text("Summary", 14, yPosition);
+        yPosition += 6;
+
+        const summaryData = summaryRows.map((row) => [
+          row.clusterName,
+          row.riggingPoints,
+          row.clusterWeight.toFixed(2)
+        ]);
+
+        autoTable(doc, {
+          head: [['Cluster Name', 'Rigging Points', 'Cluster Weight']],
+          body: summaryData,
+          startY: yPosition,
+          theme: 'grid',
+          styles: {
+            fontSize: 10,
+            cellPadding: 5,
+            lineColor: [220, 220, 230],
+            lineWidth: 0.1,
+          },
+          headStyles: {
+            fillColor: [125, 1, 1],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+          },
+          bodyStyles: { textColor: [51, 51, 51] },
+          alternateRowStyles: { fillColor: [250, 250, 255] },
+        });
+        yPosition = (doc as any).lastAutoTable.finalY + 10;
+      }
     }
 
-    // === LOGO SECTION (added at the bottom of the last page) ===
+    // === LOGO SECTION (at the bottom of the last page) ===
     const logo = new Image();
     logo.crossOrigin = 'anonymous';
     logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
