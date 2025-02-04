@@ -220,9 +220,7 @@ const VideoConsumosTool: React.FC = () => {
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'consumos' })),
         'power',
-        selectedJob.title,
-        undefined,
-        safetyMargin
+        selectedJob.title
       );
 
       const fileName = `Video Power Report - ${selectedJob.title}.pdf`;

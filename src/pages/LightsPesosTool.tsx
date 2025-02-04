@@ -165,16 +165,18 @@ const LightsPesosTool: React.FC = () => {
     });
 
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
+
     const newTable: Table = {
       name: tableName,
       rows: calculatedRows,
       totalWeight,
       id: Date.now(),
-      dualMotors: useDualMotors,
+      dualMotors: useDualMotors
     };
 
     setTables((prev) => [...prev, newTable]);
     resetCurrentTable();
+    setUseDualMotors(false);
   };
 
   const resetCurrentTable = () => {
@@ -204,8 +206,7 @@ const LightsPesosTool: React.FC = () => {
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'pesos' })),
         'weight',
-        selectedJob.title,
-        undefined
+        selectedJob.title
       );
 
       const fileName = `Lights Weight Report - ${selectedJob.title}.pdf`;

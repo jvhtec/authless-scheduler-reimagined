@@ -253,7 +253,7 @@ const PesosTool: React.FC = () => {
         cablePickCounter++;
         summaryRows.push({
           clusterName: 'CABLE PICK',
-          riggingPoints: `CP${cablePickCounter.toString().padStart(2, 0)}`,
+          riggingPoints: `CP${cablePickCounter.toString().padStart(2, '0')}`,
           clusterWeight: parseFloat(cablePickWeight),
         });
       });
@@ -439,7 +439,7 @@ const PesosTool: React.FC = () => {
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
                 <FileText className="w-4 h-4" />
-                Export & Upload PDF
+                Export &amp; Upload PDF
               </Button>
             )}
           </div>

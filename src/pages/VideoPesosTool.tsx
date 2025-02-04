@@ -94,6 +94,15 @@ const VideoPesosTool: React.FC = () => {
       return;
     }
 
+    const suffix = (() => {
+      const tableCount = tables.length + 1;
+      const suffixNumber = tableCount.toString().padStart(2, '0');
+      if (useDualMotors) {
+        return `(VX${suffixNumber}, VX${(tableCount + 1).toString().padStart(2, '0')})`;
+      }
+      return `(VX${suffixNumber})`;
+    })();
+
     const calculatedRows = currentTable.rows.map((row) => {
       const component = videoComponentDatabase.find((c) => c.id.toString() === row.componentId);
       const totalWeight =
@@ -110,15 +119,16 @@ const VideoPesosTool: React.FC = () => {
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
 
     const newTable: Table = {
-      name: tableName,
+      name: `${tableName} ${suffix}`,
       rows: calculatedRows,
       totalWeight,
       id: Date.now(),
-      dualMotors: useDualMotors
+      dualMotors: useDualMotors,
     };
 
     setTables((prev) => [...prev, newTable]);
     resetCurrentTable();
+    setUseDualMotors(false);
   };
 
   const resetCurrentTable = () => {
@@ -166,7 +176,7 @@ const VideoPesosTool: React.FC = () => {
         description: 'PDF has been generated successfully.',
       });
     } catch (error) {
-      console.error(error);
+      console.error('Error exporting PDF:', error);
       toast({
         title: 'Error',
         description: 'Failed to generate the PDF.',
@@ -310,7 +320,7 @@ const VideoPesosTool: React.FC = () => {
                     <td colSpan={3} className="px-4 py-3 text-right">
                       Total Weight:
                     </td>
-                    <td className="px-4 py-3">{table.totalWeight?.toFixed(2)}</td>
+                    <td className="px-4 py-3">{table.totalWeight?.toFixed(2)} kg</td>
                   </tr>
                 </tbody>
               </table>
