@@ -325,7 +325,7 @@ export const exportToPDF = (
     logo.onload = () => {
       const logoWidth = 50;
       const logoHeight = logoWidth * (logo.height / logo.width);
-      const totalPages = doc.internal.getNumberOfPages();
+      const totalPages = doc.internal.pages.length - 1; // Fix: Use pages.length instead of getNumberOfPages
       // Loop through every page to add the logo.
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
@@ -348,7 +348,7 @@ export const exportToPDF = (
 
     logo.onerror = () => {
       console.error('Failed to load logo');
-      const totalPages = doc.internal.getNumberOfPages();
+      const totalPages = doc.internal.pages.length - 1; // Fix: Use pages.length instead of getNumberOfPages
       doc.setPage(totalPages);
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
