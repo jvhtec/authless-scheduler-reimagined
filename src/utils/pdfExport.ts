@@ -10,7 +10,7 @@ interface ExportTableRow {
   totalWatts?: number;
 }
 
-export interface ExportTable {
+interface ExportTable {
   name: string;
   rows: ExportTableRow[];
   totalWeight?: number;
@@ -202,13 +202,13 @@ export const exportToPDF = (
     yPosition = 70;
 
     // For "consumos" tool, print summary as text lines with additional followspot notes.
-    if (tables.length > 0 && tables[0]?.toolType === 'consumos') {
+    if (tables[0]?.toolType === 'consumos') {
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
       yPosition += 10;
 
-      // Print a summary line for each table.
+      // First, print a summary line for each table.
       tables.forEach((table) => {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
@@ -233,7 +233,9 @@ export const exportToPDF = (
         }
       });
 
-      // Count followspot ("cañón") elements across all tables.
+      // Next, count followspot ("cañón") elements across all tables.
+      // Here we assume that any row whose componentName contains the substring "cañón" (case-insensitive)
+      // qualifies as a followspot.
       let followspotCount = 0;
       tables.forEach((table) => {
         table.rows.forEach((row) => {
@@ -242,7 +244,7 @@ export const exportToPDF = (
           }
         });
       });
-      // For each followspot, print a note with enumeration.
+      // For each followspot, print the required note with an enumeration.
       for (let i = 1; i <= followspotCount; i++) {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
@@ -257,24 +259,48 @@ export const exportToPDF = (
           yPosition += 10;
         }
       }
-      // Always add a note for FoH.
+      // Finally, always add a note for FoH.
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text("16A Schuko Power required at FoH position", 14, yPosition);
       yPosition += 7;
-    } else {
-      // If no tables with toolType 'consumos' are present, display a default summary message.
+    } else if (summaryRows && summaryRows.length > 0) {
+      // For other tool types, print summary as table.
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
-      yPosition += 10;
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
-      doc.text("No summary available", 14, yPosition);
-      yPosition += 7;
+      yPosition += 6;
+
+      const summaryData = summaryRows.map((row) => [
+        row.clusterName,
+        row.riggingPoints,
+        row.clusterWeight.toFixed(2)
+      ]);
+
+      autoTable(doc, {
+        head: [['Cluster Name', 'Rigging Points', 'Cluster Weight']],
+        body: summaryData,
+        startY: yPosition,
+        theme: 'grid',
+        styles: {
+          fontSize: 10,
+          cellPadding: 5,
+          lineColor: [220, 220, 230],
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: [125, 1, 1],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+        bodyStyles: { textColor: [51, 51, 51] },
+        alternateRowStyles: { fillColor: [250, 250, 255] },
+      });
+      yPosition = (doc as any).lastAutoTable.finalY + 10;
     }
 
     // === LOGO & CREATED DATE SECTION ===
+    // Add the company logo on every page and on the last page add the created date.
     const logo = new Image();
     logo.crossOrigin = 'anonymous';
     logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
@@ -282,6 +308,7 @@ export const exportToPDF = (
       const logoWidth = 50;
       const logoHeight = logoWidth * (logo.height / logo.width);
       const totalPages = doc.internal.getNumberOfPages();
+      // Loop through every page to add the logo.
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         const xPosition = (pageWidth - logoWidth) / 2;
@@ -292,6 +319,7 @@ export const exportToPDF = (
           console.error(`Error adding logo on page ${i}:`, error);
         }
       }
+      // On the last page, add the created date at the bottom right.
       doc.setPage(totalPages);
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
