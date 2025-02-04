@@ -29,17 +29,6 @@ export interface SummaryRow {
   clusterWeight: number;
 }
 
-/**
- * Function signature:
- * 1. projectName
- * 2. tables
- * 3. type ('weight' | 'power')
- * 4. jobName
- * 5. jobDate (the date of the job – can be a Date or a parsable value)
- * 6. summaryRows (optional) – used for "pesos" reports; if not provided, summary rows are generated automatically
- * 7. powerSummary (optional)
- * 8. safetyMargin (optional)
- */
 export const exportToPDF = (
   projectName: string,
   tables: ExportTable[],
@@ -314,15 +303,15 @@ export const exportToPDF = (
     }
 
     // === LOGO & CREATED DATE SECTION ===
-    // Add the company logo on every page and on the last page add the created date.
     const logo = new Image();
     logo.crossOrigin = 'anonymous';
     logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
     logo.onload = () => {
       const logoWidth = 50;
       const logoHeight = logoWidth * (logo.height / logo.width);
-      const totalPages = doc.internal.getNumberOfPages();
-      // Loop through every page to add the logo.
+      const totalPages = doc.internal.pages.length - 1; // Get total pages
+      
+      // Loop through every page to add the logo
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         const xPosition = (pageWidth - logoWidth) / 2;
@@ -333,7 +322,8 @@ export const exportToPDF = (
           console.error(`Error adding logo on page ${i}:`, error);
         }
       }
-      // On the last page, add the created date at the bottom right.
+      
+      // On the last page, add the created date at the bottom right
       doc.setPage(totalPages);
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
@@ -344,7 +334,7 @@ export const exportToPDF = (
 
     logo.onerror = () => {
       console.error('Failed to load logo');
-      const totalPages = doc.internal.getNumberOfPages();
+      const totalPages = doc.internal.pages.length - 1;
       doc.setPage(totalPages);
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
