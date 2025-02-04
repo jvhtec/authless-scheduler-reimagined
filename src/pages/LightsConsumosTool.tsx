@@ -96,7 +96,6 @@ const LightsConsumosTool: React.FC = () => {
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
 
-  // State for job and table settings.
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState(''); // raw name as entered by the user
@@ -189,8 +188,6 @@ const LightsConsumosTool: React.FC = () => {
     }
   };
 
-  // In the UI, we do not append any PDU type to the table name.
-  // The raw tableName is stored.
   const generateTable = () => {
     if (!tableName) {
       toast({
@@ -218,9 +215,8 @@ const LightsConsumosTool: React.FC = () => {
     const { currentPerPhase } = calculatePhaseCurrents(totalWatts);
     const pduSuggestion = recommendPDU(currentPerPhase);
 
-    // In the UI table, we simply use the entered tableName.
     const newTable: Table = {
-      name: tableName, // do not append PDU info here
+      name: tableName,
       rows: calculatedRows,
       totalWatts,
       currentPerPhase,
@@ -277,13 +273,14 @@ const LightsConsumosTool: React.FC = () => {
     }
 
     try {
-      // In the PDF export, we want the tool type to be 'consumos'
       const pdfBlob = await exportToPDF(
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'consumos' })),
         'power',
         selectedJob.title,
-        undefined, // jobDate not passed from UI here (it can be added as needed)
+        undefined,
+        undefined,
+        undefined,
         safetyMargin
       );
 
@@ -558,7 +555,7 @@ const LightsConsumosTool: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
                   </tr>
-                  <tr className="bg-muted/50 font-medium">
+                  <tr className="border-t bg-muted/50 font-medium">
                     <td colSpan={3} className="px-4 py-3 text-right">
                       Current per Phase:
                     </td>
