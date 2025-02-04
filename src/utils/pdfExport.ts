@@ -35,8 +35,8 @@ export interface SummaryRow {
  * 2. tables
  * 3. type ('weight' | 'power')
  * 4. jobName
- * 5. jobDate (the date of the job)
- * 6. summaryRows (optional) – used for "pesos" reports
+ * 5. jobDate (the date of the job – can be a Date or a parsable value)
+ * 6. summaryRows (optional) – used for "pesos" reports; if not provided, summary rows are generated automatically
  * 7. powerSummary (optional)
  * 8. safetyMargin (optional)
  */
@@ -56,6 +56,9 @@ export const exportToPDF = (
     const pageHeight = doc.internal.pageSize.height;
     const createdDate = new Date().toLocaleDateString('en-GB');
 
+    // Convert jobDate to a proper date string:
+    const jobDateStr = new Date(jobDate).toLocaleDateString('en-GB');
+
     // === HEADER SECTION (for main tables) ===
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, 'F');
@@ -69,7 +72,7 @@ export const exportToPDF = (
     doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
     // Print job date below the job name.
     doc.setFontSize(12);
-    doc.text(`Job Date: ${jobDate}`, pageWidth / 2, 38, { align: 'center' });
+    doc.text(`Job Date: ${jobDateStr}`, pageWidth / 2, 38, { align: 'center' });
 
     if (safetyMargin !== undefined) {
       doc.setFontSize(10);
@@ -90,9 +93,14 @@ export const exportToPDF = (
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
 
+      // Use the stored table name.
+      // For power reports, append the PDU info only if the table name (trimmed) does not already end with parentheses.
       let displayName = table.name;
       if (type === 'power' && (table.customPduType || table.pduType)) {
-        displayName = `${table.name} (${table.customPduType || table.pduType})`;
+        // Check if the trimmed table name ends with parentheses containing text.
+        if (!/\([^)]+\)$/.test(table.name.trim())) {
+          displayName = `${table.name} (${table.customPduType || table.pduType})`;
+        }
       }
       doc.text(displayName, 14, yPosition);
       yPosition += 10;
@@ -189,7 +197,7 @@ export const exportToPDF = (
     doc.setFontSize(16);
     doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
     doc.setFontSize(12);
-    doc.text(`Job Date: ${jobDate}`, pageWidth / 2, 38, { align: 'center' });
+    doc.text(`Job Date: ${jobDateStr}`, pageWidth / 2, 38, { align: 'center' });
 
     if (safetyMargin !== undefined) {
       doc.setFontSize(10);
@@ -201,14 +209,14 @@ export const exportToPDF = (
 
     yPosition = 70;
 
-    // For "consumos" tool, print summary as text lines with additional followspot notes.
+    // For "consumos" tool, print summary as text lines.
     if (tables[0]?.toolType === 'consumos') {
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
       yPosition += 10;
 
-      // First, print a summary line for each table.
+      // Print a summary line for each table.
       tables.forEach((table) => {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
@@ -233,18 +241,28 @@ export const exportToPDF = (
         }
       });
 
-      // Next, count followspot ("cañón") elements across all tables.
-      // Here we assume that any row whose componentName contains the substring "cañón" (case-insensitive)
-      // qualifies as a followspot.
+      // Next, count followspot elements from the ROBERT JULIAT series.
+      const followspotComponents = [
+        'ROBERT JULIAT ARAMIS',
+        'ROBERT JULIAT MERLIN',
+        'ROBERT JULIAT CYRANO',
+        'ROBERT JULIAT LANCELOT',
+        'ROBERT JULIAT KORRIGAN'
+      ];
       let followspotCount = 0;
       tables.forEach((table) => {
         table.rows.forEach((row) => {
-          if (row.componentName && row.componentName.toLowerCase().includes('cañón')) {
+          if (
+            row.componentName &&
+            followspotComponents.some((name) =>
+              row.componentName.toUpperCase().includes(name.toUpperCase())
+            )
+          ) {
             followspotCount++;
           }
         });
       });
-      // For each followspot, print the required note with an enumeration.
+      // For each followspot, print a note with full enumeration.
       for (let i = 1; i <= followspotCount; i++) {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
@@ -265,7 +283,7 @@ export const exportToPDF = (
       doc.text("16A Schuko Power required at FoH position", 14, yPosition);
       yPosition += 7;
     } else if (summaryRows && summaryRows.length > 0) {
-      // For other tool types, print summary as table.
+      // For other tool types, print summary as a table.
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
