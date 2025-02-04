@@ -42,7 +42,7 @@ interface TableRow {
   totalWatts?: number;
 }
 
-interface Table {
+export interface Table {
   name: string;
   rows: TableRow[];
   totalWatts?: number;
@@ -174,7 +174,7 @@ const ConsumosTool: React.FC = () => {
     const { currentPerPhase } = calculatePhaseCurrents(totalWatts);
     const pduSuggestion = recommendPDU(currentPerPhase);
 
-    const newTable = {
+    const newTable: Table = {
       name: tableName,
       rows: calculatedRows,
       totalWatts,
@@ -230,12 +230,15 @@ const ConsumosTool: React.FC = () => {
     }
 
     try {
+      // Use the job’s date if available or fallback to today’s date
+      const jobDate = (selectedJob as any).date || new Date().toLocaleDateString('en-GB');
+
       const pdfBlob = await exportToPDF(
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'consumos' })),
         'power',
         selectedJob.title,
-        undefined,
+        jobDate,
         undefined,
         undefined,
         safetyMargin
