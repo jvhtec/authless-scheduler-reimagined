@@ -20,7 +20,7 @@ export const exportTourPDF = async (
       const pageHeight = doc.internal.pageSize.height;
       const createdDate = new Date().toLocaleDateString('en-GB');
 
-      // Header
+      // === HEADER SECTION ===
       doc.setFillColor(125, 1, 1);
       doc.rect(0, 0, pageWidth, 40, 'F');
 
@@ -34,7 +34,7 @@ export const exportTourPDF = async (
       doc.setFontSize(12);
       doc.text(dateSpan, pageWidth / 2, 38, { align: 'center' });
 
-      // Table
+      // === TABLE SECTION ===
       const tableRows = rows.map(row => [row.date, row.location]);
 
       autoTable(doc, {
@@ -57,31 +57,47 @@ export const exportTourPDF = async (
         alternateRowStyles: { fillColor: [250, 250, 255] },
       });
 
-        // Get total pages
-      const totalPages = doc.internal.pages.length - 1;
+      // === PAGE NUMBERS SECTION ===
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+      }
 
       // === LOGO & CREATED DATE SECTION ===
       // Add the company logo on every page and on the last page add the created date.
       const logo = new Image();
       logo.crossOrigin = 'anonymous';
       logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
+
       logo.onload = () => {
+        // Convert the logo image to a data URL via a canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = logo.width;
+        canvas.height = logo.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(logo, 0, 0);
+        }
+        const dataURL = canvas.toDataURL('image/png');
+
         const logoWidth = 50;
         const logoHeight = logoWidth * (logo.height / logo.width);
-        const totalPages = doc.internal.pages.length - 1;
-        // Loop through every page to add the logo.
-        for (let i = 1; i <= totalPages; i++) {
+        const totalPagesAfterLogo = doc.internal.getNumberOfPages();
+
+        // Loop through every page and add the logo
+        for (let i = 1; i <= totalPagesAfterLogo; i++) {
           doc.setPage(i);
           const xPosition = (pageWidth - logoWidth) / 2;
           const yLogo = pageHeight - 20;
           try {
-            doc.addImage(logo, 'PNG', xPosition, yLogo - logoHeight, logoWidth, logoHeight);
+            doc.addImage(dataURL, 'PNG', xPosition, yLogo - logoHeight, logoWidth, logoHeight);
           } catch (error) {
             console.error(`Error adding logo on page ${i}:`, error);
           }
         }
         // On the last page, add the created date at the bottom right.
-        doc.setPage(totalPages);
+        doc.setPage(totalPagesAfterLogo);
         doc.setFontSize(10);
         doc.setTextColor(51, 51, 51);
         doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: 'right' });
@@ -91,24 +107,15 @@ export const exportTourPDF = async (
 
       logo.onerror = () => {
         console.error('Failed to load logo');
-        const totalPages = doc.internal.pages.length - 1;
-        doc.setPage(totalPages);
+        const totalPagesAfterLogo = doc.internal.getNumberOfPages();
+        doc.setPage(totalPagesAfterLogo);
         doc.setFontSize(10);
         doc.setTextColor(51, 51, 51);
         doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: 'right' });
         const blob = doc.output('blob');
         resolve(blob);
       };
-      
-      // Add page numbers
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-      }
 
-      console.log("PDF generation completed successfully");
-      const blob = doc.output('blob');
-      resolve(blob);
     } catch (error) {
       console.error("Error in PDF generation:", error);
       reject(error);
