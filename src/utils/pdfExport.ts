@@ -29,6 +29,17 @@ export interface SummaryRow {
   clusterWeight: number;
 }
 
+/**
+ * Function signature:
+ * 1. projectName
+ * 2. tables
+ * 3. type ('weight' | 'power')
+ * 4. jobName
+ * 5. jobDate (the date of the job)
+ * 6. summaryRows (optional) – used for "pesos" reports
+ * 7. powerSummary (optional)
+ * 8. safetyMargin (optional)
+ */
 export const exportToPDF = (
   projectName: string,
   tables: ExportTable[],
@@ -45,9 +56,6 @@ export const exportToPDF = (
     const pageHeight = doc.internal.pageSize.height;
     const createdDate = new Date().toLocaleDateString('en-GB');
 
-    // Convert jobDate to a proper date string:
-    const jobDateStr = new Date(jobDate).toLocaleDateString('en-GB');
-
     // === HEADER SECTION (for main tables) ===
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, 'F');
@@ -61,7 +69,7 @@ export const exportToPDF = (
     doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
     // Print job date below the job name.
     doc.setFontSize(12);
-    doc.text(`Job Date: ${jobDateStr}`, pageWidth / 2, 38, { align: 'center' });
+    doc.text(`Job Date: ${jobDate}`, pageWidth / 2, 38, { align: 'center' });
 
     if (safetyMargin !== undefined) {
       doc.setFontSize(10);
@@ -181,7 +189,7 @@ export const exportToPDF = (
     doc.setFontSize(16);
     doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
     doc.setFontSize(12);
-    doc.text(`Job Date: ${jobDateStr}`, pageWidth / 2, 38, { align: 'center' });
+    doc.text(`Job Date: ${jobDate}`, pageWidth / 2, 38, { align: 'center' });
 
     if (safetyMargin !== undefined) {
       doc.setFontSize(10);
@@ -193,7 +201,7 @@ export const exportToPDF = (
 
     yPosition = 70;
 
-    // For "consumos" tool, print summary as text lines.
+    // For "consumos" tool, print summary as text lines with additional followspot notes.
     if (tables[0]?.toolType === 'consumos') {
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
@@ -225,24 +233,13 @@ export const exportToPDF = (
         }
       });
 
-      // Next, count followspot ("cañón") elements.
-      // For this tool, followspot elements are identified by the specific component names.
-      const followspotComponents = [
-        'ROBERT JULIAT ARAMIS',
-        'ROBERT JULIAT MERLIN',
-        'ROBERT JULIAT CYRANO',
-        'ROBERT JULIAT LANCELOT',
-        'ROBERT JULIAT KORRIGAN'
-      ];
+      // Next, count followspot ("cañón") elements across all tables.
+      // Here we assume that any row whose componentName contains the substring "cañón" (case-insensitive)
+      // qualifies as a followspot.
       let followspotCount = 0;
       tables.forEach((table) => {
         table.rows.forEach((row) => {
-          if (
-            row.componentName &&
-            followspotComponents.some((name) =>
-              row.componentName.toUpperCase().includes(name.toUpperCase())
-            )
-          ) {
+          if (row.componentName && row.componentName.toLowerCase().includes('cañón')) {
             followspotCount++;
           }
         });
@@ -251,7 +248,7 @@ export const exportToPDF = (
       for (let i = 1; i <= followspotCount; i++) {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
-        doc.text(`Schuko 16A 1P+N+G required at followspot position #${i}`, 14, yPosition);
+        doc.text(`CEE16A 1P+N+G required at followspot position #${i}`, 14, yPosition);
         yPosition += 7;
         if (yPosition > pageHeight - 40) {
           doc.addPage();
@@ -268,7 +265,7 @@ export const exportToPDF = (
       doc.text("16A Schuko Power required at FoH position", 14, yPosition);
       yPosition += 7;
     } else if (summaryRows && summaryRows.length > 0) {
-      // For other tool types, print summary as a table.
+      // For other tool types, print summary as table.
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
       doc.text("Summary", 14, yPosition);
@@ -303,15 +300,15 @@ export const exportToPDF = (
     }
 
     // === LOGO & CREATED DATE SECTION ===
+    // Add the company logo on every page and on the last page add the created date.
     const logo = new Image();
     logo.crossOrigin = 'anonymous';
     logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
     logo.onload = () => {
       const logoWidth = 50;
       const logoHeight = logoWidth * (logo.height / logo.width);
-      const totalPages = doc.internal.pages.length - 1; // Get total pages
-      
-      // Loop through every page to add the logo
+      const totalPages = doc.internal.getNumberOfPages();
+      // Loop through every page to add the logo.
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         const xPosition = (pageWidth - logoWidth) / 2;
@@ -322,8 +319,7 @@ export const exportToPDF = (
           console.error(`Error adding logo on page ${i}:`, error);
         }
       }
-      
-      // On the last page, add the created date at the bottom right
+      // On the last page, add the created date at the bottom right.
       doc.setPage(totalPages);
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
@@ -334,7 +330,7 @@ export const exportToPDF = (
 
     logo.onerror = () => {
       console.error('Failed to load logo');
-      const totalPages = doc.internal.pages.length - 1;
+      const totalPages = doc.internal.getNumberOfPages();
       doc.setPage(totalPages);
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
