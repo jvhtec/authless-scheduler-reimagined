@@ -236,43 +236,6 @@ export const exportToPDF = (
         }
       });
 
-      // Next, count followspot ("cañón") elements.
-      // For this tool, followspot elements are identified by the specific component names.
-      const followspotComponents = [
-        'ROBERT JULIAT ARAMIS',
-        'ROBERT JULIAT MERLIN',
-        'ROBERT JULIAT CYRANO',
-        'ROBERT JULIAT LANCELOT',
-        'ROBERT JULIAT KORRIGAN'
-      ];
-      let followspotCount = 0;
-      tables.forEach((table) => {
-        table.rows.forEach((row) => {
-          if (
-            row.componentName &&
-            followspotComponents.some((name) =>
-              row.componentName.toUpperCase().includes(name.toUpperCase())
-            )
-          ) {
-            followspotCount++;
-          }
-        });
-      });
-      // For each followspot, print the required note with an enumeration.
-      for (let i = 1; i <= followspotCount; i++) {
-        doc.setFontSize(12);
-        doc.setTextColor(0, 0, 0);
-        doc.text(`Schuko 16A 1P+N+G required at followspot position #${i}`, 14, yPosition);
-        yPosition += 7;
-        if (yPosition > pageHeight - 40) {
-          doc.addPage();
-          yPosition = 20;
-          doc.setFontSize(16);
-          doc.setTextColor(125, 1, 1);
-          doc.text("Summary (cont'd)", 14, yPosition);
-          yPosition += 10;
-        }
-      }
       // Finally, always add a note for FoH.
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
@@ -310,7 +273,6 @@ export const exportToPDF = (
         bodyStyles: { textColor: [51, 51, 51] },
         alternateRowStyles: { fillColor: [250, 250, 255] },
       });
-      yPosition = (doc as any).lastAutoTable.finalY + 10;
     }
 
     // === LOGO & CREATED DATE SECTION ===
@@ -338,6 +300,7 @@ export const exportToPDF = (
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
       doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: 'right' });
+
       const blob = doc.output('blob');
       resolve(blob);
     };

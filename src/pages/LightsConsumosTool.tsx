@@ -96,10 +96,9 @@ const LightsConsumosTool: React.FC = () => {
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
 
-  // State for job and table settings.
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
-  const [tableName, setTableName] = useState(''); // raw name as entered by the user
+  const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [safetyMargin, setSafetyMargin] = useState(0);
   const [includesHoist, setIncludesHoist] = useState(false);
@@ -189,8 +188,6 @@ const LightsConsumosTool: React.FC = () => {
     }
   };
 
-  // In the UI, we do not append any PDU type to the table name.
-  // The raw tableName is stored.
   const generateTable = () => {
     if (!tableName) {
       toast({
@@ -218,9 +215,8 @@ const LightsConsumosTool: React.FC = () => {
     const { currentPerPhase } = calculatePhaseCurrents(totalWatts);
     const pduSuggestion = recommendPDU(currentPerPhase);
 
-    // In the UI table, we simply use the entered tableName.
     const newTable: Table = {
-      name: tableName, // do not append PDU info here
+      name: tableName,
       rows: calculatedRows,
       totalWatts,
       currentPerPhase,
@@ -277,13 +273,12 @@ const LightsConsumosTool: React.FC = () => {
     }
 
     try {
-      // In the PDF export, we want the tool type to be 'consumos'
       const pdfBlob = await exportToPDF(
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'consumos' })),
         'power',
         selectedJob.title,
-        undefined, // jobDate not passed from UI here (it can be added as needed)
+        undefined,
         safetyMargin
       );
 
@@ -375,43 +370,6 @@ const LightsConsumosTool: React.FC = () => {
               onChange={(e) => setTableName(e.target.value)}
               placeholder="Enter table name"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>PDU Type Override</Label>
-            <Select value={selectedPduType} onValueChange={setSelectedPduType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Use recommended PDU type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="default">Use recommended PDU type</SelectItem>
-                {PDU_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {selectedPduType === 'Custom' && (
-            <div className="space-y-2">
-              <Label>Custom PDU Type</Label>
-              <Input
-                value={customPduType}
-                onChange={(e) => setCustomPduType(e.target.value)}
-                placeholder="Enter custom PDU type"
-              />
-            </div>
-          )}
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="hoistPower"
-              checked={includesHoist}
-              onCheckedChange={(checked) => setIncludesHoist(checked as boolean)}
-            />
-            <Label htmlFor="hoistPower">Requires Additional Hoist Power (CEE32A 3P+N+G)</Label>
           </div>
 
           <div className="border rounded-lg overflow-hidden">
@@ -558,7 +516,7 @@ const LightsConsumosTool: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
                   </tr>
-                  <tr className="bg-muted/50 font-medium">
+                  <tr className="border-t bg-muted/50 font-medium">
                     <td colSpan={3} className="px-4 py-3 text-right">
                       Current per Phase:
                     </td>
@@ -587,6 +545,7 @@ const LightsConsumosTool: React.FC = () => {
               )}
             </div>
           ))}
+
         </div>
       </CardContent>
     </Card>
