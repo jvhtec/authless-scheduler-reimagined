@@ -42,7 +42,7 @@ interface TableRow {
   totalWatts?: number;
 }
 
-interface Table {
+export interface Table {
   name: string;
   rows: TableRow[];
   totalWatts?: number;
@@ -128,21 +128,21 @@ const ConsumosTool: React.FC = () => {
           current_per_phase: table.currentPerPhase || 0,
           pdu_type: table.customPduType || table.pduType || '',
           includes_hoist: table.includesHoist || false,
-          custom_pdu_type: table.customPduType
+          custom_pdu_type: table.customPduType,
         });
 
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Power requirement table saved successfully",
+        title: 'Success',
+        description: 'Power requirement table saved successfully',
       });
     } catch (error: any) {
       console.error('Error saving power requirement table:', error);
       toast({
-        title: "Error",
-        description: "Failed to save power requirement table",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to save power requirement table',
+        variant: 'destructive',
       });
     }
   };
@@ -174,7 +174,7 @@ const ConsumosTool: React.FC = () => {
     const { currentPerPhase } = calculatePhaseCurrents(totalWatts);
     const pduSuggestion = recommendPDU(currentPerPhase);
 
-    const newTable = {
+    const newTable: Table = {
       name: tableName,
       rows: calculatedRows,
       totalWatts,
@@ -207,16 +207,18 @@ const ConsumosTool: React.FC = () => {
   };
 
   const updateTableSettings = (tableId: number, updates: Partial<Table>) => {
-    setTables(prev => prev.map(table => {
-      if (table.id === tableId) {
-        const updatedTable = { ...table, ...updates };
-        if (selectedJobId) {
-          savePowerRequirementTable(updatedTable);
+    setTables((prev) =>
+      prev.map((table) => {
+        if (table.id === tableId) {
+          const updatedTable = { ...table, ...updates };
+          if (selectedJobId) {
+            savePowerRequirementTable(updatedTable);
+          }
+          return updatedTable;
         }
-        return updatedTable;
-      }
-      return table;
-    }));
+        return table;
+      })
+    );
   };
 
   const handleExportPDF = async () => {
@@ -230,12 +232,20 @@ const ConsumosTool: React.FC = () => {
     }
 
     try {
+      // Convert the job date into a proper string (if available)
+      let jobDate: string;
+      if (selectedJob && (selectedJob as any).date) {
+        jobDate = new Date((selectedJob as any).date).toLocaleDateString('en-GB');
+      } else {
+        jobDate = new Date().toLocaleDateString('en-GB');
+      }
+
       const pdfBlob = await exportToPDF(
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'consumos' })),
         'power',
         selectedJob.title,
-        undefined,
+        jobDate,
         undefined,
         undefined,
         safetyMargin
@@ -245,9 +255,7 @@ const ConsumosTool: React.FC = () => {
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('task_documents')
-        .upload(filePath, file);
+      const { error: uploadError } = await supabase.storage.from('task_documents').upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
@@ -411,27 +419,28 @@ const ConsumosTool: React.FC = () => {
                   Remove Table
                 </Button>
               </div>
-              
+
               <div className="p-4 bg-muted/50 space-y-4">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <Checkbox
                       id={`hoist-${table.id}`}
                       checked={table.includesHoist}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         table.id && updateTableSettings(table.id, { includesHoist: !!checked })
                       }
                     />
                     <Label htmlFor={`hoist-${table.id}`}>Include Hoist Power (CEE32A 3P+N+G)</Label>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <Label>Override PDU Type:</Label>
                     <Select
                       value={table.customPduType || 'default'}
-                      onValueChange={(value) => 
-                        table.id && updateTableSettings(table.id, { 
-                          customPduType: value === 'default' ? undefined : value 
+                      onValueChange={(value) =>
+                        table.id &&
+                        updateTableSettings(table.id, {
+                          customPduType: value === 'default' ? undefined : value,
                         })
                       }
                     >
