@@ -119,7 +119,6 @@ const VideoPesosTool: React.FC = () => {
 
     setTables((prev) => [...prev, newTable]);
     resetCurrentTable();
-    setUseDualMotors(false);
   };
 
   const resetCurrentTable = () => {
@@ -149,7 +148,8 @@ const VideoPesosTool: React.FC = () => {
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'pesos' })),
         'weight',
-        selectedJob.title
+        selectedJob.title,
+        new Date().toISOString(), // Add job date
       );
 
       const fileName = `Video Weight Report - ${selectedJob.title}.pdf`;
@@ -271,7 +271,7 @@ const VideoPesosTool: React.FC = () => {
             </Button>
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
-                <FileText className="w-4 h-4" />
+                <FileText className="h-4 w-4" />
                 Export PDF
               </Button>
             )}
@@ -311,7 +311,7 @@ const VideoPesosTool: React.FC = () => {
                     <td colSpan={3} className="px-4 py-3 text-right">
                       Total Weight:
                     </td>
-                    <td className="px-4 py-3">{table.totalWeight?.toFixed(2)}</td>
+                    <td className="px-4 py-3">{table.totalWeight?.toFixed(2)} kg</td>
                   </tr>
                 </tbody>
               </table>

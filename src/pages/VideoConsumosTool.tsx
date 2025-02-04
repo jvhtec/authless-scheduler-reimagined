@@ -33,7 +33,7 @@ interface Table {
   dualMotors?: boolean;
 }
 
-const VideoPesosTool: React.FC = () => {
+const VideoConsumosTool: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
@@ -146,12 +146,13 @@ const VideoPesosTool: React.FC = () => {
     try {
       const pdfBlob = await exportToPDF(
         selectedJob.title,
-        tables.map((table) => ({ ...table, toolType: 'pesos' })),
-        'weight',
-        selectedJob.title
+        tables.map((table) => ({ ...table, toolType: 'consumos' })),
+        'power',
+        selectedJob.title,
+        new Date().toISOString(), // Add job date
       );
 
-      const fileName = `Video Weight Report - ${selectedJob.title}.pdf`;
+      const fileName = `Video Power Report - ${selectedJob.title}.pdf`;
       const url = window.URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -322,4 +323,4 @@ const VideoPesosTool: React.FC = () => {
   );
 };
 
-export default VideoPesosTool;
+export default VideoConsumosTool;
