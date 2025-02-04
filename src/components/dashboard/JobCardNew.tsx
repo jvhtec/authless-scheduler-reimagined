@@ -33,9 +33,6 @@ import { LightsTaskDialog } from "@/components/lights/LightsTaskDialog";
 import { VideoTaskDialog } from "@/components/video/VideoTaskDialog";
 import { ArtistManagementDialog } from "../festival/ArtistManagementDialog";
 
-// -------------------------
-// Types & Props
-// -------------------------
 export interface JobDocument {
   id: string;
   file_name: string;
@@ -57,9 +54,6 @@ export interface JobCardNewProps {
   isProjectManagementPage?: boolean;
 }
 
-// -------------------------
-// Constants used in folder creation
-// -------------------------
 const FLEX_FOLDER_IDS = {
   mainFolder: "e281e71c-2c42-49cd-9834-0eb68135e9ac",
   subFolder: "358f312c-b051-11df-b8d5-00e08175e43e",
@@ -127,9 +121,6 @@ const DEPARTMENT_SUFFIXES = {
   personnel: "HR"
 };
 
-// ----------------------------------------------------------------
-// Function: createFlexFolder
-// ----------------------------------------------------------------
 async function createFlexFolder(payload: Record<string, any>) {
   console.log("Creating Flex folder with payload:", payload);
   const response = await fetch("https://sectorpro.flexrentalsolutions.com/f5/api/element", {
@@ -152,16 +143,12 @@ async function createFlexFolder(payload: Record<string, any>) {
   return data;
 }
 
-// ----------------------------------------------------------------
-// Function: createAllFoldersForJob
-// ----------------------------------------------------------------
 async function createAllFoldersForJob(
   job: any,
   formattedStartDate: string,
   formattedEndDate: string,
   documentNumber: string
 ) {
-  // Handle dryhire job type first
   if (job.job_type === "dryhire") {
     console.log("Dryhire job type detected. Creating dryhire folder...");
 
@@ -208,7 +195,6 @@ async function createAllFoldersForJob(
     return;
   }
 
-  // Handle tourdate job type
   if (job.job_type === "tourdate") {
     console.log("Tourdate job type detected. Validating tour data...");
 
@@ -412,7 +398,6 @@ async function createAllFoldersForJob(
     return;
   }
 
-  // Default Logic: Full Folder Structure for non-dryhire/non-tourdate jobs
   console.log("Default job type detected. Creating full folder structure.");
 
   const topPayload = {
@@ -533,9 +518,6 @@ async function createAllFoldersForJob(
   }
 }
 
-// ----------------------------------------------------------------
-// JobCardNew Component – Preview Look with Dark Mode
-// ----------------------------------------------------------------
 export function JobCardNew({
   job,
   onEditClick,
@@ -553,20 +535,10 @@ export function JobCardNew({
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
-  // Compute dynamic inline styles that change in dark mode.
-  const borderColor = job.color
-    ? job.color
-    : "#7E69AB";
-  // For dark mode, you may optionally have a job.darkColor property
-  const appliedBorderColor = isDark
-    ? (job.darkColor ? job.darkColor : borderColor)
-    : borderColor;
-  const bgColor = job.color
-    ? `${job.color}05`
-    : "#7E69AB05";
-  const appliedBgColor = isDark
-    ? (job.darkColor ? `${job.darkColor}15` : bgColor)
-    : bgColor;
+  const borderColor = job.color ? job.color : "#7E69AB";
+  const appliedBorderColor = isDark ? (job.darkColor ? job.darkColor : borderColor) : borderColor;
+  const bgColor = job.color ? `${job.color}05` : "#7E69AB05";
+  const appliedBgColor = isDark ? (job.darkColor ? `${job.darkColor}15` : bgColor) : bgColor;
 
   const [collapsed, setCollapsed] = useState(true);
   const [assignments, setAssignments] = useState(job.job_assignments || []);
@@ -576,25 +548,25 @@ export function JobCardNew({
   const [soundTaskDialogOpen, setSoundTaskDialogOpen] = useState(false);
   const [lightsTaskDialogOpen, setLightsTaskDialogOpen] = useState(false);
   const [videoTaskDialogOpen, setVideoTaskDialogOpen] = useState(false);
-  const getDateTypeIcon = (jobId: string, date: Date, dateTypes: Record<string, any>) => {
-  const key = `${jobId}-${format(date, "yyyy-MM-dd")}`;
-  const dateType = dateTypes[key]?.type;
-  switch (dateType) {
-    case "travel":
-      return <Plane className="h-3 w-3 text-blue-500" />;
-    case "setup":
-      return <Wrench className="h-3 w-3 text-yellow-500" />;
-    case "show":
-      return <Star className="h-3 w-3 text-green-500" />;
-    case "off":
-      return <Moon className="h-3 w-3 text-gray-500" />;
-    case "rehearsal":
-      return <Mic className="h-3 w-3 text-violet-500" />;
-    default:
-      return null;
-  }
-};
 
+  const getDateTypeIcon = (jobId: string, date: Date, dateTypes: Record<string, any>) => {
+    const key = `${jobId}-${format(date, "yyyy-MM-dd")}`;
+    const dateType = dateTypes[key]?.type;
+    switch (dateType) {
+      case "travel":
+        return <Plane className="h-3 w-3 text-blue-500" />;
+      case "setup":
+        return <Wrench className="h-3 w-3 text-yellow-500" />;
+      case "show":
+        return <Star className="h-3 w-3 text-green-500" />;
+      case "off":
+        return <Moon className="h-3 w-3 text-gray-500" />;
+      case "rehearsal":
+        return <Mic className="h-3 w-3 text-violet-500" />;
+      default:
+        return null;
+    }
+  };
 
   useEffect(() => {
     async function fetchDateTypes() {
@@ -603,45 +575,39 @@ export function JobCardNew({
         .select("*")
         .eq("job_id", job.id);
       if (!error && data && data.length > 0) {
-        // Create a key using the job id and the formatted start date.
         const key = `${job.id}-${format(new Date(job.start_time), "yyyy-MM-dd")}`;
-        // For simplicity, we use the first returned date type.
         setDateTypes({ [key]: data[0] });
       }
     }
     fetchDateTypes();
   }, [job.id, job.start_time]);
 
-  const assignedTechnicians =
-    job.job_type !== "dryhire"
-      ? assignments
-          .map((assignment: any) => {
-            let role = null;
-            switch (department) {
-              case "sound":
-                role = assignment.sound_role;
-                break;
-              case "lights":
-                role = assignment.lights_role;
-                break;
-              case "video":
-                role = assignment.video_role;
-                break;
-              default:
-                role =
-                  assignment.sound_role ||
-                  assignment.lights_role ||
-                  assignment.video_role;
-            }
-            if (!role) return null;
-            return {
-              id: assignment.technician_id,
-              name: `${assignment.profiles?.first_name || ""} ${assignment.profiles?.last_name || ""}`.trim(),
-              role
-            };
-          })
-          .filter(Boolean)
-      : [];
+  const assignedTechnicians = job.job_type !== "dryhire"
+    ? assignments
+        .map((assignment: any) => {
+          let role = null;
+          switch (department) {
+            case "sound":
+              role = assignment.sound_role;
+              break;
+            case "lights":
+              role = assignment.lights_role;
+              break;
+            case "video":
+              role = assignment.video_role;
+              break;
+            default:
+              role = assignment.sound_role || assignment.lights_role || assignment.video_role;
+          }
+          if (!role) return null;
+          return {
+            id: assignment.technician_id,
+            name: `${assignment.profiles?.first_name || ""} ${assignment.profiles?.last_name || ""}`.trim(),
+            role
+          };
+        })
+        .filter(Boolean)
+    : [];
 
   const { data: soundTasks } = useQuery({
     queryKey: ["sound-tasks", job.id],
@@ -730,10 +696,8 @@ export function JobCardNew({
         .slice(2, 10)
         .replace(/-/g, "");
 
-      const formattedStartDate =
-        new Date(job.start_time).toISOString().split(".")[0] + ".000Z";
-      const formattedEndDate =
-        new Date(job.end_time).toISOString().split(".")[0] + ".000Z";
+      const formattedStartDate = new Date(job.start_time).toISOString().split(".")[0] + ".000Z";
+      const formattedEndDate = new Date(job.end_time).toISOString().split(".")[0] + ".000Z";
 
       await createAllFoldersForJob(job, formattedStartDate, formattedEndDate, documentNumber);
       await updateFolderStatus.mutateAsync();
@@ -767,9 +731,9 @@ export function JobCardNew({
     if (!personnel) return 0;
     return (
       (personnel.foh_engineers || 0) +
-      (personnel.mon_engineers || 0) +
-      (personnel.pa_techs || 0) +
-      (personnel.rf_techs || 0)
+      (personnel.mon_engineers || 0)
+      + (personnel.pa_techs || 0)
+      + (personnel.rf_techs || 0)
     );
   };
 
@@ -1041,9 +1005,10 @@ export function JobCardNew({
   return (
     <div className="p-4 bg-gray-50 dark:bg-gray-900">
       <Card
-        className="mb-4 hover:shadow-md transition-all duration-200 cursor-pointer border-l-4 overflow-hidden"
+        className={cn(
+          "mb-4 hover:shadow-md transition-all duration-200 cursor-pointer border-l-4 overflow-hidden"
+        )}
         onClick={() => {
-          // If on the project management page, open the tasks dialog for the current department
           if (isProjectManagementPage) {
             if (department === "sound") {
               setSoundTaskDialogOpen(true);
@@ -1057,7 +1022,6 @@ export function JobCardNew({
               }
             }
           } else {
-            // Not in project management, do the default
             if (userRole !== "logistics") {
               onJobClick(job.id);
             }
@@ -1068,16 +1032,14 @@ export function JobCardNew({
           backgroundColor: appliedBgColor
         }}
       >
-        {/* Header Section */}
         <div className="p-6 pb-3">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-2 min-w-0">
               <div className="flex items-center gap-1">
-  {getDateTypeIcon(job.id, new Date(job.start_time), dateTypes)}
-  <span className="font-medium text-lg truncate">{job.title}</span>
-  {getBadgeForJobType(job.job_type)}
-</div>
-
+                {getDateTypeIcon(job.id, new Date(job.start_time), dateTypes)}
+                <span className="font-medium text-lg truncate">{job.title}</span>
+                {getBadgeForJobType(job.job_type)}
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -1097,7 +1059,10 @@ export function JobCardNew({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setArtistManagementOpen(true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setArtistManagementOpen(true);
+                  }}
                   className="hover:bg-accent/50"
                 >
                   Manage Artists
@@ -1164,7 +1129,6 @@ export function JobCardNew({
           </div>
         </div>
 
-        {/* Content Section */}
         <div className="px-6 pb-6">
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2">
@@ -1186,62 +1150,60 @@ export function JobCardNew({
               </div>
             )}
             {job.job_type !== "dryhire" && (
-  <>
-    {assignedTechnicians.length > 0 && (
-      <div className="flex items-center gap-2">
-        <Users className="h-4 w-4 text-muted-foreground" />
-        <div className="flex flex-wrap gap-1">
-          {assignedTechnicians.map((tech) => (
-            <Badge key={tech.id} variant="secondary" className="text-xs">
-              {tech.name} {tech.role && `(${tech.role})`}
-            </Badge>
-          ))}
-        </div>
-      </div>
-    )}
-    {isProjectManagementPage && documents.length > 0 && (
-      <div className="mt-4 space-y-2">
-        <div className="text-sm font-medium">Documents</div>
-        <div className="space-y-2">
-          {documents.map((doc) => (
-            <div
-              key={doc.id}
-              className="flex items-center justify-between p-2 rounded-md bg-accent/20 hover:bg-accent/30 transition-colors"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">{doc.file_name}</span>
-                <span className="text-xs text-muted-foreground">
-                  Uploaded {format(new Date(doc.uploaded_at), "MMM d, yyyy")}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleViewDocument(doc)}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDeleteDocument(doc)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
-  </>
-)}
-
+              <>
+                {assignedTechnicians.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex flex-wrap gap-1">
+                      {assignedTechnicians.map((tech) => (
+                        <Badge key={tech.id} variant="secondary" className="text-xs">
+                          {tech.name} {tech.role && `(${tech.role})`}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {isProjectManagementPage && documents.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <div className="text-sm font-medium">Documents</div>
+                    <div className="space-y-2">
+                      {documents.map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="flex items-center justify-between p-2 rounded-md bg-accent/20 hover:bg-accent/30 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">{doc.file_name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              Uploaded {format(new Date(doc.uploaded_at), "MMM d, yyyy")}
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewDocument(doc)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteDocument(doc)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
-          {/* Collapsible Details */}
           {!collapsed && job.job_type !== "dryhire" && (
             <>
               {department === "sound" && personnel && (
@@ -1297,7 +1259,6 @@ export function JobCardNew({
         </div>
       </Card>
 
-      {/* Dialogs */}
       {soundTaskDialogOpen && (
         <SoundTaskDialog
           open={soundTaskDialogOpen}
@@ -1331,4 +1292,3 @@ export function JobCardNew({
     </div>
   );
 }
-
