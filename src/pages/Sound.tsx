@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Calculator, FileSpreadsheet, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import SoundTaskDialog from '@/components/sound/SoundTaskDialog';
-import PdfAnalysis from '@/components/sound/PdfAnalysis';
-import ReportGenerator from '@/components/sound/ReportGenerator';
+import { SoundTaskDialog } from '@/components/sound/SoundTaskDialog';
+import { PdfAnalysis } from '@/components/sound/PdfAnalysis';
+import { ReportGenerator } from '@/components/sound/ReportGenerator';
 
 const Sound = () => {
   const navigate = useNavigate();
