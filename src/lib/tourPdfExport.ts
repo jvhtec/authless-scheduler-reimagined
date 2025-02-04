@@ -79,12 +79,29 @@ export const exportTourPDF = (
         { align: 'right' }
       );
 
+      // Get total pages using the correct method
+      const totalPages = doc.internal.pages.length - 1;
+      
+      // Add page numbers
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+      }
+
       const blob = doc.output('blob');
       resolve(blob);
     };
 
     logo.onerror = () => {
       console.error('Failed to load logo');
+      // Still add page numbers even if logo fails to load
+      const totalPages = doc.internal.pages.length - 1;
+      
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+      }
+      
       const blob = doc.output('blob');
       resolve(blob);
     };
