@@ -244,23 +244,15 @@ const PesosTool: React.FC = () => {
       return;
     }
 
-    // Group tables by clusterId so that mirrored pairs (or single tables) are grouped together.
-    const clusterMap = new Map<string, { clusterName: string; riggingPoints: string; clusterWeight: number }>();
-    tables.forEach((table) => {
-      const cid = table.clusterId || table.id.toString();
-      // Remove the SX suffix portion from the table name.
-      const cleanName = table.name.split('(')[0].trim();
-      if (!clusterMap.has(cid)) {
-        clusterMap.set(cid, {
-          clusterName: cleanName,
-          riggingPoints: table.riggingPoints || '',
-          clusterWeight: table.totalWeight || 0,
-        });
-      }
-    });
+const summaryRows: SummaryRow[] = tables.map((table) => {
+  const cleanName = table.name.split('(')[0].trim();
+  return {
+    clusterName: cleanName,
+    riggingPoints: table.riggingPoints || '',
+    clusterWeight: table.totalWeight || 0,
+  };
+});
 
-    // Build summary rows array from the grouped clusters.
-    let summaryRows: SummaryRow[] = Array.from(clusterMap.values());
 
     // If Cable Pick is enabled, add one cable pick summary row per cluster.
     if (cablePick) {
