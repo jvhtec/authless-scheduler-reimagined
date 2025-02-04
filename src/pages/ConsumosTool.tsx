@@ -506,3 +506,7 @@ const ConsumosTool: React.FC = () => {
         </div>
       </CardContent>
     </Card>
+  );
+};
+
+export default ConsumosTool;
