@@ -23,6 +23,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
     queryKey: ["tours"],
     queryFn: async () => {
       console.log("Fetching tours...");
+      
       const { data: toursData, error: toursError } = await supabase
         .from("tours")
         .select(`
@@ -47,7 +48,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         throw toursError;
       }
 
-      console.log("Tours fetched successfully");
+      console.log("Tours fetched successfully:", toursData);
       return toursData;
     },
   });
@@ -59,6 +60,8 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
   const handlePrint = async (tour: any) => {
     try {
+      console.log("Starting PDF export for tour:", tour.name);
+      
       const rows = tour.tour_dates.map((td: any) => ({
         date: new Date(td.date).toLocaleDateString(),
         location: td.location?.name || "",
@@ -71,6 +74,8 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
       const pdfBlob = await exportTourPDF(tour.name, dateSpan, rows);
       const url = URL.createObjectURL(pdfBlob);
       window.open(url, "_blank");
+      
+      console.log("PDF export completed successfully");
     } catch (error: any) {
       console.error("Error exporting PDF:", error);
       toast({
