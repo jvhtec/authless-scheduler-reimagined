@@ -502,7 +502,6 @@ const ConsumosTool: React.FC = () => {
               )}
             </div>
           ))}
-
         </div>
       </CardContent>
     </Card>
