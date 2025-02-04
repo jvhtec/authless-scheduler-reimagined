@@ -236,8 +236,6 @@ const ConsumosTool: React.FC = () => {
         'power',
         selectedJob.title,
         undefined,
-        undefined,
-        undefined,
         safetyMargin
       );
 
@@ -504,6 +502,7 @@ const ConsumosTool: React.FC = () => {
               )}
             </div>
           ))}
+
         </div>
       </CardContent>
     </Card>

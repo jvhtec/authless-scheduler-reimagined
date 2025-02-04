@@ -18,10 +18,8 @@ import { Separator } from "@/components/ui/separator";
 import { ReportGenerator } from "../components/sound/ReportGenerator";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { PdfAnalysis } from "@/components/sound/PdfAnalysis";
-import { useNavigate } from "react-router-dom";
 
 const Sound = () => {
-  const navigate = useNavigate();
   const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
   const [isTourDialogOpen, setIsTourDialogOpen] = useState(false);
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
@@ -162,7 +160,7 @@ const Sound = () => {
               variant="outline"
               size="lg"
               className="w-full h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => navigate('/pesos-tool')}
+              onClick={() => window.location.href = '/pesos-tool'}
             >
               <Calculator className="h-6 w-6" />
               <span>Weight Calculator</span>
@@ -172,7 +170,7 @@ const Sound = () => {
               variant="outline"
               size="lg"
               className="w-full h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => navigate('/consumos-tool')}
+              onClick={() => window.location.href = '/consumos-tool'}
             >
               <PieChart className="h-6 w-6" />
               <span>Power Calculator</span>
