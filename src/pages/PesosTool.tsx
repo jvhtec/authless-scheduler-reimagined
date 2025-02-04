@@ -276,13 +276,17 @@ const PesosTool: React.FC = () => {
 
     try {
       // Pass the summaryRows as the 5th parameter to exportToPDF.
-      const pdfBlob = await exportToPDF(
-        selectedJob.title,
-        tables.map((table) => ({ ...table, toolType: 'pesos' })),
-        'weight',
-        selectedJob.title,
-        summaryRows
-      );
+      const jobDateStr = new Date().toLocaleDateString('en-GB'); // or however you want to get the job date
+
+const pdfBlob = await exportToPDF(
+  selectedJob.title,
+  tables.map((table) => ({ ...table, toolType: 'pesos' })),
+  'weight',
+  selectedJob.title,
+  jobDateStr,    // Now the job date is correctly passed as the 5th parameter
+  summaryRows    // Now this is correctly the 6th parameter
+);
+
 
       const fileName = `Pesos Report - ${selectedJob.title}.pdf`;
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
