@@ -68,7 +68,13 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
       const end = new Date(tour.end_date).toLocaleDateString();
       const dateSpan = `${start} - ${end}`;
 
-      const pdfBlob = await exportTourPDF(tour.name, dateSpan, rows);
+      const pdfBlob = await exportTourPDF(
+        tour.name,
+        dateSpan,
+        rows,
+        new Date().toLocaleDateString()
+      );
+      
       const url = URL.createObjectURL(pdfBlob);
       window.open(url, "_blank");
     } catch (error: any) {
