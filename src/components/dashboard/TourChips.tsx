@@ -47,7 +47,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
         throw toursError;
       }
 
-      console.log("Tours fetched successfully");
+      console.log("Tours fetched successfully:", toursData);
       return toursData;
     },
   });
@@ -59,23 +59,59 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
 
   const handlePrint = async (tour: any) => {
     try {
+      console.log("Starting PDF export for tour:", tour.name);
+      
+      if (!tour.tour_dates || tour.tour_dates.length === 0) {
+        toast({
+          title: "Error",
+          description: "No tour dates available to print",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const rows = tour.tour_dates.map((td: any) => ({
         date: new Date(td.date).toLocaleDateString(),
-        location: td.location?.name || "",
+        location: td.location?.name || "TBD",
       }));
 
-      const start = new Date(tour.start_date).toLocaleDateString();
-      const end = new Date(tour.end_date).toLocaleDateString();
+      const start = tour.start_date ? new Date(tour.start_date).toLocaleDateString() : "TBD";
+      const end = tour.end_date ? new Date(tour.end_date).toLocaleDateString() : "TBD";
       const dateSpan = `${start} - ${end}`;
 
-      const pdfBlob = await exportTourPDF(tour.name, dateSpan, rows);
+      console.log("Generating PDF with:", {
+        tourName: tour.name,
+        dateSpan,
+        rows: rows
+      });
+
+      const pdfBlob = await exportTourPDF(
+        tour.name,
+        dateSpan,
+        rows
+      );
+      
+      console.log("PDF generated successfully, creating download URL");
       const url = URL.createObjectURL(pdfBlob);
-      window.open(url, "_blank");
+      
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${tour.name} - Schedule.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Tour schedule exported successfully",
+      });
     } catch (error: any) {
       console.error("Error exporting PDF:", error);
       toast({
         title: "Error",
-        description: "Failed to export PDF.",
+        description: "Failed to export PDF: " + (error.message || "Unknown error"),
         variant: "destructive",
       });
     }
