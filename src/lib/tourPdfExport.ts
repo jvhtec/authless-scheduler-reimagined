@@ -57,17 +57,7 @@ export const exportTourPDF = async (
         alternateRowStyles: { fillColor: [250, 250, 255] },
       });
 
-      // Add creation date at the bottom
-      doc.setFontSize(10);
-      doc.setTextColor(51, 51, 51);
-      doc.text(
-        `Created: ${new Date().toLocaleDateString()}`,
-        pageWidth - 10,
-        pageHeight - 10,
-        { align: 'right' }
-      );
-
-      // Get total pages
+        // Get total pages
       const totalPages = doc.internal.pages.length - 1;
 
       // === LOGO & CREATED DATE SECTION ===
