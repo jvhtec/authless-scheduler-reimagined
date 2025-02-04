@@ -244,20 +244,29 @@ const PesosTool: React.FC = () => {
       return;
     }
 
-const summaryRows: SummaryRow[] = tables.map((table) => {
-  const cleanName = table.name.split('(')[0].trim();
-  return {
-    clusterName: cleanName,
-    riggingPoints: table.riggingPoints || '',
-    clusterWeight: table.totalWeight || 0,
-  };
-});
+    const summaryRows: SummaryRow[] = tables.map((table) => {
+      const cleanName = table.name.split('(')[0].trim();
+      return {
+        clusterName: cleanName,
+        riggingPoints: table.riggingPoints || '',
+        clusterWeight: table.totalWeight || 0,
+      };
+    });
 
+    // Group tables by clusterId to handle cable picks
+    const clusters = tables.reduce((acc, table) => {
+      if (table.clusterId) {
+        if (!acc[table.clusterId]) {
+          acc[table.clusterId] = [];
+        }
+        acc[table.clusterId].push(table);
+      }
+      return acc;
+    }, {} as Record<string, Table[]>);
 
-    // If Cable Pick is enabled, add one cable pick summary row per cluster.
+    // If Cable Pick is enabled, add one cable pick summary row per cluster
     if (cablePick) {
-      // For each cluster, add an extra row with CP01 (cable pick resets per cluster).
-      clusterMap.forEach(() => {
+      Object.values(clusters).forEach(() => {
         summaryRows.push({
           clusterName: 'CABLE PICK',
           riggingPoints: 'CP01',
@@ -267,24 +276,24 @@ const summaryRows: SummaryRow[] = tables.map((table) => {
     }
 
     try {
-      // Pass the summaryRows as the 5th parameter to exportToPDF.
-      const jobDateStr = new Date().toLocaleDateString('en-GB'); // or however you want to get the job date
-
-const pdfBlob = await exportToPDF(
-  selectedJob.title,
-  tables.map((table) => ({ ...table, toolType: 'pesos' })),
-  'weight',
-  selectedJob.title,
-  jobDateStr,    // Now the job date is correctly passed as the 5th parameter
-  summaryRows    // Now this is correctly the 6th parameter
-);
-
+      const jobDateStr = new Date().toLocaleDateString('en-GB');
+      const pdfBlob = await exportToPDF(
+        selectedJob.title,
+        tables.map((table) => ({ ...table, toolType: 'pesos' })),
+        'weight',
+        selectedJob.title,
+        jobDateStr,
+        summaryRows
+      );
 
       const fileName = `Pesos Report - ${selectedJob.title}.pdf`;
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
       const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
 
-      const { error: uploadError } = await supabase.storage.from('task_documents').upload(filePath, file);
+      const { error: uploadError } = await supabase.storage
+        .from('task_documents')
+        .upload(filePath, file);
+      
       if (uploadError) throw uploadError;
 
       toast({
