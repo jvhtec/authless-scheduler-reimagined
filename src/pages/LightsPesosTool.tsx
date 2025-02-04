@@ -206,7 +206,8 @@ const LightsPesosTool: React.FC = () => {
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'pesos' })),
         'weight',
-        selectedJob.title
+        selectedJob.title,
+        undefined
       );
 
       const fileName = `Lights Weight Report - ${selectedJob.title}.pdf`;
