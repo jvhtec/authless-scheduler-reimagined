@@ -71,8 +71,7 @@ export const TourChips = ({ onTourClick }: TourChipsProps) => {
       const pdfBlob = await exportTourPDF(
         tour.name,
         dateSpan,
-        rows,
-        new Date().toLocaleDateString()
+        rows
       );
       
       const url = URL.createObjectURL(pdfBlob);
