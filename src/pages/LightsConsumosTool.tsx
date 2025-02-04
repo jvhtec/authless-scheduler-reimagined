@@ -98,12 +98,12 @@ const LightsConsumosTool: React.FC = () => {
 
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
-  const [tableName, setTableName] = useState(''); // raw name as entered by the user
+  const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [safetyMargin, setSafetyMargin] = useState(0);
   const [includesHoist, setIncludesHoist] = useState(false);
-  const [selectedPduType, setSelectedPduType] = useState<string>(''); // override selection
-  const [customPduType, setCustomPduType] = useState<string>(''); // if custom
+  const [selectedPduType, setSelectedPduType] = useState<string>('');
+  const [customPduType, setCustomPduType] = useState<string>('');
 
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
@@ -167,9 +167,9 @@ const LightsConsumosTool: React.FC = () => {
           table_name: table.name,
           total_watts: table.totalWatts || 0,
           current_per_phase: table.currentPerPhase || 0,
-          pdu_type: table.customPduType || table.pduType || '',
-          includes_hoist: table.includesHoist || false,
+          pdu_type: table.pduType || '',
           custom_pdu_type: table.customPduType,
+          includes_hoist: table.includesHoist
         });
 
       if (error) throw error;
@@ -183,7 +183,7 @@ const LightsConsumosTool: React.FC = () => {
       toast({
         title: "Error",
         description: "Failed to save power requirement table",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
@@ -213,25 +213,28 @@ const LightsConsumosTool: React.FC = () => {
 
     const totalWatts = calculatedRows.reduce((sum, row) => sum + (row.totalWatts || 0), 0);
     const { currentPerPhase } = calculatePhaseCurrents(totalWatts);
-    const pduSuggestion = recommendPDU(currentPerPhase);
+    const pduSuggestion = selectedPduType || recommendPDU(currentPerPhase);
 
-    const newTable: Table = {
-      name: tableName,
+    const finalPduType = selectedPduType === 'Custom' ? customPduType : pduSuggestion;
+    const displayName = `${tableName} (${finalPduType})${selectedPduType === 'Custom' ? ' - Custom PDU' : ''}`;
+
+    const newTable = {
+      name: displayName,
       rows: calculatedRows,
       totalWatts,
       currentPerPhase,
-      pduType: selectedPduType === 'Custom' ? customPduType : pduSuggestion,
+      pduType: finalPduType,
       customPduType: selectedPduType === 'Custom' ? customPduType : undefined,
       includesHoist,
       id: Date.now(),
     };
 
     setTables((prev) => [...prev, newTable]);
-
+    
     if (selectedJobId) {
       savePowerRequirementTable(newTable);
     }
-
+    
     resetCurrentTable();
   };
 
@@ -241,25 +244,13 @@ const LightsConsumosTool: React.FC = () => {
       rows: [{ quantity: '', componentId: '', watts: '' }],
     });
     setTableName('');
+    setIncludesHoist(false);
+    setSelectedPduType('');
+    setCustomPduType('');
   };
 
   const removeTable = (tableId: number) => {
     setTables((prev) => prev.filter((table) => table.id !== tableId));
-  };
-
-  const updateTableSettings = (tableId: number, updates: Partial<Table>) => {
-    setTables((prev) =>
-      prev.map((table) => {
-        if (table.id === tableId) {
-          const updatedTable = { ...table, ...updates };
-          if (selectedJobId) {
-            savePowerRequirementTable(updatedTable);
-          }
-          return updatedTable;
-        }
-        return table;
-      })
-    );
   };
 
   const handleExportPDF = async () => {
@@ -278,8 +269,6 @@ const LightsConsumosTool: React.FC = () => {
         tables.map((table) => ({ ...table, toolType: 'consumos' })),
         'power',
         selectedJob.title,
-        undefined,
-        undefined,
         undefined,
         safetyMargin
       );
@@ -491,46 +480,6 @@ const LightsConsumosTool: React.FC = () => {
                   Remove Table
                 </Button>
               </div>
-              
-              <div className="p-4 bg-muted/50 space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id={`hoist-${table.id}`}
-                      checked={table.includesHoist}
-                      onCheckedChange={(checked) => 
-                        table.id && updateTableSettings(table.id, { includesHoist: !!checked })
-                      }
-                    />
-                    <Label htmlFor={`hoist-${table.id}`}>Include Hoist Power (CEE32A 3P+N+G)</Label>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Label>Override PDU Type:</Label>
-                    <Select
-                      value={table.customPduType || 'default'}
-                      onValueChange={(value) => 
-                        table.id && updateTableSettings(table.id, { 
-                          customPduType: value === 'default' ? undefined : value 
-                        })
-                      }
-                    >
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Use suggested PDU" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="default">Use suggested PDU</SelectItem>
-                        {PDU_TYPES.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
               <table className="w-full">
                 <thead className="bg-muted/50">
                   <tr>
@@ -555,26 +504,12 @@ const LightsConsumosTool: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
                   </tr>
-                  <tr className="border-t bg-muted/50 font-medium">
+                  <tr className="bg-muted/50 font-medium">
                     <td colSpan={3} className="px-4 py-3 text-right">
                       Current per Phase:
                     </td>
                     <td className="px-4 py-3">{table.currentPerPhase?.toFixed(2)} A</td>
                   </tr>
-                  <tr className="border-t bg-muted/50 font-medium">
-                    <td colSpan={3} className="px-4 py-3 text-right">
-                      Suggested PDU:
-                    </td>
-                    <td className="px-4 py-3">{table.pduType}</td>
-                  </tr>
-                  {table.customPduType && (
-                    <tr className="border-t bg-muted/50 font-medium text-primary">
-                      <td colSpan={3} className="px-4 py-3 text-right">
-                        Selected PDU Override:
-                      </td>
-                      <td className="px-4 py-3">{table.customPduType}</td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
               {table.includesHoist && (

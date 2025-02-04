@@ -94,6 +94,15 @@ const VideoPesosTool: React.FC = () => {
       return;
     }
 
+    const suffix = (() => {
+      const tableCount = tables.length + 1;
+      const suffixNumber = tableCount.toString().padStart(2, '0');
+      if (useDualMotors) {
+        return `(VX${suffixNumber}, VX${(tableCount + 1).toString().padStart(2, '0')})`;
+      }
+      return `(VX${suffixNumber})`;
+    })();
+
     const calculatedRows = currentTable.rows.map((row) => {
       const component = videoComponentDatabase.find((c) => c.id.toString() === row.componentId);
       const totalWeight =
@@ -110,7 +119,7 @@ const VideoPesosTool: React.FC = () => {
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
 
     const newTable: Table = {
-      name: tableName,
+      name: `${tableName} ${suffix}`,
       rows: calculatedRows,
       totalWeight,
       id: Date.now(),
@@ -119,6 +128,7 @@ const VideoPesosTool: React.FC = () => {
 
     setTables((prev) => [...prev, newTable]);
     resetCurrentTable();
+    setUseDualMotors(false);
   };
 
   const resetCurrentTable = () => {
@@ -148,8 +158,7 @@ const VideoPesosTool: React.FC = () => {
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'pesos' })),
         'weight',
-        selectedJob.title,
-        new Date().toISOString(), // Add job date
+        selectedJob.title
       );
 
       const fileName = `Video Weight Report - ${selectedJob.title}.pdf`;
@@ -271,7 +280,7 @@ const VideoPesosTool: React.FC = () => {
             </Button>
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
-                <FileText className="h-4 w-4" />
+                <FileText className="w-4 h-4" />
                 Export PDF
               </Button>
             )}

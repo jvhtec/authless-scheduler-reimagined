@@ -6,73 +6,48 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText, ArrowLeft } from 'lucide-react';
 import { exportToPDF } from '@/utils/pdfExport';
-import { useJobSelection } from '@/hooks/useJobSelection';
+import { useJobSelection, JobSelection } from '@/hooks/useJobSelection';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useNavigate } from 'react-router-dom';
 
-const lightsComponentDatabase = [
-  { id: 1, name: 'CAMEO OPS S5', weight: 26 },
-  { id: 2, name: 'CLAY PAKY A-LEDA K20', weight: 23 },
-  { id: 3, name: 'CLAY PAKY A-LEDA K25', weight: 30 },
-  { id: 4, name: 'CLAY PAKY STORMY CC', weight: 8 },
-  { id: 5, name: 'ELATION CHORUS LINE 16', weight: 22 },
-  { id: 6, name: 'MARTIN MAC AURA', weight: 7 },
-  { id: 7, name: 'MARTIN MAC VIPER', weight: 39 },
-  { id: 8, name: 'ROBE BMFL BLADE', weight: 40 },
-  { id: 9, name: 'ROBE BMFL SPOT', weight: 38 },
-  { id: 10, name: 'ROBE BMFL WASHBEAM', weight: 41 },
-  { id: 11, name: 'ROBE MEGAPOINTE', weight: 24 },
-  { id: 12, name: 'ROBE POINTE', weight: 17 },
-  { id: 13, name: 'TRITON BLUE 15R BEAM', weight: 21 },
-  { id: 14, name: 'TRITON BLUE 15R SPOT', weight: 24 },
-  { id: 15, name: 'TRITON BLUE WALLY 3715', weight: 17 },
-  { id: 16, name: 'CAMEO AURO BAR 100', weight: 12 },
-  { id: 17, name: 'ACL 250W (2 BARRAS)', weight: 34 },
-  { id: 18, name: 'ACL 650W (2 BARRAS)', weight: 34 },
-  { id: 19, name: 'BARRA PAR 64x6', weight: 28 },
-  { id: 20, name: 'FRESNELL 2KW', weight: 9 },
-  { id: 21, name: 'MOLEFAY BLINDER 4', weight: 7 },
-  { id: 22, name: 'MOLEFAY BLINDER 8', weight: 9 },
-  { id: 23, name: 'PAR 64', weight: 4 },
-  { id: 24, name: 'ADMIRAL VINTAGE 53cm', weight: 7 },
-  { id: 25, name: 'ADMIRAL VINTAGE 38cm', weight: 5 },
-  { id: 26, name: 'FRESNELL 5KW', weight: 13 },
-  { id: 27, name: 'MOLEFAY BLINDER 2', weight: 4 },
-  { id: 28, name: 'RECORTE ETC 25º/50º', weight: 10 },
-  { id: 29, name: 'RECORTE ETC 15º/30º', weight: 12 },
-  { id: 30, name: 'RECORTE ETC 19º', weight: 8 },
-  { id: 31, name: 'RECORTE ETC 10º', weight: 8 },
-  { id: 32, name: 'RECORTE TB LED 25º/50º', weight: 15 },
-  { id: 33, name: 'SUNSTRIP', weight: 7 },
-  { id: 34, name: 'CAMEO ZENIT 120', weight: 10 },
-  { id: 35, name: 'ELATION SIXBAR 1000', weight: 8 },
-  { id: 36, name: 'MARTIN ATOMIC 3000', weight: 8 },
-  { id: 37, name: 'SGM Q7', weight: 9 },
-  { id: 38, name: 'ELATION SIXBAR 500', weight: 5 },
-  { id: 39, name: 'MOTOR CM 250Kg', weight: 30 },
-  { id: 40, name: 'MOTOR CM 500Kg', weight: 50 },
-  { id: 41, name: 'MOTOR CM 1000Kg', weight: 70 },
-  { id: 42, name: 'MOTOR CM 2000Kg', weight: 75 },
-  { id: 43, name: 'MOTOR CHAINMASTER 1000KG', weight: 69 },
-  { id: 44, name: 'MOTOR CHAINMASTER D8+ 750KG', weight: 69 },
-  { id: 45, name: 'TRUSS 76x52 3M', weight: 50 },
-  { id: 46, name: 'TRUSS 76x52 2M', weight: 32 },
-  { id: 47, name: 'TRUSS 76x52 1M', weight: 24 },
-  { id: 48, name: 'TRUSS 52x52 3M', weight: 40 },
-  { id: 49, name: 'TRUSS 52x52 2M', weight: 35 },
-  { id: 50, name: 'TRUSS 52x52 1M', weight: 27 },
-  { id: 51, name: 'TRUSS PROLYTE 30x30 4M', weight: 25 },
-  { id: 52, name: 'TRUSS PROLYTE 30x30 3M', weight: 19 },
-  { id: 53, name: 'TRUSS PROLYTE 30x30 2M', weight: 13 },
-  { id: 54, name: 'TRUSS PROLYTE 30x30 1M', weight: 7 },
-  { id: 55, name: 'TRUSS PROLYTE 30x30 0,7M', weight: 6 },
-  { id: 56, name: 'TRUSS PROLYTE 30x30 0,5M', weight: 4 },
-  { id: 57, name: 'TRUSS PROLYTE 30x30 0,3M', weight: 3 },
-  { id: 58, name: 'TRUSS PROLYTE 30x30 CUBO', weight: 12 },
-  { id: 59, name: 'TRUSS PRT 2.44M', weight: 45 },
-  { id: 60, name: 'TRUSS PRT 3,06M', weight: 43 },
-  { id: 61, name: 'VARIOS', weight: 100 }
+// Database for sound components.
+const soundComponentDatabase = [
+  { id: 1, name: ' K1 ', weight: 106 },
+  { id: 2, name: ' K2 ', weight: 56 },
+  { id: 3, name: ' K3 ', weight: 43 },
+  { id: 4, name: ' KARA II ', weight: 25 },
+  { id: 5, name: ' KIVA ', weight: 14 },
+  { id: 6, name: ' KS28 ', weight: 79 },
+  { id: 7, name: ' K1-SB ', weight: 83 },
+  { id: 8, name: ' BUMPER K1 ', weight: 108 },
+  { id: 9, name: ' BUMPER K2 ', weight: 60 },
+  { id: 10, name: ' BUMPER K3 ', weight: 50 },
+  { id: 11, name: ' BUMPER KARA ', weight: 20 },
+  { id: 12, name: ' BUMPER KIVA ', weight: 13 },
+  { id: 13, name: ' BUMPER KS28 ', weight: 15 },
+  { id: 14, name: ' KARADOWNK1 ', weight: 15 },
+  { id: 15, name: ' KARADOWNK2 ', weight: 15 },
+  { id: 16, name: ' MOTOR 2T ', weight: 90 },
+  { id: 17, name: ' MOTOR 1T ', weight: 70 },
+  { id: 18, name: ' MOTOR 750Kg ', weight: 60 },
+  { id: 19, name: ' MOTOR 500Kg ', weight: 50 },
+  { id: 20, name: ' POLIPASTO 1T ', weight: 10.4 },
+  { id: 21, name: ' TFS900H ', weight: 102 },
+  { id: 22, name: ' TFA600 ', weight: 41 },
+  { id: 23, name: ' TFS550H ', weight: 13.4 },
+  { id: 24, name: ' TFS550L ', weight: 27 },
+  { id: 25, name: ' BUMPER TFS900 ', weight: 20 },
+  { id: 26, name: ' TFS900>TFA600 ', weight: 14 },
+  { id: 27, name: ' TFS900>TFS550 ', weight: 14 },
+  { id: 28, name: ' BUMPER TFS550 ', weight: 16 },
+  { id: 29, name: ' CABLEADO L ', weight: 100 },
+  { id: 30, name: ' CABLEADO H ', weight: 250 },
 ];
+
+// Global counter for generating SX numbers.
+let soundTableCounter = 0;
 
 interface TableRow {
   quantity: string;
@@ -88,24 +63,55 @@ interface Table {
   totalWeight?: number;
   id?: number;
   dualMotors?: boolean;
+  riggingPoints?: string; // Stores the generated SX suffix(es)
+}
+
+interface SummaryRow {
+  clusterName: string;
+  riggingPoints: string;
+  clusterWeight: number;
 }
 
 const PesosTool: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: jobs } = useJobSelection();
-  const department = 'lights';
+  const department = 'sound';
 
   const [selectedJobId, setSelectedJobId] = useState<string>('');
-  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
   const [tableName, setTableName] = useState('');
   const [tables, setTables] = useState<Table[]>([]);
   const [useDualMotors, setUseDualMotors] = useState(false);
+  const [mirroredCluster, setMirroredCluster] = useState(false);
+
+  // State for Cable Pick option.
+  const [cablePick, setCablePick] = useState(false);
+  const [cablePickWeight, setCablePickWeight] = useState('100');
 
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
     rows: [{ quantity: '', componentId: '', weight: '' }],
   });
+
+  // Helper to generate an SX suffix.
+  // Returns a string such as "SX01" or "SX01, SX02" depending on useDualMotors.
+  const getSuffix = () => {
+    if (department === 'sound') {
+      if (useDualMotors) {
+        soundTableCounter++;
+        const num1 = soundTableCounter.toString().padStart(2, '0');
+        soundTableCounter++;
+        const num2 = soundTableCounter.toString().padStart(2, '0');
+        return `SX${num1}, SX${num2}`;
+      } else {
+        soundTableCounter++;
+        const num = soundTableCounter.toString().padStart(2, '0');
+        return `SX${num}`;
+      }
+    }
+    return '';
+  };
 
   const addRow = () => {
     setCurrentTable((prev) => ({
@@ -117,7 +123,7 @@ const PesosTool: React.FC = () => {
   const updateInput = (index: number, field: keyof TableRow, value: string) => {
     const newRows = [...currentTable.rows];
     if (field === 'componentId') {
-      const component = lightsComponentDatabase.find((c) => c.id.toString() === value);
+      const component = soundComponentDatabase.find((c) => c.id.toString() === value);
       newRows[index] = {
         ...newRows[index],
         [field]: value,
@@ -151,8 +157,9 @@ const PesosTool: React.FC = () => {
       return;
     }
 
+    // Calculate each row's total weight.
     const calculatedRows = currentTable.rows.map((row) => {
-      const component = lightsComponentDatabase.find((c) => c.id.toString() === row.componentId);
+      const component = soundComponentDatabase.find((c) => c.id.toString() === row.componentId);
       const totalWeight =
         parseFloat(row.quantity) && parseFloat(row.weight)
           ? parseFloat(row.quantity) * parseFloat(row.weight)
@@ -166,16 +173,47 @@ const PesosTool: React.FC = () => {
 
     const totalWeight = calculatedRows.reduce((sum, row) => sum + (row.totalWeight || 0), 0);
 
-    const newTable: Table = {
-      name: tableName,
-      rows: calculatedRows,
-      totalWeight,
-      id: Date.now(),
-      dualMotors: useDualMotors
-    };
+    if (mirroredCluster) {
+      // For mirrored clusters, generate two tables.
+      // Left table: name is "<tableName> L (SXxx)" and store the SX suffix as riggingPoints.
+      const leftSuffix = getSuffix();
+      const rightSuffix = getSuffix();
 
-    setTables((prev) => [...prev, newTable]);
+      const leftTable: Table = {
+        name: `${tableName} L (${leftSuffix})`,
+        riggingPoints: leftSuffix,
+        rows: calculatedRows,
+        totalWeight,
+        id: Date.now(),
+        dualMotors: useDualMotors,
+      };
+
+      const rightTable: Table = {
+        name: `${tableName} R (${rightSuffix})`,
+        riggingPoints: rightSuffix,
+        rows: calculatedRows,
+        totalWeight,
+        id: Date.now() + 1,
+        dualMotors: useDualMotors,
+      };
+
+      setTables((prev) => [...prev, leftTable, rightTable]);
+    } else {
+      // Single table.
+      const suffix = getSuffix();
+      const newTable: Table = {
+        name: `${tableName} (${suffix})`,
+        riggingPoints: suffix,
+        rows: calculatedRows,
+        totalWeight,
+        id: Date.now(),
+        dualMotors: useDualMotors,
+      };
+      setTables((prev) => [...prev, newTable]);
+    }
     resetCurrentTable();
+    setUseDualMotors(false);
+    setMirroredCluster(false);
   };
 
   const resetCurrentTable = () => {
@@ -200,16 +238,49 @@ const PesosTool: React.FC = () => {
       return;
     }
 
+    // Build summary rows from the generated tables.
+    // For the cluster name, remove the SX suffix portion by taking the part before the first "(".
+    const summaryRows: SummaryRow[] = tables.map((table) => ({
+      clusterName: table.name.split('(')[0].trim(),
+      riggingPoints: table.riggingPoints || '',
+      clusterWeight: table.totalWeight || 0,
+    }));
+
+    // If Cable Pick is enabled, add one cable pick summary row per table.
+    if (cablePick) {
+      let cablePickCounter = 0;
+      tables.forEach(() => {
+        cablePickCounter++;
+        summaryRows.push({
+          clusterName: 'CABLE PICK',
+          riggingPoints: `CP${cablePickCounter.toString().padStart(2, '0')}`,
+          clusterWeight: parseFloat(cablePickWeight),
+        });
+      });
+    }
+
     try {
+      // Pass the summaryRows as the 5th parameter (matching the new exportToPDF signature).
       const pdfBlob = await exportToPDF(
         selectedJob.title,
         tables.map((table) => ({ ...table, toolType: 'pesos' })),
         'weight',
         selectedJob.title,
-        undefined
+        summaryRows
       );
 
-      const fileName = `Lights Weight Report - ${selectedJob.title}.pdf`;
+      const fileName = `Pesos Report - ${selectedJob.title}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      const filePath = `sound/${selectedJobId}/${crypto.randomUUID()}.pdf`;
+
+      const { error: uploadError } = await supabase.storage.from('task_documents').upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      toast({
+        title: 'Success',
+        description: 'PDF has been generated and uploaded successfully.',
+      });
+
       const url = window.URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -218,16 +289,11 @@ const PesosTool: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-
-      toast({
-        title: 'Success',
-        description: 'PDF has been generated successfully.',
-      });
     } catch (error) {
       console.error(error);
       toast({
         title: 'Error',
-        description: 'Failed to generate the PDF.',
+        description: 'Failed to generate or upload the PDF.',
         variant: 'destructive',
       });
     }
@@ -237,10 +303,10 @@ const PesosTool: React.FC = () => {
     <Card className="w-full max-w-4xl mx-auto my-6">
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/lights')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/sound')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <CardTitle className="text-2xl font-bold">Lights Weight Calculator</CardTitle>
+          <CardTitle className="text-2xl font-bold">Weight Calculator</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
@@ -269,6 +335,50 @@ const PesosTool: React.FC = () => {
               onChange={(e) => setTableName(e.target.value)}
               placeholder="Enter table name"
             />
+            <div className="flex items-center space-x-2 mt-2">
+              <Checkbox
+                id="dualMotors"
+                checked={useDualMotors}
+                onCheckedChange={(checked) => setUseDualMotors(checked as boolean)}
+              />
+              <Label htmlFor="dualMotors" className="text-sm font-medium">
+                Dual Motors Configuration
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2 mt-2">
+              <Checkbox
+                id="mirroredCluster"
+                checked={mirroredCluster}
+                onCheckedChange={(checked) => setMirroredCluster(checked as boolean)}
+              />
+              <Label htmlFor="mirroredCluster" className="text-sm font-medium">
+                Mirrored Cluster
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2 mt-2">
+              <Checkbox
+                id="cablePick"
+                checked={cablePick}
+                onCheckedChange={(checked) => setCablePick(checked as boolean)}
+              />
+              <Label htmlFor="cablePick" className="text-sm font-medium">
+                Cable Pick
+              </Label>
+              {cablePick && (
+                <Select value={cablePickWeight} onValueChange={(value) => setCablePickWeight(value)}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Select weight" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['100', '200', '300', '400', '500'].map((w) => (
+                      <SelectItem key={w} value={w}>
+                        {w} kg
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           <div className="border rounded-lg overflow-hidden">
@@ -301,7 +411,7 @@ const PesosTool: React.FC = () => {
                           <SelectValue placeholder="Select component" />
                         </SelectTrigger>
                         <SelectContent>
-                          {lightsComponentDatabase.map((component) => (
+                          {soundComponentDatabase.map((component) => (
                             <SelectItem key={component.id} value={component.id.toString()}>
                               {component.name}
                             </SelectItem>
@@ -329,7 +439,7 @@ const PesosTool: React.FC = () => {
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
                 <FileText className="w-4 h-4" />
-                Export PDF
+                Export &amp; Upload PDF
               </Button>
             )}
           </div>
@@ -372,6 +482,11 @@ const PesosTool: React.FC = () => {
                   </tr>
                 </tbody>
               </table>
+              {table.dualMotors && (
+                <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
+                  *This configuration uses dual motors. Load is distributed between two motors for safety and redundancy.
+                </div>
+              )}
             </div>
           ))}
         </div>
