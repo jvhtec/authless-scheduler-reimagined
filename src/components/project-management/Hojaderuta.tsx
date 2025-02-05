@@ -33,6 +33,53 @@ import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+// Add these utility functions before the main component
+const loadImageAsDataURL = async (url: string): Promise<string | null> => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Error loading image:', error);
+    return null;
+  }
+};
+
+const fetchAssignedStaff = async (jobId: string) => {
+  try {
+    const { data: assignments, error } = await supabase
+      .from('job_assignments')
+      .select(`
+        technician_id,
+        profiles:technician_id (
+          first_name,
+          last_name
+        )
+      `)
+      .eq('job_id', jobId);
+
+    if (error) throw error;
+
+    // Transform the assignments into staff format
+    const staff = assignments?.map(assignment => ({
+      name: assignment.profiles?.first_name || '',
+      surname1: assignment.profiles?.last_name?.split(' ')[0] || '',
+      surname2: assignment.profiles?.last_name?.split(' ')[1] || '',
+      position: ''
+    })) || [];
+
+    return staff;
+  } catch (error) {
+    console.error('Error fetching assigned staff:', error);
+    return [];
+  }
+};
+
 // Extend jsPDF to include autoTable
 interface AutoTableJsPDF extends jsPDF {
   lastAutoTable?: {
@@ -1357,3 +1404,4 @@ const HojaDeRutaGenerator = () => {
 };
 
 export default HojaDeRutaGenerator;
+
