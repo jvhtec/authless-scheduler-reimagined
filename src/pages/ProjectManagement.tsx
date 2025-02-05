@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Loader2, Plus, FileText, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input"; 
 import { supabase } from "@/lib/supabase";
-import { Loader2, Plus, FileText, Filter } from "lucide-react";
 import { Department } from "@/types/department";
-import { startOfMonth, endOfMonth, addMonths, parseISO, isWithinInterval } from "date-fns";
+import { startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { MonthNavigation } from "@/components/project-management/MonthNavigation";
 import { DepartmentTabs } from "@/components/project-management/DepartmentTabs";
 import { useJobManagement } from "@/hooks/useJobManagement";
@@ -19,12 +19,15 @@ const ProjectManagement = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [userRole, setUserRole] = useState<string | null>(null);
   const [selectedJobType, setSelectedJobType] = useState("All");
+  const [allJobTypes, setAllJobTypes] = useState<string[]>([]);
 
   const startDate = startOfMonth(currentDate);
   const endDate = endOfMonth(currentDate);
 
-  useTabVisibility(['jobs']);
+  // Use custom hook for tab visibility
+  useTabVisibility(["jobs"]);
 
+  // Query for jobs based on selected department and date range
   const { jobs: unfilteredJobs = [], jobsLoading, handleDeleteDocument } = useJobManagement(
     selectedDepartment,
     startDate,
@@ -32,32 +35,30 @@ const ProjectManagement = () => {
     true
   );
 
-  // Safely derive distinct job types from unfilteredJobs
-  const distinctJobTypes = Array.from(
-    new Set((unfilteredJobs || []).map((job: any) => job.job_type).filter(Boolean))
-  );
-
-  // Filter jobs based on selected job type with null check
+  // Filter jobs based on the selected job type
   const jobs = (unfilteredJobs || []).filter((job: any) => {
     if (selectedJobType === "All") return true;
     return job.job_type === selectedJobType;
   });
   
+  // Check user access and fetch profile role
   useEffect(() => {
     const checkAccess = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
         if (!session) {
           console.log("ProjectManagement: No session found, redirecting to auth");
-          navigate('/auth');
+          navigate("/auth");
           return;
         }
 
         const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
           .single();
 
         if (profileError) {
@@ -65,9 +66,9 @@ const ProjectManagement = () => {
           throw profileError;
         }
 
-        if (!profile || !['admin', 'logistics', 'management'].includes(profile.role)) {
+        if (!profile || !["admin", "logistics", "management"].includes(profile.role)) {
           console.log("ProjectManagement: Unauthorized access attempt");
-          navigate('/dashboard');
+          navigate("/dashboard");
           return;
         }
 
@@ -75,12 +76,39 @@ const ProjectManagement = () => {
         setLoading(false);
       } catch (error) {
         console.error("ProjectManagement: Error in access check:", error);
-        navigate('/dashboard');
+        navigate("/dashboard");
       }
     };
 
     checkAccess();
   }, [navigate]);
+
+  // Fetch all distinct job types from the jobs table
+  useEffect(() => {
+    const fetchJobTypes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("jobs")
+          .select("job_type");
+
+        if (error) {
+          console.error("Error fetching job types:", error);
+          return;
+        }
+
+        // Derive distinct job types and filter out any falsy values
+        const types = Array.from(
+          new Set((data || []).map((job: any) => job.job_type).filter(Boolean))
+        );
+
+        setAllJobTypes(types);
+      } catch (error) {
+        console.error("Error in fetchJobTypes:", error);
+      }
+    };
+
+    fetchJobTypes();
+  }, []);
 
   if (loading || jobsLoading) {
     return (
@@ -104,7 +132,7 @@ const ProjectManagement = () => {
                 className="border border-gray-300 rounded-md py-1 px-2 text-sm"
               >
                 <option value="All">All Types</option>
-                {distinctJobTypes.map((type) => (
+                {allJobTypes.map((type) => (
                   <option key={type} value={type}>
                     {type}
                   </option>
@@ -112,7 +140,7 @@ const ProjectManagement = () => {
               </select>
             </div>
             <Button 
-              onClick={() => navigate('/hoja-de-ruta')} 
+              onClick={() => navigate("/hoja-de-ruta")} 
               className="flex items-center gap-2"
               variant="outline"
             >
@@ -120,7 +148,7 @@ const ProjectManagement = () => {
               Hoja de Ruta
             </Button>
             <Button 
-              onClick={() => navigate('/labor-po-form')} 
+              onClick={() => navigate("/labor-po-form")} 
               className="flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
@@ -131,8 +159,8 @@ const ProjectManagement = () => {
         <CardContent>
           <MonthNavigation
             currentDate={currentDate}
-            onPreviousMonth={() => setCurrentDate(prev => addMonths(prev, -1))}
-            onNextMonth={() => setCurrentDate(prev => addMonths(prev, 1))}
+            onPreviousMonth={() => setCurrentDate((prev) => addMonths(prev, -1))}
+            onNextMonth={() => setCurrentDate((prev) => addMonths(prev, 1))}
           />
           <DepartmentTabs
             selectedDepartment={selectedDepartment}
