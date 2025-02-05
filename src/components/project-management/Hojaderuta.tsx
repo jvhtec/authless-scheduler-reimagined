@@ -467,7 +467,7 @@ const HojaDeRutaGenerator = () => {
             <div className="flex flex-col space-y-2">
               <Label htmlFor="jobSelect">Select Job</Label>
               <Select
-                value={selectedJobId || "none"}
+                value={selectedJobId || "unselected"}
                 onValueChange={setSelectedJobId}
               >
                 <SelectTrigger className="w-full">
@@ -475,13 +475,9 @@ const HojaDeRutaGenerator = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {isLoadingJobs ? (
-                    <SelectItem value="loading">
-                      Loading jobs...
-                    </SelectItem>
+                    <SelectItem value="loading">Loading jobs...</SelectItem>
                   ) : jobs?.length === 0 ? (
-                    <SelectItem value="none">
-                      No jobs available
-                    </SelectItem>
+                    <SelectItem value="unselected">No jobs available</SelectItem>
                   ) : (
                     jobs?.map((job) => (
                       <SelectItem key={job.id} value={job.id}>
