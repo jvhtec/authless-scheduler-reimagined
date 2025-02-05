@@ -400,122 +400,130 @@ async function createAllFoldersForJob(
 
   console.log("Default job type detected. Creating full folder structure.");
 
-  const topPayload = {
-    definitionId: FLEX_FOLDER_IDS.mainFolder,
+const topPayload = {
+  definitionId: FLEX_FOLDER_IDS.mainFolder,
+  open: true,
+  locked: false,
+  name: job.title,
+  plannedStartDate: formattedStartDate,
+  plannedEndDate: formattedEndDate,
+  locationId: FLEX_FOLDER_IDS.location,
+  personResponsibleId: FLEX_FOLDER_IDS.mainResponsible,
+  documentNumber,
+};
+
+const topFolder = await createFlexFolder(topPayload);
+const topFolderId = topFolder.elementId;
+
+await supabase
+  .from("flex_folders")
+  .insert({
+    job_id: job.id,
+    element_id: topFolderId,
+    folder_type: "main_event",
+  });
+
+const departments = ["sound", "lights", "video", "production", "personnel"];
+for (const dept of departments) {
+  const deptPayload = {
+    definitionId: FLEX_FOLDER_IDS.subFolder,
+    parentElementId: topFolderId,
     open: true,
     locked: false,
-    name: job.title,
+    name: `${job.title} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
     plannedStartDate: formattedStartDate,
     plannedEndDate: formattedEndDate,
     locationId: FLEX_FOLDER_IDS.location,
-    personResponsibleId: FLEX_FOLDER_IDS.mainResponsible,
-    documentNumber,
+    departmentId: DEPARTMENT_IDS[dept],
+    documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`,
+    personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
   };
 
-  const topFolder = await createFlexFolder(topPayload);
-  const topFolderId = topFolder.elementId;
+  console.log(`Creating department folder for ${dept}:`, deptPayload);
+  const deptFolder = await createFlexFolder(deptPayload);
 
-  await supabase
+  // IMPORTANT: capture the inserted row so we get its internal (local DB) ID,
+  // similar to what we do in the tourdate branch.
+  const { data: [childRow], error: childErr } = await supabase
     .from("flex_folders")
     .insert({
       job_id: job.id,
-      element_id: topFolderId,
-      folder_type: "main_event",
-    });
+      parent_id: topFolderId,
+      element_id: deptFolder.elementId,
+      department: dept,
+      folder_type: "department",
+    })
+    .select("*");
 
-  const departments = ["sound", "lights", "video", "production", "personnel"];
-  for (const dept of departments) {
-    const deptPayload = {
-      definitionId: FLEX_FOLDER_IDS.subFolder,
-      parentElementId: topFolderId,
-      open: true,
-      locked: false,
-      name: `${job.title} - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
-      plannedStartDate: formattedStartDate,
-      plannedEndDate: formattedEndDate,
-      locationId: FLEX_FOLDER_IDS.location,
-      departmentId: DEPARTMENT_IDS[dept],
-      documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}`,
-      personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
-    };
+  if (childErr || !childRow) {
+    console.error("Error inserting department folder row:", childErr);
+    continue;
+  }
 
-    const deptFolder = await createFlexFolder(deptPayload);
-    const deptFolderId = deptFolder.elementId;
+  const deptFolderId = childRow.element_id;
 
-    await supabase
-      .from("flex_folders")
-      .insert({
-        job_id: job.id,
-        parent_id: topFolderId,
-        element_id: deptFolderId,
-        department: dept,
-        folder_type: "department",
-      });
+  if (dept !== "personnel") {
+    const subfolders = [
+      {
+        definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
+        name: `Documentación Técnica - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+        suffix: "DT",
+      },
+      {
+        definitionId: FLEX_FOLDER_IDS.presupuestosRecibidos,
+        name: `Presupuestos Recibidos - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+        suffix: "PR",
+      },
+      {
+        definitionId: FLEX_FOLDER_IDS.hojaGastos,
+        name: `Hoja de Gastos - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
+        suffix: "HG",
+      },
+    ];
 
-    if (dept !== "personnel") {
-      const subfolders = [
-        {
-          definitionId: FLEX_FOLDER_IDS.documentacionTecnica,
-          name: `Documentación Técnica - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
-          suffix: "DT",
-        },
-        {
-          definitionId: FLEX_FOLDER_IDS.presupuestosRecibidos,
-          name: `Presupuestos Recibidos - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
-          suffix: "PR",
-        },
-        {
-          definitionId: FLEX_FOLDER_IDS.hojaGastos,
-          name: `Hoja de Gastos - ${dept.charAt(0).toUpperCase() + dept.slice(1)}`,
-          suffix: "HG",
-        },
-      ];
+    for (const sf of subfolders) {
+      const subPayload = {
+        definitionId: sf.definitionId,
+        parentElementId: deptFolderId,
+        open: true,
+        locked: false,
+        name: sf.name,
+        plannedStartDate: formattedStartDate,
+        plannedEndDate: formattedEndDate,
+        locationId: FLEX_FOLDER_IDS.location,
+        departmentId: DEPARTMENT_IDS[dept],
+        documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
+        personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
+      };
 
-      for (const sf of subfolders) {
-        const subPayload = {
-          definitionId: sf.definitionId,
-          parentElementId: deptFolderId,
-          open: true,
-          locked: false,
-          name: sf.name,
-          plannedStartDate: formattedStartDate,
-          plannedEndDate: formattedEndDate,
-          locationId: FLEX_FOLDER_IDS.location,
-          departmentId: DEPARTMENT_IDS[dept],
-          documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
-          personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
-        };
-
-        await createFlexFolder(subPayload);
-      }
+      await createFlexFolder(subPayload);
     }
+  } else if (dept === "personnel") {
+    const personnelSubfolders = [
+      { name: `Crew Call Sonido - ${job.title}`, suffix: "CCS" },
+      { name: `Crew Call Luces - ${job.title}`, suffix: "CCL" },
+      { name: `Gastos de Personal - ${job.title}`, suffix: "GP" },
+    ];
 
-    if (dept === "personnel") {
-      const personnelSubfolders = [
-        { name: `Crew Call Sonido - ${job.title}`, suffix: "CCS" },
-        { name: `Crew Call Luces - ${job.title}`, suffix: "CCL" },
-        { name: `Gastos de Personal - ${job.title}`, suffix: "GP" },
-      ];
+    for (const sf of personnelSubfolders) {
+      const subPayload = {
+        definitionId: FLEX_FOLDER_IDS.subFolder,
+        parentElementId: deptFolderId,
+        open: true,
+        locked: false,
+        name: sf.name,
+        plannedStartDate: formattedStartDate,
+        plannedEndDate: formattedEndDate,
+        locationId: FLEX_FOLDER_IDS.location,
+        documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
+        departmentId: DEPARTMENT_IDS[dept],
+        personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
+      };
 
-      for (const sf of personnelSubfolders) {
-        const subPayload = {
-          definitionId: FLEX_FOLDER_IDS.subFolder,
-          parentElementId: deptFolderId,
-          open: true,
-          locked: false,
-          name: sf.name,
-          plannedStartDate: formattedStartDate,
-          plannedEndDate: formattedEndDate,
-          locationId: FLEX_FOLDER_IDS.location,
-          documentNumber: `${documentNumber}${DEPARTMENT_SUFFIXES[dept]}${sf.suffix}`,
-          departmentId: DEPARTMENT_IDS[dept],
-          personResponsibleId: RESPONSIBLE_PERSON_IDS[dept],
-        };
-
-        await createFlexFolder(subPayload);
-      }
+      await createFlexFolder(subPayload);
     }
   }
+}
 }
 
 export function JobCardNew({
