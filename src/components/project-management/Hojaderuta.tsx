@@ -292,6 +292,163 @@ const HojaDeRutaGenerator = () => {
     setRoomAssignments(newAssignments);
   };
 
+  interface ImageUploadSectionProps {
+    type: keyof typeof images;
+    label: string;
+  }
+
+  const ImageUploadSection = ({ type, label }: ImageUploadSectionProps) => {
+    return (
+      <div className="space-y-4">
+        <Label>{label}</Label>
+        <div className="grid grid-cols-3 gap-4">
+          {imagePreviews[type]?.map((preview, index) => (
+            <div key={index} className="relative">
+              <img
+                src={preview}
+                alt={`Preview ${index + 1}`}
+                className="w-full h-32 object-cover rounded-md"
+              />
+              <Button
+                variant="destructive"
+                size="icon"
+                className="absolute top-2 right-2"
+                onClick={() => removeImage(type, index)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+        <Input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={(e) => handleImageUpload(type, e.target.files)}
+        />
+      </div>
+    );
+  };
+
+  const generateDocument = async () => {
+    try {
+      const doc = new jsPDF() as AutoTableJsPDF;
+      
+      // Title
+      doc.setFontSize(20);
+      doc.text("Hoja de Ruta", 105, 15, { align: "center" });
+      
+      // Event Details
+      doc.setFontSize(12);
+      autoTable(doc, {
+        body: [
+          ["Event Name:", eventData.eventName],
+          ["Event Dates:", eventData.eventDates],
+          ["Venue:", `${eventData.venue.name}\n${eventData.venue.address}`]
+        ],
+        theme: 'plain',
+        startY: 25
+      });
+
+      // Contacts
+      if (eventData.contacts.length > 0) {
+        autoTable(doc, {
+          head: [["Contact Name", "Role", "Phone"]],
+          body: eventData.contacts.map(contact => [
+            contact.name,
+            contact.role,
+            contact.phone
+          ]),
+          startY: (doc.lastAutoTable?.finalY || 0) + 10
+        });
+      }
+
+      // Staff List
+      if (eventData.staff.length > 0) {
+        autoTable(doc, {
+          head: [["Name", "Surname", "Position"]],
+          body: eventData.staff.map(member => [
+            member.name,
+            `${member.surname1} ${member.surname2 || ''}`,
+            member.position
+          ]),
+          startY: (doc.lastAutoTable?.finalY || 0) + 10
+        });
+      }
+
+      // Travel Arrangements
+      if (travelArrangements.length > 0) {
+        autoTable(doc, {
+          head: [["Transport", "Pickup", "Departure", "Arrival", "Notes"]],
+          body: travelArrangements.map(arr => [
+            arr.transportation_type,
+            `${arr.pickup_address || ''}\n${arr.pickup_time || ''}`,
+            arr.departure_time || '',
+            arr.arrival_time || '',
+            arr.notes || ''
+          ]),
+          startY: (doc.lastAutoTable?.finalY || 0) + 10
+        });
+      }
+
+      // Room Assignments
+      if (roomAssignments.length > 0) {
+        autoTable(doc, {
+          head: [["Room Type", "Room Number", "Staff Member 1", "Staff Member 2"]],
+          body: roomAssignments.map(room => [
+            room.room_type,
+            room.room_number || '',
+            room.staff_member1_id || '',
+            room.staff_member2_id || ''
+          ]),
+          startY: (doc.lastAutoTable?.finalY || 0) + 10
+        });
+      }
+
+      // Schedule
+      if (eventData.schedule) {
+        autoTable(doc, {
+          head: [["Schedule"]],
+          body: [[eventData.schedule]],
+          startY: (doc.lastAutoTable?.finalY || 0) + 10
+        });
+      }
+
+      // Power Requirements
+      if (eventData.powerRequirements) {
+        autoTable(doc, {
+          head: [["Power Requirements"]],
+          body: [[eventData.powerRequirements]],
+          startY: (doc.lastAutoTable?.finalY || 0) + 10
+        });
+      }
+
+      // Auxiliary Needs
+      if (eventData.auxiliaryNeeds) {
+        autoTable(doc, {
+          head: [["Auxiliary Needs"]],
+          body: [[eventData.auxiliaryNeeds]],
+          startY: (doc.lastAutoTable?.finalY || 0) + 10
+        });
+      }
+
+      // Save the PDF
+      doc.save(`hoja_de_ruta_${eventData.eventName.replace(/\s+/g, '_')}.pdf`);
+
+      toast({
+        title: "Success",
+        description: "Hoja de Ruta has been generated successfully",
+      });
+    } catch (error) {
+      console.error('Error generating document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate Hoja de Ruta",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader>
