@@ -33,7 +33,7 @@ import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// Extend jsPDF type with autoTable
+// Extensión de jsPDF para usar autoTable
 interface AutoTableJsPDF extends jsPDF {
   lastAutoTable?: {
     finalY: number;
@@ -103,7 +103,7 @@ const HojaDeRutaGenerator = () => {
   });
 
   // ---------------------------
-  // IMAGE & FILE STATE
+  // ESTADOS DE IMÁGENES Y ARCHIVOS
   // ---------------------------
   const [images, setImages] = useState({
     venue: [] as File[],
@@ -111,7 +111,7 @@ const HojaDeRutaGenerator = () => {
   const [imagePreviews, setImagePreviews] = useState({
     venue: [] as string[],
   });
-  // New state for venue location map (a single file)
+  // Nuevo estado para el mapa de ubicación del lugar (archivo único)
   const [venueMap, setVenueMap] = useState<File | null>(null);
   const [venueMapPreview, setVenueMapPreview] = useState<string | null>(null);
 
@@ -124,7 +124,7 @@ const HojaDeRutaGenerator = () => {
   ]);
 
   // ---------------------------
-  // UTILITY: load image from URL as dataURL
+  // UTILIDAD: cargar imagen desde URL como DataURL
   // ---------------------------
   const loadImageAsDataURL = async (url: string): Promise<string | null> => {
     try {
@@ -137,13 +137,13 @@ const HojaDeRutaGenerator = () => {
         reader.readAsDataURL(blob);
       });
     } catch (error) {
-      console.error("Error loading image", error);
+      console.error("Error al cargar la imagen", error);
       return null;
     }
   };
 
   // ---------------------------
-  // FETCH FUNCTIONS
+  // FUNCIONES DE CONSULTA
   // ---------------------------
   const fetchPowerRequirements = async (jobId: string) => {
     try {
@@ -155,13 +155,13 @@ const HojaDeRutaGenerator = () => {
       if (error) throw error;
 
       if (requirements && requirements.length > 0) {
-        // Format power requirements into readable text
+        // Formatear los requisitos eléctricos en texto legible
         const formattedRequirements = requirements
           .map((req: any) => {
             return `${req.department.toUpperCase()} - ${req.table_name}:\n` +
-              `Total Power: ${req.total_watts}W\n` +
-              `Current per Phase: ${req.current_per_phase}A\n` +
-              `Recommended PDU: ${req.pdu_type}\n`;
+              `Potencia Total: ${req.total_watts}W\n` +
+              `Corriente por Fase: ${req.current_per_phase}A\n` +
+              `PDU Recomendado: ${req.pdu_type}\n`;
           })
           .join("\n");
         setPowerRequirements(formattedRequirements);
@@ -171,10 +171,10 @@ const HojaDeRutaGenerator = () => {
         }));
       }
     } catch (error: any) {
-      console.error("Error fetching power requirements:", error);
+      console.error("Error al obtener los requisitos eléctricos:", error);
       toast({
         title: "Error",
-        description: "Failed to fetch power requirements",
+        description: "No se pudieron obtener los requisitos eléctricos",
         variant: "destructive",
       });
     }
@@ -206,7 +206,7 @@ const HojaDeRutaGenerator = () => {
             assignment.sound_role ||
             assignment.lights_role ||
             assignment.video_role ||
-            "Technician",
+            "Técnico",
         }));
 
         setEventData((prev) => ({
@@ -215,10 +215,10 @@ const HojaDeRutaGenerator = () => {
         }));
       }
     } catch (error) {
-      console.error("Error fetching staff:", error);
+      console.error("Error al obtener el personal:", error);
       toast({
         title: "Error",
-        description: "Failed to fetch assigned staff",
+        description: "No se pudo obtener el personal asignado",
         variant: "destructive",
       });
     }
@@ -228,8 +228,8 @@ const HojaDeRutaGenerator = () => {
     if (selectedJobId && jobs) {
       const selectedJob = jobs.find((job: any) => job.id === selectedJobId);
       if (selectedJob) {
-        console.log("Selected job:", selectedJob);
-        // Format dates
+        console.log("Trabajo seleccionado:", selectedJob);
+        // Formatear fechas
         const formattedDates = `${format(
           new Date(selectedJob.start_time),
           "dd/MM/yyyy HH:mm"
@@ -245,15 +245,15 @@ const HojaDeRutaGenerator = () => {
         fetchAssignedStaff(selectedJob.id);
 
         toast({
-          title: "Job Selected",
-          description: "Form has been updated with job details",
+          title: "Trabajo Seleccionado",
+          description: "El formulario se ha actualizado con los detalles del trabajo",
         });
       }
     }
   }, [selectedJobId, jobs]);
 
   // ---------------------------
-  // IMAGE HANDLERS
+  // MANEJADORES DE IMÁGENES
   // ---------------------------
   const handleImageUpload = (
     type: keyof typeof images,
@@ -281,7 +281,7 @@ const HojaDeRutaGenerator = () => {
     setImagePreviews({ ...imagePreviews, [type]: newPreviews });
   };
 
-  // New handler for uploading the venue location map
+  // Nuevo manejador para subir el mapa de ubicación del lugar
   const handleVenueMapUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -292,7 +292,7 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // CONTACT & STAFF HANDLERS
+  // MANEJADORES DE CONTACTOS Y PERSONAL
   // ---------------------------
   const handleContactChange = (index: number, field: string, value: string) => {
     const newContacts = [...eventData.contacts];
@@ -324,7 +324,7 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // TRAVEL & ROOM HANDLERS
+  // MANEJADORES DE ARREGLOS DE VIAJE Y ASIGNACIONES DE HABITACIONES
   // ---------------------------
   const addTravelArrangement = () => {
     setTravelArrangements([...travelArrangements, { transportation_type: "van" }]);
@@ -367,7 +367,7 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // IMAGE UPLOAD COMPONENT
+  // COMPONENTE DE SUBIDA DE IMÁGENES
   // ---------------------------
   interface ImageUploadSectionProps {
     type: keyof typeof images;
@@ -390,7 +390,7 @@ const HojaDeRutaGenerator = () => {
               <div key={index} className="relative group">
                 <img
                   src={preview}
-                  alt={`${type} preview ${index + 1}`}
+                  alt={`${type} vista previa ${index + 1}`}
                   className="w-full h-32 object-cover rounded-lg"
                 />
                 <button
@@ -408,7 +408,7 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // UPLOAD PDF TO SUPABASE
+  // SUBIDA DEL PDF A SUPABASE
   // ---------------------------
   const uploadPdfToJob = async (
     jobId: string,
@@ -416,9 +416,9 @@ const HojaDeRutaGenerator = () => {
     fileName: string
   ) => {
     try {
-      console.log("Starting upload for PDF:", fileName);
+      console.log("Iniciando subida del PDF:", fileName);
 
-      // Sanitize the filename
+      // Sanitizar el nombre del archivo
       const sanitizedFileName = fileName
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
@@ -426,9 +426,9 @@ const HojaDeRutaGenerator = () => {
         .replace(/\s+/g, "_");
 
       const filePath = `${crypto.randomUUID()}-${sanitizedFileName}`;
-      console.log("Uploading with sanitized path:", filePath);
+      console.log("Subiendo con la ruta sanitizada:", filePath);
 
-      // Upload to Supabase storage
+      // Subir a Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("job_documents")
         .upload(filePath, pdfBlob, {
@@ -437,13 +437,13 @@ const HojaDeRutaGenerator = () => {
         });
 
       if (uploadError) {
-        console.error("Upload error:", uploadError);
+        console.error("Error en la subida:", uploadError);
         throw uploadError;
       }
 
-      console.log("File uploaded successfully:", uploadData);
+      console.log("Archivo subido con éxito:", uploadData);
 
-      // Create a database record
+      // Crear un registro en la base de datos
       const { error: dbError } = await supabase.from("job_documents").insert({
         job_id: jobId,
         file_name: fileName,
@@ -453,18 +453,18 @@ const HojaDeRutaGenerator = () => {
       });
 
       if (dbError) {
-        console.error("Database error:", dbError);
+        console.error("Error en la base de datos:", dbError);
         throw dbError;
       }
 
       toast({
-        title: "Success",
-        description: "Hoja de Ruta has been generated and uploaded",
+        title: "Éxito",
+        description: "La Hoja de Ruta ha sido generada y subida",
       });
     } catch (error: any) {
-      console.error("Upload failed:", error);
+      console.error("Fallo en la subida:", error);
       toast({
-        title: "Upload failed",
+        title: "Fallo en la subida",
         description: error.message,
         variant: "destructive",
       });
@@ -472,27 +472,27 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // GENERATE PDF DOCUMENT
+  // GENERAR DOCUMENTO PDF (Todo en español)
   // ---------------------------
   const generateDocument = async () => {
     if (!selectedJobId) {
       toast({
         title: "Error",
-        description: "Please select a job before generating the document.",
+        description: "Por favor, seleccione un trabajo antes de generar el documento.",
         variant: "destructive",
       });
       return;
     }
 
     const selectedJob = jobs?.find((job: any) => job.id === selectedJobId);
-    const jobTitle = selectedJob?.title || "Unnamed_Job";
+    const jobTitle = selectedJob?.title || "Trabajo_Sin_Nombre";
 
     const doc = new jsPDF() as AutoTableJsPDF;
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
-    const bottomMargin = 60; // Reserve 60 points at bottom for logo
+    const bottomMargin = 60; // Reservar 60 puntos en la parte inferior para el logo
 
-    // Helper to add a page if current y exceeds safe area
+    // Función auxiliar para agregar una página si la posición actual excede el área segura
     const checkPageBreak = (currentY: number): number => {
       if (currentY > pageHeight - bottomMargin) {
         doc.addPage();
@@ -501,11 +501,11 @@ const HojaDeRutaGenerator = () => {
       return currentY;
     };
 
-    // Add header background on first page
+    // Agregar fondo de cabecera en la primera página
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, "F");
 
-    // Title and Event Name (centered, white text)
+    // Título y nombre del evento (centrado, texto blanco)
     doc.setFontSize(24);
     doc.setTextColor(255, 255, 255);
     doc.text("Hoja de Ruta", pageWidth / 2, 20, { align: "center" });
@@ -516,37 +516,36 @@ const HojaDeRutaGenerator = () => {
     doc.setFontSize(12);
     doc.setTextColor(51, 51, 51);
 
-    // Event Dates
+    // Fechas del evento
     yPosition = checkPageBreak(yPosition);
-    doc.text(`Dates: ${eventData.eventDates}`, 20, yPosition);
+    doc.text(`Fechas: ${eventData.eventDates}`, 20, yPosition);
     yPosition += 15;
 
-    // Venue Information Section
+    // Sección de Información del Lugar
     yPosition = checkPageBreak(yPosition);
     doc.setFontSize(14);
     doc.setTextColor(125, 1, 1);
-    doc.text("Venue Information", 20, yPosition);
+    doc.text("Información del Lugar", 20, yPosition);
     yPosition += 10;
     doc.setFontSize(10);
     doc.setTextColor(51, 51, 51);
-    doc.text(`Name: ${eventData.venue.name}`, 30, yPosition);
+    doc.text(`Nombre: ${eventData.venue.name}`, 30, yPosition);
     yPosition += 7;
-    doc.text(`Address: ${eventData.venue.address}`, 30, yPosition);
+    doc.text(`Dirección: ${eventData.venue.address}`, 30, yPosition);
     yPosition += 15;
-    // Insert Venue Map image if available (printed just below venue address)
+    // Insertar el mapa de ubicación del lugar, si está disponible (debajo de la dirección)
     if (venueMapPreview) {
       try {
-        // You can adjust width/height as desired
         const mapWidth = 100;
         const mapHeight = 60;
         doc.addImage(venueMapPreview, "JPEG", 30, yPosition, mapWidth, mapHeight);
         yPosition += mapHeight + 10;
       } catch (error) {
-        console.error("Error adding venue map to PDF:", error);
+        console.error("Error al agregar el mapa del lugar al PDF:", error);
       }
     }
 
-    // Contacts Section
+    // Sección de Contactos
     if (
       eventData.contacts.some(
         (contact) => contact.name || contact.role || contact.phone
@@ -555,7 +554,7 @@ const HojaDeRutaGenerator = () => {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text("Contacts", 20, yPosition);
+      doc.text("Contactos", 20, yPosition);
       yPosition += 10;
 
       const contactsTableData = eventData.contacts.map((contact) => [
@@ -565,7 +564,7 @@ const HojaDeRutaGenerator = () => {
       ]);
       autoTable(doc, {
         startY: yPosition,
-        head: [["Name", "Role", "Phone"]],
+        head: [["Nombre", "Rol", "Teléfono"]],
         body: contactsTableData,
         theme: "grid",
         styles: { fontSize: 10 },
@@ -573,7 +572,7 @@ const HojaDeRutaGenerator = () => {
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Logistics Section
+    // Sección de Logística
     if (
       eventData.logistics.transport ||
       eventData.logistics.loadingDetails ||
@@ -582,14 +581,14 @@ const HojaDeRutaGenerator = () => {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text("Logistics", 20, yPosition);
+      doc.text("Logística", 20, yPosition);
       yPosition += 10;
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
       const logisticsText = [
-        { label: "Transport:", value: eventData.logistics.transport },
-        { label: "Loading Details:", value: eventData.logistics.loadingDetails },
-        { label: "Unloading Details:", value: eventData.logistics.unloadingDetails },
+        { label: "Transporte:", value: eventData.logistics.transport },
+        { label: "Detalles de Carga:", value: eventData.logistics.loadingDetails },
+        { label: "Detalles de Descarga:", value: eventData.logistics.unloadingDetails },
       ];
       logisticsText.forEach((item) => {
         if (item.value) {
@@ -602,7 +601,7 @@ const HojaDeRutaGenerator = () => {
       });
     }
 
-    // Staff Section
+    // Sección de Personal
     if (
       eventData.staff.some(
         (person) => person.name || person.surname1 || person.surname2 || person.position
@@ -611,7 +610,7 @@ const HojaDeRutaGenerator = () => {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text("Staff List", 20, yPosition);
+      doc.text("Lista de Personal", 20, yPosition);
       yPosition += 10;
 
       const staffTableData = eventData.staff.map((person) => [
@@ -622,7 +621,7 @@ const HojaDeRutaGenerator = () => {
       ]);
       autoTable(doc, {
         startY: yPosition,
-        head: [["Name", "First Surname", "Second Surname", "Position"]],
+        head: [["Nombre", "Primer Apellido", "Segundo Apellido", "Puesto"]],
         body: staffTableData,
         theme: "grid",
         styles: { fontSize: 10 },
@@ -630,7 +629,7 @@ const HojaDeRutaGenerator = () => {
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Travel Arrangements Section
+    // Sección de Arreglos de Viaje
     if (
       travelArrangements.length > 0 &&
       travelArrangements.some((arr) =>
@@ -640,7 +639,7 @@ const HojaDeRutaGenerator = () => {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text("Travel Arrangements", 20, yPosition);
+      doc.text("Arreglos de Viaje", 20, yPosition);
       yPosition += 10;
       const travelTableData = travelArrangements.map((arr) => [
         arr.transportation_type,
@@ -652,42 +651,52 @@ const HojaDeRutaGenerator = () => {
       ]);
       autoTable(doc, {
         startY: yPosition,
-        head: [["Transport", "Pickup", "Departure", "Arrival", "Flight/Train #", "Notes"]],
+        head: [["Transporte", "Recogida", "Salida", "Llegada", "Vuelo/Tren #", "Notas"]],
         body: travelTableData,
         theme: "grid",
         styles: { fontSize: 10 },
       });
       yPosition = (doc as any).lastAutoTable.finalY + 15;
 
-      // For each travel arrangement with a hardcoded pickup address, print a placeholder map image below
+      // Obtener direcciones de recogida únicas
+      const uniquePickupAddresses = Array.from(
+        new Set(
+          travelArrangements
+            .filter((arr) => arr.pickup_address)
+            .map((arr) => arr.pickup_address as string)
+        )
+      );
+
+      // Objeto con URLs placeholder para mapas
       const transportationMapPlaceholders: { [key: string]: string } = {
-        address1: "https://via.placeholder.com/300x200?text=Map+for+Address+1",
-        address2: "https://via.placeholder.com/300x200?text=Map+for+Address+2",
-        address3: "https://via.placeholder.com/300x200?text=Map+for+Address+3",
+        address1: "https://via.placeholder.com/300x200?text=Mapa+para+Dirección+1",
+        address2: "https://via.placeholder.com/300x200?text=Mapa+para+Dirección+2",
+        address3: "https://via.placeholder.com/300x200?text=Mapa+para+Dirección+3",
       };
 
-      for (let i = 0; i < travelArrangements.length; i++) {
-        const arr = travelArrangements[i];
-        if (arr.pickup_address && transportationMapPlaceholders[arr.pickup_address]) {
-          const imageDataUrl = await loadImageAsDataURL(transportationMapPlaceholders[arr.pickup_address]);
+      // Imprimir solo una vez por cada dirección única
+      for (const pickupAddress of uniquePickupAddresses) {
+        if (transportationMapPlaceholders[pickupAddress]) {
+          yPosition = checkPageBreak(yPosition);
+          doc.setFontSize(10);
+          doc.setTextColor(51, 51, 51);
+          doc.text(`Dirección de Recogida: ${pickupAddress}`, 20, yPosition);
+          yPosition += 7;
+          const placeholderUrl = transportationMapPlaceholders[pickupAddress];
+          const imageDataUrl = await loadImageAsDataURL(placeholderUrl);
           if (imageDataUrl) {
-            yPosition = checkPageBreak(yPosition);
-            doc.setFontSize(10);
-            doc.setTextColor(51, 51, 51);
-            doc.text(`Map for ${arr.pickup_address}:`, 20, yPosition);
-            yPosition += 7;
             try {
               doc.addImage(imageDataUrl, "JPEG", 20, yPosition, 100, 60);
               yPosition += 70;
             } catch (error) {
-              console.error("Error adding transportation map image:", error);
+              console.error("Error al agregar la imagen del mapa de transporte:", error);
             }
           }
         }
       }
     }
 
-    // Room Assignments Section
+    // Sección de Asignaciones de Habitaciones
     if (
       roomAssignments.length > 0 &&
       roomAssignments.some((room) =>
@@ -697,7 +706,7 @@ const HojaDeRutaGenerator = () => {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text("Room Assignments", 20, yPosition);
+      doc.text("Asignaciones de Habitaciones", 20, yPosition);
       yPosition += 10;
       const roomTableData = roomAssignments.map((room) => [
         room.room_type,
@@ -707,7 +716,7 @@ const HojaDeRutaGenerator = () => {
       ]);
       autoTable(doc, {
         startY: yPosition,
-        head: [["Room Type", "Room Number", "Staff Member 1", "Staff Member 2"]],
+        head: [["Tipo de Habitación", "Número", "Personal 1", "Personal 2"]],
         body: roomTableData,
         theme: "grid",
         styles: { fontSize: 10 },
@@ -715,12 +724,12 @@ const HojaDeRutaGenerator = () => {
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Schedule Section
+    // Sección de Programa
     if (eventData.schedule) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text("Schedule", 20, yPosition);
+      doc.text("Programa", 20, yPosition);
       yPosition += 10;
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
@@ -729,12 +738,12 @@ const HojaDeRutaGenerator = () => {
       yPosition += scheduleLines.length * 7 + 15;
     }
 
-    // Power Requirements Section
+    // Sección de Requisitos Eléctricos
     if (eventData.powerRequirements) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text("Power Requirements", 20, yPosition);
+      doc.text("Requisitos Eléctricos", 20, yPosition);
       yPosition += 10;
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
@@ -743,12 +752,12 @@ const HojaDeRutaGenerator = () => {
       yPosition += powerLines.length * 7 + 15;
     }
 
-    // Auxiliary Needs Section
+    // Sección de Necesidades Auxiliares
     if (eventData.auxiliaryNeeds) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text("Auxiliary Needs", 20, yPosition);
+      doc.text("Necesidades Auxiliares", 20, yPosition);
       yPosition += 10;
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
@@ -757,13 +766,13 @@ const HojaDeRutaGenerator = () => {
       yPosition += auxLines.length * 7 + 15;
     }
 
-    // Venue Images Section (if any)
+    // Sección de Imágenes del Lugar (si existen)
     if (imagePreviews.venue.length > 0) {
       doc.addPage();
       yPosition = 20;
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text("Venue Images", 20, yPosition);
+      doc.text("Imágenes del Lugar", 20, yPosition);
       yPosition += 20;
       const imageWidth = 80;
       const imagesPerRow = 2;
@@ -783,14 +792,14 @@ const HojaDeRutaGenerator = () => {
             currentX = 20;
           }
         } catch (error) {
-          console.error("Error adding image:", error);
+          console.error("Error al agregar la imagen:", error);
           continue;
         }
       }
     }
 
     // ---------------------------
-    // ADD LOGO ON EVERY PAGE
+    // AGREGAR LOGO EN CADA PÁGINA
     // ---------------------------
     const logo = new Image();
     logo.crossOrigin = "anonymous";
@@ -816,7 +825,7 @@ const HojaDeRutaGenerator = () => {
       URL.revokeObjectURL(url);
     };
     logo.onerror = () => {
-      console.error("Failed to load logo");
+      console.error("No se pudo cargar el logo");
       const blob = doc.output("blob");
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -828,12 +837,12 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // JSX RETURN
+  // RETORNO JSX
   // ---------------------------
   return (
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader>
-        <CardTitle>Hoja de Ruta Generator</CardTitle>
+        <CardTitle>Generador de Hoja de Ruta</CardTitle>
       </CardHeader>
       <ScrollArea className="h-[calc(100vh-12rem)]">
         <CardContent className="space-y-6">
@@ -843,22 +852,22 @@ const HojaDeRutaGenerator = () => {
             </Alert>
           )}
 
-          {/* Job Selection */}
+          {/* Selección de Trabajo */}
           <div className="space-y-4">
             <div className="flex flex-col space-y-2">
-              <Label htmlFor="jobSelect">Select Job</Label>
+              <Label htmlFor="jobSelect">Seleccione Trabajo</Label>
               <Select
                 value={selectedJobId || "unselected"}
                 onValueChange={setSelectedJobId}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a job..." />
+                  <SelectValue placeholder="Seleccione un trabajo..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLoadingJobs ? (
-                    <SelectItem value="loading">Loading jobs...</SelectItem>
+                  {isLoading: isLoadingJobs ? (
+                    <SelectItem value="loading">Cargando trabajos...</SelectItem>
                   ) : jobs?.length === 0 ? (
-                    <SelectItem value="unselected">No jobs available</SelectItem>
+                    <SelectItem value="unselected">No hay trabajos disponibles</SelectItem>
                   ) : (
                     jobs?.map((job: any) => (
                       <SelectItem key={job.id} value={job.id}>
@@ -871,7 +880,7 @@ const HojaDeRutaGenerator = () => {
             </div>
 
             <div>
-              <Label htmlFor="eventName">Event Name</Label>
+              <Label htmlFor="eventName">Nombre del Evento</Label>
               <Input
                 id="eventName"
                 value={eventData.eventName}
@@ -881,7 +890,7 @@ const HojaDeRutaGenerator = () => {
               />
             </div>
             <div>
-              <Label htmlFor="eventDates">Event Dates</Label>
+              <Label htmlFor="eventDates">Fechas del Evento</Label>
               <div className="relative">
                 <Input
                   id="eventDates"
@@ -895,25 +904,25 @@ const HojaDeRutaGenerator = () => {
             </div>
           </div>
 
-          {/* Images Section */}
+          {/* Sección de Imágenes */}
           <div className="space-y-6">
-            <ImageUploadSection type="venue" label="Venue Images" />
+            <ImageUploadSection type="venue" label="Imágenes del Lugar" />
           </div>
 
-          {/* Venue Dialog */}
+          {/* Diálogo de Lugar */}
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" className="w-full">
-                Edit Venue Details
+                Editar Detalles del Lugar
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Venue Information</DialogTitle>
+                <DialogTitle>Información del Lugar</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="venueName">Venue Name</Label>
+                  <Label htmlFor="venueName">Nombre del Lugar</Label>
                   <Input
                     id="venueName"
                     value={eventData.venue.name}
@@ -926,7 +935,7 @@ const HojaDeRutaGenerator = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="venueAddress">Address</Label>
+                  <Label htmlFor="venueAddress">Dirección</Label>
                   <Textarea
                     id="venueAddress"
                     value={eventData.venue.address}
@@ -938,9 +947,9 @@ const HojaDeRutaGenerator = () => {
                     }
                   />
                 </div>
-                {/* New Venue Map Upload */}
+                {/* Nueva subida para el Mapa de Ubicación del Lugar */}
                 <div>
-                  <Label htmlFor="venueMapUpload">Venue Location Map</Label>
+                  <Label htmlFor="venueMapUpload">Mapa de Ubicación del Lugar</Label>
                   <Input
                     id="venueMapUpload"
                     type="file"
@@ -950,7 +959,7 @@ const HojaDeRutaGenerator = () => {
                   {venueMapPreview && (
                     <img
                       src={venueMapPreview}
-                      alt="Venue Map Preview"
+                      alt="Vista previa del mapa del lugar"
                       className="mt-2 max-w-full h-auto"
                     />
                   )}
@@ -959,36 +968,36 @@ const HojaDeRutaGenerator = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Contacts Dialog */}
+          {/* Diálogo de Contactos */}
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" className="w-full">
-                Edit Contacts
+                Editar Contactos
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Contact Information</DialogTitle>
+                <DialogTitle>Información de Contactos</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 {eventData.contacts.map((contact, index) => (
                   <div key={index} className="grid grid-cols-3 gap-2">
                     <Input
-                      placeholder="Name"
+                      placeholder="Nombre"
                       value={contact.name}
                       onChange={(e) =>
                         handleContactChange(index, "name", e.target.value)
                       }
                     />
                     <Input
-                      placeholder="Role"
+                      placeholder="Rol"
                       value={contact.role}
                       onChange={(e) =>
                         handleContactChange(index, "role", e.target.value)
                       }
                     />
                     <Input
-                      placeholder="Phone"
+                      placeholder="Teléfono"
                       value={contact.phone}
                       onChange={(e) =>
                         handleContactChange(index, "phone", e.target.value)
@@ -997,49 +1006,49 @@ const HojaDeRutaGenerator = () => {
                   </div>
                 ))}
                 <Button onClick={addContact} variant="outline">
-                  Add Contact
+                  Agregar Contacto
                 </Button>
               </div>
             </DialogContent>
           </Dialog>
 
-          {/* Staff Dialog */}
+          {/* Diálogo de Personal */}
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" className="w-full">
-                Edit Staff List
+                Editar Lista de Personal
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
-                <DialogTitle>Staff List</DialogTitle>
+                <DialogTitle>Lista de Personal</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 {eventData.staff.map((member, index) => (
                   <div key={index} className="grid grid-cols-4 gap-2">
                     <Input
-                      placeholder="Name"
+                      placeholder="Nombre"
                       value={member.name}
                       onChange={(e) =>
                         handleStaffChange(index, "name", e.target.value)
                       }
                     />
                     <Input
-                      placeholder="First Surname"
+                      placeholder="Primer Apellido"
                       value={member.surname1}
                       onChange={(e) =>
                         handleStaffChange(index, "surname1", e.target.value)
                       }
                     />
                     <Input
-                      placeholder="Second Surname"
+                      placeholder="Segundo Apellido"
                       value={member.surname2}
                       onChange={(e) =>
                         handleStaffChange(index, "surname2", e.target.value)
                       }
                     />
                     <Input
-                      placeholder="Position"
+                      placeholder="Puesto"
                       value={member.position}
                       onChange={(e) =>
                         handleStaffChange(index, "position", e.target.value)
@@ -1048,29 +1057,29 @@ const HojaDeRutaGenerator = () => {
                   </div>
                 ))}
                 <Button onClick={addStaffMember} variant="outline">
-                  Add Staff Member
+                  Agregar Miembro de Personal
                 </Button>
               </div>
             </DialogContent>
           </Dialog>
 
-          {/* Travel Arrangements Dialog */}
+          {/* Diálogo de Arreglos de Viaje */}
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" className="w-full">
-                Edit Travel Arrangements
+                Editar Arreglos de Viaje
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
-                <DialogTitle>Travel Arrangements</DialogTitle>
+                <DialogTitle>Arreglos de Viaje</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 {travelArrangements.map((arrangement, index) => (
                   <div key={index} className="space-y-4 p-4 border rounded-lg">
                     <div className="flex justify-between items-center">
                       <h4 className="text-sm font-medium">
-                        Travel Arrangement {index + 1}
+                        Arreglo de Viaje {index + 1}
                       </h4>
                       <Button
                         variant="ghost"
@@ -1088,21 +1097,21 @@ const HojaDeRutaGenerator = () => {
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select transport type" />
+                        <SelectValue placeholder="Seleccione el tipo de transporte" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="van">Van</SelectItem>
-                        <SelectItem value="sleeper_bus">Sleeper Bus</SelectItem>
-                        <SelectItem value="train">Train</SelectItem>
-                        <SelectItem value="plane">Plane</SelectItem>
-                        <SelectItem value="RV">RV</SelectItem>
+                        <SelectItem value="van">Furgoneta</SelectItem>
+                        <SelectItem value="sleeper_bus">Autocar Litera</SelectItem>
+                        <SelectItem value="train">Tren</SelectItem>
+                        <SelectItem value="plane">Avión</SelectItem>
+                        <SelectItem value="RV">Autocaravana</SelectItem>
                       </SelectContent>
                     </Select>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>Pickup Address</Label>
-                        {/* Hardcoded pickup addresses */}
+                        <Label>Dirección de Recogida</Label>
+                        {/* Direcciones de recogida definidas */}
                         <Select
                           value={arrangement.pickup_address || "address1"}
                           onValueChange={(value) =>
@@ -1110,17 +1119,17 @@ const HojaDeRutaGenerator = () => {
                           }
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select pickup address" />
+                            <SelectValue placeholder="Seleccione la dirección de recogida" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="address1">Address 1 (Placeholder)</SelectItem>
-                            <SelectItem value="address2">Address 2 (Placeholder)</SelectItem>
-                            <SelectItem value="address3">Address 3 (Placeholder)</SelectItem>
+                            <SelectItem value="address1">Dirección 1 (Placeholder)</SelectItem>
+                            <SelectItem value="address2">Dirección 2 (Placeholder)</SelectItem>
+                            <SelectItem value="address3">Dirección 3 (Placeholder)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label>Pickup Time</Label>
+                        <Label>Hora de Recogida</Label>
                         <Input
                           type="datetime-local"
                           value={arrangement.pickup_time || ""}
@@ -1134,7 +1143,7 @@ const HojaDeRutaGenerator = () => {
                     {(arrangement.transportation_type === "train" ||
                       arrangement.transportation_type === "plane") && (
                       <div>
-                        <Label>Flight/Train Number</Label>
+                        <Label>Número de Vuelo/Tren</Label>
                         <Input
                           value={arrangement.flight_train_number || ""}
                           onChange={(e) =>
@@ -1146,7 +1155,7 @@ const HojaDeRutaGenerator = () => {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>Departure Time</Label>
+                        <Label>Hora de Salida</Label>
                         <Input
                           type="datetime-local"
                           value={arrangement.departure_time || ""}
@@ -1156,7 +1165,7 @@ const HojaDeRutaGenerator = () => {
                         />
                       </div>
                       <div>
-                        <Label>Arrival Time</Label>
+                        <Label>Hora de Llegada</Label>
                         <Input
                           type="datetime-local"
                           value={arrangement.arrival_time || ""}
@@ -1168,7 +1177,7 @@ const HojaDeRutaGenerator = () => {
                     </div>
 
                     <div>
-                      <Label>Notes</Label>
+                      <Label>Notas</Label>
                       <Textarea
                         value={arrangement.notes || ""}
                         onChange={(e) =>
@@ -1179,29 +1188,29 @@ const HojaDeRutaGenerator = () => {
                   </div>
                 ))}
                 <Button onClick={addTravelArrangement} variant="outline">
-                  Add Travel Arrangement
+                  Agregar Arreglo de Viaje
                 </Button>
               </div>
             </DialogContent>
           </Dialog>
 
-          {/* Room Assignments Dialog */}
+          {/* Diálogo de Asignaciones de Habitaciones */}
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" className="w-full">
-                Edit Room Assignments
+                Editar Asignaciones de Habitaciones
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
-                <DialogTitle>Room Assignments</DialogTitle>
+                <DialogTitle>Asignaciones de Habitaciones</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 {roomAssignments.map((assignment, index) => (
                   <div key={index} className="space-y-4 p-4 border rounded-lg">
                     <div className="flex justify-between items-center">
                       <h4 className="text-sm font-medium">
-                        Room Assignment {index + 1}
+                        Asignación de Habitación {index + 1}
                       </h4>
                       <Button
                         variant="ghost"
@@ -1223,16 +1232,16 @@ const HojaDeRutaGenerator = () => {
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select room type" />
+                        <SelectValue placeholder="Seleccione el tipo de habitación" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="single">Single</SelectItem>
-                        <SelectItem value="double">Double</SelectItem>
+                        <SelectItem value="single">Individual</SelectItem>
+                        <SelectItem value="double">Doble</SelectItem>
                       </SelectContent>
                     </Select>
 
                     <div>
-                      <Label>Room Number</Label>
+                      <Label>Número de Habitación</Label>
                       <Input
                         value={assignment.room_number || ""}
                         onChange={(e) =>
@@ -1242,7 +1251,7 @@ const HojaDeRutaGenerator = () => {
                     </div>
 
                     <div>
-                      <Label>Staff Member 1</Label>
+                      <Label>Personal Asignado 1</Label>
                       <Select
                         value={assignment.staff_member1_id || "unassigned"}
                         onValueChange={(value) =>
@@ -1254,10 +1263,10 @@ const HojaDeRutaGenerator = () => {
                         }
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select staff member" />
+                          <SelectValue placeholder="Seleccione un miembro" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          <SelectItem value="unassigned">Sin asignar</SelectItem>
                           {eventData.staff.map((member) => (
                             <SelectItem key={member.name} value={member.name}>
                               {`${member.name} ${member.surname1 || ""}`}
@@ -1269,7 +1278,7 @@ const HojaDeRutaGenerator = () => {
 
                     {assignment.room_type === "double" && (
                       <div>
-                        <Label>Staff Member 2</Label>
+                        <Label>Personal Asignado 2</Label>
                         <Select
                           value={assignment.staff_member2_id || "unassigned"}
                           onValueChange={(value) =>
@@ -1281,10 +1290,10 @@ const HojaDeRutaGenerator = () => {
                           }
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select staff member" />
+                            <SelectValue placeholder="Seleccione un miembro" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                            <SelectItem value="unassigned">Sin asignar</SelectItem>
                             {eventData.staff.map((member) => (
                               <SelectItem key={member.name} value={member.name}>
                                 {`${member.name} ${member.surname1 || ""}`}
@@ -1297,15 +1306,15 @@ const HojaDeRutaGenerator = () => {
                   </div>
                 ))}
                 <Button onClick={addRoomAssignment} variant="outline">
-                  Add Room Assignment
+                  Agregar Asignación de Habitación
                 </Button>
               </div>
             </DialogContent>
           </Dialog>
 
-          {/* Schedule */}
+          {/* Sección de Programa */}
           <div>
-            <Label htmlFor="schedule">Schedule</Label>
+            <Label htmlFor="schedule">Programa</Label>
             <Textarea
               id="schedule"
               value={eventData.schedule}
@@ -1317,9 +1326,9 @@ const HojaDeRutaGenerator = () => {
             />
           </div>
 
-          {/* Power Requirements */}
+          {/* Sección de Requisitos Eléctricos */}
           <div>
-            <Label htmlFor="powerRequirements">Power Requirements</Label>
+            <Label htmlFor="powerRequirements">Requisitos Eléctricos</Label>
             <Textarea
               id="powerRequirements"
               value={eventData.powerRequirements}
@@ -1330,13 +1339,13 @@ const HojaDeRutaGenerator = () => {
                 })
               }
               className="min-h-[150px]"
-              placeholder="Power requirements will be automatically populated when available..."
+              placeholder="Los requisitos eléctricos se completarán automáticamente cuando estén disponibles..."
             />
           </div>
 
-          {/* Auxiliary Needs */}
+          {/* Sección de Necesidades Auxiliares */}
           <div>
-            <Label htmlFor="auxiliaryNeeds">Auxiliary Needs</Label>
+            <Label htmlFor="auxiliaryNeeds">Necesidades Auxiliares</Label>
             <Textarea
               id="auxiliaryNeeds"
               value={eventData.auxiliaryNeeds}
@@ -1344,12 +1353,12 @@ const HojaDeRutaGenerator = () => {
                 setEventData({ ...eventData, auxiliaryNeeds: e.target.value })
               }
               className="min-h-[150px]"
-              placeholder="Loading crew requirements, equipment needs..."
+              placeholder="Requerimientos del equipo de carga, necesidades de equipamiento..."
             />
           </div>
 
           <Button onClick={generateDocument} className="w-full">
-            Generate Hoja de Ruta
+            Generar Hoja de Ruta
           </Button>
         </CardContent>
       </ScrollArea>
