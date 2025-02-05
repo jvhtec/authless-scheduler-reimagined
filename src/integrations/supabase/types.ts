@@ -1702,7 +1702,7 @@ export type Database = {
       room_type: "single" | "double"
       task_status: "not_started" | "in_progress" | "completed"
       transport_type: "trailer" | "9m" | "8m" | "6m" | "4m" | "furgoneta" | "rv"
-      transportation_type: "van" | "sleeper_bus" | "train" | "plane"
+      transportation_type: "van" | "sleeper_bus" | "train" | "plane" | "rv"
       user_role: "admin" | "user" | "management" | "logistics" | "technician"
     }
     CompositeTypes: {

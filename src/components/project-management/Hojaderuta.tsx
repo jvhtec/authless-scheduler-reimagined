@@ -62,7 +62,7 @@ interface AutoTableJsPDF extends jsPDF {
 }
 
 interface TravelArrangement {
-  transportation_type: "van" | "sleeper_bus" | "train" | "plane" | "RV";
+  transportation_type: "van" | "sleeper_bus" | "train" | "plane" | "rv";  // Changed RV to rv
   pickup_address?: string;
   pickup_time?: string;
   flight_train_number?: string;
@@ -1178,7 +1178,7 @@ const HojaDeRutaGenerator = () => {
                         <SelectItem value="sleeper_bus">Sleeper Bus Litera</SelectItem>
                         <SelectItem value="train">Tren</SelectItem>
                         <SelectItem value="plane">Avión</SelectItem>
-                        <SelectItem value="RV">Autocaravana</SelectItem>
+                        <SelectItem value="rv">Autocaravana</SelectItem>
                       </SelectContent>
                     </Select>
                     <div className="grid grid-cols-2 gap-4">
