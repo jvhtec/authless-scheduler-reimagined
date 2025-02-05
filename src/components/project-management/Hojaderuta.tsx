@@ -654,9 +654,9 @@ const HojaDeRutaGenerator = () => {
       doc.text("Contactos", 20, yPosition);
       yPosition += 10;
       const contactsTableData = eventData.contacts.map(contact => [
-        contact.name,
-        contact.role,
-        contact.phone,
+        contact.name || 'Sin nombre',
+        contact.role || '',
+        contact.phone || '',
       ]);
       autoTable(doc, {
         startY: yPosition,
@@ -704,11 +704,11 @@ const HojaDeRutaGenerator = () => {
       doc.setTextColor(125, 1, 1);
       doc.text("Lista de Personal", 20, yPosition);
       yPosition += 10;
-      const staffTableData = eventData.staff.map(person => [
-        person.name,
-        person.surname1,
-        person.surname2,
-        person.position,
+      const staffTableData = eventData.staff.map(member => [
+        member.name || 'Sin nombre',
+        member.surname1 || '',
+        member.surname2 || '',
+        member.position || '',
       ]);
       autoTable(doc, {
         startY: yPosition,
@@ -799,7 +799,7 @@ const HojaDeRutaGenerator = () => {
         room.room_type,
         room.room_number || "",
         room.staff_member1_id || "",
-        room.room_type === "double" ? room.staff_member2_id || "" : "",
+        room.room_type === "double" ? (room.staff_member2_id || "") : "",
       ]);
       autoTable(doc, {
         startY: yPosition,
