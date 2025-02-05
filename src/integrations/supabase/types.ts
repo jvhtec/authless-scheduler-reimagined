@@ -1701,7 +1701,7 @@ export type Database = {
       project_status: "pending" | "in_progress" | "completed" | "cancelled"
       room_type: "single" | "double"
       task_status: "not_started" | "in_progress" | "completed"
-      transport_type: "trailer" | "9m" | "8m" | "6m" | "4m" | "furgoneta"
+      transport_type: "trailer" | "9m" | "8m" | "6m" | "4m" | "furgoneta" | "rv"
       transportation_type: "van" | "sleeper_bus" | "train" | "plane"
       user_role: "admin" | "user" | "management" | "logistics" | "technician"
     }
