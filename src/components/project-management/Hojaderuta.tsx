@@ -773,13 +773,14 @@ const HojaDeRutaGenerator = () => {
                     <div>
                       <Label>Staff Member 1</Label>
                       <Select
-                        value={assignment.staff_member1_id || ''}
-                        onValueChange={(value) => updateRoomAssignment(index, 'staff_member1_id', value)}
+                        value={assignment.staff_member1_id || "unassigned"}
+                        onValueChange={(value) => updateRoomAssignment(index, 'staff_member1_id', value !== "unassigned" ? value : undefined)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select staff member" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
                           {eventData.staff.map((member) => (
                             <SelectItem key={member.name} value={member.name}>
                               {`${member.name} ${member.surname1 || ''}`}
@@ -793,13 +794,14 @@ const HojaDeRutaGenerator = () => {
                       <div>
                         <Label>Staff Member 2</Label>
                         <Select
-                          value={assignment.staff_member2_id || ''}
-                          onValueChange={(value) => updateRoomAssignment(index, 'staff_member2_id', value)}
+                          value={assignment.staff_member2_id || "unassigned"}
+                          onValueChange={(value) => updateRoomAssignment(index, 'staff_member2_id', value !== "unassigned" ? value : undefined)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select staff member" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
                             {eventData.staff.map((member) => (
                               <SelectItem key={member.name} value={member.name}>
                                 {`${member.name} ${member.surname1 || ''}`}
