@@ -85,6 +85,40 @@ const HojaDeRutaGenerator = () => {
   const [alertMessage, setAlertMessage] = useState("");
   const [selectedJobId, setSelectedJobId] = useState<string>("");
 
+  // Move state declarations before their usage in useEffect
+  const [eventData, setEventData] = useState<EventData>({
+    eventName: "",
+    eventDates: "",
+    venue: {
+      name: "",
+      address: "",
+    },
+    contacts: [{ name: "", role: "", phone: "" }],
+    logistics: {
+      transport: "",
+      loadingDetails: "",
+      unloadingDetails: "",
+    },
+    staff: [{ name: "", surname1: "", surname2: "", position: "" }],
+    schedule: "",
+    powerRequirements: "",
+    auxiliaryNeeds: "",
+  });
+
+  const [images, setImages] = useState({
+    venue: [] as File[],
+  });
+  const [imagePreviews, setImagePreviews] = useState({
+    venue: [] as string[],
+  });
+  const [venueMap, setVenueMap] = useState<File | null>(null);
+  const [venueMapPreview, setVenueMapPreview] = useState<string | null>(null);
+  const [powerRequirements, setPowerRequirements] = useState<string>("");
+  const [roomAssignments, setRoomAssignments] = useState<RoomAssignment[]>([]);
+  const [travelArrangements, setTravelArrangements] = useState<TravelArrangement[]>([
+    { transportation_type: "van" },
+  ]);
+
   // Load persisted data from localStorage on mount
   useEffect(() => {
     const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -109,25 +143,6 @@ const HojaDeRutaGenerator = () => {
     };
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToPersist));
   }, [eventData, travelArrangements, roomAssignments]);
-
-  const [eventData, setEventData] = useState<EventData>({
-    eventName: "",
-    eventDates: "",
-    venue: {
-      name: "",
-      address: "",
-    },
-    contacts: [{ name: "", role: "", phone: "" }],
-    logistics: {
-      transport: "",
-      loadingDetails: "",
-      unloadingDetails: "",
-    },
-    staff: [{ name: "", surname1: "", surname2: "", position: "" }],
-    schedule: "",
-    powerRequirements: "",
-    auxiliaryNeeds: "",
-  });
 
   // ---------------------------
   // IMAGE & FILE STATES
