@@ -52,6 +52,7 @@ const loadImageAsDataURL = async (url: string): Promise<string | null> => {
 
 const fetchAssignedStaff = async (jobId: string) => {
   try {
+    console.log("Fetching assigned staff for job:", jobId);
     const { data: assignments, error } = await supabase
       .from('job_assignments')
       .select(`
@@ -63,7 +64,12 @@ const fetchAssignedStaff = async (jobId: string) => {
       `)
       .eq('job_id', jobId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching assigned staff:', error);
+      throw error;
+    }
+
+    console.log("Received assignments:", assignments);
 
     // Transform the assignments into staff format
     const staff = assignments?.map(assignment => ({
@@ -73,6 +79,7 @@ const fetchAssignedStaff = async (jobId: string) => {
       position: ''
     })) || [];
 
+    console.log("Transformed staff data:", staff);
     return staff;
   } catch (error) {
     console.error('Error fetching assigned staff:', error);
