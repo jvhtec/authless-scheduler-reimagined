@@ -653,7 +653,9 @@ const HojaDeRutaGenerator = () => {
       const uniquePickupAddresses = Array.from(
         new Set(
           travelArrangements
-            .map(arr => arr.pickup_address!.trim())
+            .filter(arr => arr.pickup_address) // Filter out arrangements without pickup addresses
+            .map(arr => arr.pickup_address?.trim() || '')
+            .filter(address => address !== '') // Remove empty strings
         )
       );
       const transportationMapPlaceholders: { [key: string]: string } = {
