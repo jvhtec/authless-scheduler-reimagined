@@ -1297,11 +1297,7 @@ const HojaDeRutaGenerator = () => {
                     <Select
                       value={assignment.room_type}
                       onValueChange={(value) =>
-                        updateRoomAssignment(
-                          index,
-                          "room_type",
-                          value
-                        )
+                        updateRoomAssignment(index, "room_type", value)
                       }
                     >
                       <SelectTrigger>
@@ -1338,14 +1334,17 @@ const HojaDeRutaGenerator = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="unassigned">Sin asignar</SelectItem>
-                          {eventData.staff.map((member) => (
-                            <SelectItem 
-                              key={member.name} 
-                              value={member.name || `staff-${member.position}`}
-                            >
-                              {`${member.name} ${member.surname1 || ""}`}
-                            </SelectItem>
-                          ))}
+                          {eventData.staff.map((member, staffIndex) => {
+                            const value = member.name?.trim() || `staff-${member.position}-${staffIndex}`;
+                            return (
+                              <SelectItem 
+                                key={value} 
+                                value={value}
+                              >
+                                {`${member.name || 'Sin nombre'} ${member.surname1 || ""}`}
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1367,14 +1366,17 @@ const HojaDeRutaGenerator = () => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="unassigned">Sin asignar</SelectItem>
-                            {eventData.staff.map((member) => (
-                              <SelectItem 
-                                key={member.name} 
-                                value={member.name || `staff-${member.position}`}
-                              >
-                                {`${member.name} ${member.surname1 || ""}`}
-                              </SelectItem>
-                            ))}
+                            {eventData.staff.map((member, staffIndex) => {
+                              const value = member.name?.trim() || `staff-${member.position}-${staffIndex}`;
+                              return (
+                                <SelectItem 
+                                  key={value} 
+                                  value={value}
+                                >
+                                  {`${member.name || 'Sin nombre'} ${member.surname1 || ""}`}
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
                       </div>
