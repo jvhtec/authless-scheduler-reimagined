@@ -33,6 +33,27 @@ import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+// Add the loadImageAsDataURL function before the component
+const loadImageAsDataURL = async (url: string): Promise<string> => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error("Error loading image:", error);
+    throw error;
+  }
+};
+
+// ---------------------------
+// SUPABASE PERSISTENCE FUNCTIONS
+// ---------------------------
+
 // Extend jsPDF to include autoTable
 interface AutoTableJsPDF extends jsPDF {
   lastAutoTable?: {
@@ -1409,3 +1430,4 @@ const HojaDeRutaGenerator = () => {
 };
 
 export default HojaDeRutaGenerator;
+
