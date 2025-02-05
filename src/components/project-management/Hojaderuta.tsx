@@ -85,7 +85,7 @@ const HojaDeRutaGenerator = () => {
   const [alertMessage, setAlertMessage] = useState("");
   const [selectedJobId, setSelectedJobId] = useState<string>("");
 
-  // Move state declarations before their usage in useEffect
+  // State declarations
   const [eventData, setEventData] = useState<EventData>({
     eventName: "",
     eventDates: "",
@@ -108,9 +108,11 @@ const HojaDeRutaGenerator = () => {
   const [images, setImages] = useState({
     venue: [] as File[],
   });
+
   const [imagePreviews, setImagePreviews] = useState({
     venue: [] as string[],
   });
+
   const [venueMap, setVenueMap] = useState<File | null>(null);
   const [venueMapPreview, setVenueMapPreview] = useState<string | null>(null);
   const [powerRequirements, setPowerRequirements] = useState<string>("");
