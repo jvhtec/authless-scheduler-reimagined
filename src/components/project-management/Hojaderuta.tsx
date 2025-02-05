@@ -147,26 +147,6 @@ const HojaDeRutaGenerator = () => {
   // ---------------------------
   // IMAGE & FILE STATES
   // ---------------------------
-  const [images, setImages] = useState({
-    venue: [] as File[],
-  });
-  const [imagePreviews, setImagePreviews] = useState({
-    venue: [] as string[],
-  });
-  // For the venue location map (single file)
-  const [venueMap, setVenueMap] = useState<File | null>(null);
-  const [venueMapPreview, setVenueMapPreview] = useState<string | null>(null);
-
-  const [powerRequirements, setPowerRequirements] = useState<string>("");
-  // Initialize roomAssignments to empty so that nothing prints unless data is provided.
-  const [roomAssignments, setRoomAssignments] = useState<RoomAssignment[]>([]);
-  const [travelArrangements, setTravelArrangements] = useState<TravelArrangement[]>([
-    { transportation_type: "van" },
-  ]);
-
-  // ---------------------------
-  // Utility: load image from URL as DataURL
-  // ---------------------------
   const loadImageAsDataURL = async (url: string): Promise<string | null> => {
     try {
       const response = await fetch(url);
@@ -667,14 +647,12 @@ const HojaDeRutaGenerator = () => {
       yPosition = (doc as any).lastAutoTable.finalY + 15;
 
       // Print unique pickup addresses and associated images
-      // Since your pickup addresses are hardcoded, they will never be empty.
       const uniquePickupAddresses = Array.from(
         new Set(
           travelArrangements
             .map(arr => arr.pickup_address!.trim())
         )
       );
-      // The keys here should exactly match the pickup_address values.
       const transportationMapPlaceholders: { [key: string]: string } = {
         "Nave Sector-Pro. C\\Puerto Rico 6, 28971 - Griñon 1": "/lovable-uploads/IMG_7834.jpeg",
         "C\\ Corregidor Diego de Valderrabano 23, Moratalaz": "/lovable-uploads/IMG_7835.jpeg",
