@@ -1335,7 +1335,11 @@ const HojaDeRutaGenerator = () => {
                         <SelectContent>
                           <SelectItem value="unassigned">Sin asignar</SelectItem>
                           {eventData.staff.map((member, staffIndex) => {
-                            const value = member.name?.trim() || `staff-${member.position}-${staffIndex}`;
+                            // Create a safe value that will never be undefined
+                            const value = member.name ? 
+                              member.name.trim() || `staff-${staffIndex}` : 
+                              `staff-${member.position || 'unnamed'}-${staffIndex}`;
+                            
                             return (
                               <SelectItem 
                                 key={value} 
@@ -1367,7 +1371,11 @@ const HojaDeRutaGenerator = () => {
                           <SelectContent>
                             <SelectItem value="unassigned">Sin asignar</SelectItem>
                             {eventData.staff.map((member, staffIndex) => {
-                              const value = member.name?.trim() || `staff-${member.position}-${staffIndex}`;
+                              // Use the same safe value logic for consistency
+                              const value = member.name ? 
+                                member.name.trim() || `staff-${staffIndex}` : 
+                                `staff-${member.position || 'unnamed'}-${staffIndex}`;
+                              
                               return (
                                 <SelectItem 
                                   key={value} 
