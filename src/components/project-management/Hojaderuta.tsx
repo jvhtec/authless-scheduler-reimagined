@@ -128,17 +128,23 @@ interface EventData {
 // ---------------------------
 
 const fetchHojaDeRutaData = async (jobId: string) => {
+  console.log("Fetching hoja de ruta data for job:", jobId);
+  
   // Query the main hoja_de_ruta record for the given job
-  const { data: mainData, error: mainError } = await supabase
+  const { data: records, error: mainError } = await supabase
     .from("hoja_de_ruta")
     .select("*")
     .eq("job_id", jobId)
-    .single();
+    .order('created_at', { ascending: false })
+    .limit(1);
 
-  if (mainError && mainError.code !== "PGRST116") {
+  if (mainError) {
+    console.error("Error fetching hoja de ruta:", mainError);
     throw mainError;
   }
-  return mainData; // may be null if no record exists
+
+  console.log("Fetched hoja de ruta records:", records);
+  return records?.[0] || null; // Return the most recent record or null if none exists
 };
 
 const fetchChildData = async (hojaDeRutaId: number) => {
@@ -1404,4 +1410,3 @@ const HojaDeRutaGenerator = () => {
 };
 
 export default HojaDeRutaGenerator;
-
