@@ -144,8 +144,8 @@ const LightsPesosTool: React.FC = () => {
   const generateTable = () => {
     if (!tableName) {
       toast({
-        title: 'Missing table name',
-        description: 'Please enter a name for the table',
+        title: 'Falta el nombre de la tabla',
+        description: 'Por favor, ingrese un nombre para la tabla',
         variant: 'destructive',
       });
       return;
@@ -194,8 +194,8 @@ const LightsPesosTool: React.FC = () => {
   const handleExportPDF = async () => {
     if (!selectedJobId || !selectedJob) {
       toast({
-        title: 'No job selected',
-        description: 'Please select a job before exporting.',
+        title: 'No se ha seleccionado ningún trabajo',
+        description: 'Por favor, seleccione un trabajo antes de exportar.',
         variant: 'destructive',
       });
       return;
@@ -210,7 +210,7 @@ const LightsPesosTool: React.FC = () => {
         undefined
       );
 
-      const fileName = `Lights Weight Report - ${selectedJob.title}.pdf`;
+      const fileName = `Informe de Peso de Luces - ${selectedJob.title}.pdf`;
       const url = window.URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -221,14 +221,14 @@ const LightsPesosTool: React.FC = () => {
       document.body.removeChild(a);
 
       toast({
-        title: 'Success',
-        description: 'PDF has been generated successfully.',
+        title: 'Éxito',
+        description: 'El PDF se ha generado exitosamente.',
       });
     } catch (error) {
       console.error(error);
       toast({
         title: 'Error',
-        description: 'Failed to generate the PDF.',
+        description: 'No se pudo generar el PDF.',
         variant: 'destructive',
       });
     }
@@ -241,16 +241,16 @@ const LightsPesosTool: React.FC = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate('/lights')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <CardTitle className="text-2xl font-bold">Lights Weight Calculator</CardTitle>
+          <CardTitle className="text-2xl font-bold">Calculadora de Peso de Luces</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="jobSelect">Select Job</Label>
+            <Label htmlFor="jobSelect">Seleccionar Trabajo</Label>
             <Select value={selectedJobId} onValueChange={handleJobSelect}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a job" />
+                <SelectValue placeholder="Seleccione un trabajo" />
               </SelectTrigger>
               <SelectContent>
                 {jobs?.map((job) => (
@@ -263,12 +263,12 @@ const LightsPesosTool: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tableName">Table Name</Label>
+            <Label htmlFor="tableName">Nombre de la Tabla</Label>
             <Input
               id="tableName"
               value={tableName}
               onChange={(e) => setTableName(e.target.value)}
-              placeholder="Enter table name"
+              placeholder="Ingrese el nombre de la tabla"
             />
           </div>
 
@@ -276,9 +276,9 @@ const LightsPesosTool: React.FC = () => {
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
-                  <th className="px-4 py-3 text-left font-medium">Component</th>
-                  <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
+                  <th className="px-4 py-3 text-left font-medium">Cantidad</th>
+                  <th className="px-4 py-3 text-left font-medium">Componente</th>
+                  <th className="px-4 py-3 text-left font-medium">Peso (por unidad)</th>
                 </tr>
               </thead>
               <tbody>
@@ -299,7 +299,7 @@ const LightsPesosTool: React.FC = () => {
                         onValueChange={(value) => updateInput(index, 'componentId', value)}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select component" />
+                          <SelectValue placeholder="Seleccione componente" />
                         </SelectTrigger>
                         <SelectContent>
                           {lightsComponentDatabase.map((component) => (
@@ -320,17 +320,17 @@ const LightsPesosTool: React.FC = () => {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={addRow}>Add Row</Button>
+            <Button onClick={addRow}>Agregar Fila</Button>
             <Button onClick={generateTable} variant="secondary">
-              Generate Table
+              Generar Tabla
             </Button>
             <Button onClick={resetCurrentTable} variant="destructive">
-              Reset
+              Reiniciar
             </Button>
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
                 <FileText className="w-4 h-4" />
-                Export PDF
+                Exportar PDF
               </Button>
             )}
           </div>
@@ -344,16 +344,16 @@ const LightsPesosTool: React.FC = () => {
                   size="sm"
                   onClick={() => table.id && removeTable(table.id)}
                 >
-                  Remove Table
+                  Eliminar Tabla
                 </Button>
               </div>
               <table className="w-full">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-4 py-3 text-left font-medium">Quantity</th>
-                    <th className="px-4 py-3 text-left font-medium">Component</th>
-                    <th className="px-4 py-3 text-left font-medium">Weight (per unit)</th>
-                    <th className="px-4 py-3 text-left font-medium">Total Weight</th>
+                    <th className="px-4 py-3 text-left font-medium">Cantidad</th>
+                    <th className="px-4 py-3 text-left font-medium">Componente</th>
+                    <th className="px-4 py-3 text-left font-medium">Peso (por unidad)</th>
+                    <th className="px-4 py-3 text-left font-medium">Peso Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -367,7 +367,7 @@ const LightsPesosTool: React.FC = () => {
                   ))}
                   <tr className="border-t bg-muted/50 font-medium">
                     <td colSpan={3} className="px-4 py-3 text-right">
-                      Total Weight:
+                      Peso Total:
                     </td>
                     <td className="px-4 py-3">{table.totalWeight?.toFixed(2)}</td>
                   </tr>
