@@ -39,7 +39,7 @@ export const useJobManagement = (
         )
       `)
       .eq("job_departments.department", selectedDepartment)
-      .in("job_type", ["single", "festival"])
+      .in("job_type", ["single", "festival","tourdate"])
       .gte("start_time", startDate.toISOString())
       .lte("start_time", endDate.toISOString())
       .order("start_time", { ascending: true });
