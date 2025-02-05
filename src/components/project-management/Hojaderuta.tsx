@@ -669,9 +669,9 @@ const HojaDeRutaGenerator = () => {
 
       // Objeto con URLs placeholder para mapas
       const transportationMapPlaceholders: { [key: string]: string } = {
-        address1: "https://via.placeholder.com/300x200?text=Mapa+para+Dirección+1",
-        address2: "https://via.placeholder.com/300x200?text=Mapa+para+Dirección+2",
-        address3: "https://via.placeholder.com/300x200?text=Mapa+para+Dirección+3",
+        address1: "/public/lovable-uploads/IMG_7834.jpeg",
+        address2: "/public/lovable-uploads/IMG_7835.jpeg",
+        address3: "/public/lovable-uploads/IMG_7836.jpeg",
       };
 
       // Imprimir solo una vez por cada dirección única
