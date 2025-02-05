@@ -639,7 +639,7 @@ const HojaDeRutaGenerator = () => {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text("Arreglos de Viaje", 20, yPosition);
+      doc.text("Logistica de Personal", 20, yPosition);
       yPosition += 10;
       const travelTableData = travelArrangements.map((arr) => [
         arr.transportation_type,
@@ -1067,7 +1067,7 @@ const HojaDeRutaGenerator = () => {
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" className="w-full">
-                Editar Arreglos de Viaje
+                Editar Logistica de Personal
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
@@ -1101,7 +1101,7 @@ const HojaDeRutaGenerator = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="van">Furgoneta</SelectItem>
-                        <SelectItem value="sleeper_bus">Autocar Litera</SelectItem>
+                        <SelectItem value="sleeper_bus">Sleeper Bus Litera</SelectItem>
                         <SelectItem value="train">Tren</SelectItem>
                         <SelectItem value="plane">Avión</SelectItem>
                         <SelectItem value="RV">Autocaravana</SelectItem>
@@ -1122,9 +1122,9 @@ const HojaDeRutaGenerator = () => {
                             <SelectValue placeholder="Seleccione la dirección de recogida" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="address1">Dirección 1 (Placeholder)</SelectItem>
-                            <SelectItem value="address2">Dirección 2 (Placeholder)</SelectItem>
-                            <SelectItem value="address3">Dirección 3 (Placeholder)</SelectItem>
+                            <SelectItem value="address1">Nave Sector-Pro. C\Puerto Rico 6, 28971 - Griñon 1 </SelectItem>
+                            <SelectItem value="address2">C\ Corregidor Diego de Valderrabano 23, Moratalaz</SelectItem>
+                            <SelectItem value="address3">C\ Entrepeñas 47, Ensanche de Vallecas</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
