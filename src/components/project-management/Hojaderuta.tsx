@@ -864,7 +864,7 @@ const HojaDeRutaGenerator = () => {
                   <SelectValue placeholder="Seleccione un trabajo..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLoading: isLoadingJobs ? (
+                  {isLoadingJobs ? (
                     <SelectItem value="loading">Cargando trabajos...</SelectItem>
                   ) : jobs?.length === 0 ? (
                     <SelectItem value="unselected">No hay trabajos disponibles</SelectItem>
