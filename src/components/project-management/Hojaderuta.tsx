@@ -76,7 +76,157 @@ interface EventData {
   auxiliaryNeeds: string;
 }
 
-const LOCAL_STORAGE_KEY = "hojaDeRutaData";
+const LOCAL_STORAGE_KEY = "hojaDeRutaData"; // Not used for persistence anymore
+
+// ---------------------------
+// SUPABASE PERSISTENCE FUNCTIONS
+// ---------------------------
+
+// Fetch the hoja_de_ruta record and its children for a given job_id.
+const fetchHojaDeRutaData = async (jobId: string) => {
+  // Fetch main record from hoja_de_ruta
+  const { data: mainData, error: mainError } = await supabase
+    .from("hoja_de_ruta")
+    .select("*")
+    .eq("job_id", jobId)
+    .single();
+
+  if (mainError && mainError.code !== "PGRST116") {
+    // PGRST116 means no rows found – treat that as empty.
+    throw mainError;
+  }
+
+  // If found, return the main record; otherwise, return null.
+  return mainData;
+};
+
+// Fetch child records for a given hoja_de_ruta_id.
+const fetchChildData = async (hojaDeRutaId: number) => {
+  const [
+    { data: contactsData },
+    { data: logisticsData },
+    { data: travelData },
+    { data: roomsData },
+    { data: staffData },
+    { data: imagesData },
+  ] = await Promise.all([
+    supabase.from("hoja_de_ruta_contacts").select("*").eq("hoja_de_ruta_id", hojaDeRutaId),
+    supabase.from("hoja_de_ruta_logistics").select("*").eq("hoja_de_ruta_id", hojaDeRutaId),
+    supabase.from("hoja_de_ruta_travel").select("*").eq("hoja_de_ruta_id", hojaDeRutaId),
+    supabase.from("hoja_de_ruta_rooms").select("*").eq("hoja_de_ruta_id", hojaDeRutaId),
+    supabase.from("hoja_de_ruta_staff").select("*").eq("hoja_de_ruta_id", hojaDeRutaId),
+    supabase.from("hoja_de_ruta_images").select("*").eq("hoja_de_ruta_id", hojaDeRutaId),
+  ]);
+
+  return {
+    contacts: contactsData || [],
+    logistics: logisticsData?.[0] || {},
+    travel: travelData || [],
+    rooms: roomsData || [],
+    staff: staffData || [],
+    images: imagesData || [],
+  };
+};
+
+// Save (upsert) the hoja_de_ruta data along with its child records.
+const saveHojaDeRutaData = async (
+  jobId: string,
+  eventData: EventData,
+  travelArrangements: TravelArrangement[],
+  roomAssignments: RoomAssignment[]
+) => {
+  // Upsert main record into hoja_de_ruta
+  const { data: mainData, error: mainError } = await supabase
+    .from("hoja_de_ruta")
+    .upsert({
+      job_id: jobId,
+      event_name: eventData.eventName,
+      event_dates: eventData.eventDates,
+      venue_name: eventData.venue.name,
+      venue_address: eventData.venue.address,
+      schedule: eventData.schedule,
+      power_requirements: eventData.powerRequirements,
+      auxiliary_needs: eventData.auxiliaryNeeds,
+    })
+    .select()
+    .single();
+
+  if (mainError) {
+    throw mainError;
+  }
+
+  const hojaDeRutaId = mainData.id;
+
+  // For simplicity, delete existing child records and insert new ones.
+  await supabase.from("hoja_de_ruta_contacts").delete().eq("hoja_de_ruta_id", hojaDeRutaId);
+  await supabase.from("hoja_de_ruta_logistics").delete().eq("hoja_de_ruta_id", hojaDeRutaId);
+  await supabase.from("hoja_de_ruta_travel").delete().eq("hoja_de_ruta_id", hojaDeRutaId);
+  await supabase.from("hoja_de_ruta_rooms").delete().eq("hoja_de_ruta_id", hojaDeRutaId);
+  await supabase.from("hoja_de_ruta_staff").delete().eq("hoja_de_ruta_id", hojaDeRutaId);
+  // Images could be handled similarly if you wish
+
+  // Insert contacts
+  if (eventData.contacts.length > 0) {
+    const contactsToInsert = eventData.contacts.map(contact => ({
+      hoja_de_ruta_id: hojaDeRutaId,
+      name: contact.name,
+      role: contact.role,
+      phone: contact.phone,
+    }));
+    await supabase.from("hoja_de_ruta_contacts").insert(contactsToInsert);
+  }
+
+  // Insert logistics
+  await supabase.from("hoja_de_ruta_logistics").insert({
+    hoja_de_ruta_id: hojaDeRutaId,
+    transport: eventData.logistics.transport,
+    loading_details: eventData.logistics.loadingDetails,
+    unloading_details: eventData.logistics.unloadingDetails,
+  });
+
+  // Insert travel arrangements
+  if (travelArrangements.length > 0) {
+    const travelToInsert = travelArrangements.map(arr => ({
+      hoja_de_ruta_id: hojaDeRutaId,
+      transportation_type: arr.transportation_type,
+      pickup_address: arr.pickup_address,
+      pickup_time: arr.pickup_time,
+      flight_train_number: arr.flight_train_number,
+      departure_time: arr.departure_time,
+      arrival_time: arr.arrival_time,
+      notes: arr.notes,
+    }));
+    await supabase.from("hoja_de_ruta_travel").insert(travelToInsert);
+  }
+
+  // Insert room assignments
+  if (roomAssignments.length > 0) {
+    const roomsToInsert = roomAssignments.map(room => ({
+      hoja_de_ruta_id: hojaDeRutaId,
+      room_type: room.room_type,
+      room_number: room.room_number,
+      staff_member1_id: room.staff_member1_id,
+      staff_member2_id: room.room_type === "double" ? room.staff_member2_id : null,
+    }));
+    await supabase.from("hoja_de_ruta_rooms").insert(roomsToInsert);
+  }
+
+  // Insert staff
+  if (eventData.staff.length > 0) {
+    const staffToInsert = eventData.staff.map(member => ({
+      hoja_de_ruta_id: hojaDeRutaId,
+      name: member.name,
+      surname1: member.surname1,
+      surname2: member.surname2,
+      position: member.position,
+    }));
+    await supabase.from("hoja_de_ruta_staff").insert(staffToInsert);
+  }
+
+  // (Optional) Insert images: You could loop over your images and upload them to storage, then insert their paths in hoja_de_ruta_images.
+
+  return hojaDeRutaId;
+};
 
 const HojaDeRutaGenerator = () => {
   const { toast } = useToast();
@@ -85,7 +235,7 @@ const HojaDeRutaGenerator = () => {
   const [alertMessage, setAlertMessage] = useState("");
   const [selectedJobId, setSelectedJobId] = useState<string>("");
 
-  // State declarations
+  // State declarations for main form data, images, travel and room assignments
   const [eventData, setEventData] = useState<EventData>({
     eventName: "",
     eventDates: "",
@@ -104,174 +254,84 @@ const HojaDeRutaGenerator = () => {
     powerRequirements: "",
     auxiliaryNeeds: "",
   });
-
-  const [images, setImages] = useState({
-    venue: [] as File[],
-  });
-
-  const [imagePreviews, setImagePreviews] = useState({
-    venue: [] as string[],
-  });
-
+  const [images, setImages] = useState({ venue: [] as File[] });
+  const [imagePreviews, setImagePreviews] = useState({ venue: [] as string[] });
   const [venueMap, setVenueMap] = useState<File | null>(null);
   const [venueMapPreview, setVenueMapPreview] = useState<string | null>(null);
-  const [powerRequirements, setPowerRequirements] = useState<string>("");
   const [roomAssignments, setRoomAssignments] = useState<RoomAssignment[]>([]);
   const [travelArrangements, setTravelArrangements] = useState<TravelArrangement[]>([
     { transportation_type: "van" },
   ]);
 
-  // Load persisted data from localStorage on mount
+  // When a job is selected, fetch the persisted hoja_de_ruta data for that job.
   useEffect(() => {
-    const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData);
-        if (parsed.eventData) setEventData(parsed.eventData);
-        if (parsed.travelArrangements) setTravelArrangements(parsed.travelArrangements);
-        if (parsed.roomAssignments) setRoomAssignments(parsed.roomAssignments);
-      } catch (error) {
-        console.error("Error parsing persisted data:", error);
-      }
+    if (selectedJobId) {
+      (async () => {
+        try {
+          const mainData = await fetchHojaDeRutaData(selectedJobId);
+          if (mainData) {
+            setEventData({
+              eventName: mainData.event_name || "",
+              eventDates: mainData.event_dates || "",
+              venue: {
+                name: mainData.venue_name || "",
+                address: mainData.venue_address || "",
+              },
+              // For contacts, logistics, staff, and travel, fetch child records.
+              contacts: [],
+              logistics: { transport: "", loadingDetails: "", unloadingDetails: "" },
+              staff: [],
+              schedule: mainData.schedule || "",
+              powerRequirements: mainData.power_requirements || "",
+              auxiliaryNeeds: mainData.auxiliary_needs || "",
+            });
+            const children = await fetchChildData(mainData.id);
+            setEventData(prev => ({
+              ...prev,
+              contacts: children.contacts,
+              logistics: {
+                transport: children.logistics.transport || "",
+                loadingDetails: children.logistics.loading_details || "",
+                unloadingDetails: children.logistics.unloading_details || "",
+              },
+              schedule: mainData.schedule || "",
+              powerRequirements: mainData.power_requirements || "",
+              auxiliaryNeeds: mainData.auxiliary_needs || "",
+            }));
+            setTravelArrangements(children.travel);
+            setRoomAssignments(children.rooms);
+            setEventData(prev => ({
+              ...prev,
+              staff: children.staff,
+            }));
+            // Note: Images can be loaded separately if needed.
+          } else {
+            // If no record exists, clear the form (or leave defaults).
+            setEventData({
+              eventName: "",
+              eventDates: "",
+              venue: { name: "", address: "" },
+              contacts: [{ name: "", role: "", phone: "" }],
+              logistics: { transport: "", loadingDetails: "", unloadingDetails: "" },
+              staff: [{ name: "", surname1: "", surname2: "", position: "" }],
+              schedule: "",
+              powerRequirements: "",
+              auxiliaryNeeds: "",
+            });
+            setTravelArrangements([{ transportation_type: "van" }]);
+            setRoomAssignments([]);
+          }
+        } catch (error) {
+          console.error("Error fetching hoja_de_ruta data:", error);
+          toast({
+            title: "Error",
+            description: "No se pudo obtener la información de la hoja de ruta",
+            variant: "destructive",
+          });
+        }
+      })();
     }
-  }, []);
-
-  // Persist data to localStorage when eventData, travelArrangements, or roomAssignments change
-  useEffect(() => {
-    const dataToPersist = {
-      eventData,
-      travelArrangements,
-      roomAssignments,
-    };
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToPersist));
-  }, [eventData, travelArrangements, roomAssignments]);
-
-  // ---------------------------
-  // IMAGE & FILE STATES
-  // ---------------------------
-  const loadImageAsDataURL = async (url: string): Promise<string | null> => {
-    try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => reject(null);
-        reader.readAsDataURL(blob);
-      });
-    } catch (error) {
-      console.error("Error al cargar la imagen", error);
-      return null;
-    }
-  };
-
-  // ---------------------------
-  // FETCH FUNCTIONS
-  // ---------------------------
-  const fetchPowerRequirements = async (jobId: string) => {
-    try {
-      const { data: requirements, error } = await supabase
-        .from("power_requirement_tables")
-        .select("*")
-        .eq("job_id", jobId);
-
-      if (error) throw error;
-
-      if (requirements && requirements.length > 0) {
-        const formattedRequirements = requirements
-          .map((req: any) => {
-            return `${req.department.toUpperCase()} - ${req.table_name}:\n` +
-              `Potencia Total: ${req.total_watts}W\n` +
-              `Corriente por Fase: ${req.current_per_phase}A\n` +
-              `PDU Recomendado: ${req.pdu_type}\n`;
-          })
-          .join("\n");
-        setPowerRequirements(formattedRequirements);
-        setEventData((prev) => ({
-          ...prev,
-          powerRequirements: formattedRequirements,
-        }));
-      }
-    } catch (error: any) {
-      console.error("Error al obtener los requisitos eléctricos:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron obtener los requisitos eléctricos",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const fetchAssignedStaff = async (jobId: string) => {
-    try {
-      const { data: assignments, error } = await supabase
-        .from("job_assignments")
-        .select(
-          `
-          *,
-          profiles:technician_id (
-            first_name,
-            last_name
-          )
-        `
-        )
-        .eq("job_id", jobId);
-
-      if (error) throw error;
-
-      if (assignments && assignments.length > 0) {
-        const staffList = assignments.map((assignment: any) => ({
-          name: assignment.profiles.first_name,
-          surname1: assignment.profiles.last_name,
-          surname2: "",
-          position:
-            assignment.sound_role ||
-            assignment.lights_role ||
-            assignment.video_role ||
-            "Técnico",
-        }));
-
-        setEventData((prev) => ({
-          ...prev,
-          staff: staffList,
-        }));
-      }
-    } catch (error) {
-      console.error("Error al obtener el personal:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo obtener el personal asignado",
-        variant: "destructive",
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (selectedJobId && jobs) {
-      const selectedJob = jobs.find((job: any) => job.id === selectedJobId);
-      if (selectedJob) {
-        console.log("Trabajo seleccionado:", selectedJob);
-        const formattedDates = `${format(
-          new Date(selectedJob.start_time),
-          "dd/MM/yyyy HH:mm"
-        )} - ${format(new Date(selectedJob.end_time), "dd/MM/yyyy HH:mm")}`;
-
-        setEventData((prev) => ({
-          ...prev,
-          eventName: selectedJob.title,
-          eventDates: formattedDates,
-        }));
-
-        fetchPowerRequirements(selectedJob.id);
-        fetchAssignedStaff(selectedJob.id);
-
-        toast({
-          title: "Trabajo Seleccionado",
-          description: "El formulario se ha actualizado con los detalles del trabajo",
-        });
-      }
-    }
-  }, [selectedJobId, jobs]);
+  }, [selectedJobId]);
 
   // ---------------------------
   // IMAGE HANDLERS
@@ -284,7 +344,6 @@ const HojaDeRutaGenerator = () => {
     const fileArray = Array.from(files);
     const newImages = [...(images[type] || []), ...fileArray];
     setImages({ ...images, [type]: newImages });
-
     const previews = fileArray.map((file) => URL.createObjectURL(file));
     setImagePreviews((prev) => ({
       ...prev,
@@ -493,8 +552,20 @@ const HojaDeRutaGenerator = () => {
       });
       return;
     }
-    const selectedJob = jobs?.find((job: any) => job.id === selectedJobId);
-    const jobTitle = selectedJob?.title || "Trabajo_Sin_Nombre";
+    try {
+      // First, save the current form data into Supabase.
+      await saveHojaDeRutaData(selectedJobId, eventData, travelArrangements, roomAssignments);
+    } catch (error: any) {
+      console.error("Error guardando los datos:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron guardar los datos de la hoja de ruta",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const jobTitle = (jobs?.find((job: any) => job.id === selectedJobId)?.title) || "Trabajo_Sin_Nombre";
     const doc = new jsPDF() as AutoTableJsPDF;
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
@@ -648,13 +719,12 @@ const HojaDeRutaGenerator = () => {
       });
       yPosition = (doc as any).lastAutoTable.finalY + 15;
 
-      // Print unique pickup addresses and associated images
+      // Print unique pickup addresses and associated images.
+      // (Since your addresses are hardcoded, they will always be non-empty.)
       const uniquePickupAddresses = Array.from(
-        new Set(
-          travelArrangements
-            .map(arr => arr.pickup_address!.trim())
-        )
+        new Set(travelArrangements.map(arr => arr.pickup_address!.trim()))
       );
+      // Keys must match the hardcoded pickup address strings exactly.
       const transportationMapPlaceholders: { [key: string]: string } = {
         "Nave Sector-Pro. C\\Puerto Rico 6, 28971 - Griñon 1": "/lovable-uploads/IMG_7834.jpeg",
         "C\\ Corregidor Diego de Valderrabano 23, Moratalaz": "/lovable-uploads/IMG_7835.jpeg",
@@ -681,7 +751,7 @@ const HojaDeRutaGenerator = () => {
       }
     }
 
-    // Room Assignments: print only if at least one assignment has non-empty data
+    // Room Assignments (print only if at least one assignment has data)
     if (
       roomAssignments.length > 0 &&
       roomAssignments.some(room =>
@@ -823,9 +893,6 @@ const HojaDeRutaGenerator = () => {
     };
   };
 
-  // ---------------------------
-  // JSX RETURN
-  // ---------------------------
   return (
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader>
@@ -833,12 +900,12 @@ const HojaDeRutaGenerator = () => {
       </CardHeader>
       <ScrollArea className="h-[calc(100vh-12rem)]">
         <CardContent className="space-y-6">
+          {/* Alert */}
           {showAlert && (
             <Alert className="mb-4">
               <AlertDescription>{alertMessage}</AlertDescription>
             </Alert>
           )}
-
           {/* Selección de Trabajo */}
           <div className="space-y-4">
             <div className="flex flex-col space-y-2">
@@ -851,7 +918,7 @@ const HojaDeRutaGenerator = () => {
                   <SelectValue placeholder="Seleccione un trabajo..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLoadingJobs ? (
+                  {isLoading: isLoadingJobs ? (
                     <SelectItem value="loading">Cargando trabajos...</SelectItem>
                   ) : jobs?.length === 0 ? (
                     <SelectItem value="unselected">No hay trabajos disponibles</SelectItem>
@@ -865,7 +932,6 @@ const HojaDeRutaGenerator = () => {
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label htmlFor="eventName">Nombre del Evento</Label>
               <Input
@@ -890,12 +956,10 @@ const HojaDeRutaGenerator = () => {
               </div>
             </div>
           </div>
-
           {/* Sección de Imágenes */}
           <div className="space-y-6">
             <ImageUploadSection type="venue" label="Imágenes del Lugar" />
           </div>
-
           {/* Diálogo de Lugar */}
           <Dialog>
             <DialogTrigger asChild>
@@ -953,7 +1017,6 @@ const HojaDeRutaGenerator = () => {
               </div>
             </DialogContent>
           </Dialog>
-
           {/* Diálogo de Contactos */}
           <Dialog>
             <DialogTrigger asChild>
@@ -997,7 +1060,6 @@ const HojaDeRutaGenerator = () => {
               </div>
             </DialogContent>
           </Dialog>
-
           {/* Diálogo de Personal */}
           <Dialog>
             <DialogTrigger asChild>
@@ -1048,7 +1110,6 @@ const HojaDeRutaGenerator = () => {
               </div>
             </DialogContent>
           </Dialog>
-
           {/* Diálogo de Arreglos de Viaje */}
           <Dialog>
             <DialogTrigger asChild>
@@ -1179,7 +1240,6 @@ const HojaDeRutaGenerator = () => {
               </div>
             </DialogContent>
           </Dialog>
-
           {/* Diálogo de Asignaciones de Habitaciones */}
           <Dialog>
             <DialogTrigger asChild>
@@ -1293,7 +1353,6 @@ const HojaDeRutaGenerator = () => {
               </div>
             </DialogContent>
           </Dialog>
-
           {/* Sección de Programa */}
           <div>
             <Label htmlFor="schedule">Programa</Label>
@@ -1307,7 +1366,6 @@ const HojaDeRutaGenerator = () => {
               placeholder="Load in: 08:00&#10;Soundcheck: 14:00&#10;Doors: 19:00&#10;Show: 20:00..."
             />
           </div>
-
           {/* Sección de Requisitos Eléctricos */}
           <div>
             <Label htmlFor="powerRequirements">Requisitos Eléctricos</Label>
@@ -1324,7 +1382,6 @@ const HojaDeRutaGenerator = () => {
               placeholder="Los requisitos eléctricos se completarán automáticamente cuando estén disponibles..."
             />
           </div>
-
           {/* Sección de Necesidades Auxiliares */}
           <div>
             <Label htmlFor="auxiliaryNeeds">Necesidades Auxiliares</Label>
@@ -1338,7 +1395,6 @@ const HojaDeRutaGenerator = () => {
               placeholder="Requerimientos del equipo de carga, necesidades de equipamiento..."
             />
           </div>
-
           <Button onClick={generateDocument} className="w-full">
             Generar Hoja de Ruta
           </Button>
