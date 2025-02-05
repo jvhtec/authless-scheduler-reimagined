@@ -41,7 +41,7 @@ interface AutoTableJsPDF extends jsPDF {
 }
 
 interface TravelArrangement {
-  transportation_type: "van" | "sleeper_bus" | "train" | "plane";
+  transportation_type: "van" | "sleeper_bus" | "train" | "plane" | "RV";
   pickup_address?: string;
   pickup_time?: string;
   flight_train_number?: string;
@@ -455,8 +455,18 @@ const HojaDeRutaGenerator = () => {
     const doc = new jsPDF() as AutoTableJsPDF;
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
+    const bottomMargin = 60; // Reserve 60 points at bottom for logo
 
-    // Add header background
+    // Helper to add a page if current y exceeds safe area
+    const checkPageBreak = (currentY: number): number => {
+      if (currentY > pageHeight - bottomMargin) {
+        doc.addPage();
+        return 20;
+      }
+      return currentY;
+    };
+
+    // Add header background on first page
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, "F");
 
@@ -472,10 +482,12 @@ const HojaDeRutaGenerator = () => {
     doc.setTextColor(51, 51, 51);
 
     // Event Dates
+    yPosition = checkPageBreak(yPosition);
     doc.text(`Dates: ${eventData.eventDates}`, 20, yPosition);
     yPosition += 15;
 
     // Venue Information
+    yPosition = checkPageBreak(yPosition);
     doc.setFontSize(14);
     doc.setTextColor(125, 1, 1);
     doc.text("Venue Information", 20, yPosition);
@@ -487,12 +499,13 @@ const HojaDeRutaGenerator = () => {
     doc.text(`Address: ${eventData.venue.address}`, 30, yPosition);
     yPosition += 15;
 
-    // Contacts Section (only if any contact is filled)
+    // Contacts Section
     if (
       eventData.contacts.some(
         (contact) => contact.name || contact.role || contact.phone
       )
     ) {
+      yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
       doc.text("Contacts", 20, yPosition);
@@ -513,12 +526,13 @@ const HojaDeRutaGenerator = () => {
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Logistics Section (if any value exists)
+    // Logistics Section
     if (
       eventData.logistics.transport ||
       eventData.logistics.loadingDetails ||
       eventData.logistics.unloadingDetails
     ) {
+      yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
       doc.text("Logistics", 20, yPosition);
@@ -536,6 +550,7 @@ const HojaDeRutaGenerator = () => {
           const lines = doc.splitTextToSize(item.value, pageWidth - 60);
           doc.text(lines, 30, yPosition + 7);
           yPosition += lines.length * 7 + 15;
+          yPosition = checkPageBreak(yPosition);
         }
       });
     }
@@ -546,6 +561,7 @@ const HojaDeRutaGenerator = () => {
         (person) => person.name || person.surname1 || person.surname2 || person.position
       )
     ) {
+      yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
       doc.text("Staff List", 20, yPosition);
@@ -567,19 +583,21 @@ const HojaDeRutaGenerator = () => {
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Travel Arrangements Section (if any field is filled)
+    // Travel Arrangements Section
     if (
       travelArrangements.length > 0 &&
       travelArrangements.some((arr) =>
         Object.values(arr).some((val) => val && val !== "")
       )
     ) {
+      yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
       doc.text("Travel Arrangements", 20, yPosition);
       yPosition += 10;
       const travelTableData = travelArrangements.map((arr) => [
         arr.transportation_type,
+        // Combine pickup address and time
         `${arr.pickup_address || ""} ${arr.pickup_time || ""}`.trim(),
         arr.departure_time || "",
         arr.arrival_time || "",
@@ -596,13 +614,14 @@ const HojaDeRutaGenerator = () => {
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Room Assignments Section (if any field is filled)
+    // Room Assignments Section
     if (
       roomAssignments.length > 0 &&
       roomAssignments.some((room) =>
         Object.values(room).some((val) => val && val !== "")
       )
     ) {
+      yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
       doc.text("Room Assignments", 20, yPosition);
@@ -625,6 +644,7 @@ const HojaDeRutaGenerator = () => {
 
     // Schedule Section
     if (eventData.schedule) {
+      yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
       doc.text("Schedule", 20, yPosition);
@@ -638,6 +658,7 @@ const HojaDeRutaGenerator = () => {
 
     // Power Requirements Section
     if (eventData.powerRequirements) {
+      yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
       doc.text("Power Requirements", 20, yPosition);
@@ -651,6 +672,7 @@ const HojaDeRutaGenerator = () => {
 
     // Auxiliary Needs Section
     if (eventData.auxiliaryNeeds) {
+      yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
       doc.text("Auxiliary Needs", 20, yPosition);
@@ -665,25 +687,26 @@ const HojaDeRutaGenerator = () => {
     // Venue Images Section
     if (imagePreviews.venue.length > 0) {
       doc.addPage();
+      yPosition = 20;
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text("Venue Images", 20, 20);
-      let imageY = 40;
+      doc.text("Venue Images", 20, yPosition);
+      yPosition += 20;
       const imageWidth = 80;
       const imagesPerRow = 2;
       let currentX = 20;
       for (let i = 0; i < imagePreviews.venue.length; i++) {
         try {
-          doc.addImage(imagePreviews.venue[i], "JPEG", currentX, imageY, imageWidth, 60);
+          doc.addImage(imagePreviews.venue[i], "JPEG", currentX, yPosition, imageWidth, 60);
           if ((i + 1) % imagesPerRow === 0) {
-            imageY += 70;
+            yPosition += 70;
             currentX = 20;
           } else {
             currentX += imageWidth + 10;
           }
-          if (imageY > pageHeight - 80 && i < imagePreviews.venue.length - 1) {
+          if (yPosition > pageHeight - bottomMargin && i < imagePreviews.venue.length - 1) {
             doc.addPage();
-            imageY = 40;
+            yPosition = 20;
             currentX = 20;
           }
         } catch (error) {
@@ -693,37 +716,31 @@ const HojaDeRutaGenerator = () => {
       }
     }
 
-    // Add logo on the last page
+    // ---------------------------
+    // ADD LOGO ON EVERY PAGE
+    // ---------------------------
     const logo = new Image();
     logo.crossOrigin = "anonymous";
     logo.src = "/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png";
     logo.onload = () => {
-      doc.setPage(doc.getNumberOfPages());
-      const logoWidth = 50;
-      const logoHeight = logoWidth * (logo.height / logo.width);
-      const xPosition = (pageWidth - logoWidth) / 2;
-      const yPositionLogo = pageHeight - 20;
-      try {
-        doc.addImage(logo, "PNG", xPosition, yPositionLogo, logoWidth, logoHeight);
-        const blob = doc.output("blob");
-        const fileName = `hoja_de_ruta_${jobTitle.replace(/\s+/g, "_")}.pdf`;
-        uploadPdfToJob(selectedJobId, blob, fileName);
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = fileName;
-        link.click();
-        URL.revokeObjectURL(url);
-      } catch (error) {
-        console.error("Error adding logo:", error);
-        const blob = doc.output("blob");
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `hoja_de_ruta_${eventData.eventName.replace(/\s+/g, "_")}.pdf`;
-        link.click();
-        URL.revokeObjectURL(url);
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        const logoWidth = 50;
+        const logoHeight = logoWidth * (logo.height / logo.width);
+        const xPositionLogo = (pageWidth - logoWidth) / 2;
+        const yPositionLogo = pageHeight - logoHeight - 10;
+        doc.addImage(logo, "PNG", xPositionLogo, yPositionLogo, logoWidth, logoHeight);
       }
+      const blob = doc.output("blob");
+      const fileName = `hoja_de_ruta_${jobTitle.replace(/\s+/g, "_")}.pdf`;
+      uploadPdfToJob(selectedJobId, blob, fileName);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
     };
     logo.onerror = () => {
       console.error("Failed to load logo");
@@ -765,7 +782,7 @@ const HojaDeRutaGenerator = () => {
                   <SelectValue placeholder="Select a job..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLoadingJobs ? (
+                  {isLoading: isLoadingJobs ? (
                     <SelectItem value="loading">Loading jobs...</SelectItem>
                   ) : jobs?.length === 0 ? (
                     <SelectItem value="unselected">No jobs available</SelectItem>
@@ -988,22 +1005,29 @@ const HojaDeRutaGenerator = () => {
                         <SelectItem value="sleeper_bus">Sleeper Bus</SelectItem>
                         <SelectItem value="train">Train</SelectItem>
                         <SelectItem value="plane">Plane</SelectItem>
+                        <SelectItem value="RV">RV</SelectItem>
                       </SelectContent>
                     </Select>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Pickup Address</Label>
-                        <Input
-                          value={arrangement.pickup_address || ""}
-                          onChange={(e) =>
-                            updateTravelArrangement(
-                              index,
-                              "pickup_address",
-                              e.target.value
-                            )
+                        {/* Hardcoded pickup addresses */}
+                        <Select
+                          value={arrangement.pickup_address || "address1"}
+                          onValueChange={(value) =>
+                            updateTravelArrangement(index, "pickup_address", value)
                           }
-                        />
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select pickup address" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="address1">Address 1 (Placeholder)</SelectItem>
+                            <SelectItem value="address2">Address 2 (Placeholder)</SelectItem>
+                            <SelectItem value="address3">Address 3 (Placeholder)</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <Label>Pickup Time</Label>
@@ -1011,11 +1035,7 @@ const HojaDeRutaGenerator = () => {
                           type="datetime-local"
                           value={arrangement.pickup_time || ""}
                           onChange={(e) =>
-                            updateTravelArrangement(
-                              index,
-                              "pickup_time",
-                              e.target.value
-                            )
+                            updateTravelArrangement(index, "pickup_time", e.target.value)
                           }
                         />
                       </div>
@@ -1028,11 +1048,7 @@ const HojaDeRutaGenerator = () => {
                         <Input
                           value={arrangement.flight_train_number || ""}
                           onChange={(e) =>
-                            updateTravelArrangement(
-                              index,
-                              "flight_train_number",
-                              e.target.value
-                            )
+                            updateTravelArrangement(index, "flight_train_number", e.target.value)
                           }
                         />
                       </div>
@@ -1045,11 +1061,7 @@ const HojaDeRutaGenerator = () => {
                           type="datetime-local"
                           value={arrangement.departure_time || ""}
                           onChange={(e) =>
-                            updateTravelArrangement(
-                              index,
-                              "departure_time",
-                              e.target.value
-                            )
+                            updateTravelArrangement(index, "departure_time", e.target.value)
                           }
                         />
                       </div>
@@ -1059,11 +1071,7 @@ const HojaDeRutaGenerator = () => {
                           type="datetime-local"
                           value={arrangement.arrival_time || ""}
                           onChange={(e) =>
-                            updateTravelArrangement(
-                              index,
-                              "arrival_time",
-                              e.target.value
-                            )
+                            updateTravelArrangement(index, "arrival_time", e.target.value)
                           }
                         />
                       </div>
