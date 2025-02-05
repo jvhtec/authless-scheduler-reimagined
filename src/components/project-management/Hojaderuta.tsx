@@ -80,11 +80,11 @@ const LOCAL_STORAGE_KEY = "hojaDeRutaData";
 const HojaDeRutaGenerator = () => {
   const { toast } = useToast();
   const { data: jobs, isLoading: isLoadingJobs } = useJobSelection();
+  
+  // Initialize all state variables first
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [selectedJobId, setSelectedJobId] = useState<string>("");
-
-  // Initialize all state variables first
   const [eventData, setEventData] = useState<EventData>({
     eventName: "",
     eventDates: "",
@@ -798,4 +798,503 @@ const HojaDeRutaGenerator = () => {
         doc.setPage(i);
         const logoWidth = 50;
         const logoHeight = logoWidth * (logo.height / logo.width);
-        const xPosit
+        const xPosition = pageWidth - logoWidth - 20;
+        const yPosition = pageHeight - logoHeight - 20;
+        doc.addImage(logo, "PNG", xPosition, yPosition, logoWidth, logoHeight);
+      }
+
+      // Save and upload the PDF
+      const pdfBlob = doc.output("blob");
+      const fileName = `Hoja_de_Ruta_${jobTitle}_${format(new Date(), "dd-MM-yyyy")}.pdf`;
+      uploadPdfToJob(selectedJobId, pdfBlob, fileName);
+    };
+  };
+
+  return (
+    <Card className="w-full max-w-3xl mx-auto">
+      <CardHeader>
+        <CardTitle>Generador de Hoja de Ruta</CardTitle>
+      </CardHeader>
+      <ScrollArea className="h-[calc(100vh-12rem)]">
+        <CardContent className="space-y-6">
+          {/* Job Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="job-select">Seleccionar Trabajo</Label>
+            <Select
+              value={selectedJobId}
+              onValueChange={(value) => setSelectedJobId(value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccione un trabajo" />
+              </SelectTrigger>
+              <SelectContent>
+                {jobs?.map((job: any) => (
+                  <SelectItem key={job.id} value={job.id}>
+                    {job.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Event Details */}
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="event-name">Nombre del Evento</Label>
+              <Input
+                id="event-name"
+                value={eventData.eventName}
+                onChange={(e) =>
+                  setEventData({ ...eventData, eventName: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="event-dates">Fechas</Label>
+              <Input
+                id="event-dates"
+                value={eventData.eventDates}
+                onChange={(e) =>
+                  setEventData({ ...eventData, eventDates: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          {/* Venue Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Información del Lugar</h3>
+            <div>
+              <Label htmlFor="venue-name">Nombre del Lugar</Label>
+              <Input
+                id="venue-name"
+                value={eventData.venue.name}
+                onChange={(e) =>
+                  setEventData({
+                    ...eventData,
+                    venue: { ...eventData.venue, name: e.target.value },
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="venue-address">Dirección</Label>
+              <Input
+                id="venue-address"
+                value={eventData.venue.address}
+                onChange={(e) =>
+                  setEventData({
+                    ...eventData,
+                    venue: { ...eventData.venue, address: e.target.value },
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="venue-map">Mapa del Lugar</Label>
+              <Input
+                id="venue-map"
+                type="file"
+                accept="image/*"
+                onChange={handleVenueMapUpload}
+              />
+              {venueMapPreview && (
+                <img
+                  src={venueMapPreview}
+                  alt="Mapa del lugar"
+                  className="mt-4 max-w-full h-auto"
+                />
+              )}
+            </div>
+            <ImageUploadSection type="venue" label="Imágenes del Lugar" />
+          </div>
+
+          {/* Contacts */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Contactos</h3>
+            {eventData.contacts.map((contact, index) => (
+              <div key={index} className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label>Nombre</Label>
+                    <Input
+                      value={contact.name}
+                      onChange={(e) =>
+                        handleContactChange(index, "name", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Rol</Label>
+                    <Input
+                      value={contact.role}
+                      onChange={(e) =>
+                        handleContactChange(index, "role", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Teléfono</Label>
+                    <Input
+                      value={contact.phone}
+                      onChange={(e) =>
+                        handleContactChange(index, "phone", e.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <Button onClick={addContact}>Agregar Contacto</Button>
+          </div>
+
+          {/* Logistics */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Logística</h3>
+            <div>
+              <Label htmlFor="transport">Transporte</Label>
+              <Textarea
+                id="transport"
+                value={eventData.logistics.transport}
+                onChange={(e) =>
+                  setEventData({
+                    ...eventData,
+                    logistics: {
+                      ...eventData.logistics,
+                      transport: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="loading-details">Detalles de Carga</Label>
+              <Textarea
+                id="loading-details"
+                value={eventData.logistics.loadingDetails}
+                onChange={(e) =>
+                  setEventData({
+                    ...eventData,
+                    logistics: {
+                      ...eventData.logistics,
+                      loadingDetails: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="unloading-details">Detalles de Descarga</Label>
+              <Textarea
+                id="unloading-details"
+                value={eventData.logistics.unloadingDetails}
+                onChange={(e) =>
+                  setEventData({
+                    ...eventData,
+                    logistics: {
+                      ...eventData.logistics,
+                      unloadingDetails: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          {/* Staff */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Personal</h3>
+            {eventData.staff.map((person, index) => (
+              <div key={index} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Nombre</Label>
+                    <Input
+                      value={person.name}
+                      onChange={(e) =>
+                        handleStaffChange(index, "name", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Primer Apellido</Label>
+                    <Input
+                      value={person.surname1}
+                      onChange={(e) =>
+                        handleStaffChange(index, "surname1", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Segundo Apellido</Label>
+                    <Input
+                      value={person.surname2}
+                      onChange={(e) =>
+                        handleStaffChange(index, "surname2", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Puesto</Label>
+                    <Input
+                      value={person.position}
+                      onChange={(e) =>
+                        handleStaffChange(index, "position", e.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <Button onClick={addStaffMember}>Agregar Personal</Button>
+          </div>
+
+          {/* Travel Arrangements */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Arreglos de Viaje</h3>
+            {travelArrangements.map((arrangement, index) => (
+              <div key={index} className="space-y-4 border p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Tipo de Transporte</Label>
+                    <Select
+                      value={arrangement.transportation_type}
+                      onValueChange={(value: any) =>
+                        updateTravelArrangement(
+                          index,
+                          "transportation_type",
+                          value
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="van">Furgoneta</SelectItem>
+                        <SelectItem value="sleeper_bus">Bus Cama</SelectItem>
+                        <SelectItem value="train">Tren</SelectItem>
+                        <SelectItem value="plane">Avión</SelectItem>
+                        <SelectItem value="RV">Autocaravana</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Dirección de Recogida</Label>
+                    <Input
+                      value={arrangement.pickup_address || ""}
+                      onChange={(e) =>
+                        updateTravelArrangement(
+                          index,
+                          "pickup_address",
+                          e.target.value
+                        )
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Hora de Recogida</Label>
+                    <Input
+                      type="time"
+                      value={arrangement.pickup_time || ""}
+                      onChange={(e) =>
+                        updateTravelArrangement(
+                          index,
+                          "pickup_time",
+                          e.target.value
+                        )
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Número de Vuelo/Tren</Label>
+                    <Input
+                      value={arrangement.flight_train_number || ""}
+                      onChange={(e) =>
+                        updateTravelArrangement(
+                          index,
+                          "flight_train_number",
+                          e.target.value
+                        )
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Hora de Salida</Label>
+                    <Input
+                      type="time"
+                      value={arrangement.departure_time || ""}
+                      onChange={(e) =>
+                        updateTravelArrangement(
+                          index,
+                          "departure_time",
+                          e.target.value
+                        )
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Hora de Llegada</Label>
+                    <Input
+                      type="time"
+                      value={arrangement.arrival_time || ""}
+                      onChange={(e) =>
+                        updateTravelArrangement(
+                          index,
+                          "arrival_time",
+                          e.target.value
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Notas</Label>
+                  <Textarea
+                    value={arrangement.notes || ""}
+                    onChange={(e) =>
+                      updateTravelArrangement(index, "notes", e.target.value)
+                    }
+                  />
+                </div>
+                <Button
+                  variant="destructive"
+                  onClick={() => removeTravelArrangement(index)}
+                >
+                  Eliminar Arreglo
+                </Button>
+              </div>
+            ))}
+            <Button onClick={addTravelArrangement}>
+              Agregar Arreglo de Viaje
+            </Button>
+          </div>
+
+          {/* Room Assignments */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Asignaciones de Habitaciones</h3>
+            {roomAssignments.map((room, index) => (
+              <div key={index} className="space-y-4 border p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Tipo de Habitación</Label>
+                    <Select
+                      value={room.room_type}
+                      onValueChange={(value: any) =>
+                        updateRoomAssignment(index, "room_type", value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="single">Individual</SelectItem>
+                        <SelectItem value="double">Doble</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Número de Habitación</Label>
+                    <Input
+                      value={room.room_number || ""}
+                      onChange={(e) =>
+                        updateRoomAssignment(
+                          index,
+                          "room_number",
+                          e.target.value
+                        )
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Personal 1</Label>
+                    <Input
+                      value={room.staff_member1_id || ""}
+                      onChange={(e) =>
+                        updateRoomAssignment(
+                          index,
+                          "staff_member1_id",
+                          e.target.value
+                        )
+                      }
+                    />
+                  </div>
+                  {room.room_type === "double" && (
+                    <div>
+                      <Label>Personal 2</Label>
+                      <Input
+                        value={room.staff_member2_id || ""}
+                        onChange={(e) =>
+                          updateRoomAssignment(
+                            index,
+                            "staff_member2_id",
+                            e.target.value
+                          )
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="destructive"
+                  onClick={() => removeRoomAssignment(index)}
+                >
+                  Eliminar Asignación
+                </Button>
+              </div>
+            ))}
+            <Button onClick={addRoomAssignment}>
+              Agregar Asignación de Habitación
+            </Button>
+          </div>
+
+          {/* Schedule */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Programa</h3>
+            <Textarea
+              value={eventData.schedule}
+              onChange={(e) =>
+                setEventData({ ...eventData, schedule: e.target.value })
+              }
+              placeholder="Ingrese el programa del evento..."
+            />
+          </div>
+
+          {/* Power Requirements */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Requisitos Eléctricos</h3>
+            <Textarea
+              value={eventData.powerRequirements}
+              onChange={(e) =>
+                setEventData({
+                  ...eventData,
+                  powerRequirements: e.target.value,
+                })
+              }
+              placeholder="Ingrese los requisitos eléctricos..."
+            />
+          </div>
+
+          {/* Auxiliary Needs */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Necesidades Auxiliares</h3>
+            <Textarea
+              value={eventData.auxiliaryNeeds}
+              onChange={(e) =>
+                setEventData({ ...eventData, auxiliaryNeeds: e.target.value })
+              }
+              placeholder="Ingrese las necesidades auxiliares..."
+            />
+          </div>
+
+          {/* Generate Button */}
+          <Button onClick={generateDocument} className="w-full">
+            Generar Hoja de Ruta
+          </Button>
+        </CardContent>
+      </ScrollArea>
+    </Card>
+  );
+};
+
+export default HojaDeRutaGenerator;
