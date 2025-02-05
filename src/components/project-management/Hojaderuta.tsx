@@ -673,9 +673,9 @@ const HojaDeRutaGenerator = () => {
       // For example, if the pickup address is "Nave Sector-Pro. C\Puerto Rico 6, 28971 - Griñon 1",
       // then the image URL should be something like "/IMG_7834.jpeg". Adjust these keys as needed.
       const transportationMapPlaceholders: { [key: string]: string } = {
-        "Nave Sector-Pro. C\\Puerto Rico 6, 28971 - Griñon 1": "/IMG_7834.jpeg",
-        "C\\ Corregidor Diego de Valderrabano 23, Moratalaz": "/IMG_7835.jpeg",
-        "C\\ Entrepeñas 47, Ensanche de Vallecas": "/IMG_7836.jpeg",
+        "Nave Sector-Pro. C\\Puerto Rico 6, 28971 - Griñon 1": "/lovable-uploads/IMG_7834.jpeg",
+        "C\\ Corregidor Diego de Valderrabano 23, Moratalaz": "/lovable-uploads/IMG_7835.jpeg",
+        "C\\ Entrepeñas 47, Ensanche de Vallecas": "/lovable-uploads/IMG_7836.jpeg",
       };
 
       // Imprimir cada dirección única y su imagen asociada
