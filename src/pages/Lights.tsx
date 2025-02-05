@@ -88,7 +88,7 @@ const Lights = () => {
   };
 
   const handleDeleteClick = async (jobId: string) => {
-    if (!window.confirm("Are you sure you want to delete this job?")) return;
+    if (!window.confirm("¿Está seguro de que desea eliminar este trabajo?")) return;
 
     try {
       const { error } = await supabase
@@ -99,13 +99,13 @@ const Lights = () => {
       if (error) throw error;
 
       toast({
-        title: "Job deleted",
-        description: "The job has been successfully deleted.",
+        title: "Trabajo eliminado",
+        description: "El trabajo se ha eliminado con éxito.",
       });
       await queryClient.invalidateQueries({ queryKey: ['jobs'] });
     } catch (error: any) {
       toast({
-        title: "Error deleting job",
+        title: "Error al eliminar el trabajo",
         description: error.message,
         variant: "destructive",
       });
@@ -117,7 +117,7 @@ const Lights = () => {
       <LightsHeader 
         onCreateJob={() => setIsJobDialogOpen(true)}
         onCreateTour={() => setIsTourDialogOpen(true)}
-        department="Lights"
+        department="Luces"
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -148,7 +148,7 @@ const Lights = () => {
           className="flex items-center gap-2"
         >
           <Scale className="h-4 w-4" />
-          Weight Calculator
+          Calculadora de Peso
         </Button>
         <Button 
           variant="outline" 
@@ -156,7 +156,7 @@ const Lights = () => {
           className="flex items-center gap-2"
         >
           <Zap className="h-4 w-4" />
-          Power Calculator
+          Calculadora de Potencia
         </Button>
       </div>
 
@@ -193,4 +193,3 @@ const Lights = () => {
 };
 
 export default Lights;
-
