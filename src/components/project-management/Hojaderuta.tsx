@@ -102,12 +102,18 @@ const HojaDeRutaGenerator = () => {
     auxiliaryNeeds: "",
   });
 
+  // ---------------------------
+  // IMAGE & FILE STATE
+  // ---------------------------
   const [images, setImages] = useState({
     venue: [] as File[],
   });
   const [imagePreviews, setImagePreviews] = useState({
     venue: [] as string[],
   });
+  // New state for venue location map (a single file)
+  const [venueMap, setVenueMap] = useState<File | null>(null);
+  const [venueMapPreview, setVenueMapPreview] = useState<string | null>(null);
 
   const [powerRequirements, setPowerRequirements] = useState<string>("");
   const [travelArrangements, setTravelArrangements] = useState<TravelArrangement[]>([
@@ -116,6 +122,25 @@ const HojaDeRutaGenerator = () => {
   const [roomAssignments, setRoomAssignments] = useState<RoomAssignment[]>([
     { room_type: "single" },
   ]);
+
+  // ---------------------------
+  // UTILITY: load image from URL as dataURL
+  // ---------------------------
+  const loadImageAsDataURL = async (url: string): Promise<string | null> => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error("Error loading image", error);
+      return null;
+    }
+  };
 
   // ---------------------------
   // FETCH FUNCTIONS
@@ -254,6 +279,16 @@ const HojaDeRutaGenerator = () => {
     newPreviews.splice(index, 1);
     setImages({ ...images, [type]: newImages });
     setImagePreviews({ ...imagePreviews, [type]: newPreviews });
+  };
+
+  // New handler for uploading the venue location map
+  const handleVenueMapUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setVenueMap(file);
+      const preview = URL.createObjectURL(file);
+      setVenueMapPreview(preview);
+    }
   };
 
   // ---------------------------
@@ -486,7 +521,7 @@ const HojaDeRutaGenerator = () => {
     doc.text(`Dates: ${eventData.eventDates}`, 20, yPosition);
     yPosition += 15;
 
-    // Venue Information
+    // Venue Information Section
     yPosition = checkPageBreak(yPosition);
     doc.setFontSize(14);
     doc.setTextColor(125, 1, 1);
@@ -498,6 +533,18 @@ const HojaDeRutaGenerator = () => {
     yPosition += 7;
     doc.text(`Address: ${eventData.venue.address}`, 30, yPosition);
     yPosition += 15;
+    // Insert Venue Map image if available (printed just below venue address)
+    if (venueMapPreview) {
+      try {
+        // You can adjust width/height as desired
+        const mapWidth = 100;
+        const mapHeight = 60;
+        doc.addImage(venueMapPreview, "JPEG", 30, yPosition, mapWidth, mapHeight);
+        yPosition += mapHeight + 10;
+      } catch (error) {
+        console.error("Error adding venue map to PDF:", error);
+      }
+    }
 
     // Contacts Section
     if (
@@ -597,7 +644,6 @@ const HojaDeRutaGenerator = () => {
       yPosition += 10;
       const travelTableData = travelArrangements.map((arr) => [
         arr.transportation_type,
-        // Combine pickup address and time
         `${arr.pickup_address || ""} ${arr.pickup_time || ""}`.trim(),
         arr.departure_time || "",
         arr.arrival_time || "",
@@ -612,6 +658,33 @@ const HojaDeRutaGenerator = () => {
         styles: { fontSize: 10 },
       });
       yPosition = (doc as any).lastAutoTable.finalY + 15;
+
+      // For each travel arrangement with a hardcoded pickup address, print a placeholder map image below
+      const transportationMapPlaceholders: { [key: string]: string } = {
+        address1: "https://via.placeholder.com/300x200?text=Map+for+Address+1",
+        address2: "https://via.placeholder.com/300x200?text=Map+for+Address+2",
+        address3: "https://via.placeholder.com/300x200?text=Map+for+Address+3",
+      };
+
+      for (let i = 0; i < travelArrangements.length; i++) {
+        const arr = travelArrangements[i];
+        if (arr.pickup_address && transportationMapPlaceholders[arr.pickup_address]) {
+          const imageDataUrl = await loadImageAsDataURL(transportationMapPlaceholders[arr.pickup_address]);
+          if (imageDataUrl) {
+            yPosition = checkPageBreak(yPosition);
+            doc.setFontSize(10);
+            doc.setTextColor(51, 51, 51);
+            doc.text(`Map for ${arr.pickup_address}:`, 20, yPosition);
+            yPosition += 7;
+            try {
+              doc.addImage(imageDataUrl, "JPEG", 20, yPosition, 100, 60);
+              yPosition += 70;
+            } catch (error) {
+              console.error("Error adding transportation map image:", error);
+            }
+          }
+        }
+      }
     }
 
     // Room Assignments Section
@@ -684,7 +757,7 @@ const HojaDeRutaGenerator = () => {
       yPosition += auxLines.length * 7 + 15;
     }
 
-    // Venue Images Section
+    // Venue Images Section (if any)
     if (imagePreviews.venue.length > 0) {
       doc.addPage();
       yPosition = 20;
@@ -864,6 +937,23 @@ const HojaDeRutaGenerator = () => {
                       })
                     }
                   />
+                </div>
+                {/* New Venue Map Upload */}
+                <div>
+                  <Label htmlFor="venueMapUpload">Venue Location Map</Label>
+                  <Input
+                    id="venueMapUpload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleVenueMapUpload}
+                  />
+                  {venueMapPreview && (
+                    <img
+                      src={venueMapPreview}
+                      alt="Venue Map Preview"
+                      className="mt-2 max-w-full h-auto"
+                    />
+                  )}
                 </div>
               </div>
             </DialogContent>
