@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, FileText, Filter } from "lucide-react";
-import { Input } from "@/components/ui/input"; 
 import { supabase } from "@/lib/supabase";
 import { Department } from "@/types/department";
 import { startOfMonth, endOfMonth, addMonths } from "date-fns";
@@ -24,10 +23,10 @@ const ProjectManagement = () => {
   const startDate = startOfMonth(currentDate);
   const endDate = endOfMonth(currentDate);
 
-  // Use custom hook for tab visibility
+  // Use custom hook to keep the "jobs" tab active/visible.
   useTabVisibility(["jobs"]);
 
-  // Query for jobs based on selected department and date range
+  // Retrieve jobs using the custom hook. The hook already applies department and date filters.
   const { jobs: unfilteredJobs = [], jobsLoading, handleDeleteDocument } = useJobManagement(
     selectedDepartment,
     startDate,
@@ -35,43 +34,36 @@ const ProjectManagement = () => {
     true
   );
 
-  // Filter jobs based on the selected job type
+  // Filter jobs by selected job type using a case-insensitive comparison.
   const jobs = (unfilteredJobs || []).filter((job: any) => {
     if (selectedJobType === "All") return true;
-    return job.job_type === selectedJobType;
+    return job.job_type?.toLowerCase() === selectedJobType.toLowerCase();
   });
-  
-  // Check user access and fetch profile role
+
+  // Check user access and fetch profile role.
   useEffect(() => {
     const checkAccess = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
+        const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           console.log("ProjectManagement: No session found, redirecting to auth");
           navigate("/auth");
           return;
         }
-
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", session.user.id)
           .single();
-
         if (profileError) {
           console.error("ProjectManagement: Error fetching profile:", profileError);
           throw profileError;
         }
-
         if (!profile || !["admin", "logistics", "management"].includes(profile.role)) {
           console.log("ProjectManagement: Unauthorized access attempt");
           navigate("/dashboard");
           return;
         }
-
         setUserRole(profile.role);
         setLoading(false);
       } catch (error) {
@@ -83,24 +75,22 @@ const ProjectManagement = () => {
     checkAccess();
   }, [navigate]);
 
-  // Fetch all distinct job types from the jobs table
+  // Fetch all distinct job types (ignoring current filters) for the dropdown.
   useEffect(() => {
     const fetchJobTypes = async () => {
       try {
         const { data, error } = await supabase
           .from("jobs")
           .select("job_type");
-
         if (error) {
           console.error("Error fetching job types:", error);
           return;
         }
-
-        // Derive distinct job types and filter out any falsy values
         const types = Array.from(
-          new Set((data || []).map((job: any) => job.job_type).filter(Boolean))
+          new Set((data || [])
+            .map((job: any) => job.job_type)
+            .filter(Boolean))
         );
-
         setAllJobTypes(types);
       } catch (error) {
         console.error("Error in fetchJobTypes:", error);
@@ -159,8 +149,8 @@ const ProjectManagement = () => {
         <CardContent>
           <MonthNavigation
             currentDate={currentDate}
-            onPreviousMonth={() => setCurrentDate((prev) => addMonths(prev, -1))}
-            onNextMonth={() => setCurrentDate((prev) => addMonths(prev, 1))}
+            onPreviousMonth={() => setCurrentDate(prev => addMonths(prev, -1))}
+            onNextMonth={() => setCurrentDate(prev => addMonths(prev, 1))}
           />
           <DepartmentTabs
             selectedDepartment={selectedDepartment}
