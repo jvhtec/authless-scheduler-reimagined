@@ -320,6 +320,277 @@ export type Database = {
           },
         ]
       }
+      hoja_de_ruta: {
+        Row: {
+          auxiliary_needs: string | null
+          created_at: string | null
+          event_dates: string | null
+          event_name: string | null
+          id: string
+          job_id: string | null
+          power_requirements: string | null
+          schedule: string | null
+          updated_at: string | null
+          venue_address: string | null
+          venue_name: string | null
+        }
+        Insert: {
+          auxiliary_needs?: string | null
+          created_at?: string | null
+          event_dates?: string | null
+          event_name?: string | null
+          id?: string
+          job_id?: string | null
+          power_requirements?: string | null
+          schedule?: string | null
+          updated_at?: string | null
+          venue_address?: string | null
+          venue_name?: string | null
+        }
+        Update: {
+          auxiliary_needs?: string | null
+          created_at?: string | null
+          event_dates?: string | null
+          event_name?: string | null
+          id?: string
+          job_id?: string | null
+          power_requirements?: string | null
+          schedule?: string | null
+          updated_at?: string | null
+          venue_address?: string | null
+          venue_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hoja_de_ruta_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hoja_de_ruta_contacts: {
+        Row: {
+          hoja_de_ruta_id: string | null
+          id: string
+          name: string
+          phone: string | null
+          role: string | null
+        }
+        Insert: {
+          hoja_de_ruta_id?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          role?: string | null
+        }
+        Update: {
+          hoja_de_ruta_id?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hoja_de_ruta_contacts_hoja_de_ruta_id_fkey"
+            columns: ["hoja_de_ruta_id"]
+            isOneToOne: false
+            referencedRelation: "hoja_de_ruta"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hoja_de_ruta_images: {
+        Row: {
+          hoja_de_ruta_id: string | null
+          id: string
+          image_path: string
+          image_type: string
+        }
+        Insert: {
+          hoja_de_ruta_id?: string | null
+          id?: string
+          image_path: string
+          image_type: string
+        }
+        Update: {
+          hoja_de_ruta_id?: string | null
+          id?: string
+          image_path?: string
+          image_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hoja_de_ruta_images_hoja_de_ruta_id_fkey"
+            columns: ["hoja_de_ruta_id"]
+            isOneToOne: false
+            referencedRelation: "hoja_de_ruta"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hoja_de_ruta_logistics: {
+        Row: {
+          hoja_de_ruta_id: string | null
+          id: string
+          loading_details: string | null
+          transport: string | null
+          unloading_details: string | null
+        }
+        Insert: {
+          hoja_de_ruta_id?: string | null
+          id?: string
+          loading_details?: string | null
+          transport?: string | null
+          unloading_details?: string | null
+        }
+        Update: {
+          hoja_de_ruta_id?: string | null
+          id?: string
+          loading_details?: string | null
+          transport?: string | null
+          unloading_details?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hoja_de_ruta_logistics_hoja_de_ruta_id_fkey"
+            columns: ["hoja_de_ruta_id"]
+            isOneToOne: false
+            referencedRelation: "hoja_de_ruta"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hoja_de_ruta_rooms: {
+        Row: {
+          hoja_de_ruta_id: string | null
+          id: string
+          room_number: string | null
+          room_type: Database["public"]["Enums"]["room_type"]
+          staff_member1_id: string | null
+          staff_member2_id: string | null
+        }
+        Insert: {
+          hoja_de_ruta_id?: string | null
+          id?: string
+          room_number?: string | null
+          room_type: Database["public"]["Enums"]["room_type"]
+          staff_member1_id?: string | null
+          staff_member2_id?: string | null
+        }
+        Update: {
+          hoja_de_ruta_id?: string | null
+          id?: string
+          room_number?: string | null
+          room_type?: Database["public"]["Enums"]["room_type"]
+          staff_member1_id?: string | null
+          staff_member2_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hoja_de_ruta_rooms_hoja_de_ruta_id_fkey"
+            columns: ["hoja_de_ruta_id"]
+            isOneToOne: false
+            referencedRelation: "hoja_de_ruta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hoja_de_ruta_rooms_staff_member1_id_fkey"
+            columns: ["staff_member1_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hoja_de_ruta_rooms_staff_member2_id_fkey"
+            columns: ["staff_member2_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hoja_de_ruta_staff: {
+        Row: {
+          hoja_de_ruta_id: string | null
+          id: string
+          name: string
+          position: string | null
+          surname1: string | null
+          surname2: string | null
+        }
+        Insert: {
+          hoja_de_ruta_id?: string | null
+          id?: string
+          name: string
+          position?: string | null
+          surname1?: string | null
+          surname2?: string | null
+        }
+        Update: {
+          hoja_de_ruta_id?: string | null
+          id?: string
+          name?: string
+          position?: string | null
+          surname1?: string | null
+          surname2?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hoja_de_ruta_staff_hoja_de_ruta_id_fkey"
+            columns: ["hoja_de_ruta_id"]
+            isOneToOne: false
+            referencedRelation: "hoja_de_ruta"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hoja_de_ruta_travel: {
+        Row: {
+          arrival_time: string | null
+          departure_time: string | null
+          flight_train_number: string | null
+          hoja_de_ruta_id: string | null
+          id: string
+          notes: string | null
+          pickup_address: string | null
+          pickup_time: string | null
+          transportation_type: Database["public"]["Enums"]["transportation_type"]
+        }
+        Insert: {
+          arrival_time?: string | null
+          departure_time?: string | null
+          flight_train_number?: string | null
+          hoja_de_ruta_id?: string | null
+          id?: string
+          notes?: string | null
+          pickup_address?: string | null
+          pickup_time?: string | null
+          transportation_type: Database["public"]["Enums"]["transportation_type"]
+        }
+        Update: {
+          arrival_time?: string | null
+          departure_time?: string | null
+          flight_train_number?: string | null
+          hoja_de_ruta_id?: string | null
+          id?: string
+          notes?: string | null
+          pickup_address?: string | null
+          pickup_time?: string | null
+          transportation_type?: Database["public"]["Enums"]["transportation_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hoja_de_ruta_travel_hoja_de_ruta_id_fkey"
+            columns: ["hoja_de_ruta_id"]
+            isOneToOne: false
+            referencedRelation: "hoja_de_ruta"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_assignments: {
         Row: {
           assigned_at: string
@@ -1428,8 +1699,10 @@ export type Database = {
         | "administrative"
         | "production"
       project_status: "pending" | "in_progress" | "completed" | "cancelled"
+      room_type: "single" | "double"
       task_status: "not_started" | "in_progress" | "completed"
-      transport_type: "trailer" | "9m" | "8m" | "6m" | "4m" | "furgoneta"
+      transport_type: "trailer" | "9m" | "8m" | "6m" | "4m" | "furgoneta" | "rv"
+      transportation_type: "van" | "sleeper_bus" | "train" | "plane"
       user_role: "admin" | "user" | "management" | "logistics" | "technician"
     }
     CompositeTypes: {

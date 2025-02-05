@@ -23,6 +23,8 @@ import ExcelTool from '@/pages/ExcelTool';
 import HojaDeRuta from '@/pages/HojaDeRuta';
 import LaborPOForm from '@/pages/LaborPOForm';
 import Logistics from '@/pages/Logistics';
+import FestivalManagement from '@/pages/FestivalManagement';
+import FestivalArtistManagement from '@/pages/FestivalArtistManagement';
 
 function App() {
   return (
@@ -52,6 +54,10 @@ function App() {
               <Route path="excel-tool" element={<ExcelTool />} />
               <Route path="hoja-de-ruta" element={<HojaDeRuta />} />
               <Route path="labor-po-form" element={<LaborPOForm />} />
+              
+              {/* Festival Management Routes */}
+              <Route path="festival-management/:jobId" element={<FestivalManagement />} />
+              <Route path="festival-management/:jobId/artists" element={<FestivalArtistManagement />} />
             </Route>
           </Routes>
         </BrowserRouter>

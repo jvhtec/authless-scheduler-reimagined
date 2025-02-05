@@ -27,6 +27,19 @@ import {
 import { Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
+// Predefined pickup locations for ground transport
+const PICKUP_LOCATIONS = [
+  "Warehouse - Calle Example 123, Madrid",
+  "Office - Avenida Sample 456, Madrid",
+  "Storage - Plaza Test 789, Madrid"
+];
+
+// Ground transport types that need pickup location
+const GROUND_TRANSPORT_TYPES = ['van', 'rv', 'sleeper_bus'];
+
+// Station transport types that need departure station
+const STATION_TRANSPORT_TYPES = ['train', 'plane'];
+
 interface LogisticsEventDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -60,8 +73,8 @@ export const LogisticsEventDialog = ({
   const [customTitle, setCustomTitle] = useState("");
   const [licensePlate, setLicensePlate] = useState("");
   const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([]);
-
-  // NEW: showDeleteDialog is now properly used with <AlertDialog>
+  const [pickupLocation, setPickupLocation] = useState(PICKUP_LOCATIONS[0]);
+  const [departureStation, setDepartureStation] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const { toast } = useToast();
@@ -69,7 +82,6 @@ export const LogisticsEventDialog = ({
 
   const departments: Department[] = ["sound", "lights", "video"];
 
-  // Populate form fields from selectedEvent (edit mode) or defaults (create mode).
   useEffect(() => {
     if (selectedEvent) {
       setEventType(selectedEvent.event_type);
@@ -86,7 +98,6 @@ export const LogisticsEventDialog = ({
       setLicensePlate(selectedEvent.license_plate || "");
       setSelectedDepartments(selectedEvent.departments.map((d) => d.department));
     } else {
-      // Reset to defaults
       setEventType("load");
       setTransportType("trailer");
       setTime("09:00");
@@ -96,6 +107,8 @@ export const LogisticsEventDialog = ({
       setCustomTitle("");
       setLicensePlate("");
       setSelectedDepartments([]);
+      setPickupLocation(PICKUP_LOCATIONS[0]);
+      setDepartureStation("");
     }
   }, [selectedEvent, selectedDate]);
 
@@ -109,7 +122,6 @@ export const LogisticsEventDialog = ({
     },
   });
 
-  // NEW: Handler to delete the selected logistics event
   const handleDelete = async () => {
     try {
       if (!selectedEvent) return;
@@ -150,7 +162,6 @@ export const LogisticsEventDialog = ({
     }
   };
 
-  // Handler to create or update an event
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!date || !time || (!selectedJob && !customTitle)) {
@@ -163,32 +174,33 @@ export const LogisticsEventDialog = ({
     }
 
     try {
-      // If editing an existing event...
+      const eventData = {
+        event_type: eventType,
+        transport_type: transportType,
+        event_date: date,
+        event_time: time,
+        loading_bay: loadingBay || null,
+        job_id: selectedJob || null,
+        title: customTitle || null,
+        license_plate: licensePlate || null,
+        // Add pickup location or departure station based on transport type
+        pickup_address: GROUND_TRANSPORT_TYPES.includes(transportType) ? pickupLocation : null,
+        departure_station: STATION_TRANSPORT_TYPES.includes(transportType) ? departureStation : null,
+      };
+
       if (selectedEvent) {
-        // Update the record in logistics_events
         const { error: updateError } = await supabase
           .from("logistics_events")
-          .update({
-            event_type: eventType,
-            transport_type: transportType,
-            event_date: date,
-            event_time: time,
-            loading_bay: loadingBay || null,
-            job_id: selectedJob || null,
-            title: customTitle || null,
-            license_plate: licensePlate || null,
-          })
+          .update(eventData)
           .eq("id", selectedEvent.id);
 
         if (updateError) throw updateError;
 
-        // Remove any existing department records
         await supabase
           .from("logistics_event_departments")
           .delete()
           .eq("event_id", selectedEvent.id);
 
-        // Insert chosen departments
         if (selectedDepartments.length > 0) {
           const { error: deptError } = await supabase
             .from("logistics_event_departments")
@@ -206,19 +218,9 @@ export const LogisticsEventDialog = ({
           description: "Logistics event updated successfully.",
         });
       } else {
-        // Creating a new event
         const { data: newEvent, error } = await supabase
           .from("logistics_events")
-          .insert({
-            event_type: eventType,
-            transport_type: transportType,
-            event_date: date,
-            event_time: time,
-            loading_bay: loadingBay || null,
-            job_id: selectedJob || null,
-            title: customTitle || null,
-            license_plate: licensePlate || null,
-          })
+          .insert(eventData)
           .select()
           .single();
 
@@ -242,7 +244,6 @@ export const LogisticsEventDialog = ({
         });
       }
 
-      // Refresh data & close
       queryClient.invalidateQueries({ queryKey: ["logistics-events"] });
       queryClient.invalidateQueries({ queryKey: ["today-logistics"] });
       onOpenChange(false);
@@ -258,7 +259,7 @@ export const LogisticsEventDialog = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-<DialogContent className="max-h-[90vh] md:max-h-none md:h-auto overflow-y-auto md:overflow-visible">
+        <DialogContent className="max-h-[90vh] md:max-h-none md:h-auto overflow-y-auto md:overflow-visible">
           <DialogHeader>
             <DialogTitle>
               {selectedEvent ? "Edit Logistics Event" : "Create Logistics Event"}
@@ -349,14 +350,50 @@ export const LogisticsEventDialog = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="trailer">Trailer</SelectItem>
+                  <SelectItem value="rv">RV</SelectItem>
+                  <SelectItem value="van">Van</SelectItem>
+                  <SelectItem value="sleeper_bus">Sleeper Bus</SelectItem>
                   <SelectItem value="9m">9m</SelectItem>
                   <SelectItem value="8m">8m</SelectItem>
                   <SelectItem value="6m">6m</SelectItem>
                   <SelectItem value="4m">4m</SelectItem>
                   <SelectItem value="furgoneta">Furgoneta</SelectItem>
+                  <SelectItem value="train">Train</SelectItem>
+                  <SelectItem value="plane">Plane</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Ground Transport Pickup Location */}
+            {GROUND_TRANSPORT_TYPES.includes(transportType) && (
+              <div className="space-y-2">
+                <Label>Pickup Location</Label>
+                <Select value={pickupLocation} onValueChange={setPickupLocation}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PICKUP_LOCATIONS.map((location) => (
+                      <SelectItem key={location} value={location}>
+                        {location}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Station Transport Fields */}
+            {STATION_TRANSPORT_TYPES.includes(transportType) && (
+              <div className="space-y-2">
+                <Label>Departure Station</Label>
+                <Input
+                  value={departureStation}
+                  onChange={(e) => setDepartureStation(e.target.value)}
+                  placeholder="Enter departure station"
+                />
+              </div>
+            )}
 
             {/* License Plate */}
             <div className="space-y-2">
@@ -407,7 +444,7 @@ export const LogisticsEventDialog = ({
                 <Button
                   type="button"
                   variant="destructive"
-                  onClick={() => setShowDeleteDialog(true)} // NEW
+                  onClick={() => setShowDeleteDialog(true)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
@@ -421,7 +458,7 @@ export const LogisticsEventDialog = ({
         </DialogContent>
       </Dialog>
 
-      {/* NEW: Confirm Delete AlertDialog */}
+      {/* Confirm Delete AlertDialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
