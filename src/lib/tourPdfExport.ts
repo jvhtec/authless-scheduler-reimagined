@@ -11,13 +11,6 @@ interface AutoTableJsPDF extends jsPDF {
   lastAutoTable?: {
     finalY: number;
   };
-  internal: {
-    pages: number[];
-    pageSize: {
-      width: number;
-      height: number;
-    };
-  };
 }
 
 export const exportTourPDF = async (
@@ -30,8 +23,8 @@ export const exportTourPDF = async (
       console.log("Starting PDF generation with:", { tourName, dateSpan, rows });
       
       const doc = new jsPDF() as AutoTableJsPDF;
-      const pageWidth = doc.internal.pageSize.width;
-      const pageHeight = doc.internal.pageSize.height;
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
       const createdDate = new Date().toLocaleDateString('en-GB');
 
       // === HEADER SECTION ===
@@ -72,7 +65,7 @@ export const exportTourPDF = async (
       });
 
       // === PAGE NUMBERS SECTION ===
-      const totalPages = doc.internal.pages.length - 1;
+      const totalPages = (doc.internal as any).pages.length - 1;
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
@@ -86,7 +79,7 @@ export const exportTourPDF = async (
       logo.onload = () => {
         const logoWidth = 50;
         const logoHeight = logoWidth * (logo.height / logo.width);
-        const totalPagesAfterLogo = doc.internal.pages.length - 1;
+        const totalPagesAfterLogo = (doc.internal as any).pages.length - 1;
 
         for (let i = 1; i <= totalPagesAfterLogo; i++) {
           doc.setPage(i);
@@ -109,7 +102,7 @@ export const exportTourPDF = async (
 
       logo.onerror = () => {
         console.error('Failed to load logo');
-        const totalPagesAfterLogo = doc.internal.pages.length - 1;
+        const totalPagesAfterLogo = (doc.internal as any).pages.length - 1;
         doc.setPage(totalPagesAfterLogo);
         doc.setFontSize(10);
         doc.setTextColor(51, 51, 51);

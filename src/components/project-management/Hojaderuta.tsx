@@ -40,6 +40,23 @@ interface AutoTableJsPDF extends jsPDF {
   };
 }
 
+interface TravelArrangement {
+  transportation_type: 'van' | 'sleeper_bus' | 'train' | 'plane';
+  pickup_address?: string;
+  pickup_time?: string;
+  flight_train_number?: string;
+  departure_time?: string;
+  arrival_time?: string;
+  notes?: string;
+}
+
+interface RoomAssignment {
+  room_type: 'single' | 'double';
+  room_number?: string;
+  staff_member1_id?: string;
+  staff_member2_id?: string;
+}
+
 const HojaDeRutaGenerator = () => {
   const { toast } = useToast();
   const { data: jobs, isLoading: isLoadingJobs } = useJobSelection();
@@ -229,368 +246,50 @@ const HojaDeRutaGenerator = () => {
     });
   };
 
-  const ImageUploadSection = ({ type, label, multiple = true }) => (
-    <div className="space-y-4">
-      <div>
-        <Label htmlFor={`${type}-upload`}>{label}</Label>
-        <Input
-          id={`${type}-upload`}
-          type="file"
-          accept="image/*"
-          multiple={multiple}
-          onChange={(e) => handleImageUpload(type, e.target.files)}
-          className="mt-1"
-        />
-      </div>
-      
-      {imagePreviews[type]?.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-          {imagePreviews[type].map((preview, index) => (
-            <div key={index} className="relative group">
-              <img
-                src={preview}
-                alt={`${type} preview ${index + 1}`}
-                className="w-full h-32 object-cover rounded-lg"
-              />
-              <button
-                onClick={() => removeImage(type, index)}
-                className="absolute top-2 right-2 p-1 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <Trash2 className="w-4 h-4 text-white" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  const [travelArrangements, setTravelArrangements] = useState<TravelArrangement[]>([{
+    transportation_type: 'van'
+  }]);
 
-  const uploadPdfToJob = async (jobId: string, pdfBlob: Blob, fileName: string) => {
-    try {
-      console.log('Starting upload for PDF:', fileName);
-      
-      // Sanitize the filename - remove accents and special characters
-      const sanitizedFileName = fileName
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')  // Remove accents
-        .replace(/[^a-zA-Z0-9._-]/g, '_')  // Replace special chars with underscore
-        .replace(/\s+/g, '_');             // Replace spaces with underscore
+  const [roomAssignments, setRoomAssignments] = useState<RoomAssignment[]>([{
+    room_type: 'single'
+  }]);
 
-      // Create a unique filename without subfolder structure
-      const filePath = `${crypto.randomUUID()}-${sanitizedFileName}`;
-      
-      console.log('Uploading with sanitized path:', filePath);
-
-      // Upload to Supabase storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('job_documents')
-        .upload(filePath, pdfBlob, {
-          contentType: 'application/pdf',
-          upsert: false
-        });
-
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw uploadError;
-      }
-
-      console.log('File uploaded successfully:', uploadData);
-
-      // Create database record
-      const { error: dbError } = await supabase
-        .from('job_documents')
-        .insert({
-          job_id: jobId,
-          file_name: fileName,
-          file_path: filePath,
-          file_type: 'application/pdf',
-          file_size: pdfBlob.size
-        });
-
-      if (dbError) {
-        console.error('Database error:', dbError);
-        throw dbError;
-      }
-
-      toast({
-        title: "Success",
-        description: "Hoja de Ruta has been generated and uploaded",
-      });
-    } catch (error: any) {
-      console.error('Upload failed:', error);
-      toast({
-        title: "Upload failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+  const addTravelArrangement = () => {
+    setTravelArrangements([...travelArrangements, { transportation_type: 'van' }]);
   };
 
-  const generateDocument = async () => {
-    if (!selectedJobId) {
-      toast({
-        title: "Error",
-        description: "Please select a job before generating the document.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const removeTravelArrangement = (index: number) => {
+    const newArrangements = [...travelArrangements];
+    newArrangements.splice(index, 1);
+    setTravelArrangements(newArrangements);
+  };
 
-    const selectedJob = jobs?.find((job) => job.id === selectedJobId);
-    const jobTitle = selectedJob?.title || "Unnamed_Job";
-
-    const doc = new jsPDF() as AutoTableJsPDF;
-    const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
-
-    // Add header
-    doc.setFillColor(125, 1, 1);
-    doc.rect(0, 0, pageWidth, 40, 'F');
-
-    // Title
-    doc.setFontSize(24);
-    doc.setTextColor(255, 255, 255);
-    doc.text("Hoja de Ruta", pageWidth / 2, 20, { align: 'center' });
-
-    // Event Name
-    doc.setFontSize(16);
-    doc.setTextColor(255, 255, 255);
-    doc.text(eventData.eventName, pageWidth / 2, 30, { align: 'center' });
-
-    let yPosition = 50;
-
-    // Event Details
-    doc.setFontSize(12);
-    doc.setTextColor(51, 51, 51);
-    doc.text(`Dates: ${eventData.eventDates}`, 20, yPosition);
-    yPosition += 15;
-
-    // Venue Information
-    doc.setFontSize(14);
-    doc.setTextColor(125, 1, 1);
-    doc.text("Venue Information", 20, yPosition);
-    yPosition += 10;
-    doc.setFontSize(10);
-    doc.setTextColor(51, 51, 51);
-    doc.text(`Name: ${eventData.venue.name}`, 30, yPosition);
-    yPosition += 7;
-    doc.text(`Address: ${eventData.venue.address}`, 30, yPosition);
-    yPosition += 15;
-
-    // Contacts Section
-    if (eventData.contacts.length > 0) {
-      doc.setFontSize(14);
-      doc.setTextColor(125, 1, 1);
-      doc.text("Contacts", 20, yPosition);
-      yPosition += 10;
-
-      const contactsTableData = eventData.contacts.map(contact => [
-        contact.name,
-        contact.role,
-        contact.phone
-      ]);
-
-      autoTable(doc, {
-        startY: yPosition,
-        head: [["Name", "Role", "Phone"]],
-        body: contactsTableData,
-        theme: 'grid',
-        styles: { fontSize: 10 },
-      });
-
-      yPosition = (doc as any).lastAutoTable.finalY + 15;
-    }
-
-    // Logistics Section
-    doc.setFontSize(14);
-    doc.setTextColor(125, 1, 1);
-    doc.text("Logistics", 20, yPosition);
-    yPosition += 10;
-    doc.setFontSize(10);
-    doc.setTextColor(51, 51, 51);
-
-    const logisticsText = [
-      { label: "Transport:", value: eventData.logistics.transport },
-      { label: "Loading Details:", value: eventData.logistics.loadingDetails },
-      { label: "Unloading Details:", value: eventData.logistics.unloadingDetails }
-    ];
-
-    logisticsText.forEach(item => {
-      if (item.value) {
-        doc.text(item.label, 30, yPosition);
-        const lines = doc.splitTextToSize(item.value, pageWidth - 60);
-        doc.text(lines, 30, yPosition + 7);
-        yPosition += (lines.length * 7) + 15;
-      }
-    });
-
-    // Staff Section
-    if (eventData.staff.length > 0) {
-      doc.setFontSize(14);
-      doc.setTextColor(125, 1, 1);
-      doc.text("Staff List", 20, yPosition);
-      yPosition += 10;
-
-      const staffTableData = eventData.staff.map(person => [
-        person.name,
-        person.surname1,
-        person.surname2,
-        person.position
-      ]);
-
-      autoTable(doc, {
-        startY: yPosition,
-        head: [["Name", "First Surname", "Second Surname", "Position"]],
-        body: staffTableData,
-        theme: 'grid',
-        styles: { fontSize: 10 },
-      });
-
-      yPosition = (doc as any).lastAutoTable.finalY + 15;
-    }
-
-    // Check if we need a new page
-    if (yPosition > pageHeight - 60) {
-      doc.addPage();
-      yPosition = 20;
-    }
-
-    // Schedule Section
-    if (eventData.schedule) {
-      doc.setFontSize(14);
-      doc.setTextColor(125, 1, 1);
-      doc.text("Schedule", 20, yPosition);
-      yPosition += 10;
-      doc.setFontSize(10);
-      doc.setTextColor(51, 51, 51);
-      const scheduleLines = doc.splitTextToSize(eventData.schedule, pageWidth - 40);
-      doc.text(scheduleLines, 20, yPosition);
-      yPosition += (scheduleLines.length * 7) + 15;
-    }
-
-    // Check if we need a new page
-    if (yPosition > pageHeight - 60) {
-      doc.addPage();
-      yPosition = 20;
-    }
-
-    // Power Requirements Section
-    if (eventData.powerRequirements) {
-      doc.setFontSize(14);
-      doc.setTextColor(125, 1, 1);
-      doc.text("Power Requirements", 20, yPosition);
-      yPosition += 10;
-      doc.setFontSize(10);
-      doc.setTextColor(51, 51, 51);
-      const powerLines = doc.splitTextToSize(eventData.powerRequirements, pageWidth - 40);
-      doc.text(powerLines, 20, yPosition);
-      yPosition += (powerLines.length * 7) + 15;
-    }
-
-    // Auxiliary Needs Section
-    if (eventData.auxiliaryNeeds) {
-      doc.setFontSize(14);
-      doc.setTextColor(125, 1, 1);
-      doc.text("Auxiliary Needs", 20, yPosition);
-      yPosition += 10;
-      doc.setFontSize(10);
-      doc.setTextColor(51, 51, 51);
-      const auxLines = doc.splitTextToSize(eventData.auxiliaryNeeds, pageWidth - 40);
-      doc.text(auxLines, 20, yPosition);
-      yPosition += (auxLines.length * 7) + 15;
-    }
-
-    // Add venue images if they exist
-    if (imagePreviews.venue.length > 0) {
-      doc.addPage();
-      doc.setFontSize(14);
-      doc.setTextColor(125, 1, 1);
-      doc.text("Venue Images", 20, 20);
-
-      let imageY = 40;
-      const imageWidth = 80;
-      const imagesPerRow = 2;
-      let currentX = 20;
-
-      for (let i = 0; i < imagePreviews.venue.length; i++) {
-        try {
-          doc.addImage(
-            imagePreviews.venue[i],
-            'JPEG',
-            currentX,
-            imageY,
-            imageWidth,
-            60
-          );
-
-          if ((i + 1) % imagesPerRow === 0) {
-            imageY += 70;
-            currentX = 20;
-          } else {
-            currentX += imageWidth + 10;
-          }
-
-          if (imageY > pageHeight - 80 && i < imagePreviews.venue.length - 1) {
-            doc.addPage();
-            imageY = 40;
-            currentX = 20;
-          }
-        } catch (error) {
-          console.error('Error adding image:', error);
-          continue;
-        }
-      }
-    }
-
-    // Add logo at the end
-    const logo = new Image();
-    logo.crossOrigin = 'anonymous';
-    logo.src = '/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png';
-    
-    logo.onload = () => {
-      doc.setPage(doc.getNumberOfPages());
-      const logoWidth = 50;
-      const logoHeight = logoWidth * (logo.height / logo.width);
-      const xPosition = (pageWidth - logoWidth) / 2;
-      const yPosition = pageHeight - 20;
-      
-      try {
-        doc.addImage(logo, 'PNG', xPosition, yPosition, logoWidth, logoHeight);
-        const blob = doc.output('blob');
-        const fileName = `hoja_de_ruta_${jobTitle.replace(/\s+/g, '_')}.pdf`;
-        
-        // Start the upload
-        uploadPdfToJob(selectedJobId, blob, fileName);
-        
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        link.click();
-        URL.revokeObjectURL(url);
-      } catch (error) {
-        console.error('Error adding logo:', error);
-        const blob = doc.output('blob');
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `hoja_de_ruta_${eventData.eventName.replace(/\s+/g, '_')}.pdf`;
-        link.click();
-        URL.revokeObjectURL(url);
-      }
+  const updateTravelArrangement = (index: number, field: keyof TravelArrangement, value: string) => {
+    const newArrangements = [...travelArrangements];
+    newArrangements[index] = { 
+      ...newArrangements[index], 
+      [field]: value 
     };
+    setTravelArrangements(newArrangements);
+  };
 
-    // If the image fails to load, still generate the PDF
-    logo.onerror = () => {
-      console.error('Failed to load logo');
-      const blob = doc.output('blob');
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `hoja_de_ruta_${eventData.eventName.replace(/\s+/g, '_')}.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
+  const addRoomAssignment = () => {
+    setRoomAssignments([...roomAssignments, { room_type: 'single' }]);
+  };
+
+  const removeRoomAssignment = (index: number) => {
+    const newAssignments = [...roomAssignments];
+    newAssignments.splice(index, 1);
+    setRoomAssignments(newAssignments);
+  };
+
+  const updateRoomAssignment = (index: number, field: keyof RoomAssignment, value: string) => {
+    const newAssignments = [...roomAssignments];
+    newAssignments[index] = { 
+      ...newAssignments[index], 
+      [field]: value 
     };
+    setRoomAssignments(newAssignments);
   };
 
   return (
@@ -771,49 +470,191 @@ const HojaDeRutaGenerator = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Logistics Dialog */}
+          {/* Travel Arrangements Dialog */}
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="outline" className="w-full">Edit Logistics</Button>
+              <Button variant="outline" className="w-full">Edit Travel Arrangements</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-3xl">
               <DialogHeader>
-                <DialogTitle>Logistics Information</DialogTitle>
+                <DialogTitle>Travel Arrangements</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <div>
-                  <Label>Transport Details</Label>
-                  <Textarea
-                    value={eventData.logistics.transport}
-                    onChange={(e) => setEventData({
-                      ...eventData,
-                      logistics: { ...eventData.logistics, transport: e.target.value }
-                    })}
-                    placeholder="Number and type of vehicles, transport company details..."
-                  />
-                </div>
-                <div>
-                  <Label>Loading Details</Label>
-                  <Textarea
-                    value={eventData.logistics.loadingDetails}
-                    onChange={(e) => setEventData({
-                      ...eventData,
-                      logistics: { ...eventData.logistics, loadingDetails: e.target.value }
-                    })}
-                    placeholder="Loading location, date, time..."
-                  />
-                </div>
-                <div>
-                  <Label>Unloading Details</Label>
-                  <Textarea
-                    value={eventData.logistics.unloadingDetails}
-                    onChange={(e) => setEventData({
-                      ...eventData,
-                      logistics: { ...eventData.logistics, unloadingDetails: e.target.value }
-                    })}
-                    placeholder="Unloading location, date, time..."
-                  />
-                </div>
+                {travelArrangements.map((arrangement, index) => (
+                  <div key={index} className="space-y-4 p-4 border rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-sm font-medium">Travel Arrangement {index + 1}</h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeTravelArrangement(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <Select
+                      value={arrangement.transportation_type}
+                      onValueChange={(value) => updateTravelArrangement(index, 'transportation_type', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select transport type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="van">Van</SelectItem>
+                        <SelectItem value="sleeper_bus">Sleeper Bus</SelectItem>
+                        <SelectItem value="train">Train</SelectItem>
+                        <SelectItem value="plane">Plane</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Pickup Address</Label>
+                        <Input
+                          value={arrangement.pickup_address || ''}
+                          onChange={(e) => updateTravelArrangement(index, 'pickup_address', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Pickup Time</Label>
+                        <Input
+                          type="datetime-local"
+                          value={arrangement.pickup_time || ''}
+                          onChange={(e) => updateTravelArrangement(index, 'pickup_time', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {(arrangement.transportation_type === 'train' || arrangement.transportation_type === 'plane') && (
+                      <div>
+                        <Label>Flight/Train Number</Label>
+                        <Input
+                          value={arrangement.flight_train_number || ''}
+                          onChange={(e) => updateTravelArrangement(index, 'flight_train_number', e.target.value)}
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Departure Time</Label>
+                        <Input
+                          type="datetime-local"
+                          value={arrangement.departure_time || ''}
+                          onChange={(e) => updateTravelArrangement(index, 'departure_time', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Arrival Time</Label>
+                        <Input
+                          type="datetime-local"
+                          value={arrangement.arrival_time || ''}
+                          onChange={(e) => updateTravelArrangement(index, 'arrival_time', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Notes</Label>
+                      <Textarea
+                        value={arrangement.notes || ''}
+                        onChange={(e) => updateTravelArrangement(index, 'notes', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ))}
+                <Button onClick={addTravelArrangement} variant="outline">Add Travel Arrangement</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Room Assignments Dialog */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full">Edit Room Assignments</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Room Assignments</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {roomAssignments.map((assignment, index) => (
+                  <div key={index} className="space-y-4 p-4 border rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-sm font-medium">Room Assignment {index + 1}</h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeRoomAssignment(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <Select
+                      value={assignment.room_type}
+                      onValueChange={(value) => updateRoomAssignment(index, 'room_type', value as 'single' | 'double')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select room type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="single">Single</SelectItem>
+                        <SelectItem value="double">Double</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <div>
+                      <Label>Room Number</Label>
+                      <Input
+                        value={assignment.room_number || ''}
+                        onChange={(e) => updateRoomAssignment(index, 'room_number', e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Staff Member 1</Label>
+                      <Select
+                        value={assignment.staff_member1_id || ''}
+                        onValueChange={(value) => updateRoomAssignment(index, 'staff_member1_id', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select staff member" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {eventData.staff.map((member) => (
+                            <SelectItem key={member.name} value={member.name}>
+                              {`${member.name} ${member.surname1 || ''}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {assignment.room_type === 'double' && (
+                      <div>
+                        <Label>Staff Member 2</Label>
+                        <Select
+                          value={assignment.staff_member2_id || ''}
+                          onValueChange={(value) => updateRoomAssignment(index, 'staff_member2_id', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select staff member" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {eventData.staff.map((member) => (
+                              <SelectItem key={member.name} value={member.name}>
+                                {`${member.name} ${member.surname1 || ''}`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <Button onClick={addRoomAssignment} variant="outline">Add Room Assignment</Button>
               </div>
             </DialogContent>
           </Dialog>
