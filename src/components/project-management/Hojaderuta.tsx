@@ -84,19 +84,23 @@ const LOCAL_STORAGE_KEY = "hojaDeRutaData"; // Not used for persistence anymore
 
 // Fetch the hoja_de_ruta record and its children for a given job_id.
 const fetchHojaDeRutaData = async (jobId: string) => {
+  console.log("Fetching hoja de ruta data for job:", jobId);
+  
   // Fetch main record from hoja_de_ruta
   const { data: mainData, error: mainError } = await supabase
     .from("hoja_de_ruta")
     .select("*")
     .eq("job_id", jobId)
-    .single();
+    .maybeSingle(); // Changed from .single() to .maybeSingle()
 
-  if (mainError && mainError.code !== "PGRST116") {
-    // PGRST116 means no rows found – treat that as empty.
+  console.log("Hoja de ruta fetch result:", { mainData, mainError });
+
+  if (mainError) {
+    console.error("Error fetching hoja de ruta:", mainError);
     throw mainError;
   }
 
-  // If found, return the main record; otherwise, return null.
+  // If found, return the main record; otherwise, return null
   return mainData;
 };
 
