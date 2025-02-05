@@ -33,7 +33,7 @@ import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// Extensión de jsPDF para usar autoTable
+// Extend jsPDF to include autoTable
 interface AutoTableJsPDF extends jsPDF {
   lastAutoTable?: {
     finalY: number;
@@ -76,12 +76,39 @@ interface EventData {
   auxiliaryNeeds: string;
 }
 
+const LOCAL_STORAGE_KEY = "hojaDeRutaData";
+
 const HojaDeRutaGenerator = () => {
   const { toast } = useToast();
   const { data: jobs, isLoading: isLoadingJobs } = useJobSelection();
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [selectedJobId, setSelectedJobId] = useState<string>("");
+
+  // Load persisted data from localStorage on mount
+  useEffect(() => {
+    const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        if (parsed.eventData) setEventData(parsed.eventData);
+        if (parsed.travelArrangements) setTravelArrangements(parsed.travelArrangements);
+        if (parsed.roomAssignments) setRoomAssignments(parsed.roomAssignments);
+      } catch (error) {
+        console.error("Error parsing persisted data:", error);
+      }
+    }
+  }, []);
+
+  // Persist data to localStorage when eventData, travelArrangements, or roomAssignments change
+  useEffect(() => {
+    const dataToPersist = {
+      eventData,
+      travelArrangements,
+      roomAssignments,
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dataToPersist));
+  }, [eventData, travelArrangements, roomAssignments]);
 
   const [eventData, setEventData] = useState<EventData>({
     eventName: "",
@@ -103,7 +130,7 @@ const HojaDeRutaGenerator = () => {
   });
 
   // ---------------------------
-  // ESTADOS DE IMÁGENES Y ARCHIVOS
+  // IMAGE & FILE STATES
   // ---------------------------
   const [images, setImages] = useState({
     venue: [] as File[],
@@ -111,20 +138,19 @@ const HojaDeRutaGenerator = () => {
   const [imagePreviews, setImagePreviews] = useState({
     venue: [] as string[],
   });
-  // Estado para el mapa de ubicación del lugar (archivo único)
+  // For the venue location map (single file)
   const [venueMap, setVenueMap] = useState<File | null>(null);
   const [venueMapPreview, setVenueMapPreview] = useState<string | null>(null);
 
   const [powerRequirements, setPowerRequirements] = useState<string>("");
+  // Initialize roomAssignments to empty so that nothing prints unless data is provided.
+  const [roomAssignments, setRoomAssignments] = useState<RoomAssignment[]>([]);
   const [travelArrangements, setTravelArrangements] = useState<TravelArrangement[]>([
     { transportation_type: "van" },
   ]);
-  const [roomAssignments, setRoomAssignments] = useState<RoomAssignment[]>([
-    { room_type: "single" },
-  ]);
 
   // ---------------------------
-  // UTILIDAD: cargar imagen desde URL como DataURL
+  // Utility: load image from URL as DataURL
   // ---------------------------
   const loadImageAsDataURL = async (url: string): Promise<string | null> => {
     try {
@@ -143,7 +169,7 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // FUNCIONES DE CONSULTA
+  // FETCH FUNCTIONS
   // ---------------------------
   const fetchPowerRequirements = async (jobId: string) => {
     try {
@@ -155,7 +181,6 @@ const HojaDeRutaGenerator = () => {
       if (error) throw error;
 
       if (requirements && requirements.length > 0) {
-        // Formatear los requisitos eléctricos en texto legible
         const formattedRequirements = requirements
           .map((req: any) => {
             return `${req.department.toUpperCase()} - ${req.table_name}:\n` +
@@ -229,7 +254,6 @@ const HojaDeRutaGenerator = () => {
       const selectedJob = jobs.find((job: any) => job.id === selectedJobId);
       if (selectedJob) {
         console.log("Trabajo seleccionado:", selectedJob);
-        // Formatear fechas
         const formattedDates = `${format(
           new Date(selectedJob.start_time),
           "dd/MM/yyyy HH:mm"
@@ -253,7 +277,7 @@ const HojaDeRutaGenerator = () => {
   }, [selectedJobId, jobs]);
 
   // ---------------------------
-  // MANEJADORES DE IMÁGENES
+  // IMAGE HANDLERS
   // ---------------------------
   const handleImageUpload = (
     type: keyof typeof images,
@@ -281,7 +305,7 @@ const HojaDeRutaGenerator = () => {
     setImagePreviews({ ...imagePreviews, [type]: newPreviews });
   };
 
-  // Manejador para subir el mapa de ubicación del lugar
+  // For venue map upload
   const handleVenueMapUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -292,7 +316,7 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // MANEJADORES DE CONTACTOS Y PERSONAL
+  // CONTACT & STAFF HANDLERS
   // ---------------------------
   const handleContactChange = (index: number, field: string, value: string) => {
     const newContacts = [...eventData.contacts];
@@ -324,7 +348,7 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // MANEJADORES DE ARREGLOS DE VIAJE Y ASIGNACIONES DE HABITACIONES
+  // TRAVEL & ROOM HANDLERS
   // ---------------------------
   const addTravelArrangement = () => {
     setTravelArrangements([...travelArrangements, { transportation_type: "van" }]);
@@ -367,7 +391,7 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // COMPONENTE DE SUBIDA DE IMÁGENES
+  // IMAGE UPLOAD COMPONENT
   // ---------------------------
   interface ImageUploadSectionProps {
     type: keyof typeof images;
@@ -408,7 +432,7 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // SUBIDA DEL PDF A SUPABASE
+  // UPLOAD PDF TO SUPABASE
   // ---------------------------
   const uploadPdfToJob = async (
     jobId: string,
@@ -417,33 +441,24 @@ const HojaDeRutaGenerator = () => {
   ) => {
     try {
       console.log("Iniciando subida del PDF:", fileName);
-
-      // Sanitizar el nombre del archivo
       const sanitizedFileName = fileName
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-zA-Z0-9._-]/g, "_")
         .replace(/\s+/g, "_");
-
       const filePath = `${crypto.randomUUID()}-${sanitizedFileName}`;
       console.log("Subiendo con la ruta sanitizada:", filePath);
-
-      // Subir a Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("job_documents")
         .upload(filePath, pdfBlob, {
           contentType: "application/pdf",
           upsert: false,
         });
-
       if (uploadError) {
         console.error("Error en la subida:", uploadError);
         throw uploadError;
       }
-
       console.log("Archivo subido con éxito:", uploadData);
-
-      // Crear un registro en la base de datos
       const { error: dbError } = await supabase.from("job_documents").insert({
         job_id: jobId,
         file_name: fileName,
@@ -451,12 +466,10 @@ const HojaDeRutaGenerator = () => {
         file_type: "application/pdf",
         file_size: pdfBlob.size,
       });
-
       if (dbError) {
         console.error("Error en la base de datos:", dbError);
         throw dbError;
       }
-
       toast({
         title: "Éxito",
         description: "La Hoja de Ruta ha sido generada y subida",
@@ -483,16 +496,12 @@ const HojaDeRutaGenerator = () => {
       });
       return;
     }
-
     const selectedJob = jobs?.find((job: any) => job.id === selectedJobId);
     const jobTitle = selectedJob?.title || "Trabajo_Sin_Nombre";
-
     const doc = new jsPDF() as AutoTableJsPDF;
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
-    const bottomMargin = 60; // Reservar 60 puntos en la parte inferior para el logo
-
-    // Función auxiliar para agregar una página si la posición actual excede el área segura
+    const bottomMargin = 60;
     const checkPageBreak = (currentY: number): number => {
       if (currentY > pageHeight - bottomMargin) {
         doc.addPage();
@@ -501,17 +510,14 @@ const HojaDeRutaGenerator = () => {
       return currentY;
     };
 
-    // Agregar fondo de cabecera en la primera página
+    // Cabecera
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, "F");
-
-    // Título y nombre del evento (centrado, texto blanco)
     doc.setFontSize(24);
     doc.setTextColor(255, 255, 255);
     doc.text("Hoja de Ruta", pageWidth / 2, 20, { align: "center" });
     doc.setFontSize(16);
     doc.text(eventData.eventName, pageWidth / 2, 30, { align: "center" });
-
     let yPosition = 50;
     doc.setFontSize(12);
     doc.setTextColor(51, 51, 51);
@@ -521,7 +527,7 @@ const HojaDeRutaGenerator = () => {
     doc.text(`Fechas: ${eventData.eventDates}`, 20, yPosition);
     yPosition += 15;
 
-    // Sección de Información del Lugar
+    // Información del Lugar
     yPosition = checkPageBreak(yPosition);
     doc.setFontSize(14);
     doc.setTextColor(125, 1, 1);
@@ -533,7 +539,6 @@ const HojaDeRutaGenerator = () => {
     yPosition += 7;
     doc.text(`Dirección: ${eventData.venue.address}`, 30, yPosition);
     yPosition += 15;
-    // Insertar el mapa de ubicación del lugar, si está disponible
     if (venueMapPreview) {
       try {
         const mapWidth = 100;
@@ -545,19 +550,14 @@ const HojaDeRutaGenerator = () => {
       }
     }
 
-    // Sección de Contactos
-    if (
-      eventData.contacts.some(
-        (contact) => contact.name || contact.role || contact.phone
-      )
-    ) {
+    // Contactos
+    if (eventData.contacts.some(contact => contact.name || contact.role || contact.phone)) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
       doc.text("Contactos", 20, yPosition);
       yPosition += 10;
-
-      const contactsTableData = eventData.contacts.map((contact) => [
+      const contactsTableData = eventData.contacts.map(contact => [
         contact.name,
         contact.role,
         contact.phone,
@@ -572,7 +572,7 @@ const HojaDeRutaGenerator = () => {
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Sección de Logística
+    // Logística
     if (
       eventData.logistics.transport ||
       eventData.logistics.loadingDetails ||
@@ -590,7 +590,7 @@ const HojaDeRutaGenerator = () => {
         { label: "Detalles de Carga:", value: eventData.logistics.loadingDetails },
         { label: "Detalles de Descarga:", value: eventData.logistics.unloadingDetails },
       ];
-      logisticsText.forEach((item) => {
+      logisticsText.forEach(item => {
         if (item.value) {
           doc.text(item.label, 30, yPosition);
           const lines = doc.splitTextToSize(item.value, pageWidth - 60);
@@ -601,19 +601,14 @@ const HojaDeRutaGenerator = () => {
       });
     }
 
-    // Sección de Personal
-    if (
-      eventData.staff.some(
-        (person) => person.name || person.surname1 || person.surname2 || person.position
-      )
-    ) {
+    // Personal
+    if (eventData.staff.some(person => person.name || person.surname1 || person.surname2 || person.position)) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
       doc.text("Lista de Personal", 20, yPosition);
       yPosition += 10;
-
-      const staffTableData = eventData.staff.map((person) => [
+      const staffTableData = eventData.staff.map(person => [
         person.name,
         person.surname1,
         person.surname2,
@@ -629,20 +624,17 @@ const HojaDeRutaGenerator = () => {
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Sección de Arreglos de Viaje (tabla)
+    // Arreglos de Viaje (tabla)
     if (
       travelArrangements.length > 0 &&
-      travelArrangements.some((arr) =>
-        Object.values(arr).some((val) => val && val !== "")
-      )
+      travelArrangements.some(arr => Object.values(arr).some(val => val && val.trim() !== ""))
     ) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      // Nota: Si lo deseas, puedes cambiar el título aquí.
       doc.text("Arreglos de Viaje", 20, yPosition);
       yPosition += 10;
-      const travelTableData = travelArrangements.map((arr) => [
+      const travelTableData = travelArrangements.map(arr => [
         arr.transportation_type,
         `${arr.pickup_address || ""} ${arr.pickup_time || ""}`.trim(),
         arr.departure_time || "",
@@ -659,26 +651,20 @@ const HojaDeRutaGenerator = () => {
       });
       yPosition = (doc as any).lastAutoTable.finalY + 15;
 
-      // Obtener direcciones de recogida únicas
+      // Print unique pickup addresses and associated images
+      // Since your pickup addresses are hardcoded, they will never be empty.
       const uniquePickupAddresses = Array.from(
         new Set(
           travelArrangements
-            .filter((arr) => arr.pickup_address)
-            .map((arr) => arr.pickup_address as string)
+            .map(arr => arr.pickup_address!.trim())
         )
       );
-
-      // Dado que the URLs you provided are already substituted and uploaded into the public folder,
-      // we assume that the pickup_address value exactly matches the key for the image URL.
-      // For example, if the pickup address is "Nave Sector-Pro. C\Puerto Rico 6, 28971 - Griñon 1",
-      // then the image URL should be something like "/IMG_7834.jpeg". Adjust these keys as needed.
+      // The keys here should exactly match the pickup_address values.
       const transportationMapPlaceholders: { [key: string]: string } = {
         "Nave Sector-Pro. C\\Puerto Rico 6, 28971 - Griñon 1": "/lovable-uploads/IMG_7834.jpeg",
         "C\\ Corregidor Diego de Valderrabano 23, Moratalaz": "/lovable-uploads/IMG_7835.jpeg",
         "C\\ Entrepeñas 47, Ensanche de Vallecas": "/lovable-uploads/IMG_7836.jpeg",
       };
-
-      // Imprimir cada dirección única y su imagen asociada
       for (const pickupAddress of uniquePickupAddresses) {
         const imageUrl = transportationMapPlaceholders[pickupAddress];
         if (imageUrl) {
@@ -700,11 +686,15 @@ const HojaDeRutaGenerator = () => {
       }
     }
 
-    // Sección de Asignaciones de Habitaciones
+    // Room Assignments: print only if at least one assignment has non-empty data
     if (
       roomAssignments.length > 0 &&
-      roomAssignments.some((room) =>
-        Object.values(room).some((val) => val && val !== "")
+      roomAssignments.some(room =>
+        (room.room_number && room.room_number.trim() !== "") ||
+        (room.staff_member1_id && room.staff_member1_id.trim() !== "") ||
+        (room.room_type === "double" &&
+          room.staff_member2_id &&
+          room.staff_member2_id.trim() !== "")
       )
     ) {
       yPosition = checkPageBreak(yPosition);
@@ -712,7 +702,7 @@ const HojaDeRutaGenerator = () => {
       doc.setTextColor(125, 1, 1);
       doc.text("Asignaciones de Habitaciones", 20, yPosition);
       yPosition += 10;
-      const roomTableData = roomAssignments.map((room) => [
+      const roomTableData = roomAssignments.map(room => [
         room.room_type,
         room.room_number || "",
         room.staff_member1_id || "",
@@ -728,7 +718,7 @@ const HojaDeRutaGenerator = () => {
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Sección de Programa
+    // Programa
     if (eventData.schedule) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
@@ -742,7 +732,7 @@ const HojaDeRutaGenerator = () => {
       yPosition += scheduleLines.length * 7 + 15;
     }
 
-    // Sección de Requisitos Eléctricos
+    // Requisitos Eléctricos
     if (eventData.powerRequirements) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
@@ -756,7 +746,7 @@ const HojaDeRutaGenerator = () => {
       yPosition += powerLines.length * 7 + 15;
     }
 
-    // Sección de Necesidades Auxiliares
+    // Necesidades Auxiliares
     if (eventData.auxiliaryNeeds) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
@@ -770,7 +760,7 @@ const HojaDeRutaGenerator = () => {
       yPosition += auxLines.length * 7 + 15;
     }
 
-    // Sección de Imágenes del Lugar (si existen)
+    // Imágenes del Lugar
     if (imagePreviews.venue.length > 0) {
       doc.addPage();
       yPosition = 20;
@@ -802,9 +792,7 @@ const HojaDeRutaGenerator = () => {
       }
     }
 
-    // ---------------------------
-    // AGREGAR LOGO EN CADA PÁGINA
-    // ---------------------------
+    // Agregar logo en cada página
     const logo = new Image();
     logo.crossOrigin = "anonymous";
     logo.src = "/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png";
@@ -841,7 +829,7 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // RETORNO JSX
+  // JSX RETURN
   // ---------------------------
   return (
     <Card className="w-full max-w-3xl mx-auto">
@@ -868,7 +856,7 @@ const HojaDeRutaGenerator = () => {
                   <SelectValue placeholder="Seleccione un trabajo..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLoadingJobs ? (
+                  {isLoading: isLoadingJobs ? (
                     <SelectItem value="loading">Cargando trabajos...</SelectItem>
                   ) : jobs?.length === 0 ? (
                     <SelectItem value="unselected">No hay trabajos disponibles</SelectItem>
@@ -951,7 +939,6 @@ const HojaDeRutaGenerator = () => {
                     }
                   />
                 </div>
-                {/* Subida para el Mapa de Ubicación del Lugar */}
                 <div>
                   <Label htmlFor="venueMapUpload">Mapa de Ubicación del Lugar</Label>
                   <Input
@@ -1093,7 +1080,6 @@ const HojaDeRutaGenerator = () => {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-
                     <Select
                       value={arrangement.transportation_type}
                       onValueChange={(value) =>
@@ -1111,12 +1097,11 @@ const HojaDeRutaGenerator = () => {
                         <SelectItem value="RV">Autocaravana</SelectItem>
                       </SelectContent>
                     </Select>
-
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Dirección de Recogida</Label>
                         <Select
-                          value={arrangement.pickup_address || "address1"}
+                          value={arrangement.pickup_address || "Nave Sector-Pro. C\\Puerto Rico 6, 28971 - Griñon 1"}
                           onValueChange={(value) =>
                             updateTravelArrangement(index, "pickup_address", value)
                           }
@@ -1148,7 +1133,6 @@ const HojaDeRutaGenerator = () => {
                         />
                       </div>
                     </div>
-
                     {(arrangement.transportation_type === "train" ||
                       arrangement.transportation_type === "plane") && (
                       <div>
@@ -1161,7 +1145,6 @@ const HojaDeRutaGenerator = () => {
                         />
                       </div>
                     )}
-
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Hora de Salida</Label>
@@ -1184,7 +1167,6 @@ const HojaDeRutaGenerator = () => {
                         />
                       </div>
                     </div>
-
                     <div>
                       <Label>Notas</Label>
                       <Textarea
@@ -1202,14 +1184,6 @@ const HojaDeRutaGenerator = () => {
               </div>
             </DialogContent>
           </Dialog>
-
-          {/* Sección de direcciones únicas de recogida y mapas asociados */}
-          {travelArrangements.length > 0 && (
-            <div>
-              {/* Este bloque se ejecuta durante la generación del PDF */}
-              {/* NOTA: La siguiente parte se inserta directamente en el PDF dentro de generateDocument */}
-            </div>
-          )}
 
           {/* Diálogo de Asignaciones de Habitaciones */}
           <Dialog>
@@ -1237,7 +1211,6 @@ const HojaDeRutaGenerator = () => {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-
                     <Select
                       value={assignment.room_type}
                       onValueChange={(value) =>
@@ -1256,7 +1229,6 @@ const HojaDeRutaGenerator = () => {
                         <SelectItem value="double">Doble</SelectItem>
                       </SelectContent>
                     </Select>
-
                     <div>
                       <Label>Número de Habitación</Label>
                       <Input
@@ -1266,7 +1238,6 @@ const HojaDeRutaGenerator = () => {
                         }
                       />
                     </div>
-
                     <div>
                       <Label>Personal Asignado 1</Label>
                       <Select
@@ -1292,7 +1263,6 @@ const HojaDeRutaGenerator = () => {
                         </SelectContent>
                       </Select>
                     </div>
-
                     {assignment.room_type === "double" && (
                       <div>
                         <Label>Personal Asignado 2</Label>
@@ -1323,7 +1293,7 @@ const HojaDeRutaGenerator = () => {
                   </div>
                 ))}
                 <Button onClick={addRoomAssignment} variant="outline">
-                  Agregar Asignación de Habitación
+                  Agregar Asignación de Habitaciones
                 </Button>
               </div>
             </DialogContent>
