@@ -467,7 +467,10 @@ const HojaDeRutaGenerator = () => {
     value: string
   ) => {
     const newAssignments = [...roomAssignments];
-    newAssignments[index] = { ...newAssignments[index], [field]: value };
+    newAssignments[index] = { 
+      ...newAssignments[index], 
+      [field]: value === "unassigned" ? null : value 
+    };
     setRoomAssignments(newAssignments);
   };
 
@@ -1297,7 +1300,7 @@ const HojaDeRutaGenerator = () => {
                         updateRoomAssignment(
                           index,
                           "room_type",
-                          value as "single" | "double"
+                          value
                         )
                       }
                     >
@@ -1336,7 +1339,10 @@ const HojaDeRutaGenerator = () => {
                         <SelectContent>
                           <SelectItem value="unassigned">Sin asignar</SelectItem>
                           {eventData.staff.map((member) => (
-                            <SelectItem key={member.name} value={member.name}>
+                            <SelectItem 
+                              key={member.name} 
+                              value={member.name || `staff-${member.position}`}
+                            >
                               {`${member.name} ${member.surname1 || ""}`}
                             </SelectItem>
                           ))}
@@ -1362,7 +1368,10 @@ const HojaDeRutaGenerator = () => {
                           <SelectContent>
                             <SelectItem value="unassigned">Sin asignar</SelectItem>
                             {eventData.staff.map((member) => (
-                              <SelectItem key={member.name} value={member.name}>
+                              <SelectItem 
+                                key={member.name} 
+                                value={member.name || `staff-${member.position}`}
+                              >
                                 {`${member.name} ${member.surname1 || ""}`}
                               </SelectItem>
                             ))}
@@ -1430,4 +1439,3 @@ const HojaDeRutaGenerator = () => {
 };
 
 export default HojaDeRutaGenerator;
-
