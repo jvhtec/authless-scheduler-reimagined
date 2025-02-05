@@ -111,7 +111,7 @@ const HojaDeRutaGenerator = () => {
   const [imagePreviews, setImagePreviews] = useState({
     venue: [] as string[],
   });
-  // Nuevo estado para el mapa de ubicación del lugar (archivo único)
+  // Estado para el mapa de ubicación del lugar (archivo único)
   const [venueMap, setVenueMap] = useState<File | null>(null);
   const [venueMapPreview, setVenueMapPreview] = useState<string | null>(null);
 
@@ -281,7 +281,7 @@ const HojaDeRutaGenerator = () => {
     setImagePreviews({ ...imagePreviews, [type]: newPreviews });
   };
 
-  // Nuevo manejador para subir el mapa de ubicación del lugar
+  // Manejador para subir el mapa de ubicación del lugar
   const handleVenueMapUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -533,7 +533,7 @@ const HojaDeRutaGenerator = () => {
     yPosition += 7;
     doc.text(`Dirección: ${eventData.venue.address}`, 30, yPosition);
     yPosition += 15;
-    // Insertar el mapa de ubicación del lugar, si está disponible (debajo de la dirección)
+    // Insertar el mapa de ubicación del lugar, si está disponible
     if (venueMapPreview) {
       try {
         const mapWidth = 100;
@@ -629,7 +629,7 @@ const HojaDeRutaGenerator = () => {
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Sección de Arreglos de Viaje
+    // Sección de Arreglos de Viaje (tabla)
     if (
       travelArrangements.length > 0 &&
       travelArrangements.some((arr) =>
@@ -639,7 +639,8 @@ const HojaDeRutaGenerator = () => {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
-      doc.text("Logistica de Personal", 20, yPosition);
+      // Nota: Si lo deseas, puedes cambiar el título aquí.
+      doc.text("Arreglos de Viaje", 20, yPosition);
       yPosition += 10;
       const travelTableData = travelArrangements.map((arr) => [
         arr.transportation_type,
@@ -667,23 +668,26 @@ const HojaDeRutaGenerator = () => {
         )
       );
 
-      // Objeto con URLs placeholder para mapas
+      // Dado que the URLs you provided are already substituted and uploaded into the public folder,
+      // we assume that the pickup_address value exactly matches the key for the image URL.
+      // For example, if the pickup address is "Nave Sector-Pro. C\Puerto Rico 6, 28971 - Griñon 1",
+      // then the image URL should be something like "/IMG_7834.jpeg". Adjust these keys as needed.
       const transportationMapPlaceholders: { [key: string]: string } = {
-        address1: "/public/lovable-uploads/IMG_7834.jpeg",
-        address2: "/public/lovable-uploads/IMG_7835.jpeg",
-        address3: "/public/lovable-uploads/IMG_7836.jpeg",
+        "Nave Sector-Pro. C\\Puerto Rico 6, 28971 - Griñon 1": "/IMG_7834.jpeg",
+        "C\\ Corregidor Diego de Valderrabano 23, Moratalaz": "/IMG_7835.jpeg",
+        "C\\ Entrepeñas 47, Ensanche de Vallecas": "/IMG_7836.jpeg",
       };
 
-      // Imprimir solo una vez por cada dirección única
+      // Imprimir cada dirección única y su imagen asociada
       for (const pickupAddress of uniquePickupAddresses) {
-        if (transportationMapPlaceholders[pickupAddress]) {
+        const imageUrl = transportationMapPlaceholders[pickupAddress];
+        if (imageUrl) {
           yPosition = checkPageBreak(yPosition);
           doc.setFontSize(10);
           doc.setTextColor(51, 51, 51);
           doc.text(`Dirección de Recogida: ${pickupAddress}`, 20, yPosition);
           yPosition += 7;
-          const placeholderUrl = transportationMapPlaceholders[pickupAddress];
-          const imageDataUrl = await loadImageAsDataURL(placeholderUrl);
+          const imageDataUrl = await loadImageAsDataURL(imageUrl);
           if (imageDataUrl) {
             try {
               doc.addImage(imageDataUrl, "JPEG", 20, yPosition, 100, 60);
@@ -864,7 +868,7 @@ const HojaDeRutaGenerator = () => {
                   <SelectValue placeholder="Seleccione un trabajo..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLoadingJobs ? (
+                  {isLoading: isLoadingJobs ? (
                     <SelectItem value="loading">Cargando trabajos...</SelectItem>
                   ) : jobs?.length === 0 ? (
                     <SelectItem value="unselected">No hay trabajos disponibles</SelectItem>
@@ -947,7 +951,7 @@ const HojaDeRutaGenerator = () => {
                     }
                   />
                 </div>
-                {/* Nueva subida para el Mapa de Ubicación del Lugar */}
+                {/* Subida para el Mapa de Ubicación del Lugar */}
                 <div>
                   <Label htmlFor="venueMapUpload">Mapa de Ubicación del Lugar</Label>
                   <Input
@@ -1067,7 +1071,7 @@ const HojaDeRutaGenerator = () => {
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" className="w-full">
-                Editar Logistica de Personal
+                Editar Logística de Personal
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
@@ -1111,7 +1115,6 @@ const HojaDeRutaGenerator = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Dirección de Recogida</Label>
-                        {/* Direcciones de recogida definidas */}
                         <Select
                           value={arrangement.pickup_address || "address1"}
                           onValueChange={(value) =>
@@ -1122,9 +1125,15 @@ const HojaDeRutaGenerator = () => {
                             <SelectValue placeholder="Seleccione la dirección de recogida" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="address1">Nave Sector-Pro. C\Puerto Rico 6, 28971 - Griñon 1 </SelectItem>
-                            <SelectItem value="address2">C\ Corregidor Diego de Valderrabano 23, Moratalaz</SelectItem>
-                            <SelectItem value="address3">C\ Entrepeñas 47, Ensanche de Vallecas</SelectItem>
+                            <SelectItem value="Nave Sector-Pro. C\\Puerto Rico 6, 28971 - Griñon 1">
+                              Nave Sector-Pro. C\Puerto Rico 6, 28971 - Griñon 1
+                            </SelectItem>
+                            <SelectItem value="C\\ Corregidor Diego de Valderrabano 23, Moratalaz">
+                              C\ Corregidor Diego de Valderrabano 23, Moratalaz
+                            </SelectItem>
+                            <SelectItem value="C\\ Entrepeñas 47, Ensanche de Vallecas">
+                              C\ Entrepeñas 47, Ensanche de Vallecas
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1193,6 +1202,14 @@ const HojaDeRutaGenerator = () => {
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Sección de direcciones únicas de recogida y mapas asociados */}
+          {travelArrangements.length > 0 && (
+            <div>
+              {/* Este bloque se ejecuta durante la generación del PDF */}
+              {/* NOTA: La siguiente parte se inserta directamente en el PDF dentro de generateDocument */}
+            </div>
+          )}
 
           {/* Diálogo de Asignaciones de Habitaciones */}
           <Dialog>
