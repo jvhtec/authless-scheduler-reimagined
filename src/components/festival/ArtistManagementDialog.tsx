@@ -9,8 +9,10 @@ import { supabase } from "@/lib/supabase";
 interface ArtistManagementDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  artist: any;
+  artist?: any;
   jobId?: string;
+  start_time?: string;
+  end_time?: string;
 }
 
 export const ArtistManagementDialog = ({
@@ -18,6 +20,8 @@ export const ArtistManagementDialog = ({
   onOpenChange,
   artist,
   jobId,
+  start_time,
+  end_time
 }: ArtistManagementDialogProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
