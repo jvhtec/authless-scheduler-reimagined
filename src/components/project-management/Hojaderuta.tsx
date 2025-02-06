@@ -33,88 +33,7 @@ import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// ---------------------------
-// UTILITY FUNCTIONS
-// ---------------------------
-const loadImageAsDataURL = async (url: string): Promise<string | null> => {
-  try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.error("Error loading image:", error);
-    return null;
-  }
-};
-
-// New: Fetch power requirements from power_requirement_tables
-const fetchPowerRequirementData = async (jobId: string): Promise<string> => {
-  try {
-    const { data, error } = await supabase
-      .from("power_requirement_tables")
-      .select("*")
-      .eq("job_id", jobId);
-    if (error) throw error;
-    if (data && data.length > 0) {
-      const formatted = data
-        .map((req: any) => {
-          return `${req.department.toUpperCase()} - ${req.table_name}:\n` +
-            `Potencia Total: ${req.total_watts}W\n` +
-            `Corriente por Fase: ${req.current_per_phase}A\n` +
-            `PDU Recomendado: ${req.pdu_type}\n`;
-        })
-        .join("\n");
-      return formatted;
-    }
-    return "";
-  } catch (error) {
-    console.error("Error fetching power requirements:", error);
-    return "";
-  }
-};
-
-// Updated fetchAssignedStaff:
-// Get technician IDs from job_assignments then retrieve names from profiles.
-const fetchAssignedStaff = async (jobId: string) => {
-  try {
-    const { data: assignments, error: assignError } = await supabase
-      .from("job_assignments")
-      .select("technician_id")
-      .eq("job_id", jobId);
-    if (assignError) throw assignError;
-    if (!assignments || assignments.length === 0) return [];
-    const technicianIds = Array.from(
-      new Set(assignments.map((a: any) => a.technician_id))
-    );
-    const { data: profiles, error: profileError } = await supabase
-      .from("profiles")
-      .select("first_name, last_name")
-      .in("id", technicianIds);
-    if (profileError) throw profileError;
-    const staff = profiles.map((profile: any) => {
-      const parts = (profile.last_name || "").split(" ");
-      return {
-        name: profile.first_name || "",
-        surname1: parts[0] || "",
-        surname2: parts[1] || "",
-        position: "",
-      };
-    });
-    return staff;
-  } catch (error) {
-    console.error("Error fetching assigned staff:", error);
-    return [];
-  }
-};
-
-// ---------------------------
-// TYPES & INTERFACES
-// ---------------------------
+// Extensión de jsPDF para usar autoTable
 interface AutoTableJsPDF extends jsPDF {
   lastAutoTable?: {
     finalY: number;
@@ -157,131 +76,6 @@ interface EventData {
   auxiliaryNeeds: string;
 }
 
-const LOCAL_STORAGE_KEY = "hojaDeRutaData"; // Not used now
-
-// ---------------------------
-// SUPABASE PERSISTENCE FUNCTIONS
-// ---------------------------
-const fetchHojaDeRutaData = async (jobId: string) => {
-  console.log("Fetching hoja de ruta data for job:", jobId);
-  const { data: records, error: mainError } = await supabase
-    .from("hoja_de_ruta")
-    .select("*")
-    .eq("job_id", jobId)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  if (mainError) {
-    console.error("Error fetching hoja de ruta:", mainError);
-    throw mainError;
-  }
-  console.log("Fetched hoja de ruta records:", records);
-  return records?.[0] || null;
-};
-
-const fetchChildData = async (hojaDeRutaId: number) => {
-  const [
-    { data: contactsData },
-    { data: logisticsData },
-    { data: travelData },
-    { data: roomsData },
-    { data: staffData },
-  ] = await Promise.all([
-    supabase.from("hoja_de_ruta_contacts").select("*").eq("hoja_de_ruta_id", hojaDeRutaId),
-    supabase.from("hoja_de_ruta_logistics").select("*").eq("hoja_de_ruta_id", hojaDeRutaId),
-    supabase.from("hoja_de_ruta_travel").select("*").eq("hoja_de_ruta_id", hojaDeRutaId),
-    supabase.from("hoja_de_ruta_rooms").select("*").eq("hoja_de_ruta_id", hojaDeRutaId),
-    supabase.from("hoja_de_ruta_staff").select("*").eq("hoja_de_ruta_id", hojaDeRutaId),
-  ]);
-  return {
-    contacts: contactsData || [],
-    logistics: logisticsData?.[0] || {},
-    travel: travelData || [],
-    rooms: roomsData || [],
-    staff: staffData || [],
-  };
-};
-
-const saveHojaDeRutaData = async (
-  jobId: string,
-  eventData: EventData,
-  travelArrangements: TravelArrangement[],
-  roomAssignments: RoomAssignment[]
-) => {
-  const { data: mainData, error: mainError } = await supabase
-    .from("hoja_de_ruta")
-    .upsert({
-      job_id: jobId,
-      event_name: eventData.eventName,
-      event_dates: eventData.eventDates,
-      venue_name: eventData.venue.name,
-      venue_address: eventData.venue.address,
-      schedule: eventData.schedule,
-      power_requirements: eventData.powerRequirements,
-      auxiliary_needs: eventData.auxiliaryNeeds,
-    })
-    .select()
-    .single();
-  if (mainError) throw mainError;
-  const hojaDeRutaId = mainData.id;
-  await supabase.from("hoja_de_ruta_contacts").delete().eq("hoja_de_ruta_id", hojaDeRutaId);
-  await supabase.from("hoja_de_ruta_logistics").delete().eq("hoja_de_ruta_id", hojaDeRutaId);
-  await supabase.from("hoja_de_ruta_travel").delete().eq("hoja_de_ruta_id", hojaDeRutaId);
-  await supabase.from("hoja_de_ruta_rooms").delete().eq("hoja_de_ruta_id", hojaDeRutaId);
-  await supabase.from("hoja_de_ruta_staff").delete().eq("hoja_de_ruta_id", hojaDeRutaId);
-  if (eventData.contacts.length > 0) {
-    const contactsToInsert = eventData.contacts.map(contact => ({
-      hoja_de_ruta_id: hojaDeRutaId,
-      name: contact.name,
-      role: contact.role,
-      phone: contact.phone,
-    }));
-    await supabase.from("hoja_de_ruta_contacts").insert(contactsToInsert);
-  }
-  await supabase.from("hoja_de_ruta_logistics").insert({
-    hoja_de_ruta_id: hojaDeRutaId,
-    transport: eventData.logistics.transport,
-    loading_details: eventData.logistics.loadingDetails,
-    unloading_details: eventData.logistics.unloadingDetails,
-  });
-  if (travelArrangements.length > 0) {
-    const travelToInsert = travelArrangements.map(arr => ({
-      hoja_de_ruta_id: hojaDeRutaId,
-      transportation_type: arr.transportation_type,
-      pickup_address: arr.pickup_address,
-      pickup_time: arr.pickup_time,
-      flight_train_number: arr.flight_train_number,
-      departure_time: arr.departure_time,
-      arrival_time: arr.arrival_time,
-      notes: arr.notes,
-    }));
-    await supabase.from("hoja_de_ruta_travel").insert(travelToInsert);
-  }
-  if (roomAssignments.length > 0) {
-    const roomsToInsert = roomAssignments.map(room => ({
-      hoja_de_ruta_id: hojaDeRutaId,
-      room_type: room.room_type,
-      room_number: room.room_number,
-      staff_member1_id: room.staff_member1_id,
-      staff_member2_id: room.room_type === "double" ? room.staff_member2_id : null,
-    }));
-    await supabase.from("hoja_de_ruta_rooms").insert(roomsToInsert);
-  }
-  if (eventData.staff.length > 0) {
-    const staffToInsert = eventData.staff.map(member => ({
-      hoja_de_ruta_id: hojaDeRutaId,
-      name: member.name,
-      surname1: member.surname1,
-      surname2: member.surname2,
-      position: member.position,
-    }));
-    await supabase.from("hoja_de_ruta_staff").insert(staffToInsert);
-  }
-  return hojaDeRutaId;
-};
-
-// ---------------------------
-// MAIN COMPONENT
-// ---------------------------
 const HojaDeRutaGenerator = () => {
   const { toast } = useToast();
   const { data: jobs, isLoading: isLoadingJobs } = useJobSelection();
@@ -289,109 +83,187 @@ const HojaDeRutaGenerator = () => {
   const [alertMessage, setAlertMessage] = useState("");
   const [selectedJobId, setSelectedJobId] = useState<string>("");
 
-  // Main form state
   const [eventData, setEventData] = useState<EventData>({
     eventName: "",
     eventDates: "",
-    venue: { name: "", address: "" },
+    venue: {
+      name: "",
+      address: "",
+    },
     contacts: [{ name: "", role: "", phone: "" }],
-    logistics: { transport: "", loadingDetails: "", unloadingDetails: "" },
+    logistics: {
+      transport: "",
+      loadingDetails: "",
+      unloadingDetails: "",
+    },
     staff: [{ name: "", surname1: "", surname2: "", position: "" }],
     schedule: "",
     powerRequirements: "",
     auxiliaryNeeds: "",
   });
 
-  // Image and file states
-  const [images, setImages] = useState({ venue: [] as File[] });
-  const [imagePreviews, setImagePreviews] = useState({ venue: [] as string[] });
+  // ---------------------------
+  // ESTADOS DE IMÁGENES Y ARCHIVOS
+  // ---------------------------
+  const [images, setImages] = useState({
+    venue: [] as File[],
+  });
+  const [imagePreviews, setImagePreviews] = useState({
+    venue: [] as string[],
+  });
+  // Estado para el mapa de ubicación del lugar (archivo único)
   const [venueMap, setVenueMap] = useState<File | null>(null);
   const [venueMapPreview, setVenueMapPreview] = useState<string | null>(null);
 
-  // Child state arrays
+  const [powerRequirements, setPowerRequirements] = useState<string>("");
   const [travelArrangements, setTravelArrangements] = useState<TravelArrangement[]>([
     { transportation_type: "van" },
   ]);
-  const [roomAssignments, setRoomAssignments] = useState<RoomAssignment[]>([]);
+  const [roomAssignments, setRoomAssignments] = useState<RoomAssignment[]>([
+    { room_type: "single" },
+  ]);
 
-  // Retrieve persisted hoja_de_ruta data for the selected job.
-  useEffect(() => {
-    if (selectedJobId) {
-      (async () => {
-        try {
-          // Fetch power requirements from power_requirement_tables.
-          const powerReq = await fetchPowerRequirementData(selectedJobId);
-          // Fetch main hoja_de_ruta record.
-          const mainData = await fetchHojaDeRutaData(selectedJobId);
-          if (mainData) {
-            setEventData({
-              eventName: mainData.event_name || "",
-              eventDates: mainData.event_dates || "",
-              venue: {
-                name: mainData.venue_name || "",
-                address: mainData.venue_address || "",
-              },
-              contacts: [],
-              logistics: { transport: "", loadingDetails: "", unloadingDetails: "" },
-              staff: [],
-              schedule: mainData.schedule || "",
-              powerRequirements: powerReq || mainData.power_requirements || "",
-              auxiliaryNeeds: mainData.auxiliary_needs || "",
-            });
-            const children = await fetchChildData(mainData.id);
-            setEventData(prev => ({
-              ...prev,
-              contacts: children.contacts,
-              logistics: {
-                transport: children.logistics.transport || "",
-                loadingDetails: children.logistics.loading_details || "",
-                unloadingDetails: children.logistics.unloading_details || "",
-              },
-              schedule: mainData.schedule || "",
-              powerRequirements: powerReq || mainData.power_requirements || "",
-              auxiliaryNeeds: mainData.auxiliary_needs || "",
-              staff: children.staff,
-            }));
-            setTravelArrangements(children.travel);
-            setRoomAssignments(children.rooms);
-          } else {
-            // No hoja_de_ruta record exists; clear form and fallback to job_assignments for staff.
-            setEventData({
-              eventName: "",
-              eventDates: "",
-              venue: { name: "", address: "" },
-              contacts: [{ name: "", role: "", phone: "" }],
-              logistics: { transport: "", loadingDetails: "", unloadingDetails: "" },
-              staff: [],
-              schedule: "",
-              powerRequirements: powerReq || "",
-              auxiliaryNeeds: "",
-            });
-            setTravelArrangements([{ transportation_type: "van" }]);
-            setRoomAssignments([]);
-            const fallbackStaff = await fetchAssignedStaff(selectedJobId);
-            setEventData(prev => ({ ...prev, staff: fallbackStaff }));
-          }
-        } catch (error) {
-          console.error("Error fetching hoja_de_ruta data:", error);
-          toast({
-            title: "Error",
-            description: "No se pudo obtener la información de la hoja de ruta",
-            variant: "destructive",
-          });
-        }
-      })();
+  // ---------------------------
+  // UTILIDAD: cargar imagen desde URL como DataURL
+  // ---------------------------
+  const loadImageAsDataURL = async (url: string): Promise<string | null> => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error("Error al cargar la imagen", error);
+      return null;
     }
-  }, [selectedJobId]);
+  };
 
   // ---------------------------
-  // IMAGE HANDLERS
+  // FUNCIONES DE CONSULTA
   // ---------------------------
-  const handleImageUpload = (type: keyof typeof images, files: FileList | null) => {
+  const fetchPowerRequirements = async (jobId: string) => {
+    try {
+      const { data: requirements, error } = await supabase
+        .from("power_requirement_tables")
+        .select("*")
+        .eq("job_id", jobId);
+
+      if (error) throw error;
+
+      if (requirements && requirements.length > 0) {
+        // Formatear los requisitos eléctricos en texto legible
+        const formattedRequirements = requirements
+          .map((req: any) => {
+            return `${req.department.toUpperCase()} - ${req.table_name}:\n` +
+              `Potencia Total: ${req.total_watts}W\n` +
+              `Corriente por Fase: ${req.current_per_phase}A\n` +
+              `PDU Recomendado: ${req.pdu_type}\n`;
+          })
+          .join("\n");
+        setPowerRequirements(formattedRequirements);
+        setEventData((prev) => ({
+          ...prev,
+          powerRequirements: formattedRequirements,
+        }));
+      }
+    } catch (error: any) {
+      console.error("Error al obtener los requisitos eléctricos:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron obtener los requisitos eléctricos",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchAssignedStaff = async (jobId: string) => {
+    try {
+      const { data: assignments, error } = await supabase
+        .from("job_assignments")
+        .select(
+          `
+          *,
+          profiles:technician_id (
+            first_name,
+            last_name
+          )
+        `
+        )
+        .eq("job_id", jobId);
+
+      if (error) throw error;
+
+      if (assignments && assignments.length > 0) {
+        const staffList = assignments.map((assignment: any) => ({
+          name: assignment.profiles.first_name,
+          surname1: assignment.profiles.last_name,
+          surname2: "",
+          position:
+            assignment.sound_role ||
+            assignment.lights_role ||
+            assignment.video_role ||
+            "Técnico",
+        }));
+
+        setEventData((prev) => ({
+          ...prev,
+          staff: staffList,
+        }));
+      }
+    } catch (error) {
+      console.error("Error al obtener el personal:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo obtener el personal asignado",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (selectedJobId && jobs) {
+      const selectedJob = jobs.find((job: any) => job.id === selectedJobId);
+      if (selectedJob) {
+        console.log("Trabajo seleccionado:", selectedJob);
+        // Formatear fechas
+        const formattedDates = `${format(
+          new Date(selectedJob.start_time),
+          "dd/MM/yyyy HH:mm"
+        )} - ${format(new Date(selectedJob.end_time), "dd/MM/yyyy HH:mm")}`;
+
+        setEventData((prev) => ({
+          ...prev,
+          eventName: selectedJob.title,
+          eventDates: formattedDates,
+        }));
+
+        fetchPowerRequirements(selectedJob.id);
+        fetchAssignedStaff(selectedJob.id);
+
+        toast({
+          title: "Trabajo Seleccionado",
+          description: "El formulario se ha actualizado con los detalles del trabajo",
+        });
+      }
+    }
+  }, [selectedJobId, jobs]);
+
+  // ---------------------------
+  // MANEJADORES DE IMÁGENES
+  // ---------------------------
+  const handleImageUpload = (
+    type: keyof typeof images,
+    files: FileList | null
+  ) => {
     if (!files) return;
     const fileArray = Array.from(files);
     const newImages = [...(images[type] || []), ...fileArray];
     setImages({ ...images, [type]: newImages });
+
     const previews = fileArray.map((file) => URL.createObjectURL(file));
     setImagePreviews((prev) => ({
       ...prev,
@@ -409,7 +281,7 @@ const HojaDeRutaGenerator = () => {
     setImagePreviews({ ...imagePreviews, [type]: newPreviews });
   };
 
-  // For venue map upload
+  // Manejador para subir el mapa de ubicación del lugar
   const handleVenueMapUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -420,7 +292,7 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // CONTACT & STAFF HANDLERS
+  // MANEJADORES DE CONTACTOS Y PERSONAL
   // ---------------------------
   const handleContactChange = (index: number, field: string, value: string) => {
     const newContacts = [...eventData.contacts];
@@ -444,12 +316,15 @@ const HojaDeRutaGenerator = () => {
   const addStaffMember = () => {
     setEventData({
       ...eventData,
-      staff: [...eventData.staff, { name: "", surname1: "", surname2: "", position: "" }],
+      staff: [
+        ...eventData.staff,
+        { name: "", surname1: "", surname2: "", position: "" },
+      ],
     });
   };
 
   // ---------------------------
-  // TRAVEL & ROOM HANDLERS
+  // MANEJADORES DE ARREGLOS DE VIAJE Y ASIGNACIONES DE HABITACIONES
   // ---------------------------
   const addTravelArrangement = () => {
     setTravelArrangements([...travelArrangements, { transportation_type: "van" }]);
@@ -461,7 +336,11 @@ const HojaDeRutaGenerator = () => {
     setTravelArrangements(newArrangements);
   };
 
-  const updateTravelArrangement = (index: number, field: keyof TravelArrangement, value: string) => {
+  const updateTravelArrangement = (
+    index: number,
+    field: keyof TravelArrangement,
+    value: string
+  ) => {
     const newArrangements = [...travelArrangements];
     newArrangements[index] = { ...newArrangements[index], [field]: value };
     setTravelArrangements(newArrangements);
@@ -477,14 +356,18 @@ const HojaDeRutaGenerator = () => {
     setRoomAssignments(newAssignments);
   };
 
-  const updateRoomAssignment = (index: number, field: keyof RoomAssignment, value: string) => {
+  const updateRoomAssignment = (
+    index: number,
+    field: keyof RoomAssignment,
+    value: string
+  ) => {
     const newAssignments = [...roomAssignments];
     newAssignments[index] = { ...newAssignments[index], [field]: value };
     setRoomAssignments(newAssignments);
   };
 
   // ---------------------------
-  // IMAGE UPLOAD COMPONENT
+  // COMPONENTE DE SUBIDA DE IMÁGENES
   // ---------------------------
   interface ImageUploadSectionProps {
     type: keyof typeof images;
@@ -525,29 +408,42 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // UPLOAD PDF TO SUPABASE
+  // SUBIDA DEL PDF A SUPABASE
   // ---------------------------
-  const uploadPdfToJob = async (jobId: string, pdfBlob: Blob, fileName: string) => {
+  const uploadPdfToJob = async (
+    jobId: string,
+    pdfBlob: Blob,
+    fileName: string
+  ) => {
     try {
       console.log("Iniciando subida del PDF:", fileName);
+
+      // Sanitizar el nombre del archivo
       const sanitizedFileName = fileName
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-zA-Z0-9._-]/g, "_")
         .replace(/\s+/g, "_");
+
       const filePath = `${crypto.randomUUID()}-${sanitizedFileName}`;
       console.log("Subiendo con la ruta sanitizada:", filePath);
+
+      // Subir a Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("job_documents")
         .upload(filePath, pdfBlob, {
           contentType: "application/pdf",
           upsert: false,
         });
+
       if (uploadError) {
         console.error("Error en la subida:", uploadError);
         throw uploadError;
       }
+
       console.log("Archivo subido con éxito:", uploadData);
+
+      // Crear un registro en la base de datos
       const { error: dbError } = await supabase.from("job_documents").insert({
         job_id: jobId,
         file_name: fileName,
@@ -555,10 +451,12 @@ const HojaDeRutaGenerator = () => {
         file_type: "application/pdf",
         file_size: pdfBlob.size,
       });
+
       if (dbError) {
         console.error("Error en la base de datos:", dbError);
         throw dbError;
       }
+
       toast({
         title: "Éxito",
         description: "La Hoja de Ruta ha sido generada y subida",
@@ -585,24 +483,16 @@ const HojaDeRutaGenerator = () => {
       });
       return;
     }
-    try {
-      await saveHojaDeRutaData(selectedJobId, eventData, travelArrangements, roomAssignments);
-    } catch (error: any) {
-      console.error("Error guardando los datos:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron guardar los datos de la hoja de ruta",
-        variant: "destructive",
-      });
-      return;
-    }
-    const jobTitle =
-      (jobs?.find((job: any) => job.id === selectedJobId)?.title) ||
-      "Trabajo_Sin_Nombre";
+
+    const selectedJob = jobs?.find((job: any) => job.id === selectedJobId);
+    const jobTitle = selectedJob?.title || "Trabajo_Sin_Nombre";
+
     const doc = new jsPDF() as AutoTableJsPDF;
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
-    const bottomMargin = 60;
+    const bottomMargin = 60; // Reservar 60 puntos en la parte inferior para el logo
+
+    // Función auxiliar para agregar una página si la posición actual excede el área segura
     const checkPageBreak = (currentY: number): number => {
       if (currentY > pageHeight - bottomMargin) {
         doc.addPage();
@@ -611,14 +501,17 @@ const HojaDeRutaGenerator = () => {
       return currentY;
     };
 
-    // Cabecera
+    // Agregar fondo de cabecera en la primera página
     doc.setFillColor(125, 1, 1);
     doc.rect(0, 0, pageWidth, 40, "F");
+
+    // Título y nombre del evento (centrado, texto blanco)
     doc.setFontSize(24);
     doc.setTextColor(255, 255, 255);
     doc.text("Hoja de Ruta", pageWidth / 2, 20, { align: "center" });
     doc.setFontSize(16);
     doc.text(eventData.eventName, pageWidth / 2, 30, { align: "center" });
+
     let yPosition = 50;
     doc.setFontSize(12);
     doc.setTextColor(51, 51, 51);
@@ -628,7 +521,7 @@ const HojaDeRutaGenerator = () => {
     doc.text(`Fechas: ${eventData.eventDates}`, 20, yPosition);
     yPosition += 15;
 
-    // Información del Lugar
+    // Sección de Información del Lugar
     yPosition = checkPageBreak(yPosition);
     doc.setFontSize(14);
     doc.setTextColor(125, 1, 1);
@@ -640,6 +533,7 @@ const HojaDeRutaGenerator = () => {
     yPosition += 7;
     doc.text(`Dirección: ${eventData.venue.address}`, 30, yPosition);
     yPosition += 15;
+    // Insertar el mapa de ubicación del lugar, si está disponible
     if (venueMapPreview) {
       try {
         const mapWidth = 100;
@@ -651,14 +545,19 @@ const HojaDeRutaGenerator = () => {
       }
     }
 
-    // Contactos
-    if (eventData.contacts.some(contact => contact.name || contact.role || contact.phone)) {
+    // Sección de Contactos
+    if (
+      eventData.contacts.some(
+        (contact) => contact.name || contact.role || contact.phone
+      )
+    ) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
       doc.text("Contactos", 20, yPosition);
       yPosition += 10;
-      const contactsTableData = eventData.contacts.map(contact => [
+
+      const contactsTableData = eventData.contacts.map((contact) => [
         contact.name,
         contact.role,
         contact.phone,
@@ -673,7 +572,7 @@ const HojaDeRutaGenerator = () => {
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Logística
+    // Sección de Logística
     if (
       eventData.logistics.transport ||
       eventData.logistics.loadingDetails ||
@@ -691,7 +590,7 @@ const HojaDeRutaGenerator = () => {
         { label: "Detalles de Carga:", value: eventData.logistics.loadingDetails },
         { label: "Detalles de Descarga:", value: eventData.logistics.unloadingDetails },
       ];
-      logisticsText.forEach(item => {
+      logisticsText.forEach((item) => {
         if (item.value) {
           doc.text(item.label, 30, yPosition);
           const lines = doc.splitTextToSize(item.value, pageWidth - 60);
@@ -702,14 +601,19 @@ const HojaDeRutaGenerator = () => {
       });
     }
 
-    // Personal
-    if (eventData.staff.some(person => person.name || person.surname1 || person.surname2 || person.position)) {
+    // Sección de Personal
+    if (
+      eventData.staff.some(
+        (person) => person.name || person.surname1 || person.surname2 || person.position
+      )
+    ) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
       doc.text("Lista de Personal", 20, yPosition);
       yPosition += 10;
-      const staffTableData = eventData.staff.map(person => [
+
+      const staffTableData = eventData.staff.map((person) => [
         person.name,
         person.surname1,
         person.surname2,
@@ -725,17 +629,20 @@ const HojaDeRutaGenerator = () => {
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Arreglos de Viaje
+    // Sección de Arreglos de Viaje (tabla)
     if (
       travelArrangements.length > 0 &&
-      travelArrangements.some(arr => Object.values(arr).some(val => val && val.trim() !== ""))
+      travelArrangements.some((arr) =>
+        Object.values(arr).some((val) => val && val !== "")
+      )
     ) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
       doc.setTextColor(125, 1, 1);
+      // Nota: Si lo deseas, puedes cambiar el título aquí.
       doc.text("Arreglos de Viaje", 20, yPosition);
       yPosition += 10;
-      const travelTableData = travelArrangements.map(arr => [
+      const travelTableData = travelArrangements.map((arr) => [
         arr.transportation_type,
         `${arr.pickup_address || ""} ${arr.pickup_time || ""}`.trim(),
         arr.departure_time || "",
@@ -751,15 +658,27 @@ const HojaDeRutaGenerator = () => {
         styles: { fontSize: 10 },
       });
       yPosition = (doc as any).lastAutoTable.finalY + 15;
-      // Print pickup addresses with images.
+
+      // Obtener direcciones de recogida únicas
       const uniquePickupAddresses = Array.from(
-        new Set(travelArrangements.map(arr => arr.pickup_address!.trim()))
+        new Set(
+          travelArrangements
+            .filter((arr) => arr.pickup_address)
+            .map((arr) => arr.pickup_address as string)
+        )
       );
+
+      // Dado que the URLs you provided are already substituted and uploaded into the public folder,
+      // we assume that the pickup_address value exactly matches the key for the image URL.
+      // For example, if the pickup address is "Nave Sector-Pro. C\Puerto Rico 6, 28971 - Griñon 1",
+      // then the image URL should be something like "/IMG_7834.jpeg". Adjust these keys as needed.
       const transportationMapPlaceholders: { [key: string]: string } = {
         "Nave Sector-Pro. C\\Puerto Rico 6, 28971 - Griñon 1": "/lovable-uploads/IMG_7834.jpeg",
         "C\\ Corregidor Diego de Valderrabano 23, Moratalaz": "/lovable-uploads/IMG_7835.jpeg",
         "C\\ Entrepeñas 47, Ensanche de Vallecas": "/lovable-uploads/IMG_7836.jpeg",
       };
+
+      // Imprimir cada dirección única y su imagen asociada
       for (const pickupAddress of uniquePickupAddresses) {
         const imageUrl = transportationMapPlaceholders[pickupAddress];
         if (imageUrl) {
@@ -781,15 +700,11 @@ const HojaDeRutaGenerator = () => {
       }
     }
 
-    // Room Assignments
+    // Sección de Asignaciones de Habitaciones
     if (
       roomAssignments.length > 0 &&
-      roomAssignments.some(room =>
-        (room.room_number && room.room_number.trim() !== "") ||
-        (room.staff_member1_id && room.staff_member1_id.trim() !== "") ||
-        (room.room_type === "double" &&
-          room.staff_member2_id &&
-          room.staff_member2_id.trim() !== "")
+      roomAssignments.some((room) =>
+        Object.values(room).some((val) => val && val !== "")
       )
     ) {
       yPosition = checkPageBreak(yPosition);
@@ -797,7 +712,7 @@ const HojaDeRutaGenerator = () => {
       doc.setTextColor(125, 1, 1);
       doc.text("Asignaciones de Habitaciones", 20, yPosition);
       yPosition += 10;
-      const roomTableData = roomAssignments.map(room => [
+      const roomTableData = roomAssignments.map((room) => [
         room.room_type,
         room.room_number || "",
         room.staff_member1_id || "",
@@ -813,7 +728,7 @@ const HojaDeRutaGenerator = () => {
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Programa
+    // Sección de Programa
     if (eventData.schedule) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
@@ -827,7 +742,7 @@ const HojaDeRutaGenerator = () => {
       yPosition += scheduleLines.length * 7 + 15;
     }
 
-    // Requisitos Eléctricos
+    // Sección de Requisitos Eléctricos
     if (eventData.powerRequirements) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
@@ -841,7 +756,7 @@ const HojaDeRutaGenerator = () => {
       yPosition += powerLines.length * 7 + 15;
     }
 
-    // Necesidades Auxiliares
+    // Sección de Necesidades Auxiliares
     if (eventData.auxiliaryNeeds) {
       yPosition = checkPageBreak(yPosition);
       doc.setFontSize(14);
@@ -855,7 +770,7 @@ const HojaDeRutaGenerator = () => {
       yPosition += auxLines.length * 7 + 15;
     }
 
-    // Imágenes del Lugar
+    // Sección de Imágenes del Lugar (si existen)
     if (imagePreviews.venue.length > 0) {
       doc.addPage();
       yPosition = 20;
@@ -887,7 +802,9 @@ const HojaDeRutaGenerator = () => {
       }
     }
 
-    // Agregar logo en cada página
+    // ---------------------------
+    // AGREGAR LOGO EN CADA PÁGINA
+    // ---------------------------
     const logo = new Image();
     logo.crossOrigin = "anonymous";
     logo.src = "/lovable-uploads/ce3ff31a-4cc5-43c8-b5bb-a4056d3735e4.png";
@@ -924,443 +841,472 @@ const HojaDeRutaGenerator = () => {
   };
 
   // ---------------------------
-  // LAYOUT & RENDER
+  // RETORNO JSX
   // ---------------------------
   return (
-    // Use a full-width container with increased padding
-    <div className="min-h-screen bg-gray-100 p-8">
-      <Card className="w-full">
-        <CardHeader className="border-b border-gray-300">
-          <CardTitle className="text-3xl">Generador de Hoja de Ruta</CardTitle>
-        </CardHeader>
-        <ScrollArea className="h-[calc(100vh-6rem)]">
-          <CardContent className="space-y-8 p-8">
-            {/* Selección de Trabajo */}
-            <div className="space-y-4">
-              <div className="flex flex-col space-y-2">
-                <Label htmlFor="jobSelect" className="text-lg">
-                  Seleccione Trabajo
-                </Label>
-                <Select
-                  value={selectedJobId || "unselected"}
-                  onValueChange={setSelectedJobId}
-                >
-                  <SelectTrigger className="w-full py-3">
-                    <SelectValue placeholder="Seleccione un trabajo..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isLoadingJobs ? (
-                      <SelectItem value="loading">Cargando trabajos...</SelectItem>
-                    ) : jobs?.length === 0 ? (
-                      <SelectItem value="unselected">No hay trabajos disponibles</SelectItem>
-                    ) : (
-                      jobs?.map((job: any) => (
-                        <SelectItem key={job.id} value={job.id}>
-                          {job.title}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="eventName" className="text-lg">
-                  Nombre del Evento
-                </Label>
+    <Card className="w-full max-w-3xl mx-auto">
+      <CardHeader>
+        <CardTitle>Generador de Hoja de Ruta</CardTitle>
+      </CardHeader>
+      <ScrollArea className="h-[calc(100vh-12rem)]">
+        <CardContent className="space-y-6">
+          {showAlert && (
+            <Alert className="mb-4">
+              <AlertDescription>{alertMessage}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Selección de Trabajo */}
+          <div className="space-y-4">
+            <div className="flex flex-col space-y-2">
+              <Label htmlFor="jobSelect">Seleccione Trabajo</Label>
+              <Select
+                value={selectedJobId || "unselected"}
+                onValueChange={setSelectedJobId}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Seleccione un trabajo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoadingJobs ? (
+                    <SelectItem value="loading">Cargando trabajos...</SelectItem>
+                  ) : jobs?.length === 0 ? (
+                    <SelectItem value="unselected">No hay trabajos disponibles</SelectItem>
+                  ) : (
+                    jobs?.map((job: any) => (
+                      <SelectItem key={job.id} value={job.id}>
+                        {job.title}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="eventName">Nombre del Evento</Label>
+              <Input
+                id="eventName"
+                value={eventData.eventName}
+                onChange={(e) =>
+                  setEventData({ ...eventData, eventName: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="eventDates">Fechas del Evento</Label>
+              <div className="relative">
                 <Input
-                  id="eventName"
-                  value={eventData.eventName}
+                  id="eventDates"
+                  value={eventData.eventDates}
                   onChange={(e) =>
-                    setEventData({ ...eventData, eventName: e.target.value })
+                    setEventData({ ...eventData, eventDates: e.target.value })
                   }
-                  className="py-3"
                 />
+                <Calendar className="absolute right-3 top-2.5 h-5 w-5 text-muted-foreground" />
               </div>
-              <div>
-                <Label htmlFor="eventDates" className="text-lg">
-                  Fechas del Evento
-                </Label>
-                <div className="relative">
+            </div>
+          </div>
+
+          {/* Sección de Imágenes */}
+          <div className="space-y-6">
+            <ImageUploadSection type="venue" label="Imágenes del Lugar" />
+          </div>
+
+          {/* Diálogo de Lugar */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full">
+                Editar Detalles del Lugar
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Información del Lugar</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="venueName">Nombre del Lugar</Label>
                   <Input
-                    id="eventDates"
-                    value={eventData.eventDates}
+                    id="venueName"
+                    value={eventData.venue.name}
                     onChange={(e) =>
-                      setEventData({ ...eventData, eventDates: e.target.value })
+                      setEventData({
+                        ...eventData,
+                        venue: { ...eventData.venue, name: e.target.value },
+                      })
                     }
-                    className="py-3"
                   />
-                  <Calendar className="absolute right-4 top-3 h-6 w-6 text-gray-500" />
+                </div>
+                <div>
+                  <Label htmlFor="venueAddress">Dirección</Label>
+                  <Textarea
+                    id="venueAddress"
+                    value={eventData.venue.address}
+                    onChange={(e) =>
+                      setEventData({
+                        ...eventData,
+                        venue: { ...eventData.venue, address: e.target.value },
+                      })
+                    }
+                  />
+                </div>
+                {/* Subida para el Mapa de Ubicación del Lugar */}
+                <div>
+                  <Label htmlFor="venueMapUpload">Mapa de Ubicación del Lugar</Label>
+                  <Input
+                    id="venueMapUpload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleVenueMapUpload}
+                  />
+                  {venueMapPreview && (
+                    <img
+                      src={venueMapPreview}
+                      alt="Vista previa del mapa del lugar"
+                      className="mt-2 max-w-full h-auto"
+                    />
+                  )}
                 </div>
               </div>
-            </div>
-            {/* Sección de Imágenes */}
-            <div className="space-y-6">
-              <ImageUploadSection type="venue" label="Imágenes del Lugar" />
-            </div>
-            {/* Diálogo de Lugar */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full py-3">
-                  Editar Detalles del Lugar
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle className="text-2xl">Información del Lugar</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="venueName" className="text-lg">
-                      Nombre del Lugar
-                    </Label>
+            </DialogContent>
+          </Dialog>
+
+          {/* Diálogo de Contactos */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full">
+                Editar Contactos
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Información de Contactos</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {eventData.contacts.map((contact, index) => (
+                  <div key={index} className="grid grid-cols-3 gap-2">
                     <Input
-                      id="venueName"
-                      value={eventData.venue.name}
+                      placeholder="Nombre"
+                      value={contact.name}
                       onChange={(e) =>
-                        setEventData({
-                          ...eventData,
-                          venue: { ...eventData.venue, name: e.target.value },
-                        })
+                        handleContactChange(index, "name", e.target.value)
                       }
-                      className="py-3"
                     />
-                  </div>
-                  <div>
-                    <Label htmlFor="venueAddress" className="text-lg">
-                      Dirección
-                    </Label>
-                    <Textarea
-                      id="venueAddress"
-                      value={eventData.venue.address}
-                      onChange={(e) =>
-                        setEventData({
-                          ...eventData,
-                          venue: { ...eventData.venue, address: e.target.value },
-                        })
-                      }
-                      className="py-3"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="venueMapUpload" className="text-lg">
-                      Mapa de Ubicación del Lugar
-                    </Label>
                     <Input
-                      id="venueMapUpload"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleVenueMapUpload}
-                      className="py-3"
+                      placeholder="Rol"
+                      value={contact.role}
+                      onChange={(e) =>
+                        handleContactChange(index, "role", e.target.value)
+                      }
                     />
-                    {venueMapPreview && (
-                      <img
-                        src={venueMapPreview}
-                        alt="Vista previa del mapa del lugar"
-                        className="mt-2 max-w-full h-auto rounded-md shadow"
-                      />
-                    )}
+                    <Input
+                      placeholder="Teléfono"
+                      value={contact.phone}
+                      onChange={(e) =>
+                        handleContactChange(index, "phone", e.target.value)
+                      }
+                    />
                   </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-            {/* Diálogo de Contactos */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full py-3">
-                  Editar Contactos
+                ))}
+                <Button onClick={addContact} variant="outline">
+                  Agregar Contacto
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl">Información de Contactos</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  {eventData.contacts.map((contact, index) => (
-                    <div key={index} className="grid grid-cols-3 gap-4">
-                      <Input
-                        placeholder="Nombre"
-                        value={contact.name}
-                        onChange={(e) =>
-                          handleContactChange(index, "name", e.target.value)
-                        }
-                        className="py-2"
-                      />
-                      <Input
-                        placeholder="Rol"
-                        value={contact.role}
-                        onChange={(e) =>
-                          handleContactChange(index, "role", e.target.value)
-                        }
-                        className="py-2"
-                      />
-                      <Input
-                        placeholder="Teléfono"
-                        value={contact.phone}
-                        onChange={(e) =>
-                          handleContactChange(index, "phone", e.target.value)
-                        }
-                        className="py-2"
-                      />
-                    </div>
-                  ))}
-                  <Button onClick={addContact} variant="outline" className="py-2">
-                    Agregar Contacto
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            {/* Diálogo de Personal */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full py-3">
-                  Editar Lista de Personal
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Diálogo de Personal */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full">
+                Editar Lista de Personal
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Lista de Personal</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {eventData.staff.map((member, index) => (
+                  <div key={index} className="grid grid-cols-4 gap-2">
+                    <Input
+                      placeholder="Nombre"
+                      value={member.name}
+                      onChange={(e) =>
+                        handleStaffChange(index, "name", e.target.value)
+                      }
+                    />
+                    <Input
+                      placeholder="Primer Apellido"
+                      value={member.surname1}
+                      onChange={(e) =>
+                        handleStaffChange(index, "surname1", e.target.value)
+                      }
+                    />
+                    <Input
+                      placeholder="Segundo Apellido"
+                      value={member.surname2}
+                      onChange={(e) =>
+                        handleStaffChange(index, "surname2", e.target.value)
+                      }
+                    />
+                    <Input
+                      placeholder="Puesto"
+                      value={member.position}
+                      onChange={(e) =>
+                        handleStaffChange(index, "position", e.target.value)
+                      }
+                    />
+                  </div>
+                ))}
+                <Button onClick={addStaffMember} variant="outline">
+                  Agregar Miembro de Personal
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl">Lista de Personal</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  {eventData.staff.map((member, index) => (
-                    <div key={index} className="grid grid-cols-4 gap-4">
-                      <Input
-                        placeholder="Nombre"
-                        value={member.name}
-                        onChange={(e) =>
-                          handleStaffChange(index, "name", e.target.value)
-                        }
-                        className="py-2"
-                      />
-                      <Input
-                        placeholder="Primer Apellido"
-                        value={member.surname1}
-                        onChange={(e) =>
-                          handleStaffChange(index, "surname1", e.target.value)
-                        }
-                        className="py-2"
-                      />
-                      <Input
-                        placeholder="Segundo Apellido"
-                        value={member.surname2}
-                        onChange={(e) =>
-                          handleStaffChange(index, "surname2", e.target.value)
-                        }
-                        className="py-2"
-                      />
-                      <Input
-                        placeholder="Puesto"
-                        value={member.position}
-                        onChange={(e) =>
-                          handleStaffChange(index, "position", e.target.value)
-                        }
-                        className="py-2"
-                      />
-                    </div>
-                  ))}
-                  <Button onClick={addStaffMember} variant="outline" className="py-2">
-                    Agregar Miembro de Personal
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            {/* Diálogo de Arreglos de Viaje */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full py-3">
-                  Editar Logística de Personal
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl">Arreglos de Viaje</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  {travelArrangements.map((arrangement, index) => (
-                    <div key={index} className="space-y-4 p-4 border rounded-md">
-                      <div className="flex justify-between items-center">
-                        <h4 className="text-lg font-semibold">
-                          Arreglo de Viaje {index + 1}
-                        </h4>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeTravelArrangement(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Select
-                        value={arrangement.transportation_type}
-                        onValueChange={(value) =>
-                          updateTravelArrangement(index, "transportation_type", value)
-                        }
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Diálogo de Arreglos de Viaje */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full">
+                Editar Logística de Personal
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Arreglos de Viaje</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {travelArrangements.map((arrangement, index) => (
+                  <div key={index} className="space-y-4 p-4 border rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-sm font-medium">
+                        Arreglo de Viaje {index + 1}
+                      </h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeTravelArrangement(index)}
                       >
-                        <SelectTrigger className="py-2">
-                          <SelectValue placeholder="Seleccione el tipo de transporte" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="van">Furgoneta</SelectItem>
-                          <SelectItem value="sleeper_bus">Sleeper Bus Litera</SelectItem>
-                          <SelectItem value="train">Tren</SelectItem>
-                          <SelectItem value="plane">Avión</SelectItem>
-                          <SelectItem value="RV">Autocaravana</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-lg">Dirección de Recogida</Label>
-                          <Select
-                            value={arrangement.pickup_address || "Nave Sector-Pro. C\\Puerto Rico 6, 28971 - Griñon 1"}
-                            onValueChange={(value) =>
-                              updateTravelArrangement(index, "pickup_address", value)
-                            }
-                          >
-                            <SelectTrigger className="py-2">
-                              <SelectValue placeholder="Seleccione la dirección de recogida" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Nave Sector-Pro. C\\Puerto Rico 6, 28971 - Griñon 1">
-                                Nave Sector-Pro. C&#92;Puerto Rico 6, 28971 - Griñon 1
-                              </SelectItem>
-                              <SelectItem value="C\\ Corregidor Diego de Valderrabano 23, Moratalaz">
-                                C&#92; Corregidor Diego de Valderrabano 23, Moratalaz
-                              </SelectItem>
-                              <SelectItem value="C\\ Entrepeñas 47, Ensanche de Vallecas">
-                                C&#92; Entrepeñas 47, Ensanche de Vallecas
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label className="text-lg">Hora de Recogida</Label>
-                          <Input
-                            type="datetime-local"
-                            value={arrangement.pickup_time || ""}
-                            onChange={(e) =>
-                              updateTravelArrangement(index, "pickup_time", e.target.value)
-                            }
-                            className="py-2"
-                          />
-                        </div>
-                      </div>
-                      {(arrangement.transportation_type === "train" ||
-                        arrangement.transportation_type === "plane") && (
-                        <div>
-                          <Label className="text-lg">Número de Vuelo/Tren</Label>
-                          <Input
-                            value={arrangement.flight_train_number || ""}
-                            onChange={(e) =>
-                              updateTravelArrangement(index, "flight_train_number", e.target.value)
-                            }
-                            className="py-2"
-                          />
-                        </div>
-                      )}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-lg">Hora de Salida</Label>
-                          <Input
-                            type="datetime-local"
-                            value={arrangement.departure_time || ""}
-                            onChange={(e) =>
-                              updateTravelArrangement(index, "departure_time", e.target.value)
-                            }
-                            className="py-2"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-lg">Hora de Llegada</Label>
-                          <Input
-                            type="datetime-local"
-                            value={arrangement.arrival_time || ""}
-                            onChange={(e) =>
-                              updateTravelArrangement(index, "arrival_time", e.target.value)
-                            }
-                            className="py-2"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-lg">Notas</Label>
-                        <Textarea
-                          value={arrangement.notes || ""}
-                          onChange={(e) =>
-                            updateTravelArrangement(index, "notes", e.target.value)
-                          }
-                          className="py-2"
-                        />
-                      </div>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  ))}
-                  <Button onClick={addTravelArrangement} variant="outline" className="py-2">
-                    Agregar Arreglo de Viaje
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            {/* Diálogo de Asignaciones de Habitaciones */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full py-3">
-                  Editar Asignaciones de Habitaciones
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl">Asignaciones de Habitaciones</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  {roomAssignments.map((assignment, index) => (
-                    <div key={index} className="space-y-4 p-4 border rounded-md">
-                      <div className="flex justify-between items-center">
-                        <h4 className="text-lg font-semibold">
-                          Asignación de Habitación {index + 1}
-                        </h4>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeRoomAssignment(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Select
-                        value={assignment.room_type}
-                        onValueChange={(value) =>
-                          updateRoomAssignment(index, "room_type", value as "single" | "double")
-                        }
-                      >
-                        <SelectTrigger className="py-2">
-                          <SelectValue placeholder="Seleccione el tipo de habitación" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="single">Individual</SelectItem>
-                          <SelectItem value="double">Doble</SelectItem>
-                        </SelectContent>
-                      </Select>
+
+                    <Select
+                      value={arrangement.transportation_type}
+                      onValueChange={(value) =>
+                        updateTravelArrangement(index, "transportation_type", value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccione el tipo de transporte" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="van">Furgoneta</SelectItem>
+                        <SelectItem value="sleeper_bus">Sleeper Bus Litera</SelectItem>
+                        <SelectItem value="train">Tren</SelectItem>
+                        <SelectItem value="plane">Avión</SelectItem>
+                        <SelectItem value="RV">Autocaravana</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-lg">Número de Habitación</Label>
-                        <Input
-                          value={assignment.room_number || ""}
-                          onChange={(e) =>
-                            updateRoomAssignment(index, "room_number", e.target.value)
-                          }
-                          className="py-2"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-lg">Personal Asignado 1</Label>
+                        <Label>Dirección de Recogida</Label>
                         <Select
-                          value={assignment.staff_member1_id || "unassigned"}
+                          value={arrangement.pickup_address || "address1"}
+                          onValueChange={(value) =>
+                            updateTravelArrangement(index, "pickup_address", value)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccione la dirección de recogida" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Nave Sector-Pro. C\\Puerto Rico 6, 28971 - Griñon 1">
+                              Nave Sector-Pro. C\Puerto Rico 6, 28971 - Griñon 1
+                            </SelectItem>
+                            <SelectItem value="C\\ Corregidor Diego de Valderrabano 23, Moratalaz">
+                              C\ Corregidor Diego de Valderrabano 23, Moratalaz
+                            </SelectItem>
+                            <SelectItem value="C\\ Entrepeñas 47, Ensanche de Vallecas">
+                              C\ Entrepeñas 47, Ensanche de Vallecas
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Hora de Recogida</Label>
+                        <Input
+                          type="datetime-local"
+                          value={arrangement.pickup_time || ""}
+                          onChange={(e) =>
+                            updateTravelArrangement(index, "pickup_time", e.target.value)
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    {(arrangement.transportation_type === "train" ||
+                      arrangement.transportation_type === "plane") && (
+                      <div>
+                        <Label>Número de Vuelo/Tren</Label>
+                        <Input
+                          value={arrangement.flight_train_number || ""}
+                          onChange={(e) =>
+                            updateTravelArrangement(index, "flight_train_number", e.target.value)
+                          }
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Hora de Salida</Label>
+                        <Input
+                          type="datetime-local"
+                          value={arrangement.departure_time || ""}
+                          onChange={(e) =>
+                            updateTravelArrangement(index, "departure_time", e.target.value)
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label>Hora de Llegada</Label>
+                        <Input
+                          type="datetime-local"
+                          value={arrangement.arrival_time || ""}
+                          onChange={(e) =>
+                            updateTravelArrangement(index, "arrival_time", e.target.value)
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Notas</Label>
+                      <Textarea
+                        value={arrangement.notes || ""}
+                        onChange={(e) =>
+                          updateTravelArrangement(index, "notes", e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                ))}
+                <Button onClick={addTravelArrangement} variant="outline">
+                  Agregar Arreglo de Viaje
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Sección de direcciones únicas de recogida y mapas asociados */}
+          {travelArrangements.length > 0 && (
+            <div>
+              {/* Este bloque se ejecuta durante la generación del PDF */}
+              {/* NOTA: La siguiente parte se inserta directamente en el PDF dentro de generateDocument */}
+            </div>
+          )}
+
+          {/* Diálogo de Asignaciones de Habitaciones */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full">
+                Editar Asignaciones de Habitaciones
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Asignaciones de Habitaciones</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {roomAssignments.map((assignment, index) => (
+                  <div key={index} className="space-y-4 p-4 border rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-sm font-medium">
+                        Asignación de Habitación {index + 1}
+                      </h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeRoomAssignment(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <Select
+                      value={assignment.room_type}
+                      onValueChange={(value) =>
+                        updateRoomAssignment(
+                          index,
+                          "room_type",
+                          value as "single" | "double"
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccione el tipo de habitación" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="single">Individual</SelectItem>
+                        <SelectItem value="double">Doble</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <div>
+                      <Label>Número de Habitación</Label>
+                      <Input
+                        value={assignment.room_number || ""}
+                        onChange={(e) =>
+                          updateRoomAssignment(index, "room_number", e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Personal Asignado 1</Label>
+                      <Select
+                        value={assignment.staff_member1_id || "unassigned"}
+                        onValueChange={(value) =>
+                          updateRoomAssignment(
+                            index,
+                            "staff_member1_id",
+                            value !== "unassigned" ? value : ""
+                          )
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccione un miembro" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Sin asignar</SelectItem>
+                          {eventData.staff.map((member) => (
+                            <SelectItem key={member.name} value={member.name}>
+                              {`${member.name} ${member.surname1 || ""}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {assignment.room_type === "double" && (
+                      <div>
+                        <Label>Personal Asignado 2</Label>
+                        <Select
+                          value={assignment.staff_member2_id || "unassigned"}
                           onValueChange={(value) =>
                             updateRoomAssignment(
                               index,
-                              "staff_member1_id",
+                              "staff_member2_id",
                               value !== "unassigned" ? value : ""
                             )
                           }
                         >
-                          <SelectTrigger className="py-2">
+                          <SelectTrigger>
                             <SelectValue placeholder="Seleccione un miembro" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1373,93 +1319,67 @@ const HojaDeRutaGenerator = () => {
                           </SelectContent>
                         </Select>
                       </div>
-                      {assignment.room_type === "double" && (
-                        <div>
-                          <Label className="text-lg">Personal Asignado 2</Label>
-                          <Select
-                            value={assignment.staff_member2_id || "unassigned"}
-                            onValueChange={(value) =>
-                              updateRoomAssignment(
-                                index,
-                                "staff_member2_id",
-                                value !== "unassigned" ? value : ""
-                              )
-                            }
-                          >
-                            <SelectTrigger className="py-2">
-                              <SelectValue placeholder="Seleccione un miembro" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="unassigned">Sin asignar</SelectItem>
-                              {eventData.staff.map((member) => (
-                                <SelectItem key={member.name} value={member.name}>
-                                  {`${member.name} ${member.surname1 || ""}`}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  <Button onClick={addRoomAssignment} variant="outline" className="py-2">
-                    Agregar Asignación de Habitaciones
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            {/* Sección de Programa */}
-            <div>
-              <Label htmlFor="schedule" className="text-lg">
-                Programa
-              </Label>
-              <Textarea
-                id="schedule"
-                value={eventData.schedule}
-                onChange={(e) =>
-                  setEventData({ ...eventData, schedule: e.target.value })
-                }
-                className="min-h-[200px] py-3"
-                placeholder="Load in: 08:00&#10;Soundcheck: 14:00&#10;Doors: 19:00&#10;Show: 20:00..."
-              />
-            </div>
-            {/* Sección de Requisitos Eléctricos */}
-            <div>
-              <Label htmlFor="powerRequirements" className="text-lg">
-                Requisitos Eléctricos
-              </Label>
-              <Textarea
-                id="powerRequirements"
-                value={eventData.powerRequirements}
-                onChange={(e) =>
-                  setEventData({ ...eventData, powerRequirements: e.target.value })
-                }
-                className="min-h-[150px] py-3"
-                placeholder="Los requisitos eléctricos se completarán automáticamente cuando estén disponibles..."
-              />
-            </div>
-            {/* Sección de Necesidades Auxiliares */}
-            <div>
-              <Label htmlFor="auxiliaryNeeds" className="text-lg">
-                Necesidades Auxiliares
-              </Label>
-              <Textarea
-                id="auxiliaryNeeds"
-                value={eventData.auxiliaryNeeds}
-                onChange={(e) =>
-                  setEventData({ ...eventData, auxiliaryNeeds: e.target.value })
-                }
-                className="min-h-[150px] py-3"
-                placeholder="Requerimientos del equipo de carga, necesidades de equipamiento..."
-              />
-            </div>
-            <Button onClick={generateDocument} className="w-full py-3 text-xl">
-              Generar Hoja de Ruta
-            </Button>
-          </CardContent>
-        </ScrollArea>
-      </Card>
-    </div>
+                    )}
+                  </div>
+                ))}
+                <Button onClick={addRoomAssignment} variant="outline">
+                  Agregar Asignación de Habitación
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Sección de Programa */}
+          <div>
+            <Label htmlFor="schedule">Programa</Label>
+            <Textarea
+              id="schedule"
+              value={eventData.schedule}
+              onChange={(e) =>
+                setEventData({ ...eventData, schedule: e.target.value })
+              }
+              className="min-h-[200px]"
+              placeholder="Load in: 08:00&#10;Soundcheck: 14:00&#10;Doors: 19:00&#10;Show: 20:00..."
+            />
+          </div>
+
+          {/* Sección de Requisitos Eléctricos */}
+          <div>
+            <Label htmlFor="powerRequirements">Requisitos Eléctricos</Label>
+            <Textarea
+              id="powerRequirements"
+              value={eventData.powerRequirements}
+              onChange={(e) =>
+                setEventData({
+                  ...eventData,
+                  powerRequirements: e.target.value,
+                })
+              }
+              className="min-h-[150px]"
+              placeholder="Los requisitos eléctricos se completarán automáticamente cuando estén disponibles..."
+            />
+          </div>
+
+          {/* Sección de Necesidades Auxiliares */}
+          <div>
+            <Label htmlFor="auxiliaryNeeds">Necesidades Auxiliares</Label>
+            <Textarea
+              id="auxiliaryNeeds"
+              value={eventData.auxiliaryNeeds}
+              onChange={(e) =>
+                setEventData({ ...eventData, auxiliaryNeeds: e.target.value })
+              }
+              className="min-h-[150px]"
+              placeholder="Requerimientos del equipo de carga, necesidades de equipamiento..."
+            />
+          </div>
+
+          <Button onClick={generateDocument} className="w-full">
+            Generar Hoja de Ruta
+          </Button>
+        </CardContent>
+      </ScrollArea>
+    </Card>
   );
 };
 
