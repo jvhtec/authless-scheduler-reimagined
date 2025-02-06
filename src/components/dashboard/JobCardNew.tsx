@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 import { Department } from "@/types/department";
 import createFolderIcon from "@/assets/icons/icon.png";
 
-// UI Components & Icons
+// UI Components & Icons im just adding a comment
+
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
