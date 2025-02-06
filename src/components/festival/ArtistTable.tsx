@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit2, Loader2, Mic, Headphones } from "lucide-react";
+import { Edit2, Loader2, Mic, Headphones, FileText } from "lucide-react";
 import { format } from "date-fns";
 
 interface ArtistTableProps {
@@ -36,6 +36,7 @@ export const ArtistTable = ({ artists, isLoading, onEditArtist }: ArtistTablePro
           <TableHead>Soundcheck</TableHead>
           <TableHead>Technical Setup</TableHead>
           <TableHead>RF/IEM</TableHead>
+          <TableHead>Files</TableHead>
           <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -82,6 +83,14 @@ export const ArtistTable = ({ artists, isLoading, onEditArtist }: ArtistTablePro
                   </div>
                 )}
               </div>
+            </TableCell>
+            <TableCell>
+              {artist.files?.length > 0 && (
+                <div className="flex items-center gap-1" title="Technical Riders">
+                  <FileText className="h-4 w-4" />
+                  <span className="text-xs">{artist.files.length}</span>
+                </div>
+              )}
             </TableCell>
             <TableCell>
               <Button
