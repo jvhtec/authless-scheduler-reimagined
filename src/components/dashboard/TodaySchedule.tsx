@@ -21,7 +21,7 @@ export const TodaySchedule = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Agenda del Dia </CardTitle>
+        <CardTitle>Today's Schedule</CardTitle>
       </CardHeader>
       <CardContent className="p-4">
         <div className="space-y-4">

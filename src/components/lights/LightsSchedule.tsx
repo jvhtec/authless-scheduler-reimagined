@@ -30,7 +30,7 @@ export const LightsSchedule = ({
       <CardContent>
         <div className="space-y-4">
           {isLoading ? (
-            <p className="text-muted-foreground">Cargando agenda...</p>
+            <p className="text-muted-foreground">Loading schedule...</p>
           ) : jobs.length > 0 ? (
             jobs.map((job) => (
               <JobCardNew
@@ -45,7 +45,7 @@ export const LightsSchedule = ({
             ))
           ) : (
             <p className="text-muted-foreground">
-              No hay eventos programados para esta fecha
+              No events scheduled for this date
             </p>
           )}
         </div>

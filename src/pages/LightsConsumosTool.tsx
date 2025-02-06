@@ -98,12 +98,12 @@ const LightsConsumosTool: React.FC = () => {
 
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<JobSelection | null>(null);
-  const [tableName, setTableName] = useState(''); // nombre sin formato ingresado por el usuario
+  const [tableName, setTableName] = useState(''); // raw name as entered by the user
   const [tables, setTables] = useState<Table[]>([]);
   const [safetyMargin, setSafetyMargin] = useState(0);
   const [includesHoist, setIncludesHoist] = useState(false);
-  const [selectedPduType, setSelectedPduType] = useState<string>(''); // selección de anulación
-  const [customPduType, setCustomPduType] = useState<string>(''); // si es personalizado
+  const [selectedPduType, setSelectedPduType] = useState<string>(''); // override selection
+  const [customPduType, setCustomPduType] = useState<string>(''); // if custom
 
   const [currentTable, setCurrentTable] = useState<Table>({
     name: '',
@@ -175,14 +175,14 @@ const LightsConsumosTool: React.FC = () => {
       if (error) throw error;
 
       toast({
-        title: "Éxito",
-        description: "La tabla de requerimientos de potencia se ha guardado exitosamente",
+        title: "Success",
+        description: "Power requirement table saved successfully",
       });
     } catch (error: any) {
       console.error('Error saving power requirement table:', error);
       toast({
         title: "Error",
-        description: "Error al guardar la tabla de requerimientos de potencia",
+        description: "Failed to save power requirement table",
         variant: "destructive",
       });
     }
@@ -191,8 +191,8 @@ const LightsConsumosTool: React.FC = () => {
   const generateTable = () => {
     if (!tableName) {
       toast({
-        title: 'Falta el nombre de la tabla',
-        description: 'Por favor ingrese un nombre para la tabla',
+        title: 'Missing table name',
+        description: 'Please enter a name for the table',
         variant: 'destructive',
       });
       return;
@@ -265,8 +265,8 @@ const LightsConsumosTool: React.FC = () => {
   const handleExportPDF = async () => {
     if (!selectedJobId || !selectedJob) {
       toast({
-        title: 'No hay trabajo seleccionado',
-        description: 'Por favor seleccione un trabajo antes de exportar.',
+        title: 'No job selected',
+        description: 'Please select a job before exporting.',
         variant: 'destructive',
       });
       return;
@@ -284,7 +284,7 @@ const LightsConsumosTool: React.FC = () => {
         safetyMargin
       );
 
-      const fileName = `Informe de Potencia - ${selectedJob.title}.pdf`;
+      const fileName = `Power Report - ${selectedJob.title}.pdf`;
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
       const filePath = `lights/${selectedJobId}/${crypto.randomUUID()}.pdf`;
 
@@ -295,8 +295,8 @@ const LightsConsumosTool: React.FC = () => {
       if (uploadError) throw uploadError;
 
       toast({
-        title: 'Éxito',
-        description: 'El PDF se ha generado y subido exitosamente.',
+        title: 'Success',
+        description: 'PDF has been generated and uploaded successfully.',
       });
 
       const url = window.URL.createObjectURL(pdfBlob);
@@ -311,7 +311,7 @@ const LightsConsumosTool: React.FC = () => {
       console.error('PDF Export Error:', error);
       toast({
         title: 'Error',
-        description: 'Error al generar o subir el PDF.',
+        description: 'Failed to generate or upload the PDF.',
         variant: 'destructive',
       });
     }
@@ -324,19 +324,19 @@ const LightsConsumosTool: React.FC = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate('/lights')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <CardTitle className="text-2xl font-bold">Calculadora de Potencia</CardTitle>
+          <CardTitle className="text-2xl font-bold">Power Calculator</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="safetyMargin">Margen de Seguridad</Label>
+            <Label htmlFor="safetyMargin">Safety Margin</Label>
             <Select
               value={safetyMargin.toString()}
               onValueChange={(value) => setSafetyMargin(Number(value))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Seleccionar Margen de Seguridad" />
+                <SelectValue placeholder="Select Safety Margin" />
               </SelectTrigger>
               <SelectContent>
                 {[0, 10, 20, 30, 40, 50].map((percentage) => (
@@ -349,10 +349,10 @@ const LightsConsumosTool: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="jobSelect">Seleccionar Trabajo</Label>
+            <Label htmlFor="jobSelect">Select Job</Label>
             <Select value={selectedJobId} onValueChange={handleJobSelect}>
               <SelectTrigger>
-                <SelectValue placeholder="Seleccione un trabajo" />
+                <SelectValue placeholder="Select a job" />
               </SelectTrigger>
               <SelectContent>
                 {jobs?.map((job) => (
@@ -365,23 +365,23 @@ const LightsConsumosTool: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tableName">Nombre de la Tabla</Label>
+            <Label htmlFor="tableName">Table Name</Label>
             <Input
               id="tableName"
               value={tableName}
               onChange={(e) => setTableName(e.target.value)}
-              placeholder="Ingrese el nombre de la tabla"
+              placeholder="Enter table name"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Anulación del Tipo de PDU</Label>
+            <Label>PDU Type Override</Label>
             <Select value={selectedPduType} onValueChange={setSelectedPduType}>
               <SelectTrigger>
-                <SelectValue placeholder="Usar el tipo de PDU recomendado" />
+                <SelectValue placeholder="Use recommended PDU type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="default">Usar el tipo de PDU recomendado</SelectItem>
+                <SelectItem value="default">Use recommended PDU type</SelectItem>
                 {PDU_TYPES.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type}
@@ -393,11 +393,11 @@ const LightsConsumosTool: React.FC = () => {
 
           {selectedPduType === 'Custom' && (
             <div className="space-y-2">
-              <Label>Tipo de PDU Personalizado</Label>
+              <Label>Custom PDU Type</Label>
               <Input
                 value={customPduType}
                 onChange={(e) => setCustomPduType(e.target.value)}
-                placeholder="Ingrese un tipo de PDU personalizado"
+                placeholder="Enter custom PDU type"
               />
             </div>
           )}
@@ -408,16 +408,16 @@ const LightsConsumosTool: React.FC = () => {
               checked={includesHoist}
               onCheckedChange={(checked) => setIncludesHoist(checked as boolean)}
             />
-            <Label htmlFor="hoistPower">Requiere Potencia Adicional para Polipasto (CEE32A 3P+N+G)</Label>
+            <Label htmlFor="hoistPower">Requires Additional Hoist Power (CEE32A 3P+N+G)</Label>
           </div>
 
           <div className="border rounded-lg overflow-hidden">
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Cantidad</th>
-                  <th className="px-4 py-3 text-left font-medium">Componente</th>
-                  <th className="px-4 py-3 text-left font-medium">Vatios (por unidad)</th>
+                  <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                  <th className="px-4 py-3 text-left font-medium">Component</th>
+                  <th className="px-4 py-3 text-left font-medium">Watts (per unit)</th>
                 </tr>
               </thead>
               <tbody>
@@ -438,7 +438,7 @@ const LightsConsumosTool: React.FC = () => {
                         onValueChange={(value) => updateInput(index, 'componentId', value)}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Seleccione componente" />
+                          <SelectValue placeholder="Select component" />
                         </SelectTrigger>
                         <SelectContent>
                           {lightComponentDatabase.map((component) => (
@@ -464,17 +464,17 @@ const LightsConsumosTool: React.FC = () => {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={addRow}>Agregar Fila</Button>
+            <Button onClick={addRow}>Add Row</Button>
             <Button onClick={generateTable} variant="secondary">
-              Generar Tabla
+              Generate Table
             </Button>
             <Button onClick={resetCurrentTable} variant="destructive">
-              Reiniciar
+              Reset
             </Button>
             {tables.length > 0 && (
               <Button onClick={handleExportPDF} variant="outline" className="ml-auto gap-2">
                 <FileText className="w-4 h-4" />
-                Exportar y Subir PDF
+                Export & Upload PDF
               </Button>
             )}
           </div>
@@ -488,7 +488,7 @@ const LightsConsumosTool: React.FC = () => {
                   size="sm"
                   onClick={() => table.id && removeTable(table.id)}
                 >
-                  Eliminar Tabla
+                  Remove Table
                 </Button>
               </div>
               
@@ -502,11 +502,11 @@ const LightsConsumosTool: React.FC = () => {
                         table.id && updateTableSettings(table.id, { includesHoist: !!checked })
                       }
                     />
-                    <Label htmlFor={`hoist-${table.id}`}>Incluir Potencia para Polipasto (CEE32A 3P+N+G)</Label>
+                    <Label htmlFor={`hoist-${table.id}`}>Include Hoist Power (CEE32A 3P+N+G)</Label>
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Label>Anulación de Tipo de PDU:</Label>
+                    <Label>Override PDU Type:</Label>
                     <Select
                       value={table.customPduType || 'default'}
                       onValueChange={(value) => 
@@ -516,10 +516,10 @@ const LightsConsumosTool: React.FC = () => {
                       }
                     >
                       <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Usar PDU sugerido" />
+                        <SelectValue placeholder="Use suggested PDU" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="default">Usar PDU sugerido</SelectItem>
+                        <SelectItem value="default">Use suggested PDU</SelectItem>
                         {PDU_TYPES.map((type) => (
                           <SelectItem key={type} value={type}>
                             {type}
@@ -534,10 +534,10 @@ const LightsConsumosTool: React.FC = () => {
               <table className="w-full">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-4 py-3 text-left font-medium">Cantidad</th>
-                    <th className="px-4 py-3 text-left font-medium">Componente</th>
-                    <th className="px-4 py-3 text-left font-medium">Vatios (por unidad)</th>
-                    <th className="px-4 py-3 text-left font-medium">Vatios Totales</th>
+                    <th className="px-4 py-3 text-left font-medium">Quantity</th>
+                    <th className="px-4 py-3 text-left font-medium">Component</th>
+                    <th className="px-4 py-3 text-left font-medium">Watts (per unit)</th>
+                    <th className="px-4 py-3 text-left font-medium">Total Watts</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -551,26 +551,26 @@ const LightsConsumosTool: React.FC = () => {
                   ))}
                   <tr className="border-t bg-muted/50 font-medium">
                     <td colSpan={3} className="px-4 py-3 text-right">
-                      Vatios Totales:
+                      Total Watts:
                     </td>
                     <td className="px-4 py-3">{table.totalWatts?.toFixed(2)} W</td>
                   </tr>
                   <tr className="border-t bg-muted/50 font-medium">
                     <td colSpan={3} className="px-4 py-3 text-right">
-                      Corriente por Fase:
+                      Current per Phase:
                     </td>
                     <td className="px-4 py-3">{table.currentPerPhase?.toFixed(2)} A</td>
                   </tr>
                   <tr className="border-t bg-muted/50 font-medium">
                     <td colSpan={3} className="px-4 py-3 text-right">
-                      PDU Sugerido:
+                      Suggested PDU:
                     </td>
                     <td className="px-4 py-3">{table.pduType}</td>
                   </tr>
                   {table.customPduType && (
                     <tr className="border-t bg-muted/50 font-medium text-primary">
                       <td colSpan={3} className="px-4 py-3 text-right">
-                        Anulación de PDU Seleccionada:
+                        Selected PDU Override:
                       </td>
                       <td className="px-4 py-3">{table.customPduType}</td>
                     </tr>
@@ -579,7 +579,7 @@ const LightsConsumosTool: React.FC = () => {
               </table>
               {table.includesHoist && (
                 <div className="px-4 py-2 text-sm text-gray-500 bg-muted/30 italic">
-                  Se requiere potencia adicional para polipasto: CEE32A 3P+N+G
+                  Additional Hoist Power Required: CEE32A 3P+N+G
                 </div>
               )}
             </div>
