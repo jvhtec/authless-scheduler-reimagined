@@ -3,17 +3,16 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { Upload, Loader2, X } from "lucide-react";
 
 interface ArtistManagementDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   artist?: any;
   jobId?: string;
-  start_time?: string;
-  end_time?: string;
 }
 
 export const ArtistManagementDialog = ({
@@ -21,11 +20,11 @@ export const ArtistManagementDialog = ({
   onOpenChange,
   artist,
   jobId,
-  start_time,
-  end_time
 }: ArtistManagementDialogProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [files, setFiles] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: artist?.name || "",
     stage: artist?.stage || "",
@@ -36,29 +35,121 @@ export const ArtistManagementDialog = ({
     soundcheck_end: artist?.soundcheck_end || "",
     foh_console: artist?.foh_console || "",
     mon_console: artist?.mon_console || "",
-    // RF and Wireless fields
     wireless_model: artist?.wireless_model || "",
     wireless_quantity: artist?.wireless_quantity || 0,
     wireless_band: artist?.wireless_band || "",
     iem_model: artist?.iem_model || "",
     iem_quantity: artist?.iem_quantity || 0,
     iem_band: artist?.iem_band || "",
-    // Monitor setup
     monitors_enabled: artist?.monitors_enabled || false,
     monitors_quantity: artist?.monitors_quantity || 0,
-    // Extra requirements
     extras_sf: artist?.extras_sf || false,
     extras_df: artist?.extras_df || false,
     extras_djbooth: artist?.extras_djbooth || false,
     extras_wired: artist?.extras_wired || "",
-    // Infrastructure
     infra_cat6: artist?.infra_cat6 || false,
     infra_hma: artist?.infra_hma || false,
     infra_coax: artist?.infra_coax || false,
     infra_analog: artist?.infra_analog || 0,
-    // Notes
     notes: artist?.notes || "",
   });
+
+  // Fetch existing files when dialog opens
+  const fetchFiles = useCallback(async (artistId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('festival_artist_files')
+        .select('*')
+        .eq('artist_id', artistId);
+      
+      if (error) throw error;
+      setFiles(data || []);
+    } catch (error: any) {
+      console.error('Error fetching files:', error);
+      toast({
+        title: "Error",
+        description: "Could not load artist files",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!artist?.id || !event.target.files?.length) return;
+
+    setUploadingFile(true);
+    const file = event.target.files[0];
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${artist.id}/${crypto.randomUUID()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('artist_files')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase
+        .from('festival_artist_files')
+        .insert({
+          artist_id: artist.id,
+          file_name: file.name,
+          file_path: filePath,
+          file_type: file.type,
+          file_size: file.size,
+        });
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Success",
+        description: "File uploaded successfully",
+      });
+
+      await fetchFiles(artist.id);
+    } catch (error: any) {
+      console.error('Error uploading file:', error);
+      toast({
+        title: "Error",
+        description: "Could not upload file",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleDeleteFile = async (fileId: string, filePath: string) => {
+    try {
+      const { error: storageError } = await supabase.storage
+        .from('artist_files')
+        .remove([filePath]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from('festival_artist_files')
+        .delete()
+        .eq('id', fileId);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Success",
+        description: "File deleted successfully",
+      });
+
+      setFiles(files.filter(f => f.id !== fileId));
+    } catch (error: any) {
+      console.error('Error deleting file:', error);
+      toast({
+        title: "Error",
+        description: "Could not delete file",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,221 +273,41 @@ export const ArtistManagementDialog = ({
             </div>
           </div>
 
-          {/* RF and Wireless Section */}
-          <div className="border rounded-lg p-4 space-y-4">
-            <h3 className="text-lg font-medium">RF & Wireless Setup</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* File Upload Section - Only show when editing an artist */}
+          {artist?.id && (
+            <div className="border rounded-lg p-4 space-y-4">
+              <h3 className="text-lg font-medium">Technical Riders & Documents</h3>
+              
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="wireless_model">Wireless Microphone Model</Label>
+                <div className="flex items-center gap-4">
                   <Input
-                    id="wireless_model"
-                    value={formData.wireless_model}
-                    onChange={(e) =>
-                      setFormData({ ...formData, wireless_model: e.target.value })
-                    }
+                    type="file"
+                    onChange={handleFileUpload}
+                    disabled={uploadingFile}
+                    className="flex-1"
                   />
+                  {uploadingFile && <Loader2 className="h-4 w-4 animate-spin" />}
                 </div>
-                <div>
-                  <Label htmlFor="wireless_quantity">Quantity</Label>
-                  <Input
-                    id="wireless_quantity"
-                    type="number"
-                    value={formData.wireless_quantity}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        wireless_quantity: parseInt(e.target.value) || 0,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="wireless_band">Frequency Band</Label>
-                  <Input
-                    id="wireless_band"
-                    value={formData.wireless_band}
-                    onChange={(e) =>
-                      setFormData({ ...formData, wireless_band: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="iem_model">IEM Model</Label>
-                  <Input
-                    id="iem_model"
-                    value={formData.iem_model}
-                    onChange={(e) =>
-                      setFormData({ ...formData, iem_model: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="iem_quantity">IEM Quantity</Label>
-                  <Input
-                    id="iem_quantity"
-                    type="number"
-                    value={formData.iem_quantity}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        iem_quantity: parseInt(e.target.value) || 0,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="iem_band">IEM Band</Label>
-                  <Input
-                    id="iem_band"
-                    value={formData.iem_band}
-                    onChange={(e) =>
-                      setFormData({ ...formData, iem_band: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Monitor Setup */}
-          <div className="border rounded-lg p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Monitor Setup</h3>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={formData.monitors_enabled}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, monitors_enabled: checked })
-                  }
-                />
-                <Label>Enabled</Label>
+                {files.length > 0 && (
+                  <div className="space-y-2">
+                    {files.map((file) => (
+                      <div key={file.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                        <span className="text-sm truncate flex-1">{file.file_name}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteFile(file.id, file.file_path)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-            {formData.monitors_enabled && (
-              <div>
-                <Label htmlFor="monitors_quantity">Number of Monitors</Label>
-                <Input
-                  id="monitors_quantity"
-                  type="number"
-                  value={formData.monitors_quantity}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      monitors_quantity: parseInt(e.target.value) || 0,
-                    })
-                  }
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Extra Requirements */}
-          <div className="border rounded-lg p-4 space-y-4">
-            <h3 className="text-lg font-medium">Extra Requirements</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={formData.extras_sf}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, extras_sf: checked })
-                  }
-                />
-                <Label>Side Fill</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={formData.extras_df}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, extras_df: checked })
-                  }
-                />
-                <Label>Drum Fill</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={formData.extras_djbooth}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, extras_djbooth: checked })
-                  }
-                />
-                <Label>DJ Booth</Label>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="extras_wired">Additional Wired Requirements</Label>
-              <Input
-                id="extras_wired"
-                value={formData.extras_wired}
-                onChange={(e) =>
-                  setFormData({ ...formData, extras_wired: e.target.value })
-                }
-              />
-            </div>
-          </div>
-
-          {/* Infrastructure */}
-          <div className="border rounded-lg p-4 space-y-4">
-            <h3 className="text-lg font-medium">Infrastructure</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={formData.infra_cat6}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, infra_cat6: checked })
-                  }
-                />
-                <Label>CAT6</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={formData.infra_hma}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, infra_hma: checked })
-                  }
-                />
-                <Label>HMA</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={formData.infra_coax}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, infra_coax: checked })
-                  }
-                />
-                <Label>Coax</Label>
-              </div>
-              <div>
-                <Label htmlFor="infra_analog">Analog Lines</Label>
-                <Input
-                  id="infra_analog"
-                  type="number"
-                  value={formData.infra_analog}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      infra_analog: parseInt(e.target.value) || 0,
-                    })
-                  }
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <textarea
-              id="notes"
-              className="w-full min-h-[100px] px-3 py-2 border rounded-md"
-              value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
-            />
-          </div>
+          )}
 
           <div className="flex justify-end gap-2">
             <Button
