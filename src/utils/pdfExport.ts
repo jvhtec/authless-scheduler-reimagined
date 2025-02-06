@@ -65,22 +65,28 @@ export const exportToPDF = (
 
     doc.setFontSize(24);
     doc.setTextColor(255, 255, 255);
-    const title = type === 'weight' ? "Weight Distribution Report" : "Power Distribution Report";
+    const title =
+      type === 'weight'
+        ? "Informe de Distribución de Peso"
+        : "Informe de Distribución de Potencia";
     doc.text(title, pageWidth / 2, 20, { align: 'center' });
 
     doc.setFontSize(16);
-    doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
-    // Print job date below the job name.
+    // Use "Trabajo sin título" if jobName is empty.
+    doc.text(jobName || 'Trabajo sin título', pageWidth / 2, 30, { align: 'center' });
     doc.setFontSize(12);
-    doc.text(`Job Date: ${jobDateStr}`, pageWidth / 2, 38, { align: 'center' });
+    // Translate "Job Date:" to "Fecha del Trabajo:"
+    doc.text(`Fecha del Trabajo: ${jobDateStr}`, pageWidth / 2, 38, { align: 'center' });
 
     if (safetyMargin !== undefined) {
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
-      doc.text(`Safety Margin Applied: ${safetyMargin}%`, 14, 50);
+      // Translate "Safety Margin Applied:" to "Margen de Seguridad Aplicado:"
+      doc.text(`Margen de Seguridad Aplicado: ${safetyMargin}%`, 14, 50);
     }
     doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 60);
+    // Translate "Generated:" to "Generado:"
+    doc.text(`Generado: ${new Date().toLocaleDateString('en-GB')}`, 14, 60);
 
     let yPosition = 70;
 
@@ -97,7 +103,6 @@ export const exportToPDF = (
       // For power reports, append the PDU info only if the table name (trimmed) does not already end with parentheses.
       let displayName = table.name;
       if (type === 'power' && (table.customPduType || table.pduType)) {
-        // Check if the trimmed table name ends with parentheses containing text.
         if (!/\([^)]+\)$/.test(table.name.trim())) {
           displayName = `${table.name} (${table.customPduType || table.pduType})`;
         }
@@ -115,18 +120,14 @@ export const exportToPDF = (
       ]);
 
       if (type === 'weight' && table.totalWeight !== undefined) {
-        tableRows.push([
-          '',
-          'Total Weight',
-          '',
-          table.totalWeight.toFixed(2)
-        ]);
+        // Translate "Total Weight" to "Peso Total"
+        tableRows.push(['', 'Peso Total', '', table.totalWeight.toFixed(2)]);
       }
 
       const headers =
         type === 'weight'
-          ? [['Quantity', 'Component', 'Weight (per unit)', 'Total Weight']]
-          : [['Quantity', 'Component', 'Watts (per unit)', 'Total Watts']];
+          ? [['Cantidad', 'Componente', 'Peso (por unidad)', 'Peso Total']]
+          : [['Cantidad', 'Componente', 'Vatios (por unidad)', 'Vatios Totales']];
 
       autoTable(doc, {
         head: headers,
@@ -157,11 +158,13 @@ export const exportToPDF = (
 
           doc.setFontSize(11);
           doc.setTextColor(125, 1, 1);
-          doc.text(`Total Power: ${table.totalWatts.toFixed(2)} W`, 14, yPosition);
-          
+          // Translate "Total Power:" to "Potencia Total:"
+          doc.text(`Potencia Total: ${table.totalWatts.toFixed(2)} W`, 14, yPosition);
+
           if (table.currentPerPhase !== undefined) {
             yPosition += 7;
-            doc.text(`Current per Phase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition);
+            // Translate "Current per Phase:" to "Corriente por Fase:"
+            doc.text(`Corriente por Fase: ${table.currentPerPhase.toFixed(2)} A`, 14, yPosition);
           }
           yPosition += 10;
         }
@@ -170,7 +173,12 @@ export const exportToPDF = (
           doc.setFontSize(10);
           doc.setTextColor(51, 51, 51);
           doc.setFont(undefined, 'italic');
-          doc.text(`Additional Hoist Power Required for ${table.name}: CEE32A 3P+N+G`, 14, yPosition);
+          // Translate "Additional Hoist Power Required for ..." to Spanish.
+          doc.text(
+            `Potencia adicional para polipasto requerida para ${table.name}: CEE32A 3P+N+G`,
+            14,
+            yPosition
+          );
           yPosition += 10;
           doc.setFont(undefined, 'normal');
         }
@@ -195,17 +203,17 @@ export const exportToPDF = (
     doc.text(title, pageWidth / 2, 20, { align: 'center' });
 
     doc.setFontSize(16);
-    doc.text(jobName || 'Untitled Job', pageWidth / 2, 30, { align: 'center' });
+    doc.text(jobName || 'Trabajo sin título', pageWidth / 2, 30, { align: 'center' });
     doc.setFontSize(12);
-    doc.text(`Job Date: ${jobDateStr}`, pageWidth / 2, 38, { align: 'center' });
+    doc.text(`Fecha del Trabajo: ${jobDateStr}`, pageWidth / 2, 38, { align: 'center' });
 
     if (safetyMargin !== undefined) {
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
-      doc.text(`Safety Margin Applied: ${safetyMargin}%`, 14, 50);
+      doc.text(`Margen de Seguridad Aplicado: ${safetyMargin}%`, 14, 50);
     }
     doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 60);
+    doc.text(`Generado: ${new Date().toLocaleDateString('en-GB')}`, 14, 60);
 
     yPosition = 70;
 
@@ -213,7 +221,8 @@ export const exportToPDF = (
     if (tables[0]?.toolType === 'consumos') {
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
-      doc.text("Summary", 14, yPosition);
+      // Translate "Summary" to "Resumen"
+      doc.text("Resumen", 14, yPosition);
       yPosition += 10;
 
       // Print a summary line for each table.
@@ -227,7 +236,12 @@ export const exportToPDF = (
         if (table.includesHoist) {
           doc.setFontSize(10);
           doc.setTextColor(80, 80, 80);
-          doc.text(`Additional Hoist Power Required for ${table.name}: CEE32A 3P+N+G`, 14, yPosition);
+          // Translate "Additional Hoist Power Required for ..." to Spanish.
+          doc.text(
+            `Potencia adicional para polipasto requerida para ${table.name}: CEE32A 3P+N+G`,
+            14,
+            yPosition
+          );
           yPosition += 7;
         }
         yPosition += 5;
@@ -236,7 +250,8 @@ export const exportToPDF = (
           yPosition = 20;
           doc.setFontSize(16);
           doc.setTextColor(125, 1, 1);
-          doc.text("Summary (cont'd)", 14, yPosition);
+          // Translate "Summary (cont'd)" to "Resumen (continuado)"
+          doc.text("Resumen (continuado)", 14, yPosition);
           yPosition += 10;
         }
       });
@@ -266,27 +281,29 @@ export const exportToPDF = (
       for (let i = 1; i <= followspotCount; i++) {
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
-        doc.text(`CEE16A 1P+N+G required at followspot position #${i}`, 14, yPosition);
+        // Translate: "CEE16A 1P+N+G required at followspot position #i" to Spanish.
+        doc.text(`Se requiere CEE16A 1P+N+G en la posición de followspot n°${i}`, 14, yPosition);
         yPosition += 7;
         if (yPosition > pageHeight - 40) {
           doc.addPage();
           yPosition = 20;
           doc.setFontSize(16);
           doc.setTextColor(125, 1, 1);
-          doc.text("Summary (cont'd)", 14, yPosition);
+          doc.text("Resumen (continuado)", 14, yPosition);
           yPosition += 10;
         }
       }
       // Finally, always add a note for FoH.
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
-      doc.text("16A Schuko Power required at FoH position", 14, yPosition);
+      // Translate "16A Schuko Power required at FoH position" to Spanish.
+      doc.text("Se requiere potencia de 16A Schuko en posición FoH", 14, yPosition);
       yPosition += 7;
     } else if (summaryRows && summaryRows.length > 0) {
-      // For other tool types, print summary as a table.
       doc.setFontSize(16);
       doc.setTextColor(125, 1, 1);
-      doc.text("Summary", 14, yPosition);
+      // Translate "Summary" to "Resumen"
+      doc.text("Resumen", 14, yPosition);
       yPosition += 6;
 
       const summaryData = summaryRows.map((row) => [
@@ -296,7 +313,7 @@ export const exportToPDF = (
       ]);
 
       autoTable(doc, {
-        head: [['Cluster Name', 'Rigging Points', 'Cluster Weight']],
+        head: [['Nombre del Cluster', 'Puntos de Montaje', 'Peso del Cluster']],
         body: summaryData,
         startY: yPosition,
         theme: 'grid',
@@ -325,8 +342,7 @@ export const exportToPDF = (
     logo.onload = () => {
       const logoWidth = 50;
       const logoHeight = logoWidth * (logo.height / logo.width);
-      const totalPages = doc.internal.pages.length - 1; // Fix: Use pages.length instead of getNumberOfPages
-      // Loop through every page to add the logo.
+      const totalPages = doc.internal.pages.length - 1;
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         const xPosition = (pageWidth - logoWidth) / 2;
@@ -337,22 +353,22 @@ export const exportToPDF = (
           console.error(`Error adding logo on page ${i}:`, error);
         }
       }
-      // On the last page, add the created date at the bottom right.
       doc.setPage(totalPages);
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
-      doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: 'right' });
+      // Translate "Created:" to "Creado:"
+      doc.text(`Creado: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: 'right' });
       const blob = doc.output('blob');
       resolve(blob);
     };
 
     logo.onerror = () => {
       console.error('Failed to load logo');
-      const totalPages = doc.internal.pages.length - 1; // Fix: Use pages.length instead of getNumberOfPages
+      const totalPages = doc.internal.pages.length - 1;
       doc.setPage(totalPages);
       doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
-      doc.text(`Created: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: 'right' });
+      doc.text(`Creado: ${createdDate}`, pageWidth - 10, pageHeight - 10, { align: 'right' });
       const blob = doc.output('blob');
       resolve(blob);
     };
