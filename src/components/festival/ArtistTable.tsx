@@ -1,96 +1,109 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Edit2, Loader2, Mic, Headphones, FileText } from "lucide-react";
 import { format } from "date-fns";
 
 interface ArtistTableProps {
-  jobId: string;
+  artists: any[];
+  isLoading: boolean;
+  onEditArtist: (artist: any) => void;
 }
 
-export const ArtistTable = ({ jobId }: ArtistTableProps) => {
-  const { data: artists, isLoading } = useQuery({
-    queryKey: ["festival-artists", jobId],
-    queryFn: async () => {
-      console.log("Fetching artists for job:", jobId);
-      const { data, error } = await supabase
-        .from("festival_artists")
-        .select("*")
-        .eq("job_id", jobId)
-        .order("date", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching artists:", error);
-        throw error;
-      }
-
-      console.log("Fetched artists:", data);
-      return data;
-    },
-  });
-
+export const ArtistTable = ({ artists, isLoading, onEditArtist }: ArtistTableProps) => {
   if (isLoading) {
-    return <div>Loading artists...</div>;
+    return (
+      <div className="flex items-center justify-center p-4">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!artists.length) {
+    return (
+      <div className="text-center p-4 text-muted-foreground">
+        No artists added yet.
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button>Add Artist</Button>
-      </div>
-
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Stage</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Actions</TableHead>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Artist</TableHead>
+          <TableHead>Stage</TableHead>
+          <TableHead>Show Time</TableHead>
+          <TableHead>Soundcheck</TableHead>
+          <TableHead>Technical Setup</TableHead>
+          <TableHead>RF/IEM</TableHead>
+          <TableHead>Files</TableHead>
+          <TableHead>Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {artists.map((artist) => (
+          <TableRow key={artist.id}>
+            <TableCell className="font-medium">{artist.name}</TableCell>
+            <TableCell>{artist.stage}</TableCell>
+            <TableCell>
+              {artist.show_start && format(new Date(`2000-01-01T${artist.show_start}`), 'HH:mm')} - 
+              {artist.show_end && format(new Date(`2000-01-01T${artist.show_end}`), 'HH:mm')}
+            </TableCell>
+            <TableCell>
+              {artist.soundcheck && (
+                <>
+                  {artist.soundcheck_start && format(new Date(`2000-01-01T${artist.soundcheck_start}`), 'HH:mm')} - 
+                  {artist.soundcheck_end && format(new Date(`2000-01-01T${artist.soundcheck_end}`), 'HH:mm')}
+                </>
+              )}
+            </TableCell>
+            <TableCell>
+              <div className="flex flex-col text-sm">
+                <span>FOH: {artist.foh_console}</span>
+                <span>MON: {artist.mon_console}</span>
+                {artist.monitors_enabled && (
+                  <span className="text-xs text-muted-foreground">
+                    {artist.monitors_quantity} monitors
+                  </span>
+                )}
+              </div>
+            </TableCell>
+            <TableCell>
+              <div className="flex gap-2">
+                {artist.wireless_quantity > 0 && (
+                  <div className="flex items-center gap-1" title="Wireless Mics">
+                    <Mic className="h-4 w-4" />
+                    <span className="text-xs">{artist.wireless_quantity}</span>
+                  </div>
+                )}
+                {artist.iem_quantity > 0 && (
+                  <div className="flex items-center gap-1" title="IEM Systems">
+                    <Headphones className="h-4 w-4" />
+                    <span className="text-xs">{artist.iem_quantity}</span>
+                  </div>
+                )}
+              </div>
+            </TableCell>
+            <TableCell>
+              {artist.files?.length > 0 && (
+                <div className="flex items-center gap-1" title="Technical Riders">
+                  <FileText className="h-4 w-4" />
+                  <span className="text-xs">{artist.files.length}</span>
+                </div>
+              )}
+            </TableCell>
+            <TableCell>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onEditArtist(artist)}
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+            </TableCell>
           </TableRow>
-        </TableHeader>
-        <TableBody>
-          {artists?.map((artist) => (
-            <TableRow key={artist.id}>
-              <TableCell>{artist.name}</TableCell>
-              <TableCell>
-                {artist.date ? format(new Date(artist.date), "PPP") : "No date set"}
-              </TableCell>
-              <TableCell>
-                <Select value={artist.stage || "unassigned"}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                    <SelectItem value="main">Main Stage</SelectItem>
-                    <SelectItem value="second">Second Stage</SelectItem>
-                    <SelectItem value="third">Third Stage</SelectItem>
-                  </SelectContent>
-                </Select>
-              </TableCell>
-              <TableCell>
-                <Select value={artist.status || "pending"}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </TableCell>
-              <TableCell>
-                <Button variant="ghost" size="sm">
-                  Edit
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+        ))}
+      </TableBody>
+    </Table>
   );
 };

@@ -7,9 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Department } from "@/types/department";
 import createFolderIcon from "@/assets/icons/icon.png";
+import { useNavigate } from "react-router-dom";
 
-// UI Components & Icons im just adding a comment
-
+// UI Components & Icons
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -443,8 +443,6 @@ for (const dept of departments) {
   console.log(`Creating department folder for ${dept}:`, deptPayload);
   const deptFolder = await createFlexFolder(deptPayload);
 
-  // IMPORTANT: capture the inserted row so we get its internal (local DB) ID,
-  // similar to what we do in the tourdate branch.
   const { data: [childRow], error: childErr } = await supabase
     .from("flex_folders")
     .insert({
@@ -539,6 +537,7 @@ export function JobCardNew({
   showManageArtists = false,
   isProjectManagementPage = false
 }: JobCardNewProps) {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { theme } = useTheme();
@@ -1011,6 +1010,11 @@ export function JobCardNew({
     onJobClick(job.id);
   };
 
+  const handleManageArtists = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/festival-management/${job.id}`);
+  };
+
   return (
     <div className="p-4 bg-gray-50 dark:bg-gray-900">
       <Card
@@ -1068,10 +1072,7 @@ export function JobCardNew({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setArtistManagementOpen(true);
-                  }}
+                  onClick={handleManageArtists}
                   className="hover:bg-accent/50"
                 >
                   Manage Artists
@@ -1287,15 +1288,6 @@ export function JobCardNew({
           open={videoTaskDialogOpen}
           onOpenChange={setVideoTaskDialogOpen}
           jobId={job.id}
-        />
-      )}
-      {artistManagementOpen && (
-        <ArtistManagementDialog
-          open={artistManagementOpen}
-          onOpenChange={setArtistManagementOpen}
-          jobId={job.id}
-          start_time={job.start_time}
-          end_time={job.end_time}
         />
       )}
     </div>

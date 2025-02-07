@@ -288,38 +288,6 @@ export const useTourCreationMutation = () => {
         if (dateInfo.location) {
           locationId = await getOrCreateLocation(dateInfo.location);
         }
-
-// After getting locationId but before creating tour date
-let jobTitle = `${title} (Tour Date)`; // Default title
-if (locationId) {
-  // Fetch location name
-  const { data: location } = await supabase
-    .from('locations')
-    .select('name')
-    .eq('id', locationId)
-    .single();
-    
-  if (location?.name) {
-    jobTitle = `${title} - ${location.name}`;
-  }
-}
-
-// Then use jobTitle in the job creation instead of the hardcoded string
-const { data: dateJob, error: dateJobError } = await supabase
-  .from("jobs")
-  .insert({
-    title: jobTitle, // Use our dynamic title here
-    description,
-    start_time: `${dateInfo.date}T00:00:00`,
-    end_time: `${dateInfo.date}T23:59:59`,
-    location_id: locationId,
-    job_type: "single",
-    tour_date_id: tourDate.id,
-    color,
-  })
-  .select()
-  .single();
-
         
         const { data: tourDate, error: tourDateError } = await supabase
           .from("tour_dates")
